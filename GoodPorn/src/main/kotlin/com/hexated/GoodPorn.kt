@@ -67,7 +67,7 @@ class GoodPorn : MainAPI() {
         val description = document.select("div.info div:nth-child(2)").text().trim()
         val actors = document.select("div.info div:nth-child(6) > a").map { it.text() }
         val recommendations =
-            document.select("div.list_videos_related_videos_items div.item").mapNotNull {
+            document.select("div#list_videos_related_videos_items div.item").mapNotNull {
                 it.toSearchResult()
             }
 
