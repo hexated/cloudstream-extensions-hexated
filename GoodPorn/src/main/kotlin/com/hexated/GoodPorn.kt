@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import java.util.*
 
 class GoodPorn : MainAPI() {
     override var mainUrl = "https://goodporn.to"
@@ -93,7 +94,7 @@ class GoodPorn : MainAPI() {
                 ExtractorLink(
                     this.name,
                     this.name,
-                    res.attr("href"),
+                    res.attr("href").replace(Regex("\\?download\\S+.mp4&"), "?") + "&rnd=${Date().time}" ,
                     referer = data,
                     quality = Regex("([0-9]+p),").find(res.text())?.groupValues?.get(1)
                         .let { getQualityFromName(it) },

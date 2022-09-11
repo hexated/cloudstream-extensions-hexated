@@ -38,7 +38,6 @@ subprojects {
         // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
         setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/hexated/cloudstream-extensions-hexated")
 
-        description = "Providers from all country"
         authors = listOf("Hexated")
     }
 
