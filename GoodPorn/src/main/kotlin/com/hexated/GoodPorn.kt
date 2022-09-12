@@ -18,9 +18,12 @@ class GoodPorn : MainAPI() {
         "$mainUrl/?mode=async&function=get_block&block_id=list_videos_most_recent_videos&sort_by=post_date&from=" to "New Videos",
         "$mainUrl/?mode=async&function=get_block&block_id=list_videos_most_recent_videos&sort_by=video_viewed&from=" to "Most Viewed Videos",
         "$mainUrl/?mode=async&function=get_block&block_id=list_videos_most_recent_videos&sort_by=rating&from=" to "Top Rated Videos ",
-        "$mainUrl/?mode=async&function=get_block&block_id=list_videos_most_recent_videos&sort_by=most_commented&from=" to "Most Commented Videos ",
+        "$mainUrl/?mode=async&function=get_block&block_id=list_videos_most_recent_videos&sort_by=most_commented&from=" to "Most Commented Videos",
         "$mainUrl/?mode=async&function=get_block&block_id=list_videos_most_recent_videos&sort_by=duration&from=" to "Longest Videos",
-        "$mainUrl/?mode=async&function=get_block&block_id=list_videos_most_recent_videos&sort_by=most_favourited&from=" to "Most Favourited Videos ",
+        "$mainUrl/channels/brazzers/?mode=async&function=get_block&block_id=list_videos_common_videos_list&sort_by=post_date&from=" to "Brazzers",
+        "$mainUrl/channels/digitalplayground/?mode=async&function=get_block&block_id=list_videos_common_videos_list&sort_by=post_date&from=" to "Digital Playground",
+        "$mainUrl/channels/realitykings/?mode=async&function=get_block&block_id=list_videos_common_videos_list&sort_by=post_date&from=" to "Realitykings",
+        "$mainUrl/channels/babes-network/?mode=async&function=get_block&block_id=list_videos_common_videos_list&sort_by=post_date&from=" to "Babes Network",
     )
 
     override suspend fun getMainPage(
@@ -28,7 +31,7 @@ class GoodPorn : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
         val document = app.get(request.data + page).document
-        val home = document.select("div#list_videos_most_recent_videos_items div.item").mapNotNull {
+        val home = document.select("div#list_videos_most_recent_videos_items div.item, div#list_videos_common_videos_list_items div.item").mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(
