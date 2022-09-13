@@ -1,15 +1,13 @@
-# **cloudstream hexated extensions**<p align="center">
+# **cloudstream hexated extensions**
  > Used to load providers for [Cloudstream](https://recloudstream.github.io/)
-<br>
- 
+
 You can download this extension repositories [here
 ](https://recloudstream.github.io/repos/)
 
 
 [![Discord](https://invidget.switchblade.xyz/5Hus6fM)](https://discord.gg/5Hus6fM)
 
- 
-<br>
+
 ### 🌟STAR THIS REPOSITORY TO SUPPORT THE DEVELOPER
 
 ## Getting started with writing your first plugin
