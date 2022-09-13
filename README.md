@@ -1,23 +1,22 @@
-**⚠️ This is currently under development, dont use it yet if you're not comfortable with constantly merging new changes**
+# **cloudstream hexated extensions**<p align="center">
+ > Used to load providers for [Cloudstream](https://recloudstream.github.io/)
+<br>
+ 
+You can download this extension repositories [here
+](https://recloudstream.github.io/repos/)
 
-# `Cloudstream3 Plugin Repo Template`
 
-Template for a [Cloudstream3](https://github.com/recloudstream) plugin repo
-
-**⚠️ Make sure you check "Include all branches" when using this template**
+[![Discord](https://invidget.switchblade.xyz/5Hus6fM)](https://discord.gg/5Hus6fM)
 
  
-## Getting started with writing your first plugin
+<br>
+### 🌟STAR THIS REPOSITORY TO SUPPORT THE DEVELOPER
 
-This template includes 1 example plugin.
+## Getting started with writing your first plugin
 
 1. Open the root build.gradle.kts, read the comments and replace all the placeholders
 2. Familiarize yourself with the project structure. Most files are commented
 3. Build or deploy your first plugin using:
-   - Windows: `.\gradlew.bat ExampleProvider:make` or `.\gradlew.bat ExampleProvider:deployWithAdb`
-   - Linux & Mac: `./gradlew ExampleProvider:make` or `./gradlew ExampleProvider:deployWithAdb`
+    - Windows: `.\gradlew.bat ExampleProvider:make` or `.\gradlew.bat ExampleProvider:deployWithAdb`
+    - Linux & Mac: `./gradlew ExampleProvider:make` or `./gradlew ExampleProvider:deployWithAdb`
 
-## Attribution
-
-This template as well as the gradle plugin and the whole plugin system is **heavily** based on [Aliucord](https://github.com/Aliucord).
-*Go use it, it's a great mobile discord client mod!*
