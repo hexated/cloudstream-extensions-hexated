@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
@@ -32,9 +33,10 @@ class Movierulzhd : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
         val document = app.get(request.data + page).document
-        val home = document.select("div.items.normal article, div#archive-content article").mapNotNull {
-            it.toSearchResult()
-        }
+        val home =
+            document.select("div.items.normal article, div#archive-content article").mapNotNull {
+                it.toSearchResult()
+            }
         return newHomePageResponse(request.name, home)
     }
 
@@ -162,29 +164,34 @@ class Movierulzhd : MainAPI() {
         val mainUrl = "https://sbflix.xyz"
         val name = "Sbflix"
 
-        val regexID = Regex("(embed-[a-zA-Z0-9]{0,8}[a-zA-Z0-9_-]+|\\/e\\/[a-zA-Z0-9]{0,8}[a-zA-Z0-9_-]+)")
+        val regexID =
+            Regex("(embed-[a-zA-Z0-9]{0,8}[a-zA-Z0-9_-]+|\\/e\\/[a-zA-Z0-9]{0,8}[a-zA-Z0-9_-]+)")
         val id = regexID.findAll(url).map {
-            it.value.replace(Regex("(embed-|\\/e\\/)"),"")
+            it.value.replace(Regex("(embed-|\\/e\\/)"), "")
         }.first()
         val master = "$mainUrl/sources48/" + bytesToHex("||$id||||streamsb".toByteArray()) + "/"
         val headers = mapOf(
             "watchsb" to "sbstream",
         )
-        val urltext = app.get(master.lowercase(),
+        val urltext = app.get(
+            master.lowercase(),
             headers = headers,
             referer = url,
         ).text
         val mapped = urltext.let { AppUtils.parseJson<Main>(it) }
+        val testurl = app.get(mapped.streamData.file, headers = headers).text
+        if (urltext.contains("m3u8") && testurl.contains("EXTM3U"))
             callback.invoke(
-            ExtractorLink(
-                name,
-                name,
-                mapped.streamData.file,
-                url,
-                Qualities.Unknown.value,
-                headers = headers
+                ExtractorLink(
+                    name,
+                    name,
+                    mapped.streamData.file,
+                    url,
+                    Qualities.Unknown.value,
+                    isM3u8 = true,
+                    headers = headers
+                )
             )
-        )
     }
 
     override suspend fun loadLinks(
@@ -247,12 +254,12 @@ class Movierulzhd : MainAPI() {
         return String(hexChars)
     }
 
-    data class Subs (
+    data class Subs(
         @JsonProperty("file") val file: String,
         @JsonProperty("label") val label: String,
     )
 
-    data class StreamData (
+    data class StreamData(
         @JsonProperty("file") val file: String,
         @JsonProperty("cdn_img") val cdnImg: String,
         @JsonProperty("hash") val hash: String,
@@ -263,7 +270,7 @@ class Movierulzhd : MainAPI() {
         @JsonProperty("backup") val backup: String,
     )
 
-    data class Main (
+    data class Main(
         @JsonProperty("stream_data") val streamData: StreamData,
         @JsonProperty("status_code") val statusCode: Int,
     )
