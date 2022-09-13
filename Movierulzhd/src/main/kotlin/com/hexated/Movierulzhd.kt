@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
+import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
@@ -157,6 +158,37 @@ class Movierulzhd : MainAPI() {
         }
     }
 
+    private suspend fun invokeSbflix(
+        url: String,
+        callback: (ExtractorLink) -> Unit,
+        subtitleCallback: (SubtitleFile) -> Unit,
+    ) {
+        val mainUrl = "https://sbflix.xyz"
+        val name = "Sbflix"
+
+        val regexID = Regex("(embed-[a-zA-Z0-9]{0,8}[a-zA-Z0-9_-]+|\\/e\\/[a-zA-Z0-9]{0,8}[a-zA-Z0-9_-]+)")
+        val id = regexID.findAll(url).map {
+            it.value.replace(Regex("(embed-|\\/e\\/)"),"")
+        }.first()
+        val master = "$mainUrl/sources48/" + bytesToHex("||$id||||streamsb".toByteArray()) + "/"
+        val headers = mapOf(
+            "watchsb" to "sbstream",
+        )
+        val urltext = app.get(master.lowercase(),
+            headers = headers,
+            referer = url,
+        ).text
+        val mapped = urltext.let { AppUtils.parseJson<Main>(it) }
+        val testurl = app.get(mapped.streamData.file, headers = headers).text
+        if (urltext.contains("m3u8") && testurl.contains("EXTM3U"))
+            M3u8Helper.generateM3u8(
+                name,
+                mapped.streamData.file,
+                url,
+                headers = headers
+            ).forEach(callback)
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -179,10 +211,20 @@ class Movierulzhd : MainAPI() {
                         "post" to id,
                         "nume" to nume,
                         "type" to type
-                    )
+                    ),
+                    referer = data,
+                    headers = mapOf("X-Requested-With" to "XMLHttpRequest")
                 ).parsed<ResponseHash>().embed_url
 
-                loadExtractor(source, data, subtitleCallback, callback)
+                when {
+                    source.startsWith("https://sbflix.xyz") -> {
+                        invokeSbflix(source, callback, subtitleCallback)
+                    }
+//                    source.startsWith("https://series.databasegdriveplayer.co") -> {
+//                        invokeDatabase(source, callback, subtitleCallback)
+//                    }
+                    else -> loadExtractor(source, data, subtitleCallback, callback)
+                }
             }
         }
 
@@ -192,6 +234,40 @@ class Movierulzhd : MainAPI() {
     data class ResponseHash(
         @JsonProperty("embed_url") val embed_url: String,
         @JsonProperty("type") val type: String?,
+    )
+
+    private val hexArray = "0123456789ABCDEF".toCharArray()
+
+    private fun bytesToHex(bytes: ByteArray): String {
+        val hexChars = CharArray(bytes.size * 2)
+        for (j in bytes.indices) {
+            val v = bytes[j].toInt() and 0xFF
+
+            hexChars[j * 2] = hexArray[v ushr 4]
+            hexChars[j * 2 + 1] = hexArray[v and 0x0F]
+        }
+        return String(hexChars)
+    }
+
+    data class Subs (
+        @JsonProperty("file") val file: String,
+        @JsonProperty("label") val label: String,
+    )
+
+    data class StreamData (
+        @JsonProperty("file") val file: String,
+        @JsonProperty("cdn_img") val cdnImg: String,
+        @JsonProperty("hash") val hash: String,
+        @JsonProperty("subs") val subs: List<Subs>?,
+        @JsonProperty("length") val length: String,
+        @JsonProperty("id") val id: String,
+        @JsonProperty("title") val title: String,
+        @JsonProperty("backup") val backup: String,
+    )
+
+    data class Main (
+        @JsonProperty("stream_data") val streamData: StreamData,
+        @JsonProperty("status_code") val statusCode: Int,
     )
 
 }
