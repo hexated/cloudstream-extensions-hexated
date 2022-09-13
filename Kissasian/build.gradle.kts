@@ -1,13 +1,13 @@
 // use an integer for version numbers
-version = 3
+version = 1
 
 
 cloudstream {
-    language = "id"
+    language = "en"
     // All of these properties are optional, you can safely remove them
 
     // description = "Lorem Ipsum"
-    authors = listOf("Hexated")
+     authors = listOf("Hexated")
 
     /**
      * Status int as the following:
@@ -17,11 +17,7 @@ cloudstream {
      * 3: Beta only
      * */
     status = 1 // will be 3 if unspecified
-    tvTypes = listOf(
-        "AsianDrama",
-        "TvSeries",
-        "Movie",
-    )
+    tvTypes = listOf("AsianDrama",)
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=lk21.homes&sz=%size%"
+    iconUrl = "https://www.google.com/s2/favicons?domain=kissasian.pe&sz=%size%"
 }

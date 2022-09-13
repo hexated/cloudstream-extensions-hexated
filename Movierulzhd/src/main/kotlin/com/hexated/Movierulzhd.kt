@@ -175,14 +175,16 @@ class Movierulzhd : MainAPI() {
             referer = url,
         ).text
         val mapped = urltext.let { AppUtils.parseJson<Main>(it) }
-        val testurl = app.get(mapped.streamData.file, headers = headers).text
-        if (urltext.contains("m3u8") && testurl.contains("EXTM3U"))
-            M3u8Helper.generateM3u8(
+            callback.invoke(
+            ExtractorLink(
+                name,
                 name,
                 mapped.streamData.file,
                 url,
+                Qualities.Unknown.value,
                 headers = headers
-            ).forEach(callback)
+            )
+        )
     }
 
     override suspend fun loadLinks(

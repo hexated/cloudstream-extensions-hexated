@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://lk21.homes"
+    override var mainUrl = "https://lk21.cloud"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
