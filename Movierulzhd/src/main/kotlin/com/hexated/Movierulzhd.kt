@@ -5,11 +5,8 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
-import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
-import java.net.URI
 
 class Movierulzhd : MainAPI() {
     override var mainUrl = "https://movierulzhd.run"
@@ -43,15 +40,15 @@ class Movierulzhd : MainAPI() {
 
     private fun getProperLink(uri: String): String {
         return when {
-            uri.contains("/episode/") -> {
-                var title = uri.substringAfter("$mainUrl/episode/")
+            uri.contains("/episodes/") -> {
+                var title = uri.substringAfter("$mainUrl/episodes/")
                 title = Regex("(.+?)-season").find(title)?.groupValues?.get(1).toString()
-                "$mainUrl/tvseries/$title"
+                "$mainUrl/tvshows/$title"
             }
-            uri.contains("/season/") -> {
-                var title = uri.substringAfter("$mainUrl/season/")
+            uri.contains("/seasons/") -> {
+                var title = uri.substringAfter("$mainUrl/seasons/")
                 title = Regex("(.+?)-season").find(title)?.groupValues?.get(1).toString()
-                "$mainUrl/tvseries/$title"
+                "$mainUrl/tvshows/$title"
             }
             else -> {
                 uri
@@ -61,7 +58,7 @@ class Movierulzhd : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h3 > a")?.text() ?: return null
-        val href = fixUrl(this.selectFirst("h3 > a")!!.attr("href"))
+        val href = getProperLink(fixUrl(this.selectFirst("h3 > a")!!.attr("href")))
         val posterUrl = fixUrlNull(this.select("div.poster > img").attr("src"))
         val quality = getQualityFromString(this.select("span.quality").text())
         return newMovieSearchResponse(title, href, TvType.Movie) {
@@ -161,7 +158,6 @@ class Movierulzhd : MainAPI() {
     private suspend fun invokeSbflix(
         url: String,
         callback: (ExtractorLink) -> Unit,
-        subtitleCallback: (SubtitleFile) -> Unit,
     ) {
         val mainUrl = "https://sbflix.xyz"
         val name = "Sbflix"
@@ -218,7 +214,7 @@ class Movierulzhd : MainAPI() {
 
                 when {
                     source.startsWith("https://sbflix.xyz") -> {
-                        invokeSbflix(source, callback, subtitleCallback)
+                        invokeSbflix(source, callback)
                     }
 //                    source.startsWith("https://series.databasegdriveplayer.co") -> {
 //                        invokeDatabase(source, callback, subtitleCallback)
