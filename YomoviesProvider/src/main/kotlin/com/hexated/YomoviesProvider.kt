@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class YomoviesProvider : MainAPI() {
-    override var mainUrl = "https://yomovies.cloud"
+    override var mainUrl = "https://yomovies.red"
     override var name = "Yomovies"
     override val hasMainPage = true
     override var lang = "hi"
