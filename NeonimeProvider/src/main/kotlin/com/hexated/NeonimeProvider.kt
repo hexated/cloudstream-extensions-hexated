@@ -8,7 +8,7 @@ import org.jsoup.nodes.Element
 import java.util.*
 
 class NeonimeProvider : MainAPI() {
-    override var mainUrl = "https://neonime.watch"
+    override var mainUrl = "https://neonime.cloud"
     override var name = "Neonime"
     override val hasQuickSearch = false
     override val hasMainPage = true
