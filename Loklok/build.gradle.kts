@@ -3,7 +3,7 @@ version = 1
 
 
 cloudstream {
-    language = "id"
+    language = "en"
     // All of these properties are optional, you can safely remove them
 
      description = "Best extension that base on Loklok app API"
