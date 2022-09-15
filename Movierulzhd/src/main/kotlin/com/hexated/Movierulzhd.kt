@@ -68,6 +68,7 @@ class Movierulzhd : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = quality
+            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
 
     }
@@ -83,6 +84,7 @@ class Movierulzhd : MainAPI() {
             val posterUrl = it.selectFirst("img")!!.attr("src").toString()
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
+                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
     }
@@ -115,6 +117,7 @@ class Movierulzhd : MainAPI() {
             val recPosterUrl = it.selectFirst("img")?.attr("src").toString()
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
+                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
 
@@ -144,6 +147,7 @@ class Movierulzhd : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
+                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
@@ -155,6 +159,7 @@ class Movierulzhd : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
+                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
     }
@@ -203,7 +208,7 @@ class Movierulzhd : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data, interceptor = interceptor).document
+        val document = app.get(data).document
         val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
         val type = if (data.contains("/movies/")) "movie" else "tv"
 
