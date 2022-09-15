@@ -225,7 +225,6 @@ class Movierulzhd : MainAPI() {
                         "type" to type
                     ),
                     referer = data,
-                    interceptor = interceptor,
                     headers = mapOf("X-Requested-With" to "XMLHttpRequest")
                 ).parsed<ResponseHash>().embed_url
 
