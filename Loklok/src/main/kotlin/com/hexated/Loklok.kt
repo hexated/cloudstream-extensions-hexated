@@ -29,10 +29,12 @@ class Loklok : MainAPI() {
 
     // no license found
     // thanks to https://github.com/napthedev/filmhot for providing API
-    private val api = base64Decode("aHR0cHM6Ly9nYS1tb2JpbGUtYXBpLmxva2xvay50dg==")
-    private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
-
-    private val mainImageUrl = "https://images.weserv.nl"
+    companion object {
+        private val api = base64Decode("aHR0cHM6Ly9nYS1tb2JpbGUtYXBpLmxva2xvay50dg==")
+        private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
+        private val searchApi = base64Decode("aHR0cHM6Ly9maWxtaG90LmxpdmUvX25leHQvZGF0YS9NeXQzRm4tVHRXaHJ2a1RBaG45SGw=")
+        private const val mainImageUrl = "https://images.weserv.nl"
+    }
 
     private fun encode(input: String): String? = java.net.URLEncoder.encode(input, "utf-8")
 
@@ -75,8 +77,6 @@ class Loklok : MainAPI() {
 //                "searchType" to ""
 //            ), headers = headers
 //        )
-        val searchApi =
-            base64Decode("aHR0cHM6Ly9maWxtaG90LmxpdmUvX25leHQvZGF0YS9NeXQzRm4tVHRXaHJ2a1RBaG45SGw=")
         val res = app.get(
             "$searchApi/search.json?q=$query",
             headers = mapOf("x-nextjs-data" to "1")
