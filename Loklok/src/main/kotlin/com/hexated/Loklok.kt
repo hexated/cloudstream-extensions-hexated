@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.SubtitleHelper
 import com.lagradost.cloudstream3.utils.getQualityFromName
+import kotlinx.coroutines.delay
 
 class Loklok : MainAPI() {
     override var name = "Loklok"
@@ -36,11 +37,12 @@ class Loklok : MainAPI() {
         private const val mainImageUrl = "https://images.weserv.nl"
     }
 
-    private fun encode(input: String): String? = java.net.URLEncoder.encode(input, "utf-8")
+    private fun encode(input: String): String = java.net.URLEncoder.encode(input, "utf-8").replace("+", "%20")
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val home = ArrayList<HomePageList>()
         for (i in 0..10) {
+            delay(500)
             app.get("$apiUrl/homePage/getHome?page=$i", headers = headers)
                 .parsedSafe<Home>()?.data?.recommendItems
                 ?.filterNot { it.homeSectionType == "BLOCK_GROUP" }

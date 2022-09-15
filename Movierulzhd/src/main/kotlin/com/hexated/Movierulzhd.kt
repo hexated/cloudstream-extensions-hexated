@@ -5,11 +5,12 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
 class Movierulzhd : MainAPI() {
-    override var mainUrl = "https://movierulzhd.run"
+    override var mainUrl = "https://movierulzhd.biz"
     override var name = "Movierulzhd"
     override val hasMainPage = true
     override var lang = "hi"
@@ -27,11 +28,13 @@ class Movierulzhd : MainAPI() {
         "$mainUrl/episodes/page/" to "Episode",
     )
 
+    private val interceptor = CloudflareKiller()
+
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page).document
+        val document = app.get(request.data + page, interceptor = interceptor).document
         val home =
             document.select("div.items.normal article, div#archive-content article").mapNotNull {
                 it.toSearchResult()
@@ -71,7 +74,7 @@ class Movierulzhd : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/search/$query"
-        val document = app.get(link).document
+        val document = app.get(link, interceptor = interceptor).document
 
         return document.select("div.result-item").map {
             val title =
@@ -85,7 +88,7 @@ class Movierulzhd : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = interceptor).document
 
         val title =
             document.selectFirst("div.data > h1")?.text()?.trim().toString()
@@ -200,7 +203,7 @@ class Movierulzhd : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data).document
+        val document = app.get(data, interceptor = interceptor).document
         val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
         val type = if (data.contains("/movies/")) "movie" else "tv"
 
