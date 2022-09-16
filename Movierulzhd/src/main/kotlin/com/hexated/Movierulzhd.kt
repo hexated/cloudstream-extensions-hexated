@@ -28,13 +28,15 @@ class Movierulzhd : MainAPI() {
         "$mainUrl/episodes/page/" to "Episode",
     )
 
-    private val interceptor = CloudflareKiller()
+//    private val interceptor = CloudflareKiller()
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page, interceptor = interceptor).document
+        val document = app.get(request.data + page,
+//            interceptor = interceptor
+        ).document
         val home =
             document.select("div.items.normal article, div#archive-content article").mapNotNull {
                 it.toSearchResult()
@@ -68,14 +70,16 @@ class Movierulzhd : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = quality
-            posterHeaders = interceptor.getCookieHeaders(url).toMap()
+//            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
 
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/search/$query"
-        val document = app.get(link, interceptor = interceptor).document
+        val document = app.get(link
+//            , interceptor = interceptor
+        ).document
 
         return document.select("div.result-item").map {
             val title =
@@ -84,13 +88,15 @@ class Movierulzhd : MainAPI() {
             val posterUrl = it.selectFirst("img")!!.attr("src").toString()
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
+//                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url, interceptor = interceptor).document
+        val document = app.get(url
+//            , interceptor = interceptor
+        ).document
 
         val title =
             document.selectFirst("div.data > h1")?.text()?.trim().toString()
@@ -117,7 +123,7 @@ class Movierulzhd : MainAPI() {
             val recPosterUrl = it.selectFirst("img")?.attr("src").toString()
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
+//                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
 
@@ -147,7 +153,7 @@ class Movierulzhd : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
+//                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
@@ -159,7 +165,7 @@ class Movierulzhd : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
+//                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
     }

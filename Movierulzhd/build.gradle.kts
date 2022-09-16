@@ -1,12 +1,12 @@
 // use an integer for version numbers
-version = 9
+version = 10
 
 
 cloudstream {
     language = "hi"
     // All of these properties are optional, you can safely remove them
 
-    // description = "Lorem Ipsum"
+//     description = "Movierulzhd recently have prank feature that the enable and disable cloudflare a "
      authors = listOf("Hexated")
 
     /**
