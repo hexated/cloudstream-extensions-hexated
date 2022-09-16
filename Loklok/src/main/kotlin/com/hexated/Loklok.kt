@@ -149,6 +149,7 @@ class Loklok : MainAPI() {
     private fun getLanguage(str: String): String {
         return when (str) {
             "in_ID" -> "Indonesian"
+            "pt" -> "Portuguese"
             else -> str.split("_").first().let {
                 SubtitleHelper.fromTwoLettersToLanguage(it).toString()
             }
@@ -166,6 +167,7 @@ class Loklok : MainAPI() {
 
         res.definitionList?.apmap { video ->
             safeApiCall {
+                delay(500)
                 app.get(
                     "$apiUrl/media/previewInfo?category=${res.category}&contentId=${res.id}&episodeId=${res.epId}&definition=${video.code}",
                     headers = headers
