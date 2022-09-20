@@ -1,12 +1,12 @@
 // use an integer for version numbers
-version = 2
+version = 1
 
 
 cloudstream {
-    language = "tr"
+    language = "en"
     // All of these properties are optional, you can safely remove them
 
-    // description = "Lorem Ipsum"
+     description = "Full movie porn (use VPN if links not working)"
      authors = listOf("Hexated")
 
     /**
@@ -18,9 +18,8 @@ cloudstream {
      * */
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
-        "TvSeries",
-        "Movie",
+        "NSFW",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=hdfilmcehennemi.live&sz=%size%"
+    iconUrl = "https://www.google.com/s2/favicons?domain=en.paradisehill.cc&sz=%size%"
 }

@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -10,7 +11,7 @@ import org.jsoup.nodes.Element
 import java.util.ArrayList
 
 class OtakudesuProvider : MainAPI() {
-    override var mainUrl = "https://otakudesu.watch"
+    override var mainUrl = "https://otakudesu.video"
     override var name = "Otakudesu"
     override val hasMainPage = true
     override var lang = "id"
@@ -23,6 +24,8 @@ class OtakudesuProvider : MainAPI() {
     )
 
     companion object {
+        private val interceptor = CloudflareKiller()
+
         fun getType(t: String): TvType {
             return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
             else if (t.contains("Movie")) TvType.AnimeMovie
@@ -47,7 +50,7 @@ class OtakudesuProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page).document
+        val document = app.get(request.data + page, interceptor = interceptor).document
         val home = document.select("div.venz > ul > li").mapNotNull {
             it.toSearchResult()
         }
@@ -63,13 +66,14 @@ class OtakudesuProvider : MainAPI() {
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
             addSub(epNum)
+            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
 
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/?s=$query&post_type=anime"
-        val document = app.get(link).document
+        val document = app.get(link, interceptor = interceptor).document
 
         return document.select("ul.chivsrc > li").map {
             val title = it.selectFirst("h2 > a")!!.ownText().trim()
@@ -77,13 +81,14 @@ class OtakudesuProvider : MainAPI() {
             val posterUrl = it.selectFirst("img")!!.attr("src").toString()
             newAnimeSearchResponse(title, href, TvType.Anime) {
                 this.posterUrl = posterUrl
+                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
     }
 
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = interceptor).document
 
         val title = document.selectFirst("div.infozingle > p:nth-child(1) > span")?.ownText()
             ?.replace(":", "")?.trim().toString()
@@ -118,6 +123,7 @@ class OtakudesuProvider : MainAPI() {
                 val recPosterUrl = it.selectFirst("a > img")?.attr("src").toString()
                 newAnimeSearchResponse(recName, recHref, TvType.Anime) {
                     this.posterUrl = recPosterUrl
+                    posterHeaders = interceptor.getCookieHeaders(url).toMap()
                 }
             }
 
@@ -130,6 +136,7 @@ class OtakudesuProvider : MainAPI() {
             plot = description
             this.tags = tags
             this.recommendations = recommendations
+            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
     }
 
@@ -151,7 +158,7 @@ class OtakudesuProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data).document
+        val document = app.get(data, interceptor = interceptor).document
         val scriptData = document.select("script").last()?.data()
         val token = scriptData?.substringAfter("{action:\"")?.substringBefore("\"}").toString()
 
