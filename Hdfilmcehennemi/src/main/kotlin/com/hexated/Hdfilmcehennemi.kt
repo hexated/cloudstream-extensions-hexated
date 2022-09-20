@@ -155,21 +155,32 @@ class Hdfilmcehennemi : MainAPI() {
     private suspend fun invokeLocalSource(
         source: String,
         url: String,
-        sourceCallback: (ExtractorLink) -> Unit
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ) {
-        val m3uLink =
-            app.get(url, referer = "$mainUrl/").document.select("script")
-                .find {
-                    it.data().contains("var sources = [];") || it.data()
-                        .contains("playerInstance =")
-                }?.data()
-                ?.substringAfter("[{file:\"")?.substringBefore("\"}]") ?: return
+        val res = app.get(url, referer = "$mainUrl/")
+        val m3uLink = res.document.select("script")
+            .find {
+                it.data().contains("var sources = [];") || it.data()
+                    .contains("playerInstance =")
+            }?.data()
+            ?.substringAfter("[{file:\"")?.substringBefore("\"}]") ?: return
 
         M3u8Helper.generateM3u8(
             source,
             m3uLink,
             if (url.startsWith(mainUrl)) "$mainUrl/" else "https://vidmoly.to/"
-        ).forEach(sourceCallback)
+        ).forEach(callback)
+
+        Regex("\"(/srt\\S*?)\",\\slabel:\\s\"(\\S*?)\"").findAll(res.text)
+            .map { it.groupValues[1] to it.groupValues[2] }.toList().map { (url, lang) ->
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        lang,
+                        fixUrl(url)
+                    )
+                )
+            }
 
     }
 
@@ -185,7 +196,7 @@ class Hdfilmcehennemi : MainAPI() {
             safeApiCall {
                 app.get(url).document.select("div.card-video > iframe").attr("data-src")
                     .let { link ->
-                        invokeLocalSource(source, link, callback)
+                        invokeLocalSource(source, link,subtitleCallback, callback)
                     }
             }
         }
