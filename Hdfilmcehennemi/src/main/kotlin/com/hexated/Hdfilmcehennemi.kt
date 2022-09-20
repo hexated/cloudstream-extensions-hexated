@@ -22,7 +22,7 @@ class Hdfilmcehennemi : MainAPI() {
 
     override val mainPage = mainPageOf(
         "$mainUrl/category/tavsiye-filmler-izle1/page/" to "Tavsiye Filmler Kategorisi",
-        "$mainUrl/yabancidizi/page/" to "Son Eklenen Yabancı Diziler",
+        "$mainUrl/yabancidiziizle/page/" to "Son Eklenen Yabancı Diziler",
         "$mainUrl/imdb-7-puan-uzeri-filmler/page/" to "Imdb 7+ Filmler",
         "$mainUrl/en-cok-yorumlananlar/page/" to "En Çok Yorumlananlar",
         "$mainUrl/en-cok-begenilen-filmleri-izle/page/" to "En Çok Beğenilenler",
