@@ -33,7 +33,6 @@ class Loklok : MainAPI() {
     companion object {
         private val api = base64Decode("aHR0cHM6Ly9nYS1tb2JpbGUtYXBpLmxva2xvay50dg==")
         private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
-        private val searchApi = base64Decode("aHR0cHM6Ly9maWxtaG90LmxpdmUvX25leHQvZGF0YS9NeXQzRm4tVHRXaHJ2a1RBaG45SGw=")
         private const val mainImageUrl = "https://images.weserv.nl"
     }
 
@@ -79,6 +78,8 @@ class Loklok : MainAPI() {
 //                "searchType" to ""
 //            ), headers = headers
 //        )
+        val buildId = app.get("${base64Decode("aHR0cHM6Ly9maWxtaG90LmxpdmUvc2VhcmNo")}?q=$query").text.substringAfterLast("\"buildId\":\"").substringBefore("\",")
+        val searchApi = "${base64Decode("aHR0cHM6Ly9maWxtaG90LmxpdmUvX25leHQvZGF0YQ==")}/$buildId"
         val res = app.get(
             "$searchApi/search.json?q=$query",
             headers = mapOf("x-nextjs-data" to "1")
