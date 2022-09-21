@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
 class Movierulzhd : MainAPI() {
-    override var mainUrl = "https://movierulzhd.biz"
+    override var mainUrl = "https://ww5.movierulzhd.biz"
     override var name = "Movierulzhd"
     override val hasMainPage = true
     override var lang = "hi"
@@ -214,7 +214,9 @@ class Movierulzhd : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data).document
+        val document = app.get(data
+//            , interceptor = interceptor
+        ).document
         val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
         val type = if (data.contains("/movies/")) "movie" else "tv"
 
