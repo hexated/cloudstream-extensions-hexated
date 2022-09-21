@@ -22,21 +22,30 @@ class OnetwothreeTv : MainAPI() {
         TvType.Live
     )
 
+    override val mainPage = mainPageOf(
+        "1" to "United States (USA)",
+        "$mainUrl/top-streams/" to "Top Streams",
+        "$mainUrl/latest-streams/" to "Latest Streams",
+    )
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val homePageList = ArrayList<HomePageList>()
-        listOf(
-            Pair("$mainUrl/category/united-states-usa/", "United States (USA)"),
-            Pair("$mainUrl/top-streams/", "Top Streams"),
-            Pair("$mainUrl/latest-streams/", "Latest Streams")
-        ).apmap {
-            val home =
-                app.get(it.first).document.select("div.videos-latest-list.row div.col-md-3.col-sm-6")
-                    .mapNotNull { item ->
-                        item.toSearchResult()
-                    }
-            if (home.isNotEmpty()) homePageList.add(HomePageList(it.second, home, true))
+
+        val document = if(request.name.contains("USA")) {
+            app.post( "$mainUrl/wp-admin/admin-ajax.php" , data = mapOf(
+                "action" to "_123tv_load_more_videos_from_category",
+                "cat_id" to request.data,
+                "page_num" to "${page.minus(1)}"
+            ), headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest"
+            )).document
+        } else {
+            app.get(request.data).document
         }
-        return HomePageResponse(homePageList)
+        val home = document.select("div.col-md-3.col-sm-6").mapNotNull {
+            it.toSearchResult()
+        }
+        return newHomePageResponse(request.name, home)
+
     }
 
     private fun Element.toSearchResult(): LiveSearchResponse? {
