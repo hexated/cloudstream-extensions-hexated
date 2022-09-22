@@ -24,6 +24,9 @@ class Movierulzhd : MainAPI() {
         "$mainUrl/trending/page/" to "Trending",
         "$mainUrl/movies/page/" to "Movies",
         "$mainUrl/tvshows/page/" to "TV Shows",
+        "$mainUrl/genre/netflix/page/" to "Netflix",
+        "$mainUrl/genre/amazon-prime/page/" to "Amazon Prime",
+        "$mainUrl/genre/Zee5/page/" to "Zee5",
         "$mainUrl/seasons/page/" to "Season",
         "$mainUrl/episodes/page/" to "Episode",
     )
