@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class NontonAnimeIDProvider : MainAPI() {
-    override var mainUrl = "https://75.119.159.228"
+    override var mainUrl = "https://nontonanimeid.site"
     override var name = "NontonAnimeID"
     override val hasQuickSearch = false
     override val hasMainPage = true
