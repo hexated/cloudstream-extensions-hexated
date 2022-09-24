@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://lk21.cloud"
+    override var mainUrl = "https://lk21official.biz"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
@@ -27,6 +27,10 @@ class LayarKacaProvider : MainAPI() {
         "$mainUrl/latest/page/" to "Film Upload Terbaru",
     )
 
+    companion object {
+        private const val seriesUrl = "https://nontondrama.today"
+    }
+
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
@@ -38,9 +42,29 @@ class LayarKacaProvider : MainAPI() {
         return newHomePageResponse(request.name, home)
     }
 
+    private fun getProperLink(str: String, check: String): String {
+        return if (check.contains("/series", true) || check.contains("Season", true)) {
+            str.replace(mainUrl, seriesUrl)
+        } else {
+            str
+        }
+    }
+
+    private fun changesUrl(url: String): String {
+        val startsWithNoHttp = url.startsWith("//")
+        if (startsWithNoHttp) {
+            return "https:$url"
+        } else {
+            if (url.startsWith('/')) {
+                return seriesUrl + url
+            }
+            return "$seriesUrl/$url"
+        }
+    }
+
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h1.grid-title > a")?.ownText()?.trim() ?: return null
-        val href = fixUrl(this.selectFirst("h1.grid-title > a")!!.attr("href"))
+        val href = getProperLink(fixUrl(this.selectFirst("h1.grid-title > a")!!.attr("href")), title)
         val posterUrl = fixUrlNull(this.selectFirst(".grid-poster > a > img")?.attr("src"))
         val quality = this.select("div.quality").text().trim()
         return newMovieSearchResponse(title, href, TvType.Movie) {
@@ -50,12 +74,12 @@ class LayarKacaProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/?s=$query"
-        val document = app.get(link).document
+        val document = app.get( "$mainUrl/?s=$query").document
 
         return document.select("div.search-item").map {
             val title = it.selectFirst("h2 > a")!!.text().trim()
-            val href = it.selectFirst("h2 > a")!!.attr("href")
+            val type = it.selectFirst("p.cat-links a")?.attr("href").toString()
+            val href = getProperLink(it.selectFirst("h2 > a")!!.attr("href"), type)
             val posterUrl = fixUrl(it.selectFirst("img.img-thumbnail")?.attr("src").toString())
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
@@ -95,7 +119,7 @@ class LayarKacaProvider : MainAPI() {
 
         return if (tvType == TvType.TvSeries) {
             val episodes = document.select("div.episode-list > a:matches(\\d+)").map {
-                val href = fixUrl(it.attr("href"))
+                val href = changesUrl(it.attr("href"))
                 val episode = it.text().toIntOrNull()
                 val season =
                     it.attr("href").substringAfter("season-").substringBefore("-").toIntOrNull()
