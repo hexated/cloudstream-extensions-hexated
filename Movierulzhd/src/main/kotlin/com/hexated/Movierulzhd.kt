@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
 class Movierulzhd : MainAPI() {
-    override var mainUrl = "https://ww5.movierulzhd.biz"
+    override var mainUrl = "https://movierulzhd.top"
     override var name = "Movierulzhd"
     override val hasMainPage = true
     override var lang = "hi"
