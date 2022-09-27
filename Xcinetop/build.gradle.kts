@@ -22,5 +22,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=xcine.top&sz=%size%"
+    iconUrl = "https://raw.githubusercontent.com/hexated/cloudstream-extensions-hexated/master/Xcinetop/icon.png"
 }
