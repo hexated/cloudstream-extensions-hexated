@@ -151,7 +151,7 @@ class Animixplay : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
 
         val (fixUrl, malId) = if (url.contains("/anime/")) {
-            listOf(url, Regex("anime/([0-9]+)/").find(url)?.groupValues?.get(1))
+            listOf(url, Regex("anime/([0-9]+)/?").find(url)?.groupValues?.get(1))
         } else {
             val malId = app.get(url).text.substringAfterLast("malid = '").substringBefore("';")
             listOf("$mainUrl/anime/$malId", malId)
@@ -191,7 +191,7 @@ class Animixplay : MainAPI() {
             .parsedSafe<RecResult>()?.recommendations?.mapNotNull { rec ->
                 newAnimeSearchResponse(
                     rec.title ?: return@mapNotNull null,
-                    "$mainUrl/anime/${rec.malId}",
+                    "$mainUrl/anime/${rec.malId}/",
                     TvType.Anime
                 ) {
                     this.posterUrl = rec.imageUrl
