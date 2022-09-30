@@ -19,15 +19,19 @@ class IdlixProvider : MainAPI() {
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
+        TvType.Anime,
+        TvType.AsianDrama
     )
 
     override val mainPage = mainPageOf(
+        "$mainUrl/" to "Featured",
         "$mainUrl/trending/page/?get=movies" to "Trending Movies",
         "$mainUrl/trending/page/?get=tv" to "Trending TV Series",
         "$mainUrl/movie/page/" to "Movie Terbaru",
         "$mainUrl/tvseries/page/" to "TV Series Terbaru",
-        "$mainUrl/season/page/" to "Season Terbaru",
-        "$mainUrl/episode/page/" to "Episode Terbaru",
+        "$mainUrl/network/netflix/page/" to "Netflix",
+        "$mainUrl/genre/anime/page/" to "Anime",
+        "$mainUrl/genre/drama-korea/page/" to "Drama Korea",
     )
 
     override suspend fun getMainPage(
@@ -35,8 +39,16 @@ class IdlixProvider : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
         val url = request.data.split("?")
-        val document = app.get("${url.first()}$page/?${url.lastOrNull()}").document
-        val home = document.select("div.items.full article, div#archive-content article").mapNotNull {
+        val document = if (request.name == "Featured") {
+            app.get(request.data).document
+        } else {
+            app.get("${url.first()}$page/?${url.lastOrNull()}").document
+        }
+        val home = (if (request.name == "Featured") {
+            document.select("div.items.featured article")
+        } else {
+            document.select("div.items.full article, div#archive-content article")
+        }).mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(request.name, home)

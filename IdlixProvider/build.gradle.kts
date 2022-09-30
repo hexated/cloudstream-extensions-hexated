@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 2
+version = 3
 
 
 cloudstream {
@@ -20,6 +20,8 @@ cloudstream {
     tvTypes = listOf(
         "TvSeries",
         "Movie",
+        "Anime",
+        "AsianDrama",
     )
 
     iconUrl = "https://www.google.com/s2/favicons?domain=94.103.82.88&sz=%size%"
