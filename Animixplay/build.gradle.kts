@@ -1,9 +1,9 @@
 // use an integer for version numbers
-version = 4
+version = 1
 
 
 cloudstream {
-    language = "id"
+    language = "en"
     // All of these properties are optional, you can safely remove them
 
     // description = "Lorem Ipsum"
@@ -18,11 +18,10 @@ cloudstream {
      * */
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
-        "TvSeries",
-        "Movie",
+        "AnimeMovie",
         "Anime",
-        "AsianDrama",
+        "OVA",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=94.103.82.88&sz=%size%"
+    iconUrl = "https://www.google.com/s2/favicons?domain=animixplay.to&sz=%size%"
 }

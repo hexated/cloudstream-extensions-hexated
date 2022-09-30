@@ -39,12 +39,13 @@ class IdlixProvider : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
         val url = request.data.split("?")
-        val document = if (request.name == "Featured") {
+        val nonPaged = request.name == "Featured" && page <= 1
+        val document = if (nonPaged) {
             app.get(request.data).document
         } else {
             app.get("${url.first()}$page/?${url.lastOrNull()}").document
         }
-        val home = (if (request.name == "Featured") {
+        val home = (if (nonPaged) {
             document.select("div.items.featured article")
         } else {
             document.select("div.items.full article, div#archive-content article")
