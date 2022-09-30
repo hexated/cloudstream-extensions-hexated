@@ -191,7 +191,7 @@ class Animixplay : MainAPI() {
             .parsedSafe<RecResult>()?.recommendations?.mapNotNull { rec ->
                 newAnimeSearchResponse(
                     rec.title ?: return@mapNotNull null,
-                    "$mainUrl/${rec.malId}",
+                    "$mainUrl/anime/${rec.malId}",
                     TvType.Anime
                 ) {
                     this.posterUrl = rec.imageUrl
