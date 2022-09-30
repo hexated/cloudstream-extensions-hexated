@@ -153,7 +153,8 @@ class GogoanimeProvider : MainAPI() {
                         isM3u8 = source.type == "hls" || source.label?.contains(
                             "auto",
                             ignoreCase = true
-                        ) == true
+                        ) == true,
+                        mapOf("Origin" to "https://gogohd.net")
                     )
                 )
             }
@@ -202,7 +203,7 @@ class GogoanimeProvider : MainAPI() {
 
     override suspend fun getMainPage(
         page: Int,
-        request : MainPageRequest
+        request: MainPageRequest
     ): HomePageResponse {
         val params = mapOf("page" to page.toString(), "type" to request.data)
         val html = app.get(
