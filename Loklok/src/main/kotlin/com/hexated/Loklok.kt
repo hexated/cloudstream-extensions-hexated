@@ -36,7 +36,8 @@ class Loklok : MainAPI() {
         private const val mainImageUrl = "https://images.weserv.nl"
     }
 
-    private fun encode(input: String): String = java.net.URLEncoder.encode(input, "utf-8").replace("+", "%20")
+    private fun encode(input: String): String =
+        java.net.URLEncoder.encode(input, "utf-8").replace("+", "%20")
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val home = ArrayList<HomePageList>()
@@ -77,11 +78,13 @@ class Loklok : MainAPI() {
         val script = res.select("script").find { it.data().contains("function(a,b,c,d,e") }?.data()
             ?.substringAfter("searchResults:[")?.substringBefore("]}],fetch")
 
-        return script?.split("areas")?.filter { it.contains("domainType") }?.map { item ->
-            val name = Regex("\",name:\"(.*?)\",").find(item)?.groupValues?.getOrNull(1)
-            val id = Regex("id:\"([0-9]{3,}?)\",").find(item)?.groupValues?.getOrNull(1)
-            val type = Regex("domainType:([ae]),").find(item)?.groupValues?.getOrNull(1)?.let { if(it == "a") 1 else 0 }
-            val image = Regex("coverVerticalUrl:\"(\\S+?)\",").find(item)?.groupValues?.getOrNull(1)?.replace("\\u002F", "/")
+        return res.select("div.search-list div.search-video-card").mapIndexed { num, block ->
+            val name = block.selectFirst("h2.title")?.text()
+            val data = block.selectFirst("a")?.attr("href")?.split("/")
+            val id = data?.last()
+            val type = data?.get(2)?.toInt()
+            val image = Regex("coverVerticalUrl:\"(\\S+?)\",").findAll(script.toString())
+                .map { it.groupValues[1] }.toList()[num].replace("\\u002F", "/")
 
             newMovieSearchResponse(
                 "$name",
@@ -91,7 +94,7 @@ class Loklok : MainAPI() {
                 this.posterUrl = image
             }
 
-        } ?: throw ErrorLoadingException("No media found")
+        }
 
     }
 
