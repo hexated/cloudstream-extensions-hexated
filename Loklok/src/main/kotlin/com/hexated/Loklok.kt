@@ -70,29 +70,29 @@ class Loklok : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-//        val res = app.post(
-//            "$apiUrl/search/v1/searchWithKeyWord", data = mapOf(
-//                "searchKeyWord" to query,
-//                "size" to "50",
-//                "sort" to "",
-//                "searchType" to ""
-//            ), headers = headers
-//        )
-        val buildId = app.get("${base64Decode("aHR0cHM6Ly9maWxtaG90LmxpdmUvc2VhcmNo")}?q=$query").text.substringAfterLast("\"buildId\":\"").substringBefore("\",")
-        val searchApi = "${base64Decode("aHR0cHM6Ly9maWxtaG90LmxpdmUvX25leHQvZGF0YQ==")}/$buildId"
         val res = app.get(
-            "$searchApi/search.json?q=$query",
-            headers = mapOf("x-nextjs-data" to "1")
-        )
-        return res.parsedSafe<Search>()?.pageProps?.result?.mapNotNull { media ->
+            "https://loklok.com/search?keyword=$query",
+        ).document
+
+        val script = res.select("script").find { it.data().contains("function(a,b,c,d,e") }?.data()
+            ?.substringAfter("searchResults:[")?.substringBefore("]}],fetch")
+
+        return script?.split("areas")?.filter { it.contains("domainType") }?.map { item ->
+            val name = Regex("\",name:\"(.*?)\",").find(item)?.groupValues?.getOrNull(1)
+            val id = Regex("id:\"([0-9]{3,}?)\",").find(item)?.groupValues?.getOrNull(1)
+            val type = Regex("domainType:([ae]),").find(item)?.groupValues?.getOrNull(1)?.let { if(it == "a") 1 else 0 }
+            val image = Regex("coverVerticalUrl:\"(\\S+?)\",").find(item)?.groupValues?.getOrNull(1)?.replace("\\u002F", "/")
+
             newMovieSearchResponse(
-                media.name ?: return@mapNotNull null,
-                UrlData(media.id?.toIntOrNull(), media.domainType).toJson(),
+                "$name",
+                UrlData(id, type).toJson(),
                 TvType.Movie,
             ) {
-                this.posterUrl = media.coverVerticalUrl
+                this.posterUrl = image
             }
-        } ?: throw ErrorLoadingException("Invalid Json Reponse")
+
+        } ?: throw ErrorLoadingException("No media found")
+
     }
 
     override suspend fun load(url: String): LoadResponse? {
