@@ -202,7 +202,7 @@ class Animixplay : MainAPI() {
         return newAnimeLoadResponse(
             res.title ?: return null,
             url,
-            getType(res.type)
+            TvType.Anime
         ) {
             engName = res.title
             posterUrl = res.imageUrl
