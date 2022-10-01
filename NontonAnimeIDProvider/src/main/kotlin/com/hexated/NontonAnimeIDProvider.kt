@@ -64,35 +64,8 @@ class NontonAnimeIDProvider : MainAPI() {
         return HomePageResponse(homePageList)
     }
 
-    private fun getProperAnimeLink(uri: String): String {
-        return if (uri.contains("/anime/")) {
-            uri
-        } else {
-            var title = uri.substringAfter("$mainUrl/")
-            val fixTitle = Regex("(.*)-episode.*").find(title)?.groupValues?.getOrNull(1).toString()
-            title = when {
-                title.contains("utawarerumono-season-3") -> fixTitle.replace(
-                    "season-3",
-                    "futari-no-hakuoro"
-                )
-                title.contains("kingdom-season-4") -> fixTitle.replace("season-4", "4th-season")
-                title.contains("maou-sama-season-2") -> fixTitle.replace("season-2", "2")
-                title.contains("overlord-season-4") -> fixTitle.replace("season-4", "iv")
-                title.contains("kyoushitsu-e-season-2") -> fixTitle.replace(
-                    "kyoushitsu-e-season-2",
-                    "kyoushitsu-e-tv-2nd-season"
-                )
-                title.contains("season-2") -> fixTitle.replace("season-2", "2nd-season")
-                title.contains("season-3") -> fixTitle.replace("season-3", "3rd-season")
-                title.contains("movie") -> title.substringBefore("-movie")
-                else -> fixTitle
-            }
-            "$mainUrl/anime/$title"
-        }
-    }
-
     private fun Element.toSearchResult(): AnimeSearchResponse? {
-        val href = getProperAnimeLink(fixUrl(this.selectFirst("a")!!.attr("href")))
+        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val title = this.selectFirst("h3.title")?.text() ?: return null
         val posterUrl = fixUrl(this.select("img").attr("data-src"))
 
@@ -104,7 +77,7 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     private fun Element.toSearchResultPopular(): AnimeSearchResponse? {
-        val href = getProperAnimeLink(fixUrl(this.selectFirst("a")!!.attr("href")))
+        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val title = this.selectFirst("h4")?.text()?.trim() ?: return null
         val posterUrl = fixUrl(this.select("img").attr("data-src"))
 
@@ -134,15 +107,14 @@ class NontonAnimeIDProvider : MainAPI() {
         }
     }
 
-    private data class EpResponse(
-        @JsonProperty("posts") val posts: String?,
-        @JsonProperty("max_page") val max_page: Int?,
-        @JsonProperty("found_posts") val found_posts: Int?,
-        @JsonProperty("content") val content: String
-    )
+    override suspend fun load(url: String): LoadResponse? {
+        val fixUrl = if (url.contains("/anime/")) {
+            url
+        } else {
+            app.get(url).document.selectFirst("div.nvs.nvsc a")?.attr("href")
+        }
 
-    override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val document = app.get(fixUrl ?: return null).document
 
         val title = document.selectFirst("h1.entry-title.cs")!!.text().trim()
         val poster = document.selectFirst(".poster > img")?.attr("data-src")
@@ -254,4 +226,11 @@ class NontonAnimeIDProvider : MainAPI() {
 
         return true
     }
+
+    private data class EpResponse(
+        @JsonProperty("posts") val posts: String?,
+        @JsonProperty("max_page") val max_page: Int?,
+        @JsonProperty("found_posts") val found_posts: Int?,
+        @JsonProperty("content") val content: String
+    )
 }
