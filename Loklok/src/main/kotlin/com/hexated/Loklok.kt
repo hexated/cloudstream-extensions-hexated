@@ -33,6 +33,7 @@ class Loklok : MainAPI() {
     companion object {
         private val api = base64Decode("aHR0cHM6Ly9nYS1tb2JpbGUtYXBpLmxva2xvay50dg==")
         private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
+        private val searchApi = base64Decode("aHR0cHM6Ly9sb2tsb2suY29t")
         private const val mainImageUrl = "https://images.weserv.nl"
     }
 
@@ -72,7 +73,7 @@ class Loklok : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val res = app.get(
-            "https://loklok.com/search?keyword=$query",
+            "$searchApi/search?keyword=$query",
         ).document
 
         val script = res.select("script").find { it.data().contains("function(a,b,c,d,e") }?.data()
@@ -83,7 +84,7 @@ class Loklok : MainAPI() {
             val data = block.selectFirst("a")?.attr("href")?.split("/")
             val id = data?.last()
             val type = data?.get(2)?.toInt()
-            val image = Regex("coverVerticalUrl:\"(\\S+?)\",").findAll(script.toString())
+            val image = Regex("coverVerticalUrl:\"(.*?)\",").findAll(script.toString())
                 .map { it.groupValues[1] }.toList().getOrNull(num)?.replace("\\u002F", "/")
 
 
