@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
+import org.json.JSONObject
 import org.jsoup.Jsoup
 import java.net.URI
 
@@ -130,9 +131,29 @@ class Animixplay : MainAPI() {
         }
     }
 
-    override suspend fun quickSearch(query: String) = search(query)
+    
+    override suspend fun search(query: String):List<SearchResponse>?{
+        val searchData = app.post(
+            url = "https://v1.ij7p9towl8uj4qafsopjtrjk.workers.dev",
+            referer = mainUrl,
+            data = mapOf(
+                "q2" to query,
+                "origin" to "1",
+                "root" to "animixplay.to",
+                "d" to "gogoanime.tel")
+        )
+        return Jsoup.parse(JSONObject(searchData.text).get("result").toString()).select("div").map{elem->
 
-    override suspend fun search(query: String): List<SearchResponse>? {
+            val href = fixUrl(elem.select("a").attr("href"))
+            val title =  elem.select("a").attr("title")
+            newAnimeSearchResponse(title, href, TvType.Anime) {
+                this.posterUrl = elem.select("img").attr("src")
+                addDubStatus(isDub = title.contains("Dub"))
+            }
+        }
+    }
+
+    override suspend fun quickSearch(query: String): List<SearchResponse>? {
         return app.post(
             "https://cdn.animixplay.to/api/search",
             data = mapOf("qfast" to query, "root" to URI(mainUrl).host)
@@ -148,6 +169,7 @@ class Animixplay : MainAPI() {
         }
     }
 
+    
     override suspend fun load(url: String): LoadResponse? {
 
         val (fixUrl, malId) = if (url.contains("/anime/")) {
