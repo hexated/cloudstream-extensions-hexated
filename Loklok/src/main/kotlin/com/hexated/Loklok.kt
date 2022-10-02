@@ -84,7 +84,8 @@ class Loklok : MainAPI() {
             val id = data?.last()
             val type = data?.get(2)?.toInt()
             val image = Regex("coverVerticalUrl:\"(\\S+?)\",").findAll(script.toString())
-                .map { it.groupValues[1] }.toList()[num].replace("\\u002F", "/")
+                .map { it.groupValues[1] }.toList().getOrNull(num)?.replace("\\u002F", "/")
+
 
             newMovieSearchResponse(
                 "$name",
