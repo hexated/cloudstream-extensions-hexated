@@ -1,8 +1,11 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -132,29 +135,56 @@ class KuramanimeProvider : MainAPI() {
 
     }
 
+    private suspend fun invokeLocalSource(
+        url: String,
+        ref: String,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val document = app.get(
+            url,
+            referer = ref,
+            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).document
+        document.select("video#player > source").map {
+            val link = fixUrl(it.attr("src"))
+            val quality = it.attr("size").toIntOrNull()
+            callback.invoke(
+                ExtractorLink(
+                    name,
+                    name,
+                    link,
+                    referer = "$mainUrl/",
+                    quality = quality ?: Qualities.Unknown.value,
+                    headers = mapOf(
+                        "Range" to "bytes=0-"
+                    )
+                )
+            )
+        }
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val servers = app.get(data).document
-        servers.select("video#player > source").map {
-            suspendSafeApiCall {
-                val url = it.attr("src")
-                val quality = it.attr("size").toInt()
-                callback.invoke(
-                    ExtractorLink(
-                        name,
-                        name,
-                        url,
-                        referer = "$mainUrl/",
-                        quality = quality,
-                        headers = mapOf(
-                            "Range" to "bytes=0-"
-                        )
-                    )
-                )
+        val res = app.get(data).document
+        res.select("select#changeServer option").apmap { source ->
+            safeApiCall {
+                val server = source.attr("value")
+                val link = "$data?activate_stream=1&stream_server=$server"
+                if (server == "kuramadrive") {
+                    invokeLocalSource(link, data, callback)
+                } else {
+                    app.get(
+                        link,
+                        referer = data,
+                        headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+                    ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
+                        loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
+                    }
+                }
             }
         }
 
