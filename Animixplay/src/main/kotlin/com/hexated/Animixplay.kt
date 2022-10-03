@@ -188,7 +188,7 @@ class Animixplay : MainAPI() {
             ).parsedSafe<DataAni>()?.data?.media?.id
 
             val res = app.get("$mainUrl/assets/mal/$malId.json").parsedSafe<AnimeDetail>()
-                ?: throw ErrorLoadingException("Invalid json responses")
+                ?: throw ErrorLoadingException("No data found")
 
             val subEpisodes = mutableListOf<Episode>()
             val dubEpisodes = mutableListOf<Episode>()

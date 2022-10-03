@@ -140,12 +140,24 @@ class GogoanimeProvider : MainAPI() {
                 source: GogoSource,
                 sourceCallback: (ExtractorLink) -> Unit
             ) {
-                M3u8Helper.generateM3u8(
-                    mainApiName,
-                    source.file,
-                    mainUrl,
-                    headers = mapOf("Origin" to "https://plyr.link")
-                ).forEach(sourceCallback)
+                if (source.file.contains(".m3u8")) {
+                    M3u8Helper.generateM3u8(
+                        mainApiName,
+                        source.file,
+                        mainUrl,
+                        headers = mapOf("Origin" to "https://plyr.link")
+                    ).forEach(sourceCallback)
+                } else {
+                    sourceCallback.invoke(
+                        ExtractorLink(
+                            mainApiName,
+                            mainApiName,
+                            source.file,
+                            mainUrl,
+                            getQualityFromName(source.label),
+                        )
+                    )
+                }
             }
 
             sources.source?.forEach {
