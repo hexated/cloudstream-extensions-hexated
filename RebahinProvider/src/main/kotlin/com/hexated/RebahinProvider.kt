@@ -7,19 +7,18 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.network.WebViewResolver
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 import java.net.URI
 
-class RebahinProvider : MainAPI() {
-    override var mainUrl = "http://104.237.198.194"
+open class RebahinProvider : MainAPI() {
+    override var mainUrl = "http://104.237.198.196"
     override var name = "Rebahin"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
+    open var mainServer = "http://172.96.161.72"
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -27,7 +26,7 @@ class RebahinProvider : MainAPI() {
         TvType.AsianDrama
     )
 
-    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val urls = listOf(
             Pair("Featured", "xtab1"),
             Pair("Film Terbaru", "xtab2"),
@@ -50,7 +49,7 @@ class RebahinProvider : MainAPI() {
                 val home =
                     app.get("$mainUrl/wp-content/themes/indoxxi/ajax-top-$tab.php").document.select(
                         "div.ml-item"
-                    ).map {
+                    ).mapNotNull {
                         it.toSearchResult()
                     }
                 items.add(HomePageList(header, home))
@@ -63,13 +62,13 @@ class RebahinProvider : MainAPI() {
         return HomePageResponse(items)
     }
 
-    private fun Element.toSearchResult(): SearchResponse {
-        val title = this.selectFirst("span.mli-info > h2")!!.text().trim()
+    fun Element.toSearchResult(): SearchResponse? {
+        val title = this.selectFirst("span.mli-info > h2")?.text() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
         val type =
             if (this.select("span.mli-quality").isNotEmpty()) TvType.Movie else TvType.TvSeries
         return if (type == TvType.Movie) {
-            val posterUrl = this.select("img").attr("src")
+            val posterUrl = fixUrlNull(this.select("img").attr("src"))
             val quality = getQualityFromString(this.select("span.mli-quality").text().trim())
             newMovieSearchResponse(title, href, TvType.Movie) {
                 this.posterUrl = posterUrl
@@ -77,7 +76,9 @@ class RebahinProvider : MainAPI() {
             }
         } else {
             val posterUrl =
-                this.select("img").attr("src").ifEmpty { this.select("img").attr("data-original") }
+                fixUrlNull(
+                    this.select("img").attr("src")
+                        .ifEmpty { this.select("img").attr("data-original") })
             val episode =
                 this.select("div.mli-eps > span").text().replace(Regex("[^0-9]"), "").toIntOrNull()
             newAnimeSearchResponse(title, href, TvType.TvSeries) {
@@ -91,7 +92,7 @@ class RebahinProvider : MainAPI() {
         val link = "$mainUrl/?s=$query"
         val document = app.get(link).document
 
-        return document.select("div.ml-item").map {
+        return document.select("div.ml-item").mapNotNull {
             it.toSearchResult()
         }
     }
@@ -157,10 +158,15 @@ class RebahinProvider : MainAPI() {
         }
     }
 
+    private fun getLanguage(str: String): String {
+        return when {
+            str.contains("indonesia", true) || str.contains("bahasa", true) -> "Indonesian"
+            else -> str
+        }
+    }
+
     private suspend fun invokeLokalSource(
         url: String,
-        name: String,
-        ref: String,
         subCallback: (SubtitleFile) -> Unit,
         sourceCallback: (ExtractorLink) -> Unit
     ) {
@@ -171,37 +177,35 @@ class RebahinProvider : MainAPI() {
             headers = mapOf("Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
         ).document
 
-        document.select("script").map { script ->
-            if (script.data().contains("sources: [")) {
-                val source = tryParseJson<ResponseLocal>(
-                    script.data().substringAfter("sources: [").substringBefore("],")
-                )
-                val m3uData = app.get(source!!.file, referer = ref).text
-                val quality = Regex("\\d{3,4}\\.m3u8").findAll(m3uData).map { it.value }.toList()
-
-                quality.forEach {
+        document.select("script").find { it.data().contains("config =") }?.data()?.let { script ->
+            Regex("\"file\":\\s?\"(.+.m3u8)\"").find(script)?.groupValues?.getOrNull(1)
+                ?.let { link ->
                     sourceCallback.invoke(
                         ExtractorLink(
                             source = name,
                             name = name,
-                            url = source.file.replace("video.m3u8", it),
-                            referer = ref,
-                            quality = getQualityFromName("${it.replace(".m3u8", "")}p"),
-                            isM3u8 = true
+                            url = link,
+                            referer = "$mainServer/",
+                            quality = Qualities.Unknown.value,
+                            isM3u8 = true,
+                            headers = mapOf("Accept" to "*/*", "Origin" to mainServer)
                         )
                     )
                 }
 
-                val trackJson = script.data().substringAfter("tracks: [").substringBefore("],")
-                val track = tryParseJson<List<Tracks>>("[$trackJson]")
-                track?.map {
-                    subCallback.invoke(
-                        SubtitleFile(
-                            "Indonesian",
-                            (if (it.file.contains(".srt")) it.file else null)!!
-                        )
+            val subData =
+                Regex("\"?tracks\"?:\\s\\n?\\[(.*)],").find(script)?.groupValues?.getOrNull(1)
+                    ?: Regex("\"?tracks\"?:\\s\\n?\\[\\s*(?s:(.+)],\\n\\s*\"sources)").find(script)?.groupValues?.getOrNull(
+                        1
                     )
-                }
+            tryParseJson<List<Tracks>>("[$subData]")?.map {
+                subCallback.invoke(
+                    SubtitleFile(
+                        getLanguage(it.label ?: return@map null),
+                        if (it.file?.contains(".srt") == true) it.file else return@map null
+                    )
+                )
+
             }
         }
     }
@@ -233,7 +237,7 @@ class RebahinProvider : MainAPI() {
         sources.captions?.map {
             subCallback.invoke(
                 SubtitleFile(
-                    if (it.language.lowercase().contains("eng")) it.language else "Indonesian",
+                    getLanguage(it.language),
                     "$domainUrl/asset/userdata/$userData/caption/${it.hash}/${it.id}.srt"
                 )
             )
@@ -251,10 +255,8 @@ class RebahinProvider : MainAPI() {
         data.removeSurrounding("[", "]").split(",").map { it.trim() }.apmap { link ->
             safeApiCall {
                 when {
-                    link.startsWith("http://172.96.161.72") -> invokeLokalSource(
+                    link.startsWith(mainServer) -> invokeLokalSource(
                         link,
-                        this.name,
-                        "http://172.96.161.72/",
                         subtitleCallback,
                         callback
                     )
@@ -286,16 +288,10 @@ class RebahinProvider : MainAPI() {
         return true
     }
 
-    private data class ResponseLocal(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String,
-        @JsonProperty("type") val type: String?
-    )
-
     private data class Tracks(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String?,
-        @JsonProperty("kind") val kind: String?
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+        @JsonProperty("kind") val kind: String? = null
     )
 
     private data class Captions(
