@@ -73,13 +73,22 @@ class TimefourTv : MainAPI() {
             ?.substringBefore("',")?.let { link ->
                 val doc = app.get(link).document.selectFirst("div.tv_palyer iframe")?.attr("src")
                     ?.let { iframe ->
-                        app.get(fixUrl(iframe), allowRedirects = false).document
+                        app.get(fixUrl(iframe), referer = link).document
                     }
-                doc?.select("div.stream_button a")?.map {
-                    Episode(
-                        fixUrl(it.attr("href")),
-                        it.text()
-                    )
+                if (doc?.select("div.stream_button").isNullOrEmpty()) {
+                    doc?.select("iframe")?.mapIndexed { eps, ele ->
+                        Episode(
+                            fixUrl(ele.attr("src")),
+                            "Server ${eps.plus(1)}"
+                        )
+                    }
+                } else {
+                    doc?.select("div.stream_button a")?.map {
+                        Episode(
+                            fixUrl(it.attr("href")),
+                            it.text()
+                        )
+                    }
                 }
             } ?: throw ErrorLoadingException("Refresh page")
         return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -140,9 +149,11 @@ class TimefourTv : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data, allowRedirects = false).document
-        val link = document.selectFirst("iframe")?.attr("src")
-            ?: throw ErrorLoadingException()
+        val link = if (data.startsWith(mainUrl)) {
+            app.get(data, allowRedirects = false).document.selectFirst("iframe")?.attr("src")
+        } else {
+            data
+        } ?: throw ErrorLoadingException()
         getLink(fixUrl(link))?.let { m3uLink ->
             callback.invoke(
                 ExtractorLink(
