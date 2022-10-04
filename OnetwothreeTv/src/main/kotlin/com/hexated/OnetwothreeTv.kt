@@ -29,9 +29,19 @@ class OnetwothreeTv : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val items = mutableListOf<HomePageList>()
+        val nonPaged =
+            (request.name == "Top Streams" || request.name == "Latest Streams") && page <= 1
+        if (nonPaged) {
+            val res = app.get(request.data).document
+            val home = res.select("div.col-md-3.col-sm-6").mapNotNull {
+                it.toSearchResult()
+            }
+            items.add(HomePageList(request.name, home, true))
+        }
 
-        val document = if (request.name.contains("USA")) {
-            app.post(
+        if (request.name == "United States (USA)") {
+            val res = app.post(
                 "$mainUrl/wp-admin/admin-ajax.php", data = mapOf(
                     "action" to "_123tv_load_more_videos_from_category",
                     "cat_id" to request.data,
@@ -40,20 +50,13 @@ class OnetwothreeTv : MainAPI() {
                     "X-Requested-With" to "XMLHttpRequest"
                 )
             ).document
-        } else {
-            app.get(request.data).document
+            val home = res.select("div.col-md-3.col-sm-6").mapNotNull {
+                it.toSearchResult()
+            }
+            items.add(HomePageList(request.name, home, true))
         }
-        val home = document.select("div.col-md-3.col-sm-6").mapNotNull {
-            it.toSearchResult()
-        }
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = true
-            ),
-            hasNext = true
-        )
+
+        return newHomePageResponse(items)
 
     }
 

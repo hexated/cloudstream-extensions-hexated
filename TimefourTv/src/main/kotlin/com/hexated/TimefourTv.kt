@@ -28,26 +28,28 @@ class TimefourTv : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = if (request.name == "All Channels") {
-            if (page == 1) {
+        val items = mutableListOf<HomePageList>()
+        val nonPaged = request.name != "All Channels" && page <= 1
+        if(nonPaged) {
+            val res = app.get("${request.data}.php").document
+            val home = res.select("div.tab-content ul li").mapNotNull {
+                it.toSearchResult()
+            }
+            items.add(HomePageList(request.name, home, true))
+        }
+        if (request.name == "All Channels") {
+            val res = if (page == 1) {
                 app.get("${request.data}.php").document
             } else {
                 app.get("${request.data}${page.minus(1)}.php").document
             }
-        } else {
-            app.get("${request.data}.php").document
+            val home = res.select("div.tab-content ul li").mapNotNull {
+                it.toSearchResult()
+            }
+            items.add(HomePageList(request.name, home, true))
         }
-        val home = document.select("div.tab-content ul li").mapNotNull {
-            it.toSearchResult()
-        }
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = true
-            ),
-            hasNext = true
-        )
+
+        return newHomePageResponse(items)
     }
 
     private fun Element.toSearchResult(): LiveSearchResponse? {
