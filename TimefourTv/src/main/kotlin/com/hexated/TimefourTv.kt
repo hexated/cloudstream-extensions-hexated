@@ -4,10 +4,9 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Element
-import java.net.URI
 
-class TimefourTv : MainAPI() {
-    override var mainUrl = "https://time4tv.stream"
+open class TimefourTv : MainAPI() {
+    final override var mainUrl = "https://time4tv.stream"
     override var name = "Time4tv"
     override val hasDownloadSupport = false
     override val hasMainPage = true
@@ -30,7 +29,7 @@ class TimefourTv : MainAPI() {
     ): HomePageResponse {
         val items = mutableListOf<HomePageList>()
         val nonPaged = request.name != "All Channels" && page <= 1
-        if(nonPaged) {
+        if (nonPaged) {
             val res = app.get("${request.data}.php").document
             val home = res.select("div.tab-content ul li").mapNotNull {
                 it.toSearchResult()
@@ -97,51 +96,6 @@ class TimefourTv : MainAPI() {
         }
     }
 
-    private fun getBaseUrl(url: String): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
-        }
-    }
-
-    private var mainServer: String? = null
-    private suspend fun getLink(url: String): String? {
-        val (channel, iframe) = if (url.contains("width=")) {
-            val doc = app.get(url, referer = "$mainUrl/").document
-            val tempIframe = doc.selectFirst("iframe")?.attr("src") ?: return null
-            val doctwo = app.get(fixUrl(tempIframe), referer = url).text
-            listOf(
-                tempIframe.split("?").last().removePrefix("id=").replace(".php", ""),
-                doctwo.substringAfterLast("<iframe  src=\"").substringBefore("'+")
-            )
-        } else {
-            val doc = app.get(url, referer = "$mainUrl/").text
-            listOf(
-                url.split("?").last().removePrefix("id=").replace(".php", ""),
-                doc.substringAfterLast("<iframe  src=\"").substringBefore("'+")
-            )
-        }
-
-        val linkFirst = "$iframe$channel.php"
-        val refFirst = getBaseUrl(url)
-        val docSecond = app.get(fixUrl(linkFirst), referer = refFirst).document
-        val iframeSecond = docSecond.select("iframe:last-child, iframe#thatframe").attr("src")
-
-        val refSecond = getBaseUrl(linkFirst)
-        val docThird = app.get(fixUrl(iframeSecond), referer = "$refSecond/")
-        mainServer = getBaseUrl(iframeSecond)
-
-        return Regex("""source:['|"](\S+.m3u8)['|"],""").find(docThird.text)?.groupValues?.getOrNull(
-            1
-        ) ?: run {
-            val scriptData =
-                docThird.document.selectFirst("div#player")?.nextElementSibling()?.data()
-                    ?.substringAfterLast("return(")?.substringBefore(".join")
-            scriptData?.removeSurrounding("[", "]")?.replace("\"", "")?.split(",")
-                ?.joinToString("")
-        }
-
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -154,7 +108,7 @@ class TimefourTv : MainAPI() {
         } else {
             data
         } ?: throw ErrorLoadingException()
-        getLink(fixUrl(link))?.let { m3uLink ->
+        TimefourTvExtractor().getLink(fixUrl(link))?.let { m3uLink ->
             callback.invoke(
                 ExtractorLink(
                     this.name,
@@ -162,7 +116,7 @@ class TimefourTv : MainAPI() {
                     m3uLink,
                     referer = "$mainServer/",
                     quality = Qualities.Unknown.value,
-                    isM3u8 = true
+                    isM3u8 = true,
                 )
             )
         }
