@@ -4,7 +4,6 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
-import java.util.*
 
 class Paradisehill : MainAPI() {
     override var mainUrl = "https://en.paradisehill.cc"
@@ -105,7 +104,7 @@ class Paradisehill : MainAPI() {
             ExtractorLink(
                 this.name,
                 this.name,
-                data,
+                data.replace("\\", ""),
                 referer = mainUrl,
                 quality = Qualities.Unknown.value,
 //                headers = mapOf("Range" to "bytes=0-"),
