@@ -136,10 +136,22 @@ class Loklok : MainAPI() {
             rec.toSearchResponse()
         }
 
+        val type = when {
+            data.category == 0 -> {
+                TvType.Movie
+            }
+            data.category != 0 && res.tagNameList?.contains("Anime") == true -> {
+                TvType.Anime
+            }
+            else -> {
+                TvType.TvSeries
+            }
+        }
+
         return newTvSeriesLoadResponse(
             res.name ?: return null,
             url,
-            if (data.category == 0) TvType.Movie else TvType.TvSeries,
+            type,
             episodes
         ) {
             this.posterUrl = res.coverVerticalUrl
