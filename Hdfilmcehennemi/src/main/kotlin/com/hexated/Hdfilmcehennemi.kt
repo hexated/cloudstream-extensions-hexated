@@ -157,28 +157,6 @@ class Hdfilmcehennemi : MainAPI() {
         }
     }
 
-    private fun fixSubUrl(url: String): String {
-        if (url.startsWith("http") ||
-            // Do not fix JSON objects when passed as urls.
-            url.startsWith("{\"")
-        ) {
-            return url
-        }
-        if (url.isEmpty()) {
-            return ""
-        }
-
-        val startsWithNoHttp = url.startsWith("//")
-        if (startsWithNoHttp) {
-            return "https:$url"
-        } else {
-            if (url.startsWith('/')) {
-                return vidmolyServer + url
-            }
-            return "$vidmolyServer/$url"
-        }
-    }
-
     private fun String.addMarks(str: String): String {
         return this.replace(Regex("\"?$str\"?"), "\"$str\"")
     }
@@ -212,7 +190,7 @@ class Hdfilmcehennemi : MainAPI() {
                 subtitleCallback.invoke(
                     SubtitleFile(
                         it.label.toString(),
-                        fixSubUrl(it.file.toString())
+                        "$vidmolyServer${it.file}"
                     )
                 )
             }
