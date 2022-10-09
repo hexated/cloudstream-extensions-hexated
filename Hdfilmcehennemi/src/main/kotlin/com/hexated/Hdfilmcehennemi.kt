@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 
 class Hdfilmcehennemi : MainAPI() {
@@ -19,6 +20,10 @@ class Hdfilmcehennemi : MainAPI() {
         TvType.Movie,
         TvType.TvSeries,
     )
+
+    companion object {
+        private const val vidmolyServer = "https://vidmoly.to"
+    }
 
     override val mainPage = mainPageOf(
         "$mainUrl/category/tavsiye-filmler-izle1/page/" to "Tavsiye Filmler Kategorisi",
@@ -152,36 +157,65 @@ class Hdfilmcehennemi : MainAPI() {
         }
     }
 
+    private fun fixSubUrl(url: String): String {
+        if (url.startsWith("http") ||
+            // Do not fix JSON objects when passed as urls.
+            url.startsWith("{\"")
+        ) {
+            return url
+        }
+        if (url.isEmpty()) {
+            return ""
+        }
+
+        val startsWithNoHttp = url.startsWith("//")
+        if (startsWithNoHttp) {
+            return "https:$url"
+        } else {
+            if (url.startsWith('/')) {
+                return vidmolyServer + url
+            }
+            return "$vidmolyServer/$url"
+        }
+    }
+
+    private fun String.addMarks(str: String): String {
+        return this.replace(Regex("\"?$str\"?"), "\"$str\"")
+    }
+
     private suspend fun invokeLocalSource(
         source: String,
         url: String,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get(url, referer = "$mainUrl/")
-        val m3uLink = res.document.select("script")
-            .find {
-                it.data().contains("var sources = [];") || it.data()
-                    .contains("playerInstance =")
-            }?.data()
-            ?.substringAfter("[{file:\"")?.substringBefore("\"}]") ?: return
+        val script = app.get(
+            url,
+            referer = "${mainUrl}/"
+        ).document.select("script")
+            .find { it.data().contains("sources:") }?.data()
+        val videoData = script?.substringAfter("sources: [")
+            ?.substringBefore("],")?.addMarks("file")
+        val subData = script?.substringAfter("tracks: [")?.substringBefore("]")?.addMarks("file")
+            ?.addMarks("label")?.addMarks("kind")
 
-        M3u8Helper.generateM3u8(
-            source,
-            m3uLink,
-            if (url.startsWith(mainUrl)) "$mainUrl/" else "https://vidmoly.to/"
-        ).forEach(callback)
+        tryParseJson<Source>(videoData)?.file?.let { m3uLink ->
+            M3u8Helper.generateM3u8(
+                source,
+                m3uLink,
+                if (url.startsWith(mainUrl)) "$mainUrl/" else "$vidmolyServer/"
+            ).forEach(callback)
+        }
 
-        Regex("\"(/srt\\S*?)\",\\slabel:\\s\"(\\S*?)\"").findAll(res.text)
-            .map { it.groupValues[1] to it.groupValues[2] }.toList().map { (url, lang) ->
+        tryParseJson<List<SubSource>>("[${subData}]")
+            ?.filter { it.kind == "captions" }?.map {
                 subtitleCallback.invoke(
                     SubtitleFile(
-                        lang,
-                        fixUrl(url)
+                        it.label.toString(),
+                        fixSubUrl(it.file.toString())
                     )
                 )
             }
-
     }
 
     override suspend fun loadLinks(
@@ -196,12 +230,22 @@ class Hdfilmcehennemi : MainAPI() {
             safeApiCall {
                 app.get(url).document.select("div.card-video > iframe").attr("data-src")
                     .let { link ->
-                        invokeLocalSource(source, link,subtitleCallback, callback)
+                        invokeLocalSource(source, link, subtitleCallback, callback)
                     }
             }
         }
         return true
     }
+
+    private data class Source(
+        @JsonProperty("file") val file: String? = null,
+    )
+
+    private data class SubSource(
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+        @JsonProperty("kind") val kind: String? = null,
+    )
 
     data class Result(
         @JsonProperty("result") val result: ArrayList<Media>? = arrayListOf(),

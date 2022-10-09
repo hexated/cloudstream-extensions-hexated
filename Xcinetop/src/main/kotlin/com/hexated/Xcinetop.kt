@@ -30,7 +30,7 @@ class Xcinetop : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get(request.data + page).document
+        val document = app.get("${request.data}$page/").document
         val home = document.select("div#dle-content div.movie-item").mapNotNull {
             it.toSearchResult()
         }
@@ -48,7 +48,7 @@ class Xcinetop : MainAPI() {
         return newAnimeSearchResponse(title, href, TvType.TvSeries) {
             addQuality(quantity)
             addDub(episode)
-            addPoster(posterUrl, headers = mapOf("Referer" to "$mainUrl/"))
+            this.posterUrl = posterUrl
         }
     }
 
@@ -94,7 +94,7 @@ class Xcinetop : MainAPI() {
                 fixUrl(it.attr("data-link"))
             }
             return newMovieLoadResponse(title, url, TvType.Movie, Links(link).toJson()) {
-                addPoster(poster, headers = mapOf("Referer" to "$mainUrl/"))
+                this.posterUrl = poster
                 this.year = year
                 plot = description
                 this.tags = tags
@@ -115,7 +115,7 @@ class Xcinetop : MainAPI() {
                 )
             }
             return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes = episodes) {
-                addPoster(poster, headers = mapOf("Referer" to "$mainUrl/"))
+                this.posterUrl = poster
                 this.year = year
                 plot = description
                 this.tags = tags
