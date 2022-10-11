@@ -21,10 +21,6 @@ class Hdfilmcehennemi : MainAPI() {
         TvType.TvSeries,
     )
 
-    companion object {
-        private const val vidmolyServer = "https://vidmoly.to"
-    }
-
     override val mainPage = mainPageOf(
         "$mainUrl/category/tavsiye-filmler-izle1/page/" to "Tavsiye Filmler Kategorisi",
         "$mainUrl/yabancidiziizle/page/" to "Son Eklenen Yabancı Diziler",
@@ -178,11 +174,17 @@ class Hdfilmcehennemi : MainAPI() {
             ?.addMarks("label")?.addMarks("kind")
 
         tryParseJson<Source>(videoData)?.file?.let { m3uLink ->
-            M3u8Helper.generateM3u8(
-                source,
-                m3uLink,
-                if (url.startsWith(mainUrl)) "$mainUrl/" else "$vidmolyServer/"
-            ).forEach(callback)
+            callback.invoke(
+                ExtractorLink(
+                    source,
+                    source,
+                    m3uLink,
+                    "$mainUrl/",
+                    Qualities.Unknown.value,
+                    true
+                )
+
+            )
         }
 
         tryParseJson<List<SubSource>>("[${subData}]")
@@ -190,7 +192,7 @@ class Hdfilmcehennemi : MainAPI() {
                 subtitleCallback.invoke(
                     SubtitleFile(
                         it.label.toString(),
-                        "$vidmolyServer${it.file}"
+                        fixUrl(it.file.toString())
                     )
                 )
             }
@@ -208,7 +210,11 @@ class Hdfilmcehennemi : MainAPI() {
             safeApiCall {
                 app.get(url).document.select("div.card-video > iframe").attr("data-src")
                     .let { link ->
-                        invokeLocalSource(source, link, subtitleCallback, callback)
+                        if (link.startsWith(mainUrl)) {
+                            invokeLocalSource(source, link, subtitleCallback, callback)
+                        } else {
+                            loadExtractor(link, "$mainUrl/", subtitleCallback, callback)
+                        }
                     }
             }
         }
