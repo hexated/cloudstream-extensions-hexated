@@ -180,17 +180,12 @@ open class RebahinProvider : MainAPI() {
         document.select("script").find { it.data().contains("config =") }?.data()?.let { script ->
             Regex("\"file\":\\s?\"(.+.m3u8)\"").find(script)?.groupValues?.getOrNull(1)
                 ?.let { link ->
-                    sourceCallback.invoke(
-                        ExtractorLink(
-                            source = name,
-                            name = name,
-                            url = link,
-                            referer = "$mainServer/",
-                            quality = Qualities.Unknown.value,
-                            isM3u8 = true,
-                            headers = mapOf("Accept" to "*/*", "Origin" to mainServer)
-                        )
-                    )
+                    M3u8Helper.generateM3u8(
+                        name,
+                        link,
+                        referer = "$mainServer/",
+                        headers = mapOf("Accept" to "*/*", "Origin" to mainServer)
+                    ).forEach(sourceCallback)
                 }
 
             val subData =
