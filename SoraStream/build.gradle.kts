@@ -24,5 +24,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=kisskh.me&sz=%size%"
+    iconUrl = "https://raw.githubusercontent.com/hexated/cloudstream-extensions-hexated/master/SoraStream/Icon.png"
 }
