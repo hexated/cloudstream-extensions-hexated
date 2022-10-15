@@ -55,11 +55,19 @@ class GoodPorn : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/search/$query").document
-        return document.select("div#list_videos_videos_list_search_result_items div.item")
-            .mapNotNull {
-                it.toSearchResult()
-            }
+        val searchResponse = mutableListOf<SearchResponse>()
+        for (i in 1..10) {
+            val document =
+                app.get(
+                    "$mainUrl/search/nikki-benz/?mode=async&function=get_block&block_id=list_videos_videos_list_search_result&q=$query&category_ids=&sort_by=&from_videos=$i&from_albums=$i",
+                    headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+                ).document
+            searchResponse.addAll(document.select("div#list_videos_videos_list_search_result_items div.item")
+                .mapNotNull {
+                    it.toSearchResult()
+                })
+        }
+        return searchResponse
     }
 
     override suspend fun load(url: String): LoadResponse {
