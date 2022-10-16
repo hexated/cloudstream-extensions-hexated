@@ -10,6 +10,7 @@ class Paradisehill : MainAPI() {
     override var name = "Paradisehill"
     override val hasMainPage = true
     override val hasDownloadSupport = true
+    override var sequentialMainPage = true
     override val vpnStatus = VPNStatus.MightBeNeeded
     override val supportedTypes = setOf(TvType.NSFW)
 
@@ -48,11 +49,18 @@ class Paradisehill : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/search/?pattern=$query&what=1").document
-        return document.select("div.content div.item")
-            .mapNotNull {
-                it.toSearchResult()
-            }
+        val searchResponse = mutableListOf<SearchResponse>()
+        for (i in 1..10) {
+            val document = app.get("$mainUrl/search/?pattern=$query&what=1&page=$i").document
+            val results = document.select("div.content div.item")
+                .mapNotNull {
+                    it.toSearchResult()
+                }
+            searchResponse.addAll(results)
+            if(results.isEmpty()) break
+        }
+
+        return searchResponse
     }
 
     override suspend fun load(url: String): LoadResponse? {
