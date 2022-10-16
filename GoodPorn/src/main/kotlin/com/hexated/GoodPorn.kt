@@ -3,6 +3,8 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import org.jsoup.nodes.Element
 import java.util.*
 
@@ -50,7 +52,8 @@ class GoodPorn : MainAPI() {
         val title = this.selectFirst("strong.title")?.text() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val posterUrl = fixUrlNull(this.select("div.img > img").attr("data-original"))
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        val previewUrl = fixUrlNull(this.select("div.img > img").attr("data-preview"))
+        return newMovieSearchResponse(title, LoadData(href, previewUrl).toJson(), TvType.Movie) {
             this.posterUrl = posterUrl
         }
 
@@ -76,7 +79,8 @@ class GoodPorn : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val res = parseJson<LoadData>(url)
+        val document = app.get(res.url.toString()).document
 
         val title = document.selectFirst("div.headline > h1")?.text()?.trim().toString()
         val poster =
@@ -89,12 +93,19 @@ class GoodPorn : MainAPI() {
                 it.toSearchResult()
             }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.Movie, LoadData(res.url, res.trailer).toJson()) {
             this.posterUrl = poster
             this.plot = description
             this.tags = tags
             addActors(actors)
             this.recommendations = recommendations
+            this.trailers = mutableListOf(
+                TrailerData(
+                    res.trailer.toString(),
+                    referer = "$mainUrl/",
+                    raw = true
+                )
+            )
         }
     }
 
@@ -104,8 +115,8 @@ class GoodPorn : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-
-        val document = app.get(data).document
+        val res = parseJson<LoadData>(data)
+        val document = app.get(res.url.toString()).document
         document.select("div.info div:last-child a").map { res ->
             callback.invoke(
                 ExtractorLink(
@@ -121,6 +132,22 @@ class GoodPorn : MainAPI() {
             )
         }
 
+        callback.invoke(
+            ExtractorLink(
+                "Preview",
+                "Preview",
+                res.trailer.toString(),
+                referer = data,
+                quality = Qualities.Unknown.value,
+                headers = mapOf("Range" to "bytes=0-"),
+            )
+        )
+
         return true
     }
+
+    data class LoadData(
+        val url: String? = null,
+        val trailer: String? = null,
+    )
 }
