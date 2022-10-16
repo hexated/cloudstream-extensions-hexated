@@ -31,9 +31,11 @@ class GoodPorn : MainAPI() {
         request: MainPageRequest
     ): HomePageResponse {
         val document = app.get(request.data + page).document
-        val home = document.select("div#list_videos_most_recent_videos_items div.item, div#list_videos_common_videos_list_items div.item").mapNotNull {
-            it.toSearchResult()
-        }
+        val home =
+            document.select("div#list_videos_most_recent_videos_items div.item, div#list_videos_common_videos_list_items div.item")
+                .mapNotNull {
+                    it.toSearchResult()
+                }
         return newHomePageResponse(
             list = HomePageList(
                 name = request.name,
@@ -56,16 +58,19 @@ class GoodPorn : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
-        for (i in 1..10) {
+        for (i in 1..15) {
             val document =
                 app.get(
                     "$mainUrl/search/nikki-benz/?mode=async&function=get_block&block_id=list_videos_videos_list_search_result&q=$query&category_ids=&sort_by=&from_videos=$i&from_albums=$i",
                     headers = mapOf("X-Requested-With" to "XMLHttpRequest")
                 ).document
-            searchResponse.addAll(document.select("div#list_videos_videos_list_search_result_items div.item")
-                .mapNotNull {
-                    it.toSearchResult()
-                })
+            val results =
+                document.select("div#list_videos_videos_list_search_result_items div.item")
+                    .mapNotNull {
+                        it.toSearchResult()
+                    }
+            searchResponse.addAll(results)
+            if (results.isEmpty()) break
         }
         return searchResponse
     }
@@ -106,7 +111,8 @@ class GoodPorn : MainAPI() {
                 ExtractorLink(
                     this.name,
                     this.name,
-                    res.attr("href").replace(Regex("\\?download\\S+.mp4&"), "?") + "&rnd=${Date().time}" ,
+                    res.attr("href")
+                        .replace(Regex("\\?download\\S+.mp4&"), "?") + "&rnd=${Date().time}",
                     referer = data,
                     quality = Regex("([0-9]+p),").find(res.text())?.groupValues?.get(1)
                         .let { getQualityFromName(it) },
