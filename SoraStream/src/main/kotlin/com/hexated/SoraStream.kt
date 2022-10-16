@@ -4,6 +4,7 @@ import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
+import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -217,6 +218,41 @@ class SoraStream : TmdbProvider() {
         }
     }
 
+    private suspend fun invokeLocalSources(
+        url: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val doc = app.get(url).document
+        val script = doc.select("script").find { it.data().contains("\"sources\":[") }?.data()
+        val sourcesData = script?.substringAfter("\"sources\":[")?.substringBefore("],")
+        val subData = script?.substringAfter("\"subtitles\":[")?.substringBefore("],")
+
+        AppUtils.tryParseJson<List<Sources>>("[$sourcesData]")?.map { source ->
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    source.url ?: return@map null,
+                    "$mainServerAPI/",
+                    source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+                    isM3u8 = source.isM3U8,
+                    headers = mapOf("Origin" to mainServerAPI)
+                )
+            )
+        }
+
+        AppUtils.tryParseJson<List<Subtitles>>("[$subData]")?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.lang.toString(),
+                    sub.url ?: return@map null
+                )
+            )
+        }
+
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -242,7 +278,8 @@ class SoraStream : TmdbProvider() {
         ).parsedSafe<LoadLinks>()
 
         if (json?.sources.isNullOrEmpty()) {
-            invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
+//            invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
+            invokeLocalSources(referer, subtitleCallback, callback)
         } else {
             json?.sources?.map { source ->
                 callback.invoke(
