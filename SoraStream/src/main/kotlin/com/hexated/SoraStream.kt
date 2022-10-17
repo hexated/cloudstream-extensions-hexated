@@ -30,8 +30,8 @@ open class SoraStream : TmdbProvider() {
     companion object {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         private const val apiKey = "b030404650f279792a8d3287232358e3" // PLEASE DON'T STEAL
-        private var mainAPI = base64Decode("aHR0cHM6Ly94cHdhdGNoLnZlcmNlbC5hcHA=")
-        var mainServerAPI = base64Decode("aHR0cHM6Ly9zb3JhLW1vdmllLnZlcmNlbC5hcHA=")
+        val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
+        val mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
 
@@ -55,6 +55,10 @@ open class SoraStream : TmdbProvider() {
                 "Returning Series" -> ShowStatus.Ongoing
                 else -> ShowStatus.Completed
             }
+        }
+
+        private fun base64DecodeAPI(api: String): String {
+            return api.chunked(4).map { base64Decode(it) }.reversed().joinToString("")
         }
     }
 
