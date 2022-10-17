@@ -3,8 +3,9 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.RandomUserAgent.getRandomUserAgent
 import com.hexated.SoraExtractor.invokeLocalSources
+import com.hexated.SoraExtractor.invokeOlgply
 import com.hexated.SoraExtractor.invokeTwoEmbed
-import com.hexated.SoraExtractor.invokeVidSrcSources
+import com.hexated.SoraExtractor.invokeVidSrc
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -244,7 +245,10 @@ open class SoraStream : TmdbProvider() {
                 }
             },
             {
-                invokeVidSrcSources(res.id, res.season, res.episode, subtitleCallback, callback)
+                invokeVidSrc(res.id, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeOlgply(res.id, res.season, res.episode, callback)
             })
 
 
