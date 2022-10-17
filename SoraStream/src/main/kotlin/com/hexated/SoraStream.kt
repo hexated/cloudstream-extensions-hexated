@@ -276,7 +276,8 @@ class SoraStream : TmdbProvider() {
 
         val json = app.get(
             query,
-            referer = referer
+            referer = referer,
+            headers = mapOf("User-Agent" to getRandomUserAgent())
         ).parsedSafe<LoadLinks>()
 
         argamap(
