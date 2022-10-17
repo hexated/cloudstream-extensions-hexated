@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.hexated.TimefourTvExtractor.getLink
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
@@ -108,7 +109,7 @@ open class TimefourTv : MainAPI() {
         } else {
             data
         } ?: throw ErrorLoadingException()
-        TimefourTvExtractor().getLink(fixUrl(link))?.let { m3uLink ->
+        getLink(fixUrl(link))?.let { m3uLink ->
             callback.invoke(
                 ExtractorLink(
                     this.name,

@@ -7,7 +7,7 @@ import java.net.URI
 
 var mainServer: String? = null
 
-class TimefourTvExtractor : TimefourTv() {
+object TimefourTvExtractor : TimefourTv() {
 
     private fun getBaseUrl(url: String): String {
         return URI(url).let {
