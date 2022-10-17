@@ -3,9 +3,11 @@ package com.hexated
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.RandomUserAgent.getRandomUserAgent
+import com.hexated.SoraExtractor.invokeLocalSources
+import com.hexated.SoraExtractor.invokeTwoEmbed
+import com.hexated.SoraExtractor.invokeVidSrcSources
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
-import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -14,7 +16,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 import kotlin.math.roundToInt
 
-class SoraStream : TmdbProvider() {
+open class SoraStream : TmdbProvider() {
     override var name = "SoraStream"
     override val hasMainPage = true
     override val hasDownloadSupport = true
@@ -31,8 +33,9 @@ class SoraStream : TmdbProvider() {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         private const val apiKey = "b030404650f279792a8d3287232358e3" // PLEASE DON'T STEAL
         private var mainAPI = base64Decode("aHR0cHM6Ly94cHdhdGNoLnZlcmNlbC5hcHA=")
-        private var mainServerAPI = base64Decode("aHR0cHM6Ly9zb3JhLW1vdmllLnZlcmNlbC5hcHA=")
-        private const val twoEmbedAPI = "https://www.2embed.to"
+        var mainServerAPI = base64Decode("aHR0cHM6Ly9zb3JhLW1vdmllLnZlcmNlbC5hcHA=")
+        const val twoEmbedAPI = "https://www.2embed.to"
+        const val vidSrcAPI = "https://v2.vidsrc.me"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -186,74 +189,74 @@ class SoraStream : TmdbProvider() {
         }
     }
 
-    private suspend fun invokeTwoEmbed(
-        id: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val url = if (season == null) {
-            "$twoEmbedAPI/embed/tmdb/movie?id=$id"
-        } else {
-            "$twoEmbedAPI/embed/tmdb/tv?id=$id&s=$season&e=$episode"
-        }
-        val document = app.get(url).document
-        val captchaKey =
-            document.select("script[src*=https://www.google.com/recaptcha/api.js?render=]")
-                .attr("src").substringAfter("render=")
-
-        document.select(".dropdown-menu a[data-id]").map { it.attr("data-id") }.apmap { serverID ->
-            val token = APIHolder.getCaptchaToken(url, captchaKey)
-            app.get(
-                "$twoEmbedAPI/ajax/embed/play?id=$serverID&_token=$token",
-                referer = url
-            ).parsedSafe<EmbedJson>()?.let { source ->
-                Log.i("hexated", "${source.link}")
-                loadExtractor(
-                    source.link ?: return@let null,
-                    twoEmbedAPI,
-                    subtitleCallback,
-                    callback
-                )
-            }
-        }
-    }
-
-    private suspend fun invokeLocalSources(
-        url: String,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val doc = app.get(url, headers = mapOf("User-Agent" to getRandomUserAgent())).document
-        val script = doc.select("script").find { it.data().contains("\"sources\":[") }?.data()
-        val sourcesData = script?.substringAfter("\"sources\":[")?.substringBefore("],")
-        val subData = script?.substringAfter("\"subtitles\":[")?.substringBefore("],")
-
-        AppUtils.tryParseJson<List<Sources>>("[$sourcesData]")?.map { source ->
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    source.url ?: return@map null,
-                    "$mainServerAPI/",
-                    source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                    isM3u8 = source.isM3U8,
-                    headers = mapOf("Origin" to mainServerAPI)
-                )
-            )
-        }
-
-        AppUtils.tryParseJson<List<Subtitles>>("[$subData]")?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.lang.toString(),
-                    sub.url ?: return@map null
-                )
-            )
-        }
-
-    }
+//    private suspend fun invokeTwoEmbed(
+//        id: Int? = null,
+//        season: Int? = null,
+//        episode: Int? = null,
+//        subtitleCallback: (SubtitleFile) -> Unit,
+//        callback: (ExtractorLink) -> Unit
+//    ) {
+//        val url = if (season == null) {
+//            "$twoEmbedAPI/embed/tmdb/movie?id=$id"
+//        } else {
+//            "$twoEmbedAPI/embed/tmdb/tv?id=$id&s=$season&e=$episode"
+//        }
+//        val document = app.get(url).document
+//        val captchaKey =
+//            document.select("script[src*=https://www.google.com/recaptcha/api.js?render=]")
+//                .attr("src").substringAfter("render=")
+//
+//        document.select(".dropdown-menu a[data-id]").map { it.attr("data-id") }.apmap { serverID ->
+//            val token = APIHolder.getCaptchaToken(url, captchaKey)
+//            app.get(
+//                "$twoEmbedAPI/ajax/embed/play?id=$serverID&_token=$token",
+//                referer = url
+//            ).parsedSafe<EmbedJson>()?.let { source ->
+//                Log.i("hexated", "${source.link}")
+//                loadExtractor(
+//                    source.link ?: return@let null,
+//                    twoEmbedAPI,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            }
+//        }
+//    }
+//
+//    private suspend fun invokeLocalSources(
+//        url: String,
+//        subtitleCallback: (SubtitleFile) -> Unit,
+//        callback: (ExtractorLink) -> Unit
+//    ) {
+//        val doc = app.get(url, headers = mapOf("User-Agent" to getRandomUserAgent())).document
+//        val script = doc.select("script").find { it.data().contains("\"sources\":[") }?.data()
+//        val sourcesData = script?.substringAfter("\"sources\":[")?.substringBefore("],")
+//        val subData = script?.substringAfter("\"subtitles\":[")?.substringBefore("],")
+//
+//        AppUtils.tryParseJson<List<Sources>>("[$sourcesData]")?.map { source ->
+//            callback.invoke(
+//                ExtractorLink(
+//                    this.name,
+//                    this.name,
+//                    source.url ?: return@map null,
+//                    "$mainServerAPI/",
+//                    source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+//                    isM3u8 = source.isM3U8,
+//                    headers = mapOf("Origin" to mainServerAPI)
+//                )
+//            )
+//        }
+//
+//        AppUtils.tryParseJson<List<Subtitles>>("[$subData]")?.map { sub ->
+//            subtitleCallback.invoke(
+//                SubtitleFile(
+//                    sub.lang.toString(),
+//                    sub.url ?: return@map null
+//                )
+//            )
+//        }
+//
+//    }
 
     override suspend fun loadLinks(
         data: String,
@@ -311,6 +314,9 @@ class SoraStream : TmdbProvider() {
                         )
                     }
                 }
+            },
+            {
+                invokeVidSrcSources(res.id, res.season, res.episode, subtitleCallback, callback)
             })
 
 
