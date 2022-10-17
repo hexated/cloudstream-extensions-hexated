@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.RandomUserAgent.getRandomUserAgent
+import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeLocalSources
 import com.hexated.SoraExtractor.invokeOlgply
 import com.hexated.SoraExtractor.invokeTwoEmbed
@@ -31,9 +32,11 @@ open class SoraStream : TmdbProvider() {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         private const val apiKey = "b030404650f279792a8d3287232358e3" // PLEASE DON'T STEAL
         val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
-        val mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
+        val mainServerAPI =
+            base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
+        const val dbgoAPI = " https://dbgo.fun"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -253,6 +256,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeOlgply(res.id, res.season, res.episode, callback)
+            },
+            {
+                invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             })
 
 
