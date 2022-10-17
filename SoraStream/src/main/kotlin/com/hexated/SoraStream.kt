@@ -214,9 +214,6 @@ open class SoraStream : TmdbProvider() {
 
         argamap(
             {
-                invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
                 if (json?.sources.isNullOrEmpty()) {
                     invokeLocalSources(referer, subtitleCallback, callback)
                 } else {
@@ -243,6 +240,9 @@ open class SoraStream : TmdbProvider() {
                         )
                     }
                 }
+            },
+            {
+                invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeVidSrc(res.id, res.season, res.episode, subtitleCallback, callback)
