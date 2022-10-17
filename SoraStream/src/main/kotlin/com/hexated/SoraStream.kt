@@ -4,6 +4,7 @@ import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
+import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -277,33 +278,40 @@ class SoraStream : TmdbProvider() {
             referer = referer
         ).parsedSafe<LoadLinks>()
 
-        if (json?.sources.isNullOrEmpty()) {
-//            invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
-            invokeLocalSources(referer, subtitleCallback, callback)
-        } else {
-            json?.sources?.map { source ->
-                callback.invoke(
-                    ExtractorLink(
-                        this.name,
-                        this.name,
-                        source.url ?: return@map null,
-                        "$mainServerAPI/",
-                        source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                        isM3u8 = source.isM3U8,
-                        headers = mapOf("Origin" to mainServerAPI)
-                    )
-                )
-            }
+        argamap(
+            {
+                invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if (json?.sources.isNullOrEmpty()) {
+                    invokeLocalSources(referer, subtitleCallback, callback)
+                } else {
+                    json?.sources?.map { source ->
+                        callback.invoke(
+                            ExtractorLink(
+                                this.name,
+                                this.name,
+                                source.url ?: return@map null,
+                                "$mainServerAPI/",
+                                source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+                                isM3u8 = source.isM3U8,
+                                headers = mapOf("Origin" to mainServerAPI)
+                            )
+                        )
+                    }
 
-            json?.subtitles?.map { sub ->
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        sub.lang.toString(),
-                        sub.url ?: return@map null
-                    )
-                )
-            }
-        }
+                    json?.subtitles?.map { sub ->
+                        subtitleCallback.invoke(
+                            SubtitleFile(
+                                sub.lang.toString(),
+                                sub.url ?: return@map null
+                            )
+                        )
+                    }
+                }
+            })
+
+
 
         return true
     }
