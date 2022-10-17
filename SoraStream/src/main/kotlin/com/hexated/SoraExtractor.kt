@@ -5,10 +5,12 @@ import com.lagradost.cloudstream3.APIHolder
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.nicehttp.requestCreator
 
 object SoraExtractor : SoraStream() {
 
@@ -84,7 +86,7 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeVidSrcSources(
+    suspend fun invokeVidSrc(
         id: Int? = null,
         season: Int? = null,
         episode: Int? = null,
@@ -98,6 +100,40 @@ object SoraExtractor : SoraStream() {
         }
 
         loadExtractor(url, null, subtitleCallback, callback)
+    }
+
+    private suspend fun loadLinksWithWebView(
+        url: String,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val foundVideo = WebViewResolver(
+            Regex("""\.m3u8|i7njdjvszykaieynzsogaysdgb0hm8u1mzubmush4maopa4wde\.com""")
+        ).resolveUsingWebView(
+            requestCreator(
+                "GET", url, referer = "https://olgply.com/"
+            )
+        ).first ?: return
+
+        callback.invoke(
+            ExtractorLink(
+                "Olgply",
+                "Olgply",
+                foundVideo.url.toString(),
+                "",
+                Qualities.Unknown.value,
+                true
+            )
+        )
+    }
+
+    suspend fun invokeOlgply(
+        id: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = "https://olgply.xyz/${id}${season?.let { "/$it" } ?: ""}${episode?.let { "/$it" } ?: ""}"
+        loadLinksWithWebView(url, callback)
     }
 
 }
