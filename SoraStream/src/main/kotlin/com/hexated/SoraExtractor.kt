@@ -92,9 +92,9 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val url = if (season == null) {
-            "$vidSrcAPI/embed/id=$id"
+            "$vidSrcAPI/embed/$id"
         } else {
-            "$mainUrl/embed/$id/${season}-${episode}"
+            "$vidSrcAPI/embed/$id/${season}-${episode}"
         }
 
         loadExtractor(url, null, subtitleCallback, callback)
