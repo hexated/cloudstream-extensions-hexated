@@ -1,16 +1,12 @@
 package com.hexated
 
 import android.util.Log
-import com.lagradost.cloudstream3.APIHolder
-import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.apmap
-import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.network.WebViewResolver
-import com.lagradost.cloudstream3.utils.AppUtils
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.nicehttp.requestCreator
+import java.net.URI
+import java.util.ArrayList
 
 object SoraExtractor : SoraStream() {
 
@@ -102,38 +98,151 @@ object SoraExtractor : SoraStream() {
         loadExtractor(url, null, subtitleCallback, callback)
     }
 
-    private suspend fun loadLinksWithWebView(
-        url: String,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val foundVideo = WebViewResolver(
-            Regex("""\.m3u8|i7njdjvszykaieynzsogaysdgb0hm8u1mzubmush4maopa4wde\.com""")
-        ).resolveUsingWebView(
-            requestCreator(
-                "GET", url, referer = "https://olgply.com/"
-            )
-        ).first ?: return
-
-        callback.invoke(
-            ExtractorLink(
-                "Olgply",
-                "Olgply",
-                foundVideo.url.toString(),
-                "",
-                Qualities.Unknown.value,
-                true
-            )
-        )
-    }
-
     suspend fun invokeOlgply(
         id: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = "https://olgply.xyz/${id}${season?.let { "/$it" } ?: ""}${episode?.let { "/$it" } ?: ""}"
+        val url =
+            "https://olgply.xyz/${id}${season?.let { "/$it" } ?: ""}${episode?.let { "/$it" } ?: ""}"
         loadLinksWithWebView(url, callback)
     }
 
+    suspend fun invokeDbgo(
+        id: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if (season == null) {
+            "$dbgoAPI/imdb.php?id=$id"
+        } else {
+            "$dbgoAPI/imdbse.php?id=$id&s=$season&e=$episode"
+        }
+
+        val doc = app.get(url).document
+        val iframe = doc.select("div.myvideo iframe").attr("src")
+        val script = app.get(iframe, referer = "$dbgoAPI/").document.select("script")
+            .find { it.data().contains("CDNplayerConfig =") }?.data()
+
+        val source =
+            Regex("['|\"]file['|\"]:\\s['|\"](#\\S+?)['|\"]").find(script.toString())?.groupValues?.get(
+                1
+            )
+        val subtitle =
+            Regex("['|\"]subtitle['|\"]:\\s['|\"](\\S+?)['|\"]").find(script.toString())?.groupValues?.get(
+                1
+            )
+
+        decryptStreamUrl(source.toString()).split(",").map { links ->
+            val quality =
+                Regex("\\[([0-9]*p.*?)]").find(links)?.groupValues?.getOrNull(1).toString().trim()
+            links.replace("[$quality]", "").split("or").map { it.trim() }
+                .map { link ->
+                    val name = if (link.contains(".m3u8")) "Dbgo (Main)" else "Dbgo (Backup)"
+                    callback.invoke(
+                        ExtractorLink(
+                            name,
+                            name,
+                            link,
+                            "${getBaseUrl(iframe)}/",
+                            getQuality(quality),
+                            isM3u8 = link.contains(".m3u8"),
+                            headers = mapOf(
+                                "Origin" to getBaseUrl(iframe)
+                            )
+                        )
+                    )
+                }
+        }
+
+        subtitle?.split(",")?.map { sub ->
+            val language =
+                Regex("\\[(.*)]").find(sub)?.groupValues?.getOrNull(1)
+                    .toString()
+            val link = sub.replace("[$language]", "").trim()
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    language,
+                    link
+                )
+            )
+        }
+
+    }
+
+}
+
+private fun getQuality(str: String): Int {
+    return when (str) {
+        "360p" -> Qualities.P240.value
+        "480p" -> Qualities.P360.value
+        "720p" -> Qualities.P480.value
+        "1080p" -> Qualities.P720.value
+        "1080p Ultra" -> Qualities.P1080.value
+        else -> getQualityFromName(str)
+    }
+}
+
+private fun getBaseUrl(url: String): String {
+    return URI(url).let {
+        "${it.scheme}://${it.host}"
+    }
+}
+
+private fun decryptStreamUrl(data: String): String {
+
+    fun getTrash(arr: List<String>, item: Int): List<String> {
+        val trash = ArrayList<List<String>>()
+        for (i in 1..item) {
+            trash.add(arr)
+        }
+        return trash.reduce { acc, list ->
+            val temp = ArrayList<String>()
+            acc.forEach { ac ->
+                list.forEach { li ->
+                    temp.add(ac.plus(li))
+                }
+            }
+            return@reduce temp
+        }
+    }
+
+    val trashList = listOf("@", "#", "!", "^", "$")
+    val trashSet = getTrash(trashList, 2) + getTrash(trashList, 3)
+    var trashString = data.replace("#2", "").split("//_//").joinToString("")
+
+    trashSet.forEach {
+        val temp = base64Encode(it.toByteArray())
+        trashString = trashString.replace(temp, "")
+    }
+
+    return base64Decode(trashString)
+
+}
+
+suspend fun loadLinksWithWebView(
+    url: String,
+    callback: (ExtractorLink) -> Unit
+) {
+    val foundVideo = WebViewResolver(
+        Regex("""\.m3u8|i7njdjvszykaieynzsogaysdgb0hm8u1mzubmush4maopa4wde\.com""")
+    ).resolveUsingWebView(
+        requestCreator(
+            "GET", url, referer = "https://olgply.com/"
+        )
+    ).first ?: return
+
+    callback.invoke(
+        ExtractorLink(
+            "Olgply",
+            "Olgply",
+            foundVideo.url.toString(),
+            "",
+            Qualities.Unknown.value,
+            true
+        )
+    )
 }
