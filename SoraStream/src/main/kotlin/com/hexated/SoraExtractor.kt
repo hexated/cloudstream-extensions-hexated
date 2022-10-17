@@ -116,16 +116,25 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = if (season == null) {
-            "$dbgoAPI/imdb.php?id=$id"
-        } else {
-            "$dbgoAPI/imdbse.php?id=$id&s=$season&e=$episode"
-        }
 
-        val doc = app.get(url).document
-        val iframe = doc.select("div.myvideo iframe").attr("src")
-        val script = app.get(iframe, referer = "$dbgoAPI/").document.select("script")
-            .find { it.data().contains("CDNplayerConfig =") }?.data()
+        var iframeDbgo: String? = null
+        val script = if (season == null) {
+            val doc = app.get("$dbgoAPI/imdb.php?id=$id").document
+            iframeDbgo = doc.select("div.myvideo iframe").attr("src")
+            app.get(iframeDbgo, referer = "$dbgoAPI/").document.select("script")
+                .find { it.data().contains("CDNplayerConfig =") }?.data()
+        } else {
+            val doc = app.get("$dbgoAPI/tv-imdb.php?id=$id&s=$season").document
+            iframeDbgo = doc.select("div.myvideo iframe").attr("src")
+            val token = app.get(
+                iframeDbgo,
+                referer = "$dbgoAPI/"
+            ).document.selectFirst("select#translator-name option")?.attr("data-token")
+            app.get("https://voidboost.net/serial/$token/iframe?s=$season&e=$episode&h=dbgo.fun").document.select(
+                "script"
+            )
+                .find { it.data().contains("CDNplayerConfig =") }?.data()
+        }
 
         val source =
             Regex("['|\"]file['|\"]:\\s['|\"](#\\S+?)['|\"]").find(script.toString())?.groupValues?.get(
@@ -147,11 +156,11 @@ object SoraExtractor : SoraStream() {
                             name,
                             name,
                             link,
-                            "${getBaseUrl(iframe)}/",
+                            "${getBaseUrl(iframeDbgo)}/",
                             getQuality(quality),
                             isM3u8 = link.contains(".m3u8"),
                             headers = mapOf(
-                                "Origin" to getBaseUrl(iframe)
+                                "Origin" to getBaseUrl(iframeDbgo)
                             )
                         )
                     )
