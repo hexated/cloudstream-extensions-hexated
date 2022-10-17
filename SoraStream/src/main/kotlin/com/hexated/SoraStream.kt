@@ -2,6 +2,7 @@ package com.hexated
 
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.RandomUserAgent.getRandomUserAgent
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.lagradost.cloudstream3.mvvm.safeApiCall
@@ -224,7 +225,7 @@ class SoraStream : TmdbProvider() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val doc = app.get(url).document
+        val doc = app.get(url, headers = mapOf("User-Agent" to getRandomUserAgent())).document
         val script = doc.select("script").find { it.data().contains("\"sources\":[") }?.data()
         val sourcesData = script?.substringAfter("\"sources\":[")?.substringBefore("],")
         val subData = script?.substringAfter("\"subtitles\":[")?.substringBefore("],")
