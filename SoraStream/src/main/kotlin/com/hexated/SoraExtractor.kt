@@ -95,7 +95,20 @@ object SoraExtractor : SoraStream() {
             "$vidSrcAPI/embed/$id/${season}-${episode}"
         }
 
-        loadExtractor(url, null, subtitleCallback, callback)
+        loadExtractor(url, null, subtitleCallback) { link ->
+            callback.invoke(
+                ExtractorLink(
+                    link.name,
+                    link.name,
+                    link.url,
+                    link.referer,
+                    Qualities.P1080.value,
+                    link.isM3u8,
+                    link.headers,
+                    link.extractorData
+                )
+            )
+        }
     }
 
     suspend fun invokeOlgply(
@@ -250,7 +263,7 @@ suspend fun loadLinksWithWebView(
             "Olgply",
             foundVideo.url.toString(),
             "",
-            Qualities.Unknown.value,
+            Qualities.P1080.value,
             true
         )
     )
