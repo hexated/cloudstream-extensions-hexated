@@ -195,11 +195,18 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invoke123Movie(
-        id: String? = null,
+        tmdbId: Int? = null,
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = "$movie123API/imdb.php?imdb=$id&server=vcu"
+        val url = if(season == null) {
+            "$movie123API/imdb.php?imdb=$imdbId&server=vcu"
+        } else {
+            "$movie123API/tmdb_api.php?se=$season&ep=$episode&tmdb=$tmdbId&server_name=vcu"
+        }
         val iframe = app.get(url).document.selectFirst("iframe")?.attr("src")
 
         val doc = app.get(

@@ -263,7 +263,14 @@ open class SoraStream : TmdbProvider() {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                if (res.type == "movie") invoke123Movie(res.imdbId, subtitleCallback, callback)
+                invoke123Movie(
+                    res.id,
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             })
 
 
