@@ -90,7 +90,7 @@ class Paradisehill : MainAPI() {
                     it.toSearchResult()
                 }
 
-        return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+        return newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
             this.posterUrl = poster
             this.plot = description
             this.tags = tags

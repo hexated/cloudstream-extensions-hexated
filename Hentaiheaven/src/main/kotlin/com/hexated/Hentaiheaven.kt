@@ -81,7 +81,7 @@ class Hentaiheaven : MainAPI() {
                 it.toSearchResult()
             }
 
-        return newAnimeLoadResponse(title, url, TvType.Anime) {
+        return newAnimeLoadResponse(title, url, TvType.NSFW) {
             engName = title
             posterUrl = poster
             addEpisodes(DubStatus.Subbed, episodes)

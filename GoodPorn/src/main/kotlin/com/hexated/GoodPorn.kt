@@ -93,7 +93,7 @@ class GoodPorn : MainAPI() {
                 it.toSearchResult()
             }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, LoadData(res.url, res.trailer).toJson()) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, LoadData(res.url, res.trailer).toJson()) {
             this.posterUrl = poster
             this.plot = description
             this.tags = tags
