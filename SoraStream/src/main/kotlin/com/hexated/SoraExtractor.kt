@@ -8,11 +8,6 @@ import com.lagradost.nicehttp.requestCreator
 import java.net.URI
 import java.util.ArrayList
 
-class EmbedSito : XStreamCdn() {
-    override val name: String = "EmbedSito"
-    override val mainUrl: String = "https://embedsito.com"
-}
-
 object SoraExtractor : SoraStream() {
 
     suspend fun invokeLocalSources(
