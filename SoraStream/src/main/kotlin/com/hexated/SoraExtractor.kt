@@ -1,12 +1,17 @@
 package com.hexated
 
-import android.util.Log
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.nicehttp.requestCreator
 import java.net.URI
 import java.util.ArrayList
+
+class EmbedSito : XStreamCdn() {
+    override val name: String = "EmbedSito"
+    override val mainUrl: String = "https://embedsito.com"
+}
 
 object SoraExtractor : SoraStream() {
 
@@ -71,7 +76,6 @@ object SoraExtractor : SoraStream() {
                 "$twoEmbedAPI/ajax/embed/play?id=$serverID&_token=$token",
                 referer = url
             ).parsedSafe<EmbedJson>()?.let { source ->
-                Log.i("hexated", "${source.link}")
                 loadExtractor(
                     source.link ?: return@let null,
                     twoEmbedAPI,
@@ -195,6 +199,33 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invoke123Movie(
+        id: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = "$movie123API/imdb.php?imdb=$id&server=vcu"
+        val iframe = app.get(url).document.selectFirst("iframe")?.attr("src")
+
+        val doc = app.get(
+            "$iframe",
+            referer = url,
+            headers = mapOf("Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+        ).document
+
+        doc.select("ul.list-server-items li.linkserver").mapNotNull { server ->
+            server.attr("data-video").let {
+                Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
+            }
+        }.apmap { link ->
+            loadExtractor(
+                link,
+                "https://123moviesjr.cc/",
+                subtitleCallback,
+                callback
+            )
+        }
+    }
 }
 
 private fun getQuality(str: String): Int {
