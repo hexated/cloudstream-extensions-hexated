@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.WebViewResolver
@@ -202,7 +203,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = if(season == null) {
+        val url = if (season == null) {
             "$movie123API/imdb.php?imdb=$imdbId&server=vcu"
         } else {
             "$movie123API/tmdb_api.php?se=$season&ep=$episode&tmdb=$tmdbId&server_name=vcu"
@@ -226,6 +227,39 @@ object SoraExtractor : SoraStream() {
                 subtitleCallback,
                 callback
             )
+        }
+    }
+
+    suspend fun invokeMovieHab(
+        id: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if (season == null) {
+            "$movieHabAPI/embed/movie?tmdb=$id"
+        } else {
+            "$movieHabAPI/embed/series?tmdb=$id&sea=$season&epi=$episode"
+        }
+
+        val doc = app.get(url, referer = "$movieHabAPI/").document
+        val movieId = doc.select("div#embed-player").attr("data-movie-id")
+
+        doc.select("div.dropdown-menu a").apmap {
+            val dataId = it.attr("data-id")
+            app.get(
+                "$movieHabAPI/ajax/get_stream_link?id=$dataId&movie=$movieId&is_init=true&captcha=&ref=",
+                referer = url,
+                headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+            ).parsedSafe<MovieHabRes>()?.data?.let { res ->
+                loadExtractor(
+                    res.link ?: return@let null,
+                    movieHabAPI,
+                    subtitleCallback,
+                    callback
+                )
+            }
         }
     }
 }
@@ -301,3 +335,12 @@ suspend fun loadLinksWithWebView(
         )
     )
 }
+
+private data class MovieHabData(
+    @JsonProperty("link") val link: String? = null,
+    @JsonProperty("token") val token: String? = null,
+)
+
+private data class MovieHabRes(
+    @JsonProperty("data") val data: MovieHabData? = null,
+)
