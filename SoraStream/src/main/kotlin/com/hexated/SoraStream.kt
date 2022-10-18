@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.RandomUserAgent.getRandomUserAgent
+import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeLocalSources
 import com.hexated.SoraExtractor.invokeOlgply
@@ -36,7 +37,8 @@ open class SoraStream : TmdbProvider() {
             base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
-        const val dbgoAPI = " https://dbgo.fun"
+        const val dbgoAPI = "https://dbgo.fun"
+        const val movie123API = "https://api.123movie.cc"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -259,6 +261,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if (res.type == "movie") invoke123Movie(res.imdbId, subtitleCallback, callback)
             })
 
 
