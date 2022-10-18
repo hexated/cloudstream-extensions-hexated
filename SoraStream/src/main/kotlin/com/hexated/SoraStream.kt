@@ -5,6 +5,7 @@ import com.hexated.RandomUserAgent.getRandomUserAgent
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeLocalSources
+import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeOlgply
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -39,6 +40,7 @@ open class SoraStream : TmdbProvider() {
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
         const val movie123API = "https://api.123movie.cc"
+        const val movieHabAPI = "https://moviehab.com"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -263,14 +265,10 @@ open class SoraStream : TmdbProvider() {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invoke123Movie(
-                    res.id,
-                    res.imdbId,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
+                invoke123Movie(res.id, res.imdbId, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeMovieHab(res.id, res.season, res.episode, subtitleCallback, callback)
             })
 
 
