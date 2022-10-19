@@ -26,6 +26,7 @@ open class SoraStream : TmdbProvider() {
     override val hasDownloadSupport = true
     override val instantLinkLoading = true
     override val useMetaLoadResponse = true
+    override val hasQuickSearch = true
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
