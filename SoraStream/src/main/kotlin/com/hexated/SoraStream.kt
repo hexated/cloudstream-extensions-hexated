@@ -120,6 +120,8 @@ open class SoraStream : TmdbProvider() {
         }
     }
 
+    override suspend fun quickSearch(query: String) = search(query)
+
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
 
