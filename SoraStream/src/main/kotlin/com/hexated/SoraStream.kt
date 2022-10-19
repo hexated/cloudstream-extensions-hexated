@@ -223,6 +223,15 @@ open class SoraStream : TmdbProvider() {
             headers = mapOf("User-Agent" to getRandomUserAgent())
         ).parsedSafe<LoadLinks>()
 
+        json?.subtitles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.lang.toString(),
+                    sub.url ?: return@map null
+                )
+            )
+        }
+
         argamap(
             {
                 if (json?.sources.isNullOrEmpty()) {
@@ -238,15 +247,6 @@ open class SoraStream : TmdbProvider() {
                                 source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
                                 isM3u8 = source.isM3U8,
                                 headers = mapOf("Origin" to mainServerAPI)
-                            )
-                        )
-                    }
-
-                    json?.subtitles?.map { sub ->
-                        subtitleCallback.invoke(
-                            SubtitleFile(
-                                sub.lang.toString(),
-                                sub.url ?: return@map null
                             )
                         )
                     }
