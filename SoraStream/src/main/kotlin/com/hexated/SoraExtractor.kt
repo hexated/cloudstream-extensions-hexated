@@ -261,6 +261,42 @@ object SoraExtractor : SoraStream() {
             }
         }
     }
+
+//    suspend fun invokeOpenvids(
+//        id: Int? = null,
+//        season: Int? = null,
+//        episode: Int? = null,
+//        subtitleCallback: (SubtitleFile) -> Unit,
+//        callback: (ExtractorLink) -> Unit
+//    ) {
+//
+//    }
+
+    suspend fun invokeGogo(
+        aniId: String? = null,
+        animeId: String? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res =
+            app.get("$mainServerAPI/anime/$aniId/episode/$animeId?_data=routes/anime/\$animeId.episode.\$episodeId")
+                .parsedSafe<LoadLinks>()
+
+        res?.sources?.map { source ->
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    source.url ?: return@map null,
+                    "$mainServerAPI/",
+                    getQualityFromName(source.quality),
+                    isM3u8 = source.isM3U8,
+                    headers = mapOf("Origin" to mainServerAPI)
+                )
+            )
+        }
+
+    }
+
 }
 
 private fun getQuality(str: String): Int {
@@ -342,4 +378,14 @@ private data class MovieHabData(
 
 private data class MovieHabRes(
     @JsonProperty("data") val data: MovieHabData? = null,
+)
+
+private data class Sources(
+    @JsonProperty("url") val url: String? = null,
+    @JsonProperty("quality") val quality: String? = null,
+    @JsonProperty("isM3U8") val isM3U8: Boolean = true,
+)
+
+private data class LoadLinks(
+    @JsonProperty("sources") val sources: ArrayList<Sources>? = arrayListOf(),
 )
