@@ -8,5 +8,3 @@ You can download this extension repositories [here
 [![Discord](https://invidget.switchblade.xyz/5Hus6fM)](https://discord.gg/5Hus6fM)
 
 
-### 🌟star this repository to support developers
-
