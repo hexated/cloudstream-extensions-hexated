@@ -8,7 +8,6 @@ import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
-import java.net.URI
 
 class IdlixProvider : MainAPI() {
     override var mainUrl = "https://109.234.36.69"
@@ -181,23 +180,6 @@ class IdlixProvider : MainAPI() {
         }
     }
 
-    data class ResponseHash(
-        @JsonProperty("embed_url") val embed_url: String,
-        @JsonProperty("type") val type: String?,
-    )
-
-    data class ResponseSource(
-        @JsonProperty("hls") val hls: Boolean,
-        @JsonProperty("videoSource") val videoSource: String,
-        @JsonProperty("securedLink") val securedLink: String?,
-    )
-
-    data class Tracks(
-        @JsonProperty("kind") val kind: String?,
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String?,
-    )
-
     private suspend fun invokeLokalSource(
         url: String,
         subCallback: (SubtitleFile) -> Unit,
@@ -235,11 +217,6 @@ class IdlixProvider : MainAPI() {
             }
         }
     }
-
-    data class ResponseLaviolaSource(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String?,
-    )
 
     private suspend fun invokeLaviolaSource(
         url: String,
@@ -283,63 +260,6 @@ class IdlixProvider : MainAPI() {
         }
     }
 
-    private data class Captions(
-        @JsonProperty("id") val id: String,
-        @JsonProperty("hash") val hash: String,
-        @JsonProperty("language") val language: String,
-    )
-
-    private data class Data(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String,
-    )
-
-    private data class Player(
-        @JsonProperty("poster_file") val poster_file: String,
-    )
-
-    private data class ResponseCdn(
-        @JsonProperty("success") val success: Boolean,
-        @JsonProperty("player") val player: Player,
-        @JsonProperty("data") val data: List<Data>?,
-        @JsonProperty("captions") val captions: List<Captions>?
-    )
-
-    private suspend fun invokeCdnSource(
-        url: String,
-        subCallback: (SubtitleFile) -> Unit,
-        sourceCallback: (ExtractorLink) -> Unit
-    ) {
-        val domainUrl = "https://cdnplayer.online"
-        val id = url.trimEnd('/').split("/").last()
-        val sources = app.post(
-            url = "$domainUrl/api/source/$id",
-            data = mapOf("r" to mainUrl, "d" to URI(url).host)
-        ).parsed<ResponseCdn>()
-
-        sources.data?.map {
-            sourceCallback.invoke(
-                ExtractorLink(
-                    name,
-                    "Cdnplayer",
-                    fixUrl(it.file),
-                    referer = url,
-                    quality = getQualityFromName(it.label)
-                )
-            )
-        }
-        val userData = sources.player.poster_file.split("/")[2]
-        sources.captions?.map { subtitle ->
-            subCallback.invoke(
-                SubtitleFile(
-                    getLanguage(subtitle.language),
-                    "$domainUrl/asset/userdata/$userData/caption/${subtitle.hash}/${subtitle.id}.srt"
-                )
-            )
-        }
-
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -376,11 +296,6 @@ class IdlixProvider : MainAPI() {
                         subtitleCallback,
                         callback
                     )
-                    source.startsWith("https://cdnplayer.online") -> invokeCdnSource(
-                        source,
-                        subtitleCallback,
-                        callback
-                    )
                     else -> {
                         if (source.startsWith("https://uservideo.xyz")) {
                             source = app.get(source).document.select("iframe").attr("src")
@@ -394,5 +309,26 @@ class IdlixProvider : MainAPI() {
         return true
     }
 
+    data class ResponseHash(
+        @JsonProperty("embed_url") val embed_url: String,
+        @JsonProperty("type") val type: String?,
+    )
+
+    data class ResponseSource(
+        @JsonProperty("hls") val hls: Boolean,
+        @JsonProperty("videoSource") val videoSource: String,
+        @JsonProperty("securedLink") val securedLink: String?,
+    )
+
+    data class Tracks(
+        @JsonProperty("kind") val kind: String?,
+        @JsonProperty("file") val file: String,
+        @JsonProperty("label") val label: String?,
+    )
+
+    data class ResponseLaviolaSource(
+        @JsonProperty("file") val file: String,
+        @JsonProperty("label") val label: String?,
+    )
 
 }
