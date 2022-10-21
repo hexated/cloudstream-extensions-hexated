@@ -342,7 +342,7 @@ open class SoraStream : TmdbProvider() {
                 invokeMovieHab(res.id, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeGogo(res.aniId, res.animeId, callback)
+                if (res.aniId?.isNotEmpty() == true) invokeGogo(res.aniId, res.animeId, callback)
             })
 
 
