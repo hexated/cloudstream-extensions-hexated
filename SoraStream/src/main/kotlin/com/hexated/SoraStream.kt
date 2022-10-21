@@ -1,5 +1,6 @@
 package com.hexated
 
+import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.RandomUserAgent.getRandomUserAgent
 import com.hexated.SoraExtractor.invoke123Movie
@@ -8,12 +9,14 @@ import com.hexated.SoraExtractor.invokeGogo
 import com.hexated.SoraExtractor.invokeLocalSources
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeOlgply
+import com.hexated.SoraExtractor.invokeSoraVIP
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
+import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -26,7 +29,6 @@ open class SoraStream : TmdbProvider() {
     override val hasDownloadSupport = true
     override val instantLinkLoading = true
     override val useMetaLoadResponse = true
-    override val hasQuickSearch = true
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -120,8 +122,6 @@ open class SoraStream : TmdbProvider() {
             addSub(totalEpisodes)
         }
     }
-
-    override suspend fun quickSearch(query: String) = search(query)
 
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
@@ -286,16 +286,10 @@ open class SoraStream : TmdbProvider() {
             headers = mapOf("User-Agent" to getRandomUserAgent())
         ).parsedSafe<LoadLinks>()
 
-        json?.subtitles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.lang.toString(),
-                    sub.url ?: return@map null
-                )
-            )
-        }
-
         argamap(
+            {
+                invokeSoraVIP(res.id, res.season, res.episode, subtitleCallback, callback)
+            },
             {
                 if (json?.sources.isNullOrEmpty()) {
                     invokeLocalSources(referer, subtitleCallback, callback)
@@ -310,6 +304,14 @@ open class SoraStream : TmdbProvider() {
                                 source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
                                 isM3u8 = source.isM3U8,
                                 headers = mapOf("Origin" to mainServerAPI)
+                            )
+                        )
+                    }
+                    json?.subtitles?.map { sub ->
+                        subtitleCallback.invoke(
+                            SubtitleFile(
+                                sub.lang.toString(),
+                                sub.url ?: return@map null
                             )
                         )
                     }
@@ -516,6 +518,28 @@ open class SoraStream : TmdbProvider() {
 
     data class DetailAnimeResult(
         @JsonProperty("detail") val detail: DetailAnime? = null,
+    )
+
+    data class DetailVip(
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("original_title") val original_title: String? = null,
+        @JsonProperty("original_name") val original_name: String? = null,
+        @JsonProperty("release_date") val release_date: String? = null,
+        @JsonProperty("first_air_date") val first_air_date: String? = null,
+    )
+
+    data class DetailVipResult(
+        @JsonProperty("detail") val detail: DetailVip? = null,
+    )
+
+    data class Providers(
+        @JsonProperty("id") val id: String? = null,
+        @JsonProperty("provider") val provider: String? = null,
+    )
+
+    data class ProvidersResult(
+        @JsonProperty("provider") val provider: ArrayList<Providers>? = arrayListOf(),
     )
 
 }
