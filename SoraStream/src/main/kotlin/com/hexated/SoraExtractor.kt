@@ -262,15 +262,69 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-//    suspend fun invokeOpenvids(
-//        id: Int? = null,
-//        season: Int? = null,
-//        episode: Int? = null,
-//        subtitleCallback: (SubtitleFile) -> Unit,
-//        callback: (ExtractorLink) -> Unit
-//    ) {
-//
-//    }
+    suspend fun invokeSoraVIP(
+        id: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val providerId = if (season == null) {
+            val url = "$mainServerAPI/movies/$id/?_data=routes/movies/\$movieId"
+            val data = app.get(url).parsedSafe<DetailVipResult>()?.detail
+            app.get(
+                "$mainServerAPI/api/provider?title=${data?.title ?: data?.name}&type=movie&origTitle=${data?.original_title ?: data?.original_name}&year=${
+                    (data?.release_date ?: data?.first_air_date)?.substringBefore("-")
+                }&_data=routes/api/provider"
+            )
+                .parsedSafe<ProvidersResult>()?.provider?.first { it.provider == "Loklok" }?.id
+
+        } else {
+            val url = "$mainServerAPI/tv-shows/$id/?_data=routes/tv-shows/\$tvId"
+            val data = app.get(url).parsedSafe<DetailVipResult>()?.detail
+            app.get(
+                "$mainServerAPI/api/provider?title=${data?.title ?: data?.name}&type=tv&origTitle=${data?.original_title ?: data?.original_name}&year=${
+                    (data?.release_date ?: data?.first_air_date)?.substringBefore("-")
+                }&season=$season&_data=routes/api/provider"
+            )
+                .parsedSafe<ProvidersResult>()?.provider?.first { it.provider == "Loklok" }?.id
+
+        }
+
+        val query = if (season == null) {
+            "$mainServerAPI/movies/$id/watch?provider=Loklok&id=$providerId&_data=routes/movies/\$movieId.watch"
+        } else {
+            "$mainServerAPI/tv-shows/$id/season/$season/episode/$episode?provider=Loklok&id=$providerId&_data=routes/tv-shows/\$tvId.season.\$seasonId.episode.\$episodeId"
+        }
+
+        val json = app.get(
+            query,
+            headers = mapOf("User-Agent" to RandomUserAgent.getRandomUserAgent())
+        ).parsedSafe<LoadLinks>()
+
+        json?.sources?.map { source ->
+            callback.invoke(
+                ExtractorLink(
+                    "${this.name} (VIP)",
+                    "${this.name} (VIP)",
+                    source.url ?: return@map null,
+                    "$mainServerAPI/",
+                    source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+                    isM3u8 = source.isM3U8,
+                    headers = mapOf("Origin" to mainServerAPI)
+                )
+            )
+        }
+
+        json?.subtitles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.lang.toString(),
+                    sub.url ?: return@map null
+                )
+            )
+        }
+    }
 
     suspend fun invokeGogo(
         aniId: String? = null,
@@ -380,12 +434,3 @@ private data class MovieHabRes(
     @JsonProperty("data") val data: MovieHabData? = null,
 )
 
-private data class Sources(
-    @JsonProperty("url") val url: String? = null,
-    @JsonProperty("quality") val quality: String? = null,
-    @JsonProperty("isM3U8") val isM3U8: Boolean = true,
-)
-
-private data class LoadLinks(
-    @JsonProperty("sources") val sources: ArrayList<Sources>? = arrayListOf(),
-)
