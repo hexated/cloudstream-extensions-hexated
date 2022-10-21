@@ -1,6 +1,5 @@
 package com.hexated
 
-import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.RandomUserAgent.getRandomUserAgent
 import com.hexated.SoraExtractor.invoke123Movie
