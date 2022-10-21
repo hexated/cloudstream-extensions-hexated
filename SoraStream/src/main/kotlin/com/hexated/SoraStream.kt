@@ -43,7 +43,7 @@ open class SoraStream : TmdbProvider() {
         val mainServerAPI =
             base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
-        const val vidSrcAPI = "https://vidsrc.me"
+        const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
         const val movie123API = "https://api.123movie.cc"
         const val movieHabAPI = "https://moviehab.com"
