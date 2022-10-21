@@ -542,4 +542,13 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("provider") val provider: ArrayList<Providers>? = arrayListOf(),
     )
 
+    data class MovieHabData(
+        @JsonProperty("link") val link: String? = null,
+        @JsonProperty("token") val token: String? = null,
+    )
+
+    data class MovieHabRes(
+        @JsonProperty("data") val data: MovieHabData? = null,
+    )
+
 }

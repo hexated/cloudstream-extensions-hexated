@@ -1,6 +1,5 @@
 package com.hexated
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
@@ -294,7 +293,7 @@ object SoraExtractor : SoraStream() {
         val query = if (season == null) {
             "$mainServerAPI/movies/$id/watch?provider=Loklok&id=$providerId&_data=routes/movies/\$movieId.watch"
         } else {
-            "$mainServerAPI/tv-shows/$id/season/$season/episode/$episode?provider=Loklok&id=$providerId&_data=routes/tv-shows/\$tvId.season.\$seasonId.episode.\$episodeId"
+            "$mainServerAPI/tv-shows/$id/season/$season/episode/${episode?.minus(1)}?provider=Loklok&id=$providerId&_data=routes/tv-shows/\$tvId.season.\$seasonId.episode.\$episodeId"
         }
 
         val json = app.get(
@@ -424,13 +423,4 @@ suspend fun loadLinksWithWebView(
         )
     )
 }
-
-private data class MovieHabData(
-    @JsonProperty("link") val link: String? = null,
-    @JsonProperty("token") val token: String? = null,
-)
-
-private data class MovieHabRes(
-    @JsonProperty("data") val data: MovieHabData? = null,
-)
 
