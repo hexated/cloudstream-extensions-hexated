@@ -5,11 +5,13 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://lk21official.biz"
+    override var mainUrl = "https://lk21official.org"
+
+    //    private val redirectUrl = "https://nd21x1.github.io"
+    private val seriesUrl = "https://nontondrama.icu"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
@@ -22,14 +24,12 @@ class LayarKacaProvider : MainAPI() {
 
     override val mainPage = mainPageOf(
         "$mainUrl/populer/page/" to "Film Terplopuler",
-        "$mainUrl/latest-series/page/" to "Series Terbaru",
-        "$mainUrl/series/asian/page/" to "Film Asian Terbaru",
+        "$mainUrl/rating/page/" to "Film Berdasarkan IMDb Rating",
+        "$mainUrl/most-commented/page/" to "Film Dengan Komentar Terbanyak",
+        "$seriesUrl/latest/page/" to "Series Terbaru",
+        "$seriesUrl/series/asian/page/" to "Film Asian Terbaru",
         "$mainUrl/latest/page/" to "Film Upload Terbaru",
     )
-
-    companion object {
-        private const val seriesUrl = "https://nontondrama.today"
-    }
 
     override suspend fun getMainPage(
         page: Int,
@@ -64,22 +64,34 @@ class LayarKacaProvider : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h1.grid-title > a")?.ownText()?.trim() ?: return null
-        val href = getProperLink(fixUrl(this.selectFirst("h1.grid-title > a")!!.attr("href")), title)
+        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst(".grid-poster > a > img")?.attr("src"))
-        val quality = this.select("div.quality").text().trim()
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = posterUrl
-            addQuality(quality)
+        val type =
+            if (this.selectFirst("div.last-episode") == null) TvType.Movie else TvType.TvSeries
+        return if (type == TvType.TvSeries) {
+            val episode = this.selectFirst("div.last-episode span")?.text()?.filter { it.isDigit() }
+                ?.toIntOrNull()
+            newAnimeSearchResponse(title, href, TvType.TvSeries) {
+                this.posterUrl = posterUrl
+                addSub(episode)
+            }
+        } else {
+            val quality = this.select("div.quality").text().trim()
+            newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = posterUrl
+                addQuality(quality)
+            }
         }
+
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get( "$mainUrl/?s=$query").document
+        val document = app.get("$mainUrl/?s=$query").document
 
         return document.select("div.search-item").map {
             val title = it.selectFirst("h2 > a")!!.text().trim()
             val type = it.selectFirst("p.cat-links a")?.attr("href").toString()
-            val href = getProperLink(it.selectFirst("h2 > a")!!.attr("href"), type)
+            val href = getProperLink(it.selectFirst("a")!!.attr("href"), type)
             val posterUrl = fixUrl(it.selectFirst("img.img-thumbnail")?.attr("src").toString())
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
