@@ -282,7 +282,9 @@ class IdlixProvider : MainAPI() {
                         "post" to id,
                         "nume" to nume,
                         "type" to type
-                    )
+                    ),
+                    headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
+                    referer = data
                 ).parsed<ResponseHash>().embed_url
 
                 when {
