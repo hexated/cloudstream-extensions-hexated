@@ -1,13 +1,13 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.GogoExtractor.extractVidstream
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
-import org.json.JSONObject
 import org.jsoup.Jsoup
 import java.net.URI
 
@@ -27,14 +27,6 @@ class Animixplay : MainAPI() {
     )
 
     companion object {
-        fun getType(t: String?): TvType {
-            return when {
-                t?.contains("TV") == true -> TvType.Anime
-                t?.contains("Movie") == true -> TvType.AnimeMovie
-                else -> TvType.OVA
-            }
-        }
-
         fun getStatus(t: String?): ShowStatus {
             return when (t) {
                 "Finished Airing" -> ShowStatus.Completed
@@ -155,205 +147,237 @@ class Animixplay : MainAPI() {
         }
     }
 
-        override suspend fun quickSearch(query: String): List<SearchResponse>? {
-            return app.post(
-                "https://cdn.animixplay.to/api/search",
-                data = mapOf("qfast" to query, "root" to URI(mainUrl).host)
-            ).parsedSafe<Search>()?.result?.let {
-                Jsoup.parse(it).select("a").map { elem ->
-                    val href = elem.attr("href")
-                    val title = elem.select("p.name").text()
-                    newAnimeSearchResponse(title, href, TvType.Anime) {
-                        this.posterUrl = elem.select("img").attr("src")
-                        addDubStatus(isDub = title.contains("Dub"))
-                    }
+    override suspend fun quickSearch(query: String): List<SearchResponse>? {
+        return app.post(
+            "https://cdn.animixplay.to/api/search",
+            data = mapOf("qfast" to query, "root" to URI(mainUrl).host)
+        ).parsedSafe<Search>()?.result?.let {
+            Jsoup.parse(it).select("a").map { elem ->
+                val href = elem.attr("href")
+                val title = elem.select("p.name").text()
+                newAnimeSearchResponse(title, href, TvType.Anime) {
+                    this.posterUrl = elem.select("img").attr("src")
+                    addDubStatus(isDub = title.contains("Dub"))
                 }
             }
         }
-
-
-        override suspend fun load(url: String): LoadResponse? {
-
-            val (fixUrl, malId) = if (url.contains("/anime/")) {
-                listOf(url, Regex("anime/([0-9]+)/?").find(url)?.groupValues?.get(1))
-            } else {
-                val malId = app.get(url).text.substringAfterLast("malid = '").substringBefore("';")
-                listOf("$mainUrl/anime/$malId", malId)
-            }
-
-            val anilistId = app.post(
-                "https://graphql.anilist.co/", data = mapOf(
-                    "query" to "{Media(idMal:$malId,type:ANIME){id}}",
-                )
-            ).parsedSafe<DataAni>()?.data?.media?.id
-
-            val res = app.get("$mainUrl/assets/mal/$malId.json").parsedSafe<AnimeDetail>()
-                ?: throw ErrorLoadingException("No data found")
-
-            val subEpisodes = mutableListOf<Episode>()
-            val dubEpisodes = mutableListOf<Episode>()
-
-            app.post("$mainUrl/api/search", data = mapOf("recomended" to "$malId"))
-                .parsedSafe<Data>()?.data?.filter { it.type == "GOGO" }?.map { item ->
-                    item.items?.apmap { server ->
-                        val dataEps =
-                            app.get(fixUrl(server.url.toString())).document.select("div#epslistplace")
-                                .text().trim()
-                        Regex("\"([0-9]+)\":\"(\\S+?)\"").findAll(dataEps).toList()
-                            .map { it.groupValues[1] to it.groupValues[2] }.map { (ep, link) ->
-                                val episode = Episode(fixUrl(link), episode = ep.toInt() + 1)
-                                if (server.url?.contains("-dub") == true) {
-                                    dubEpisodes.add(episode)
-                                } else {
-                                    subEpisodes.add(episode)
-                                }
-                            }
-                    }
-                }
-
-            val recommendations = app.get("$mainUrl/assets/similar/$malId.json")
-                .parsedSafe<RecResult>()?.recommendations?.mapNotNull { rec ->
-                    newAnimeSearchResponse(
-                        rec.title ?: return@mapNotNull null,
-                        "$mainUrl/anime/${rec.malId}/",
-                        TvType.Anime
-                    ) {
-                        this.posterUrl = rec.imageUrl
-                        addDubStatus(dubExist = false, subExist = true)
-                    }
-                }
-
-            return newAnimeLoadResponse(
-                res.title ?: return null,
-                url,
-                TvType.Anime
-            ) {
-                engName = res.title
-                posterUrl = res.imageUrl
-                this.year = res.aired?.from?.split("-")?.firstOrNull()?.toIntOrNull()
-                showStatus = getStatus(res.status)
-                plot = res.synopsis
-                this.tags = res.genres?.mapNotNull { it.name }
-                this.recommendations = recommendations
-                addMalId(malId?.toIntOrNull())
-                addAniListId(anilistId?.toIntOrNull())
-                addTrailer(res.trailerUrl)
-                if (subEpisodes.isNotEmpty()) addEpisodes(DubStatus.Subbed, subEpisodes)
-                if (dubEpisodes.isNotEmpty()) addEpisodes(DubStatus.Dubbed, dubEpisodes)
-            }
-
-        }
-
-        override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
-        ): Boolean {
-
-            val iframe = app.get(data)
-            val iframeDoc = iframe.document
-
-            argamap({
-                iframeDoc.select(".list-server-items > .linkserver")
-                    .forEach { element ->
-                        val status = element.attr("data-status") ?: return@forEach
-                        if (status != "1") return@forEach
-                        val extractorData = element.attr("data-video") ?: return@forEach
-                        loadExtractor(extractorData, iframe.url, subtitleCallback, callback)
-                    }
-            }, {
-                val iv = "3134003223491201"
-                val secretKey = "37911490979715163134003223491201"
-                val secretDecryptKey = "54674138327930866480207815084989"
-                GogoanimeProvider.extractVidstream(
-                    iframe.url,
-                    this.name,
-                    callback,
-                    iv,
-                    secretKey,
-                    secretDecryptKey,
-                    isUsingAdaptiveKeys = false,
-                    isUsingAdaptiveData = true,
-                    iframeDocument = iframeDoc
-                )
-            })
-            return true
     }
 
-        private data class IdAni(
-            @JsonProperty("id") val id: String? = null,
-        )
+    private suspend fun loadMissingAnime(url: String): LoadResponse? {
+        val doc = app.get(url).document
 
-        private data class MediaAni(
-            @JsonProperty("Media") val media: IdAni? = null,
-        )
+        val title = doc.selectFirst("span.animetitle")?.text()
+        val image = fixUrlNull(doc.selectFirst("meta[property=og:image]")?.attr("content"))
+        val genres = doc.selectFirst("span#genredata")?.text()?.split(",")?.map { it.trim() }
 
-        private data class DataAni(
-            @JsonProperty("data") val data: MediaAni? = null,
-        )
+        val subEpisodes = mutableListOf<Episode>()
+        val dubEpisodes = mutableListOf<Episode>()
+        val dataEps = doc.select("div#epslistplace")
+            .text().trim()
+        Regex("\"([0-9]+)\":\"(\\S+?)\"").findAll(dataEps).toList()
+            .map { it.groupValues[1] to it.groupValues[2] }.map { (ep, link) ->
+                val episode = Episode(fixUrl(link), episode = ep.toInt() + 1)
+                if (url.contains("-dub")) {
+                    dubEpisodes.add(episode)
+                } else {
+                    subEpisodes.add(episode)
+                }
+            }
 
-        private data class Items(
-            @JsonProperty("url") val url: String? = null,
-            @JsonProperty("title") val title: String? = null,
-        )
+        return newAnimeLoadResponse(
+            title ?: return null,
+            url,
+            TvType.Anime
+        ) {
+            this.posterUrl = image
+            this.tags = genres
+            if (subEpisodes.isNotEmpty()) addEpisodes(DubStatus.Subbed, subEpisodes)
+            if (dubEpisodes.isNotEmpty()) addEpisodes(DubStatus.Dubbed, dubEpisodes)
+        }
+    }
 
-        private data class Episodes(
-            @JsonProperty("type") val type: String? = null,
-            @JsonProperty("items") val items: ArrayList<Items>? = arrayListOf(),
-        )
+    override suspend fun load(url: String): LoadResponse? {
 
-        private data class Data(
-            @JsonProperty("data") val data: ArrayList<Episodes>? = arrayListOf(),
-        )
+        val (fixUrl, malId) = if (url.contains("/anime/")) {
+            listOf(url, Regex("anime/([0-9]+)/?").find(url)?.groupValues?.get(1))
+        } else {
+            val malId = app.get(url).text.substringAfterLast("malid = '").substringBefore("';")
+            listOf("$mainUrl/anime/$malId", malId)
+        }
 
-        private data class Aired(
-            @JsonProperty("from") val from: String? = null,
-        )
+        val anilistId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
 
-        private data class Genres(
-            @JsonProperty("name") val name: String? = null,
-        )
+        val res = app.get("$mainUrl/assets/mal/$malId.json").parsedSafe<AnimeDetail>()
+            ?: return loadMissingAnime(url)
 
-        private data class RecResult(
-            @JsonProperty("recommendations") val recommendations: ArrayList<Recommendations>? = arrayListOf(),
-        )
+        val subEpisodes = mutableListOf<Episode>()
+        val dubEpisodes = mutableListOf<Episode>()
 
-        private data class Recommendations(
-            @JsonProperty("mal_id") val malId: String? = null,
-            @JsonProperty("image_url") val imageUrl: String? = null,
-            @JsonProperty("title") val title: String? = null,
-        )
+        app.post("$mainUrl/api/search", data = mapOf("recomended" to "$malId"))
+            .parsedSafe<Data>()?.data?.filter { it.type == "GOGO" }?.map { item ->
+                item.items?.apmap { server ->
+                    val dataEps =
+                        app.get(fixUrl(server.url.toString())).document.select("div#epslistplace")
+                            .text().trim()
+                    Regex("\"([0-9]+)\":\"(\\S+?)\"").findAll(dataEps).toList()
+                        .map { it.groupValues[1] to it.groupValues[2] }.map { (ep, link) ->
+                            val episode = Episode(fixUrl(link), episode = ep.toInt() + 1)
+                            if (server.url?.contains("-dub") == true) {
+                                dubEpisodes.add(episode)
+                            } else {
+                                subEpisodes.add(episode)
+                            }
+                        }
+                }
+            }
 
-        private data class AnimeDetail(
-            @JsonProperty("title") val title: String? = null,
-            @JsonProperty("image_url") val imageUrl: String? = null,
-            @JsonProperty("type") val type: String? = null,
-            @JsonProperty("aired") val aired: Aired? = null,
-            @JsonProperty("status") val status: String? = null,
-            @JsonProperty("synopsis") val synopsis: String? = null,
-            @JsonProperty("trailer_url") val trailerUrl: String? = null,
-            @JsonProperty("genres") val genres: ArrayList<Genres>? = arrayListOf(),
-        )
+        val recommendations = app.get("$mainUrl/assets/similar/$malId.json")
+            .parsedSafe<RecResult>()?.recommendations?.mapNotNull { rec ->
+                newAnimeSearchResponse(
+                    rec.title ?: return@mapNotNull null,
+                    "$mainUrl/anime/${rec.malId}/",
+                    TvType.Anime
+                ) {
+                    this.posterUrl = rec.imageUrl
+                    addDubStatus(dubExist = false, subExist = true)
+                }
+            }
 
-        private data class Search(
-            @JsonProperty("result") val result: String? = null,
-        )
+        return newAnimeLoadResponse(
+            res.title ?: return null,
+            url,
+            TvType.Anime
+        ) {
+            engName = res.title
+            posterUrl = res.imageUrl
+            this.year = res.aired?.from?.split("-")?.firstOrNull()?.toIntOrNull()
+            showStatus = getStatus(res.status)
+            plot = res.synopsis
+            this.tags = res.genres?.mapNotNull { it.name }
+            this.recommendations = recommendations
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
+            addTrailer(res.trailerUrl)
+            if (subEpisodes.isNotEmpty()) addEpisodes(DubStatus.Subbed, subEpisodes)
+            if (dubEpisodes.isNotEmpty()) addEpisodes(DubStatus.Dubbed, dubEpisodes)
+        }
 
-        private data class Result(
-            @JsonProperty("result") val result: ArrayList<Anime> = arrayListOf(),
-            @JsonProperty("last") val last: Any? = null,
-        )
+    }
 
-        private data class Anime(
-            @JsonProperty("title") val title: String? = null,
-            @JsonProperty("url") val url: String? = null,
-            @JsonProperty("img") val img: String? = null,
-            @JsonProperty("picture") val picture: String? = null,
-            @JsonProperty("infotext") val infotext: String? = null,
-        )
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
 
-        private data class FullSearch(
+        val iframe = app.get(data)
+        val iframeDoc = iframe.document
+
+        argamap({
+            iframeDoc.select(".list-server-items > .linkserver")
+                .forEach { element ->
+                    val status = element.attr("data-status") ?: return@forEach
+                    if (status != "1") return@forEach
+                    val extractorData = element.attr("data-video") ?: return@forEach
+                    loadExtractor(extractorData, iframe.url, subtitleCallback, callback)
+                }
+        }, {
+            val iv = "3134003223491201"
+            val secretKey = "37911490979715163134003223491201"
+            val secretDecryptKey = "54674138327930866480207815084989"
+            extractVidstream(
+                iframe.url,
+                this.name,
+                callback,
+                iv,
+                secretKey,
+                secretDecryptKey,
+                isUsingAdaptiveKeys = false,
+                isUsingAdaptiveData = true,
+                iframeDocument = iframeDoc
+            )
+        })
+        return true
+    }
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
+    )
+
+    private data class Items(
+        @JsonProperty("url") val url: String? = null,
+        @JsonProperty("title") val title: String? = null,
+    )
+
+    private data class Episodes(
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("items") val items: ArrayList<Items>? = arrayListOf(),
+    )
+
+    private data class Data(
+        @JsonProperty("data") val data: ArrayList<Episodes>? = arrayListOf(),
+    )
+
+    private data class Aired(
+        @JsonProperty("from") val from: String? = null,
+    )
+
+    private data class Genres(
+        @JsonProperty("name") val name: String? = null,
+    )
+
+    private data class RecResult(
+        @JsonProperty("recommendations") val recommendations: ArrayList<Recommendations>? = arrayListOf(),
+    )
+
+    private data class Recommendations(
+        @JsonProperty("mal_id") val malId: String? = null,
+        @JsonProperty("image_url") val imageUrl: String? = null,
+        @JsonProperty("title") val title: String? = null,
+    )
+
+    private data class AnimeDetail(
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("image_url") val imageUrl: String? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("aired") val aired: Aired? = null,
+        @JsonProperty("status") val status: String? = null,
+        @JsonProperty("synopsis") val synopsis: String? = null,
+        @JsonProperty("trailer_url") val trailerUrl: String? = null,
+        @JsonProperty("genres") val genres: ArrayList<Genres>? = arrayListOf(),
+    )
+
+    private data class Search(
+        @JsonProperty("result") val result: String? = null,
+    )
+
+    private data class Result(
+        @JsonProperty("result") val result: ArrayList<Anime> = arrayListOf(),
+        @JsonProperty("last") val last: Any? = null,
+    )
+
+    private data class Anime(
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("url") val url: String? = null,
+        @JsonProperty("img") val img: String? = null,
+        @JsonProperty("picture") val picture: String? = null,
+        @JsonProperty("infotext") val infotext: String? = null,
+    )
+
+    private data class FullSearch(
         @JsonProperty("result") val result: String? = null,
     )
 
