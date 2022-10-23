@@ -9,8 +9,7 @@ import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
     override var mainUrl = "https://lk21official.org"
-
-    //    private val redirectUrl = "https://nd21x1.github.io"
+//    private val redirectUrl = "https://nd21x1.github.io"
     private val seriesUrl = "https://nontondrama.icu"
     override var name = "LayarKaca"
     override val hasMainPage = true
