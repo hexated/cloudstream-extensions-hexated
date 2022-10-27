@@ -17,6 +17,7 @@ import com.hexated.SoraExtractor.invokeVidSrc
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -205,6 +206,8 @@ open class SoraStream : TmdbProvider() {
         val recommendations =
             responses.recommandations?.mapNotNull { media -> media.toSearchResponse() }
 
+        val trailer = responses.result.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }?.first()
+
         return if (type == TvType.TvSeries) {
             val episodes = mutableListOf<Episode>()
             res.seasons?.apmap { season ->
@@ -244,6 +247,7 @@ open class SoraStream : TmdbProvider() {
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
                 this.actors = actors
+                addTrailer(trailer)
             }
         } else {
             newMovieLoadResponse(
@@ -264,6 +268,7 @@ open class SoraStream : TmdbProvider() {
                 this.tags = res.genres?.mapNotNull { it.name }
                 this.recommendations = recommendations
                 this.actors = actors
+                addTrailer(trailer)
             }
         }
     }
@@ -349,15 +354,15 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeMovieHab(res.id, res.season, res.episode, subtitleCallback, callback)
             },
-//            {
-//                invokeDatabaseGdrive(
-//                    res.imdbId,
-//                    res.season,
-//                    res.episode,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
+            {
+                invokeDatabaseGdrive(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
             {
                 if (res.aniId?.isNotEmpty() == true) invokeGogo(res.aniId, res.animeId, callback)
             },
@@ -454,6 +459,14 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("episodes") val episodes: ArrayList<Episodes>? = arrayListOf(),
     )
 
+    data class Trailers(
+        @JsonProperty("key") val key: String? = null,
+    )
+
+    data class ResultsTrailer(
+        @JsonProperty("results") val results: ArrayList<Trailers>? = arrayListOf(),
+    )
+
     data class MediaDetail(
         @JsonProperty("id") val id: Int? = null,
         @JsonProperty("imdb_id") val imdbId: String? = null,
@@ -468,7 +481,9 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("status") val status: String? = null,
         @JsonProperty("genres") val genres: ArrayList<Genres>? = arrayListOf(),
         @JsonProperty("seasons") val seasons: ArrayList<Seasons>? = arrayListOf(),
-    )
+        @JsonProperty("videos") val videos: ResultsTrailer? = null,
+
+        )
 
     data class PageProps(
         @JsonProperty("id") val id: String? = null,
