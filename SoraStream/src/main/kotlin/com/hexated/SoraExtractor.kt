@@ -470,11 +470,6 @@ object SoraExtractor : SoraStream() {
 
 }
 
-//private fun getHdMovieBoxUrl(link: String?): String? {
-//    if (link == null) return null
-//    return if (link.startsWith("/")) "https://image.tmdb.org/t/p/w500/$link" else link
-//}
-
 private fun getQuality(str: String): Int {
     return when (str) {
         "360p" -> Qualities.P240.value
