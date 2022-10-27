@@ -3,11 +3,14 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.RandomUserAgent.getRandomUserAgent
 import com.hexated.SoraExtractor.invoke123Movie
+import com.hexated.SoraExtractor.invokeDatabaseGdrive
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeGogo
+import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeLocalSources
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeOlgply
+import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSoraVIP
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -15,7 +18,6 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
-import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -46,6 +48,9 @@ open class SoraStream : TmdbProvider() {
         const val dbgoAPI = "https://dbgo.fun"
         const val movie123API = "https://api.123movie.cc"
         const val movieHabAPI = "https://moviehab.com"
+        const val databaseGdriveAPI = "https://databasegdriveplayer.co"
+        const val hdMovieBoxAPI = "https://hdmoviebox.net"
+        const val series9API = "https://series9.la"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -186,6 +191,7 @@ open class SoraStream : TmdbProvider() {
                 .parsedSafe<Detail>()?.pageProps
                 ?: throw ErrorLoadingException("Invalid Json Response")
         val res = responses.result ?: return null
+        val title = res.title ?: res.name ?: res.originalTitle ?: res.originalName ?: return null
         val type = getType(data.type)
         val actors = responses.cast?.mapNotNull { cast ->
             ActorData(
@@ -210,7 +216,8 @@ open class SoraStream : TmdbProvider() {
                                 responses.imdbId,
                                 data.type,
                                 eps.seasonNumber,
-                                eps.episodeNumber
+                                eps.episodeNumber,
+                                title = title,
                             ).toJson(),
                             name = eps.name,
                             season = eps.seasonNumber,
@@ -224,7 +231,7 @@ open class SoraStream : TmdbProvider() {
                     }
             }
             newTvSeriesLoadResponse(
-                res.title ?: res.name ?: res.originalTitle ?: res.originalName ?: return null,
+                title,
                 url,
                 TvType.TvSeries,
                 episodes
@@ -240,13 +247,14 @@ open class SoraStream : TmdbProvider() {
             }
         } else {
             newMovieLoadResponse(
-                res.title ?: res.name ?: res.originalTitle ?: res.originalName ?: return null,
+                title,
                 url,
                 TvType.Movie,
                 LinkData(
                     data.id,
                     responses.imdbId,
                     data.type,
+                    title = title,
                 ).toJson(),
             ) {
                 this.posterUrl = getImageUrl(res.posterPath)
@@ -341,11 +349,25 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeMovieHab(res.id, res.season, res.episode, subtitleCallback, callback)
             },
+//            {
+//                invokeDatabaseGdrive(
+//                    res.imdbId,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (res.aniId?.isNotEmpty() == true) invokeGogo(res.aniId, res.animeId, callback)
-            })
-
-
+            },
+            {
+                invokeHDMovieBox(res.title, res.season, res.episode, callback)
+            },
+            {
+                invokeSeries9(res.title, res.season, res.episode, subtitleCallback, callback)
+            }
+        )
 
         return true
     }
@@ -358,6 +380,7 @@ open class SoraStream : TmdbProvider() {
         val episode: Int? = null,
         val aniId: String? = null,
         val animeId: String? = null,
+        val title: String? = null,
     )
 
     data class Data(

@@ -1,11 +1,12 @@
 package com.hexated
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.requestCreator
 import java.net.URI
-import java.util.ArrayList
 
 object SoraExtractor : SoraStream() {
 
@@ -22,7 +23,7 @@ object SoraExtractor : SoraStream() {
         val sourcesData = script?.substringAfter("\"sources\":[")?.substringBefore("],")
         val subData = script?.substringAfter("\"subtitles\":[")?.substringBefore("],")
 
-        AppUtils.tryParseJson<List<Sources>>("[$sourcesData]")?.map { source ->
+        tryParseJson<List<Sources>>("[$sourcesData]")?.map { source ->
             callback.invoke(
                 ExtractorLink(
                     this.name,
@@ -36,7 +37,7 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        AppUtils.tryParseJson<List<Subtitles>>("[$subData]")?.map { sub ->
+        tryParseJson<List<Subtitles>>("[$subData]")?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
                     sub.lang.toString(),
@@ -261,6 +262,21 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    suspend fun invokeDatabaseGdrive(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if (season == null) {
+            "$databaseGdriveAPI/player.php?imdb=$imdbId"
+        } else {
+            "$databaseGdriveAPI/player.php?type=series&imdb=$imdbId&season=$season&episode=$episode"
+        }
+        loadExtractor(url, databaseGdriveAPI, subtitleCallback, callback)
+    }
+
     suspend fun invokeSoraVIP(
         id: Int? = null,
         season: Int? = null,
@@ -350,7 +366,109 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeHDMovieBox(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title?.replace(":", "")?.replace(" ", "-")?.lowercase()
+        val url = "$hdMovieBoxAPI/watch/$fixTitle"
+        val ref = if (season == null) {
+            "$hdMovieBoxAPI/watch/$fixTitle"
+        } else {
+            "$hdMovieBoxAPI/watch/$fixTitle/season-$season/episode-$episode"
+        }
+
+        val doc = app.get(url).document
+        val id = if (season == null) {
+            doc.selectFirst("div.player div#not-loaded")?.attr("data-whatwehave")
+        } else {
+            doc.select("div.season-list-column div[data-season=$season] div.list div.item")[episode?.minus(
+                1
+            ) ?: 0].selectFirst("div.ui.checkbox")?.attr("data-episode")
+        }
+
+        val iframeUrl = app.post(
+            "$hdMovieBoxAPI/ajax/service", data = mapOf(
+                "e_id" to "$id",
+                "v_lang" to "en",
+                "type" to "get_whatwehave",
+            ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsedSafe<HdMovieBoxIframe>()?.apiIframe ?: return
+
+        val iframe = app.get(iframeUrl, referer = "$hdMovieBoxAPI/").document.selectFirst("iframe")
+            ?.attr("src")
+
+        val script = app.get(
+            iframe ?: return,
+            referer = "$hdMovieBoxAPI/"
+        ).document.selectFirst("script:containsData(var vhash =)")?.data()
+            ?.substringAfter("vhash, {")?.substringBefore("}, false")
+
+        tryParseJson<HdMovieBoxSource>("{$script}").let { source ->
+            val link = getBaseUrl(iframe) + source?.videoUrl?.replace(
+                "\\",
+                ""
+            ) + "?s=${source?.videoServer}&d=${base64Encode(source?.videoDisk?.toByteArray() ?: return)}"
+            callback.invoke(
+                ExtractorLink(
+                    "HDMovieBox",
+                    "HDMovieBox",
+                    link,
+                    iframe,
+                    Qualities.P1080.value,
+                    isM3u8 = true,
+                )
+            )
+        }
+    }
+
+    suspend fun invokeSeries9(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title?.replace(":", "")?.replace(" ", "-")?.lowercase()
+        val url = if (season == null) {
+            "$series9API/film/$fixTitle/watching.html"
+        } else {
+            "$series9API/film/$fixTitle-season-$season/watching.html"
+        }
+
+        val res = app.get(url).document
+        val sources : ArrayList<String?> = arrayListOf()
+
+        if (season == null) {
+            val xstreamcdn = res.selectFirst("div#list-eps div#server-29 a")?.attr("player-data")?.let {
+                Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
+            }
+            val streamsb = res.selectFirst("div#list-eps div#server-13 a")?.attr("player-data")
+            val doodstream = res.selectFirst("div#list-eps div#server-14 a")?.attr("player-data")
+            sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
+        } else {
+            val xstreamcdn = res.selectFirst("div#list-eps div#server-29 a[episode-data=$episode]")?.attr("player-data")?.let {
+                Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
+            }
+            val streamsb = res.selectFirst("div#list-eps div#server-13 a[episode-data=$episode]")?.attr("player-data")
+            val doodstream = res.selectFirst("div#list-eps div#server-14 a[episode-data=$episode]")?.attr("player-data")
+            sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
+        }
+
+        sources.apmap { link ->
+            loadExtractor(link ?: return@apmap null, url, subtitleCallback, callback)
+        }
+
+    }
+
 }
+
+//private fun getHdMovieBoxUrl(link: String?): String? {
+//    if (link == null) return null
+//    return if (link.startsWith("/")) "https://image.tmdb.org/t/p/w500/$link" else link
+//}
 
 private fun getQuality(str: String): Int {
     return when (str) {
@@ -423,4 +541,14 @@ suspend fun loadLinksWithWebView(
         )
     )
 }
+
+data class HdMovieBoxSource(
+    @JsonProperty("videoUrl") val videoUrl: String? = null,
+    @JsonProperty("videoServer") val videoServer: String? = null,
+    @JsonProperty("videoDisk") val videoDisk: String? = null,
+)
+
+data class HdMovieBoxIframe(
+    @JsonProperty("api_iframe") val apiIframe: String? = null,
+)
 
