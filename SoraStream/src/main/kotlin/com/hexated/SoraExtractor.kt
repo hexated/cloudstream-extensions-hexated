@@ -407,10 +407,15 @@ object SoraExtractor : SoraStream() {
             ?.substringAfter("vhash, {")?.substringBefore("}, false")
 
         tryParseJson<HdMovieBoxSource>("{$script}").let { source ->
+            val disk = if(source?.videoDisk == null) {
+                ""
+            } else {
+                base64Encode(source.videoDisk.toString().toByteArray())
+            }
             val link = getBaseUrl(iframe) + source?.videoUrl?.replace(
                 "\\",
                 ""
-            ) + "?s=${source?.videoServer}&d=${base64Encode(source?.videoDisk?.toByteArray() ?: return)}"
+            ) + "?s=${source?.videoServer}&d=$disk"
             callback.invoke(
                 ExtractorLink(
                     "HDMovieBox",
@@ -545,7 +550,7 @@ suspend fun loadLinksWithWebView(
 data class HdMovieBoxSource(
     @JsonProperty("videoUrl") val videoUrl: String? = null,
     @JsonProperty("videoServer") val videoServer: String? = null,
-    @JsonProperty("videoDisk") val videoDisk: String? = null,
+    @JsonProperty("videoDisk") val videoDisk: Any? = null,
 )
 
 data class HdMovieBoxIframe(
