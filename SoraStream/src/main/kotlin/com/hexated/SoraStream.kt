@@ -354,15 +354,15 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeMovieHab(res.id, res.season, res.episode, subtitleCallback, callback)
             },
-            {
-                invokeDatabaseGdrive(
-                    res.imdbId,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeDatabaseGdrive(
+//                    res.imdbId,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (res.aniId?.isNotEmpty() == true) invokeGogo(res.aniId, res.animeId, callback)
             },
