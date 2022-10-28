@@ -294,17 +294,17 @@ open class SoraStream : TmdbProvider() {
             "$mainServerAPI/movies/${res.id}/watch"
         }
 
-        val json = app.get(
-            query,
-            referer = referer,
-            headers = mapOf("User-Agent" to getRandomUserAgent())
-        ).parsedSafe<LoadLinks>()
-
         argamap(
             {
                 invokeSoraVIP(res.id, res.season, res.episode, subtitleCallback, callback)
             },
             {
+                val json = app.get(
+                    query,
+                    referer = referer,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                ).parsedSafe<LoadLinks>()
+
                 if (json?.sources.isNullOrEmpty()) {
                     invokeLocalSources(referer, subtitleCallback, callback)
                 } else {
