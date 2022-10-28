@@ -208,7 +208,7 @@ open class SoraStream : TmdbProvider() {
         val recommendations =
             responses.recommandations?.mapNotNull { media -> media.toSearchResponse() }
 
-        val trailer = responses.result.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }?.random()
+        val trailer = responses.result.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }?.randomOrNull()
 
         return if (type == TvType.TvSeries) {
             val episodes = mutableListOf<Episode>()
