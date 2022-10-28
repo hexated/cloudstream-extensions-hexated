@@ -7,6 +7,7 @@ import com.hexated.SoraExtractor.invokeDatabaseGdrive
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeGogo
 import com.hexated.SoraExtractor.invokeHDMovieBox
+import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeLocalSources
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeOlgply
@@ -52,6 +53,7 @@ open class SoraStream : TmdbProvider() {
         const val databaseGdriveAPI = "https://databasegdriveplayer.co"
         const val hdMovieBoxAPI = "https://hdmoviebox.net"
         const val series9API = "https://series9.la"
+        const val idlixAPI = "https://109.234.36.69"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -352,7 +354,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeMovieHab(res.id, res.season, res.episode, subtitleCallback, callback)
+                invokeMovieHab(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
 //            {
 //                invokeDatabaseGdrive(
@@ -371,6 +373,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeSeries9(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeIdlix(res.title, res.season, res.episode, subtitleCallback, callback)
             }
         )
 
