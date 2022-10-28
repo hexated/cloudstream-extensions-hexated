@@ -230,16 +230,16 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invokeMovieHab(
-        id: Int? = null,
+        imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val url = if (season == null) {
-            "$movieHabAPI/embed/movie?tmdb=$id"
+            "$movieHabAPI/embed/movie?imdb=$imdbId"
         } else {
-            "$movieHabAPI/embed/series?tmdb=$id&sea=$season&epi=$episode"
+            "$movieHabAPI/embed/series?imdb=$imdbId&sea=$season&epi=$episode"
         }
 
         val doc = app.get(url, referer = "$movieHabAPI/").document
@@ -334,7 +334,7 @@ object SoraExtractor : SoraStream() {
         json?.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    sub.lang.toString(),
+                    getLanguage(sub.lang.toString()),
                     sub.url ?: return@map null
                 )
             )
@@ -372,7 +372,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val fixTitle = title?.replace(":", "")?.replace(" ", "-")?.lowercase()
+        val fixTitle = title.fixTitle()
         val url = "$hdMovieBoxAPI/watch/$fixTitle"
         val ref = if (season == null) {
             "$hdMovieBoxAPI/watch/$fixTitle"
@@ -436,7 +436,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val fixTitle = title?.replace(":", "")?.replace(" ", "-")?.lowercase()
+        val fixTitle = title.fixTitle()
         val url = if (season == null) {
             "$series9API/film/$fixTitle/watching.html"
         } else {
@@ -465,9 +465,57 @@ object SoraExtractor : SoraStream() {
         sources.apmap { link ->
             loadExtractor(link ?: return@apmap null, url, subtitleCallback, callback)
         }
-
     }
 
+    suspend fun invokeIdlix(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.fixTitle()
+        val url = if(season == null) {
+            "$idlixAPI/movie/$fixTitle"
+        } else {
+            "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
+        }
+
+        val document = app.get(url).document
+        val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
+        val type = if (url.contains("/movie/")) "movie" else "tv"
+
+        document.select("ul#playeroptionsul > li").map {
+            it.attr("data-nume")
+        }.apmap { nume ->
+            val source = app.post(
+                url = "$idlixAPI/wp-admin/admin-ajax.php",
+                data = mapOf(
+                    "action" to "doo_player_ajax",
+                    "post" to id,
+                    "nume" to nume,
+                    "type" to type
+                ),
+                headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
+                referer = url
+            ).parsed<ResponseHash>().embed_url
+
+            loadExtractor(source, "$idlixAPI/", subtitleCallback, callback)
+        }
+    }
+
+}
+
+//private fun fixTitle(title: String? = null) : String? {
+//    return title?.replace(":", "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
+//}
+
+private fun String?.fixTitle() : String? {
+    return this?.replace(":", "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
+}
+
+fun getLanguage(str: String): String {
+    return if(str.contains("(in_ID)")) "Indonesian" else str
 }
 
 private fun getQuality(str: String): Int {
@@ -550,5 +598,10 @@ data class HdMovieBoxSource(
 
 data class HdMovieBoxIframe(
     @JsonProperty("api_iframe") val apiIframe: String? = null,
+)
+
+data class ResponseHash(
+    @JsonProperty("embed_url") val embed_url: String,
+    @JsonProperty("type") val type: String?,
 )
 
