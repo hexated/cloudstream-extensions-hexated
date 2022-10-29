@@ -10,6 +10,7 @@ import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeLocalSources
 import com.hexated.SoraExtractor.invokeMovieHab
+import com.hexated.SoraExtractor.invokeNoverse
 import com.hexated.SoraExtractor.invokeOlgply
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSoraVIP
@@ -54,6 +55,8 @@ open class SoraStream : TmdbProvider() {
         const val hdMovieBoxAPI = "https://hdmoviebox.net"
         const val series9API = "https://series9.la"
         const val idlixAPI = "https://109.234.36.69"
+        const val noverseAPI = "https://www.nollyverse.com"
+        const val olgplyAPI = "https://olgply.xyz"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -376,6 +379,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeIdlix(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeNoverse(res.title, res.season, res.episode, callback)
             }
         )
 
