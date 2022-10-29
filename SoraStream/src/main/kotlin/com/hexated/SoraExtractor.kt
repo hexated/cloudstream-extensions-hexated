@@ -71,12 +71,28 @@ object SoraExtractor : SoraStream() {
                 "$twoEmbedAPI/ajax/embed/play?id=$serverID&_token=$token",
                 referer = url
             ).parsedSafe<EmbedJson>()?.let { source ->
-                loadExtractor(
-                    source.link ?: return@let null,
-                    twoEmbedAPI,
-                    subtitleCallback,
-                    callback
-                )
+                val link = source.link ?: return@let
+                if (link.contains("rabbitstream")) {
+                    val rabbitId = link.substringAfterLast("/").substringBefore("?")
+                    app.get(
+                        "https://rabbitstream.net/ajax/embed-5/getSources?id=$rabbitId",
+                        headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+                    ).parsedSafe<RabbitSources>()?.tracks?.map { sub ->
+                        subtitleCallback.invoke(
+                            SubtitleFile(
+                                sub.label.toString(),
+                                sub.file ?: return@map null
+                            )
+                        )
+                    }
+                } else {
+                    loadExtractor(
+                        link,
+                        twoEmbedAPI,
+                        subtitleCallback,
+                        callback
+                    )
+                }
             }
         }
     }
@@ -117,7 +133,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val url =
-            "https://olgply.xyz/${id}${season?.let { "/$it" } ?: ""}${episode?.let { "/$it" } ?: ""}"
+            "$olgplyAPI/${id}${season?.let { "/$it" } ?: ""}${episode?.let { "/$it" } ?: ""}"
         loadLinksWithWebView(url, callback)
     }
 
@@ -303,13 +319,12 @@ object SoraExtractor : SoraStream() {
                 }&season=$season&_data=routes/api/provider"
             )
                 .parsedSafe<ProvidersResult>()?.provider?.first { it.provider == "Loklok" }?.id
-
         }
 
         val query = if (season == null) {
             "$mainServerAPI/movies/$id/watch?provider=Loklok&id=$providerId&_data=routes/movies/\$movieId.watch"
         } else {
-            "$mainServerAPI/tv-shows/$id/season/$season/episode/${episode?.minus(1)}?provider=Loklok&id=$providerId&_data=routes/tv-shows/\$tvId.season.\$seasonId.episode.\$episodeId"
+            "$mainServerAPI/tv-shows/$id/season/$season/episode/$episode?provider=Loklok&id=$providerId&_data=routes/tv-shows/\$tvId.season.\$seasonId.episode.\$episodeId"
         }
 
         val json = app.get(
@@ -407,7 +422,7 @@ object SoraExtractor : SoraStream() {
             ?.substringAfter("vhash, {")?.substringBefore("}, false")
 
         tryParseJson<HdMovieBoxSource>("{$script}").let { source ->
-            val disk = if(source?.videoDisk == null) {
+            val disk = if (source?.videoDisk == null) {
                 ""
             } else {
                 base64Encode(source.videoDisk.toString().toByteArray())
@@ -444,21 +459,25 @@ object SoraExtractor : SoraStream() {
         }
 
         val res = app.get(url).document
-        val sources : ArrayList<String?> = arrayListOf()
+        val sources: ArrayList<String?> = arrayListOf()
 
         if (season == null) {
-            val xstreamcdn = res.selectFirst("div#list-eps div#server-29 a")?.attr("player-data")?.let {
-                Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
-            }
+            val xstreamcdn =
+                res.selectFirst("div#list-eps div#server-29 a")?.attr("player-data")?.let {
+                    Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
+                }
             val streamsb = res.selectFirst("div#list-eps div#server-13 a")?.attr("player-data")
             val doodstream = res.selectFirst("div#list-eps div#server-14 a")?.attr("player-data")
             sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
         } else {
-            val xstreamcdn = res.selectFirst("div#list-eps div#server-29 a[episode-data=$episode]")?.attr("player-data")?.let {
-                Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
-            }
-            val streamsb = res.selectFirst("div#list-eps div#server-13 a[episode-data=$episode]")?.attr("player-data")
-            val doodstream = res.selectFirst("div#list-eps div#server-14 a[episode-data=$episode]")?.attr("player-data")
+            val xstreamcdn = res.selectFirst("div#list-eps div#server-29 a[episode-data=$episode]")
+                ?.attr("player-data")?.let {
+                    Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
+                }
+            val streamsb = res.selectFirst("div#list-eps div#server-13 a[episode-data=$episode]")
+                ?.attr("player-data")
+            val doodstream = res.selectFirst("div#list-eps div#server-14 a[episode-data=$episode]")
+                ?.attr("player-data")
             sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
         }
 
@@ -475,7 +494,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
-        val url = if(season == null) {
+        val url = if (season == null) {
             "$idlixAPI/movie/$fixTitle"
         } else {
             "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
@@ -504,18 +523,65 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    suspend fun invokeNoverse(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.fixTitle()
+        val url = if (season == null) {
+            "$noverseAPI/movie/$fixTitle/download/"
+        } else {
+            "$noverseAPI/serie/$fixTitle/season-$season"
+        }
+
+        val doc = app.get(url).document
+
+        val links = if (season == null) {
+            doc.select("table.table-striped tbody tr").map {
+                it.select("a").attr("href") to it.selectFirst("td")?.text()
+            }
+        } else {
+            doc.select("table.table-striped tbody tr")
+                .find { it.text().contains("Episode $episode") }
+                ?.select("td")?.map {
+                    it.select("a").attr("href") to it.select("a").text()
+                }
+        }
+
+        links?.map { (link, quality) ->
+            val name =
+                quality?.replace(Regex("[0-9]{3,4}p"), "Noverse")?.replace(".", " ") ?: "Noverse"
+            callback.invoke(
+                ExtractorLink(
+                    name,
+                    name,
+                    link,
+                    "$noverseAPI/",
+                    getQualityFromName("${quality?.substringBefore("p")?.trim()}p"),
+//                    headers = mapOf(
+//                        "Origin" to noverseAPI,
+//                        "Range" to "bytes=0-"
+//                    )
+                )
+            )
+        }
+
+    }
+
 }
 
 //private fun fixTitle(title: String? = null) : String? {
 //    return title?.replace(":", "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
 //}
 
-private fun String?.fixTitle() : String? {
+private fun String?.fixTitle(): String? {
     return this?.replace(":", "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
 }
 
 fun getLanguage(str: String): String {
-    return if(str.contains("(in_ID)")) "Indonesian" else str
+    return if (str.contains("(in_ID)")) "Indonesian" else str
 }
 
 private fun getQuality(str: String): Int {
@@ -603,5 +669,15 @@ data class HdMovieBoxIframe(
 data class ResponseHash(
     @JsonProperty("embed_url") val embed_url: String,
     @JsonProperty("type") val type: String?,
+)
+
+data class Track(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("label") val label: String? = null,
+)
+
+data class RabbitSources(
+    @JsonProperty("sources") val sources: String? = null,
+    @JsonProperty("tracks") val tracks: ArrayList<Track>? = arrayListOf(),
 )
 
