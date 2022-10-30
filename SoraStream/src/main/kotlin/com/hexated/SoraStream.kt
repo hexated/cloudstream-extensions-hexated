@@ -201,6 +201,7 @@ open class SoraStream : TmdbProvider() {
                 ?: throw ErrorLoadingException("Invalid Json Response")
         val res = responses.result ?: return null
         val title = res.title ?: res.name ?: res.originalTitle ?: res.originalName ?: return null
+        val year = (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
         val type = getType(data.type)
         val actors = responses.cast?.mapNotNull { cast ->
             ActorData(
@@ -214,7 +215,9 @@ open class SoraStream : TmdbProvider() {
         val recommendations =
             responses.recommandations?.mapNotNull { media -> media.toSearchResponse() }
 
-        val trailer = responses.result.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }?.randomOrNull()
+        val trailer =
+            responses.result.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }
+                ?.randomOrNull()
 
         return if (type == TvType.TvSeries) {
             val episodes = mutableListOf<Episode>()
@@ -229,6 +232,7 @@ open class SoraStream : TmdbProvider() {
                                 eps.seasonNumber,
                                 eps.episodeNumber,
                                 title = title,
+                                year = year,
                             ).toJson(),
                             name = eps.name,
                             season = eps.seasonNumber,
@@ -248,8 +252,7 @@ open class SoraStream : TmdbProvider() {
                 episodes
             ) {
                 this.posterUrl = getImageUrl(res.posterPath)
-                this.year =
-                    (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
+                this.year = year
                 this.plot = res.overview
                 this.tags = res.genres?.mapNotNull { it.name }
                 this.showStatus = getStatus(res.status)
@@ -267,11 +270,11 @@ open class SoraStream : TmdbProvider() {
                     responses.imdbId,
                     data.type,
                     title = title,
+                    year = year,
                 ).toJson(),
             ) {
                 this.posterUrl = getImageUrl(res.posterPath)
-                this.year =
-                    (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
+                this.year = year
                 this.plot = res.overview
                 this.tags = res.genres?.mapNotNull { it.name }
                 this.recommendations = recommendations
@@ -381,7 +384,7 @@ open class SoraStream : TmdbProvider() {
                 invokeSeries9(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeIdlix(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeIdlix(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeNoverse(res.title, res.season, res.episode, callback)
@@ -400,6 +403,7 @@ open class SoraStream : TmdbProvider() {
         val aniId: String? = null,
         val animeId: String? = null,
         val title: String? = null,
+        val year: Int? = null,
     )
 
     data class Data(
@@ -571,7 +575,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("detail") val detail: DetailAnime? = null,
     )
 
-    data class seasonsVip(
+    data class SeasonsVip(
         @JsonProperty("air_date") val air_date: String? = null,
         @JsonProperty("season_number") val season_number: Int? = null,
     )
@@ -583,7 +587,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("original_name") val original_name: String? = null,
         @JsonProperty("release_date") val release_date: String? = null,
         @JsonProperty("first_air_date") val first_air_date: String? = null,
-        @JsonProperty("seasons") val seasons: ArrayList<seasonsVip>? = arrayListOf(),
+        @JsonProperty("seasons") val seasons: ArrayList<SeasonsVip>? = arrayListOf(),
     )
 
     data class DetailVipResult(

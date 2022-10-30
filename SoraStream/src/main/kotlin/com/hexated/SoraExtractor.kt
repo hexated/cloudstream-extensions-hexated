@@ -490,6 +490,7 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeIdlix(
         title: String? = null,
+        year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -497,7 +498,7 @@ object SoraExtractor : SoraStream() {
     ) {
         val fixTitle = title.fixTitle()
         val url = if (season == null) {
-            "$idlixAPI/movie/$fixTitle"
+            "$idlixAPI/movie/$fixTitle-$year"
         } else {
             "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
         }
