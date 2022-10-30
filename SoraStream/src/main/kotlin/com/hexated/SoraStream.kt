@@ -568,6 +568,10 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("detail") val detail: DetailAnime? = null,
     )
 
+    data class seasonsVip(
+        @JsonProperty("air_date") val air_date: String? = null,
+    )
+
     data class DetailVip(
         @JsonProperty("title") val title: String? = null,
         @JsonProperty("name") val name: String? = null,
@@ -575,6 +579,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("original_name") val original_name: String? = null,
         @JsonProperty("release_date") val release_date: String? = null,
         @JsonProperty("first_air_date") val first_air_date: String? = null,
+        @JsonProperty("seasons") val seasons: ArrayList<seasonsVip>? = arrayListOf(),
     )
 
     data class DetailVipResult(
