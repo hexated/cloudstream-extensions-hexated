@@ -86,10 +86,13 @@ open class SoraStream : TmdbProvider() {
     }
 
     override val mainPage = mainPageOf(
+        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=&page=" to "Airing Today TV Shows",
         "$tmdbAPI/movie/popular?api_key=$apiKey&region=&page=" to "Popular Movies",
         "$tmdbAPI/tv/popular?api_key=$apiKey&region=&page=" to "Popular TV Shows",
+        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=&page=" to "On The Air TV Shows",
         "$tmdbAPI/movie/top_rated?api_key=$apiKey&region=&page=" to "Top Rated Movies",
         "$tmdbAPI/tv/top_rated?api_key=$apiKey&region=&page=" to "Top Rated TV Shows",
+        "$tmdbAPI/movie/upcoming?api_key=$apiKey&region=&page=" to "Upcoming Movies",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_keywords=210024|222243&page=" to "Anime",
         "$tmdbAPI/discover/movie?api_key=$apiKey&with_keywords=210024|222243&page=" to "Anime Movies",
     )
@@ -570,6 +573,7 @@ open class SoraStream : TmdbProvider() {
 
     data class seasonsVip(
         @JsonProperty("air_date") val air_date: String? = null,
+        @JsonProperty("season_number") val season_number: Int? = null,
     )
 
     data class DetailVip(
