@@ -303,20 +303,22 @@ object SoraExtractor : SoraStream() {
         val providerId = if (season == null) {
             val url = "$mainServerAPI/movies/$id/?_data=routes/movies/\$movieId"
             val data = app.get(url).parsedSafe<DetailVipResult>()?.detail
+            val airDate = (data?.release_date ?: data?.first_air_date)?.substringBefore("-")
             app.get(
-                "$mainServerAPI/api/provider?title=${data?.title ?: data?.name}&type=movie&origTitle=${data?.original_title ?: data?.original_name}&year=${
-                    (data?.release_date ?: data?.first_air_date)?.substringBefore("-")
-                }&_data=routes/api/provider"
+                "$mainServerAPI/api/provider?title=${data?.title ?: data?.name}&type=movie&origTitle=${data?.original_title ?: data?.original_name}&year=$airDate&_data=routes/api/provider"
             )
                 .parsedSafe<ProvidersResult>()?.provider?.first { it.provider == "Loklok" }?.id
 
         } else {
             val url = "$mainServerAPI/tv-shows/$id/?_data=routes/tv-shows/\$tvId"
             val data = app.get(url).parsedSafe<DetailVipResult>()?.detail
+            val airDate = (if (data?.seasons?.size == 1) {
+                data.seasons.first().air_date
+            } else {
+                data?.seasons?.get(season)?.air_date
+            })?.substringBefore("-")
             app.get(
-                "$mainServerAPI/api/provider?title=${data?.title ?: data?.name}&type=tv&origTitle=${data?.original_title ?: data?.original_name}&year=${
-                    (data?.release_date ?: data?.first_air_date)?.substringBefore("-")
-                }&season=$season&_data=routes/api/provider"
+                "$mainServerAPI/api/provider?title=${data?.title ?: data?.name}&type=tv&origTitle=${data?.original_title ?: data?.original_name}&year=$airDate&season=$season&_data=routes/api/provider"
             )
                 .parsedSafe<ProvidersResult>()?.provider?.first { it.provider == "Loklok" }?.id
         }
