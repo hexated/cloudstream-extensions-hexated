@@ -15,6 +15,7 @@ import com.hexated.SoraExtractor.invokeOlgply
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSoraVIP
 import com.hexated.SoraExtractor.invokeTwoEmbed
+import com.hexated.SoraExtractor.invokeUniqueStream
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
@@ -57,6 +58,7 @@ open class SoraStream : TmdbProvider() {
         const val idlixAPI = "https://109.234.36.69"
         const val noverseAPI = "https://www.nollyverse.com"
         const val olgplyAPI = "https://olgply.xyz"
+        const val uniqueStreamAPI = "https://uniquestream.net"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -144,14 +146,13 @@ open class SoraStream : TmdbProvider() {
             referer = "$mainAPI/"
         ).parsedSafe<Results>()?.results?.mapNotNull { media ->
             media.toSearchResponse()
-        } ?: throw ErrorLoadingException("Invalid Json reponse")
-        searchResponse.addAll(mainResponse)
+        }
+        if(mainResponse?.isNotEmpty() == true) searchResponse.addAll(mainResponse)
 
         val animeResponse =
             app.get("$mainServerAPI/search/anime/$query?_data=routes/search/anime/\$animeKeyword")
                 .parsedSafe<SearchAnime>()?.searchResults?.results?.mapNotNull { anime -> anime.toSearchResponse() }
-                ?: throw ErrorLoadingException("Invalid Json reponse")
-        searchResponse.addAll(animeResponse)
+        if(animeResponse?.isNotEmpty() == true) searchResponse.addAll(animeResponse)
 
         return searchResponse
     }
@@ -388,6 +389,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeNoverse(res.title, res.season, res.episode, callback)
+            },
+            {
+                invokeUniqueStream(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             }
         )
 

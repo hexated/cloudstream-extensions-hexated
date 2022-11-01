@@ -526,6 +526,71 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    suspend fun invokeUniqueStream(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.fixTitle()
+        val url = if (season == null) {
+            "$uniqueStreamAPI/movies/$fixTitle-$year"
+        } else {
+            "$uniqueStreamAPI/episodes/$fixTitle-season-$season-episode-$episode"
+        }
+
+        val document = app.get(url).document
+        val type = if (url.contains("/movie/")) "movie" else "tv"
+        document.select("ul#playeroptionsul > li").apmap { el ->
+            val id = el.attr("data-post")
+            val nume = el.attr("data-nume")
+            val source = app.post(
+                url = "$uniqueStreamAPI/wp-admin/admin-ajax.php",
+                data = mapOf(
+                    "action" to "doo_player_ajax",
+                    "post" to id,
+                    "nume" to nume,
+                    "type" to type
+                ),
+                headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
+                referer = url
+            ).parsed<ResponseHash>().embed_url.let { fixUrl(it) }
+
+            if (source.contains("uniquestream")) {
+                val resDoc = app.get(
+                    source, referer = "$uniqueStreamAPI/", headers = mapOf(
+                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                    )
+                ).document
+                val srcm3u8 = resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
+                    Regex("['|\"](.*?.m3u8)['|\"]").find(it)?.groupValues?.getOrNull(1)
+                } ?: return@apmap null
+                val quality = app.get(srcm3u8, referer = source, headers = mapOf(
+                    "Accept" to "*/*",
+                )).text.let { quality ->
+                    if(quality.contains("RESOLUTION=1920")) Qualities.P1080.value else Qualities.P720.value
+                }
+                callback.invoke(
+                    ExtractorLink(
+                        "UniqueStream",
+                        "UniqueStream",
+                        srcm3u8,
+                        source,
+                        quality,
+                        true,
+                        headers = mapOf(
+                            "Accept" to "*/*",
+                        )
+                    )
+                )
+            } else {
+                loadExtractor(source, "$uniqueStreamAPI/", subtitleCallback, callback)
+            }
+        }
+    }
+
     suspend fun invokeNoverse(
         title: String? = null,
         season: Int? = null,
