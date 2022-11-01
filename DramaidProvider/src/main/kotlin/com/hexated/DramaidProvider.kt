@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -202,7 +203,12 @@ class DramaidProvider : MainAPI() {
             it.replace("https://ndrama.xyz", "https://www.fembed.com")
         }.apmap {
             when {
-                it.contains("motonews.club") -> invokeDriveSource(it, this.name, subtitleCallback, callback)
+                it.contains("motonews.club") -> invokeDriveSource(
+                    it,
+                    this.name,
+                    subtitleCallback,
+                    callback
+                )
                 else -> loadExtractor(it, data, subtitleCallback, callback)
             }
         }
@@ -211,3 +217,9 @@ class DramaidProvider : MainAPI() {
     }
 
 }
+
+class Vanfem : XStreamCdn() {
+    override val name: String = "Vanfem"
+    override val mainUrl: String = "https://vanfem.com"
+}
+
