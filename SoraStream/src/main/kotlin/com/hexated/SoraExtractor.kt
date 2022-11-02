@@ -1,12 +1,20 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.SoraStream.Companion.filmxyAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.nicehttp.Requests
+import com.lagradost.nicehttp.Session
 import com.lagradost.nicehttp.requestCreator
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import com.google.gson.JsonParser
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
+
+val session = Session(Requests().baseClient)
 
 object SoraExtractor : SoraStream() {
 
@@ -638,11 +646,142 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeFilmxy(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if (season == null) {
+            "${filmxyAPI}/movie/$imdbId"
+        } else {
+            "${filmxyAPI}/tv/$imdbId"
+        }
+        val filmxyCookies = getFilmxyCookies(imdbId, season)
+
+        val cookiesDoc = mapOf(
+            "G_ENABLED_IDPS" to "google",
+            "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" to filmxyCookies.wLog,
+            "PHPSESSID" to filmxyCookies.phpsessid
+        )
+
+        val doc = session.get(url, cookies = cookiesDoc).document
+        val script = doc.selectFirst("script:containsData(var isSingle)")?.data().toString()
+        val sourcesData = Regex("listSE\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
+        val sourcesDetail = Regex("linkDetails\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
+
+        //Gson is shit, but i don't care
+        val sourcesJson = JsonParser().parse(sourcesData).asJsonObject
+        val sourcesDetailJson = JsonParser().parse(sourcesDetail).asJsonObject
+
+        val sources = if (season == null && episode == null) {
+            sourcesJson.getAsJsonObject("movie").getAsJsonArray("movie")
+        } else {
+            val eps = if (episode!! < 10) "0$episode" else episode
+            val sson = if (season!! < 10) "0$season" else season
+            sourcesJson.getAsJsonObject("s$sson").getAsJsonArray("e$eps")
+        }.asJsonArray
+
+        val scriptUser = doc.select("script").find { it.data().contains("var userNonce") }?.data().toString()
+        val userNonce = Regex("var\\suserNonce.*?[\"|'](\\S+?)[\"|'];").find(scriptUser)?.groupValues?.get(1)
+        val userId = Regex("var\\suser_id.*?[\"|'](\\S+?)[\"|'];").find(scriptUser)?.groupValues?.get(1)
+        val linkIDs = sources.joinToString("") {
+            "&linkIDs%5B%5D=$it"
+        }.replace("\"", "")
+
+        val body = "action=get_vid_links$linkIDs&user_id=$userId&nonce=$userNonce".toRequestBody()
+        val cookiesJson = mapOf(
+            "G_ENABLED_IDPS" to "google",
+            "PHPSESSID" to filmxyCookies.phpsessid,
+            "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" to filmxyCookies.wLog,
+            "wordpress_sec_8bf9d5433ac88cc9a3a396d6b154cd01" to filmxyCookies.wSec
+        )
+        val json = app.post(
+            "$filmxyAPI/wp-admin/admin-ajax.php",
+            requestBody = body,
+            referer = url,
+            headers = mapOf(
+                "Accept" to "*/*",
+                "DNT" to "1",
+                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
+                "Origin" to filmxyAPI,
+                "X-Requested-With" to "XMLHttpRequest",
+            ),
+            cookies = cookiesJson
+        ).text.let { JsonParser().parse(it).asJsonObject }
+
+        sources.map { source ->
+            val src = source.asString
+            val link = json.getAsJsonPrimitive(src).asString
+            val quality = sourcesDetailJson.getAsJsonObject(src).getAsJsonPrimitive("resolution").asString
+            val server = sourcesDetailJson.getAsJsonObject(src).getAsJsonPrimitive("server").asString
+            val size = sourcesDetailJson.getAsJsonObject(src).getAsJsonPrimitive("size").asString
+
+            callback.invoke(
+                ExtractorLink(
+                    "Filmxy $size ($server)",
+                    "Filmxy $size ($server)",
+                    link,
+                    "$filmxyAPI/",
+                    getQualityFromName(quality)
+                )
+            )
+        }
+
+    }
+
 }
 
-//private fun fixTitle(title: String? = null) : String? {
-//    return title?.replace(":", "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
-//}
+data class FilmxyCookies(
+    val phpsessid: String,
+    val wLog: String,
+    val wSec: String,
+)
+
+suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies {
+
+    val url = if (season == null) {
+        "${filmxyAPI}/movie/$imdbId"
+    } else {
+        "${filmxyAPI}/tv/$imdbId"
+    }
+    val cookieUrl = "${filmxyAPI}/wp-admin/admin-ajax.php"
+
+    val res = session.get(
+        url,
+        headers = mapOf(
+            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+        ),
+    )
+
+    val userNonce =
+        res.document.select("script").find { it.data().contains("var userNonce") }?.data()?.let {
+            Regex("var\\suserNonce.*?\"(\\S+?)\";").find(it)?.groupValues?.get(1)
+        }
+
+    var phpsessid = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
+        .first { it.name == "PHPSESSID" }.value
+
+    session.post(
+        cookieUrl,
+        data = mapOf(
+            "action" to "guest_login",
+            "nonce" to "$userNonce",
+        ),
+        headers = mapOf(
+            "Cookie" to "PHPSESSID=$phpsessid; G_ENABLED_IDPS=google",
+            "X-Requested-With" to "XMLHttpRequest",
+        )
+    )
+
+    val cookieJar = session.baseClient.cookieJar.loadForRequest(cookieUrl.toHttpUrl())
+    phpsessid = cookieJar.first { it.name == "PHPSESSID" }.value
+    val wLog = cookieJar.first { it.name == "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" }.value
+    val wSec = cookieJar.first { it.name == "wordpress_sec_8bf9d5433ac88cc9a3a396d6b154cd01" }.value
+
+    return FilmxyCookies(phpsessid, wLog, wSec)
+}
 
 private fun String?.fixTitle(): String? {
     return this?.replace(":", "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")

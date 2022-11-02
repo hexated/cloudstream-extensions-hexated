@@ -5,6 +5,7 @@ import com.hexated.RandomUserAgent.getRandomUserAgent
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeDatabaseGdrive
 import com.hexated.SoraExtractor.invokeDbgo
+import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeGogo
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
@@ -45,8 +46,7 @@ open class SoraStream : TmdbProvider() {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         private const val apiKey = "b030404650f279792a8d3287232358e3" // PLEASE DON'T STEAL
         val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
-        val mainServerAPI =
-            base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
+        var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
@@ -59,6 +59,7 @@ open class SoraStream : TmdbProvider() {
         const val noverseAPI = "https://www.nollyverse.com"
         const val olgplyAPI = "https://olgply.xyz"
         const val uniqueStreamAPI = "https://uniquestream.net"
+        const val filmxyAPI = "https://www.filmxy.vip"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -87,11 +88,25 @@ open class SoraStream : TmdbProvider() {
         }
     }
 
+    private suspend fun checkMainServer() {
+        val check = app.get(mainServerAPI)
+        mainServerAPI = if(check.isSuccessful) {
+            mainServerAPI
+        } else {
+            base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=Ny4=bjQ=cmE=aHQ=YW4=a2g=ZS0=dmk=bW8=eC0=bWk=cmU=Ly8=czo=dHA=aHQ=")
+        }
+    }
+
     override val mainPage = mainPageOf(
         "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=&page=" to "Airing Today TV Shows",
         "$tmdbAPI/movie/popular?api_key=$apiKey&region=&page=" to "Popular Movies",
         "$tmdbAPI/tv/popular?api_key=$apiKey&region=&page=" to "Popular TV Shows",
         "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=&page=" to "On The Air TV Shows",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=213&page=" to "Netflix",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=1024&page=" to "Amazon",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2739&page=" to "Disney+",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=453&page=" to "Hulu",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2552&page=" to "Apple TV+",
         "$tmdbAPI/movie/top_rated?api_key=$apiKey&region=&page=" to "Top Rated Movies",
         "$tmdbAPI/tv/top_rated?api_key=$apiKey&region=&page=" to "Top Rated TV Shows",
         "$tmdbAPI/movie/upcoming?api_key=$apiKey&region=&page=" to "Upcoming Movies",
@@ -108,6 +123,7 @@ open class SoraStream : TmdbProvider() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        checkMainServer()
         val type = if (request.data.contains("/movie")) "movie" else "tv"
         val home = app.get(request.data + page)
             .parsedSafe<Results>()?.results
@@ -392,6 +408,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeUniqueStream(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             }
         )
 
