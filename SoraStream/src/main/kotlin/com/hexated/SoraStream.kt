@@ -119,6 +119,11 @@ open class SoraStream : TmdbProvider() {
         return if (link.startsWith("/")) "https://image.tmdb.org/t/p/w500/$link" else link
     }
 
+    private fun getOriImageUrl(link: String?): String? {
+        if (link == null) return null
+        return if (link.startsWith("/")) "https://image.tmdb.org/t/p/original/$link" else link
+    }
+
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
@@ -268,7 +273,7 @@ open class SoraStream : TmdbProvider() {
                 TvType.TvSeries,
                 episodes
             ) {
-                this.posterUrl = getImageUrl(res.posterPath)
+                this.posterUrl = getOriImageUrl(res.backdropPath)
                 this.year = year
                 this.plot = res.overview
                 this.tags = res.genres?.mapNotNull { it.name }
@@ -290,7 +295,7 @@ open class SoraStream : TmdbProvider() {
                     year = year,
                 ).toJson(),
             ) {
-                this.posterUrl = getImageUrl(res.posterPath)
+                this.posterUrl = getOriImageUrl(res.backdropPath)
                 this.year = year
                 this.plot = res.overview
                 this.tags = res.genres?.mapNotNull { it.name }
@@ -516,6 +521,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("original_title") val originalTitle: String? = null,
         @JsonProperty("original_name") val originalName: String? = null,
         @JsonProperty("poster_path") val posterPath: String? = null,
+        @JsonProperty("backdrop_path") val backdropPath: String? = null,
         @JsonProperty("release_date") val releaseDate: String? = null,
         @JsonProperty("first_air_date") val firstAirDate: String? = null,
         @JsonProperty("overview") val overview: String? = null,
