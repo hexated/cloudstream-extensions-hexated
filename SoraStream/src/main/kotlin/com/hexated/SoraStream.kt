@@ -35,6 +35,7 @@ open class SoraStream : TmdbProvider() {
     override val hasDownloadSupport = true
     override val instantLinkLoading = true
     override val useMetaLoadResponse = true
+    override val hasChromecastSupport = true
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -83,14 +84,15 @@ open class SoraStream : TmdbProvider() {
             }
         }
 
-        private fun base64DecodeAPI(api: String): String {
+        fun base64DecodeAPI(api: String): String {
             return api.chunked(4).map { base64Decode(it) }.reversed().joinToString("")
         }
+
     }
 
     private suspend fun checkMainServer() {
         val check = app.get(mainServerAPI)
-        mainServerAPI = if(check.isSuccessful) {
+        mainServerAPI = if (check.isSuccessful) {
             mainServerAPI
         } else {
             base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=Ny4=bjQ=cmE=aHQ=YW4=a2g=ZS0=dmk=bW8=eC0=bWk=cmU=Ly8=czo=dHA=aHQ=")
@@ -128,7 +130,7 @@ open class SoraStream : TmdbProvider() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        checkMainServer()
+//        checkMainServer()
         val type = if (request.data.contains("/movie")) "movie" else "tv"
         val home = app.get(request.data + page)
             .parsedSafe<Results>()?.results
@@ -168,12 +170,12 @@ open class SoraStream : TmdbProvider() {
         ).parsedSafe<Results>()?.results?.mapNotNull { media ->
             media.toSearchResponse()
         }
-        if(mainResponse?.isNotEmpty() == true) searchResponse.addAll(mainResponse)
+        if (mainResponse?.isNotEmpty() == true) searchResponse.addAll(mainResponse)
 
-        val animeResponse =
-            app.get("$mainServerAPI/search/anime/$query?_data=routes/search/anime/\$animeKeyword")
-                .parsedSafe<SearchAnime>()?.searchResults?.results?.mapNotNull { anime -> anime.toSearchResponse() }
-        if(animeResponse?.isNotEmpty() == true) searchResponse.addAll(animeResponse)
+//        val animeResponse =
+//            app.get("$mainServerAPI/search/anime/$query?_data=routes/search/anime/\$animeKeyword")
+//                .parsedSafe<SearchAnime>()?.searchResults?.results?.mapNotNull { anime -> anime.toSearchResponse() }
+//        if (animeResponse?.isNotEmpty() == true) searchResponse.addAll(animeResponse)
 
         return searchResponse
     }
@@ -222,9 +224,11 @@ open class SoraStream : TmdbProvider() {
                 .parsedSafe<Detail>()?.pageProps
                 ?: throw ErrorLoadingException("Invalid Json Response")
         val res = responses.result ?: return null
-        val title = res.title ?: res.name ?: res.originalTitle ?: res.originalName ?: return null
-        val year = (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
+        val title = res.title ?: res.name ?: return null
+        val orgTitle = res.originalTitle ?: res.originalName ?: return null
         val type = getType(data.type)
+        val year = (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
+
         val actors = responses.cast?.mapNotNull { cast ->
             ActorData(
                 Actor(
@@ -254,7 +258,8 @@ open class SoraStream : TmdbProvider() {
                                 eps.seasonNumber,
                                 eps.episodeNumber,
                                 title = title,
-                                year = year,
+                                year = season.airDate?.split("-")?.first()?.toIntOrNull(),
+                                orgTitle = orgTitle,
                             ).toJson(),
                             name = eps.name,
                             season = eps.seasonNumber,
@@ -293,6 +298,7 @@ open class SoraStream : TmdbProvider() {
                     data.type,
                     title = title,
                     year = year,
+                    orgTitle = orgTitle,
                 ).toJson(),
             ) {
                 this.posterUrl = getOriImageUrl(res.backdropPath)
@@ -327,7 +333,15 @@ open class SoraStream : TmdbProvider() {
 
         argamap(
             {
-                invokeSoraVIP(res.id, res.season, res.episode, subtitleCallback, callback)
+                invokeSoraVIP(
+                    res.title,
+                    res.orgTitle,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 val json = app.get(
@@ -336,30 +350,26 @@ open class SoraStream : TmdbProvider() {
                     headers = mapOf("User-Agent" to getRandomUserAgent())
                 ).parsedSafe<LoadLinks>()
 
-                if (json?.sources.isNullOrEmpty()) {
-                    invokeLocalSources(referer, subtitleCallback, callback)
-                } else {
-                    json?.sources?.map { source ->
-                        callback.invoke(
-                            ExtractorLink(
-                                this.name,
-                                this.name,
-                                source.url ?: return@map null,
-                                "$mainServerAPI/",
-                                source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                                isM3u8 = source.isM3U8,
-                                headers = mapOf("Origin" to mainServerAPI)
-                            )
+                json?.sources?.map { source ->
+                    callback.invoke(
+                        ExtractorLink(
+                            this.name,
+                            this.name,
+                            source.url ?: return@map null,
+                            "$mainServerAPI/",
+                            source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+                            isM3u8 = source.isM3U8,
+                            headers = mapOf("Origin" to mainServerAPI)
                         )
-                    }
-                    json?.subtitles?.map { sub ->
-                        subtitleCallback.invoke(
-                            SubtitleFile(
-                                sub.lang.toString(),
-                                sub.url ?: return@map null
-                            )
+                    )
+                }
+                json?.subtitles?.map { sub ->
+                    subtitleCallback.invoke(
+                        SubtitleFile(
+                            getLanguage(sub.lang.toString()),
+                            sub.url ?: return@map null
                         )
-                    }
+                    )
                 }
             },
             {
@@ -397,7 +407,11 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (res.aniId?.isNotEmpty() == true) invokeGogo(res.aniId, res.animeId, callback)
+                if (res.aniId?.isNotEmpty() == true) invokeGogo(
+                    res.aniId,
+                    res.animeId,
+                    callback
+                )
             },
             {
                 invokeHDMovieBox(res.title, res.season, res.episode, callback)
@@ -406,17 +420,31 @@ open class SoraStream : TmdbProvider() {
                 invokeSeries9(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeIdlix(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                invokeIdlix(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeNoverse(res.title, res.season, res.episode, callback)
             },
             {
-                invokeUniqueStream(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                invokeUniqueStream(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            }
+            },
         )
 
         return true
@@ -432,6 +460,7 @@ open class SoraStream : TmdbProvider() {
         val animeId: String? = null,
         val title: String? = null,
         val year: Int? = null,
+        val orgTitle: String? = null,
     )
 
     data class Data(
@@ -444,6 +473,7 @@ open class SoraStream : TmdbProvider() {
     data class Subtitles(
         @JsonProperty("url") val url: String? = null,
         @JsonProperty("lang") val lang: String? = null,
+        @JsonProperty("language") val language: String? = null,
     )
 
     data class Sources(
@@ -454,6 +484,16 @@ open class SoraStream : TmdbProvider() {
 
     data class LoadLinks(
         @JsonProperty("sources") val sources: ArrayList<Sources>? = arrayListOf(),
+        @JsonProperty("subtitles") val subtitles: ArrayList<Subtitles>? = arrayListOf(),
+    )
+
+    data class SourcesVIP(
+        @JsonProperty("url") val url: String? = null,
+        @JsonProperty("quality") val quality: Int? = null,
+    )
+
+    data class LoadVIPLinks(
+        @JsonProperty("sources") val sources: ArrayList<SourcesVIP>? = arrayListOf(),
         @JsonProperty("subtitles") val subtitles: ArrayList<Subtitles>? = arrayListOf(),
     )
 
@@ -479,6 +519,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("id") val id: Int? = null,
         @JsonProperty("name") val name: String? = null,
         @JsonProperty("season_number") val seasonNumber: Int? = null,
+        @JsonProperty("air_date") val airDate: String? = null,
     )
 
     data class Cast(
@@ -609,18 +650,12 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("season_number") val season_number: Int? = null,
     )
 
-    data class DetailVip(
-        @JsonProperty("title") val title: String? = null,
-        @JsonProperty("name") val name: String? = null,
-        @JsonProperty("original_title") val original_title: String? = null,
-        @JsonProperty("original_name") val original_name: String? = null,
-        @JsonProperty("release_date") val release_date: String? = null,
-        @JsonProperty("first_air_date") val first_air_date: String? = null,
-        @JsonProperty("seasons") val seasons: ArrayList<SeasonsVip>? = arrayListOf(),
+    data class DataVip(
+        @JsonProperty("id") val id: String? = null,
     )
 
     data class DetailVipResult(
-        @JsonProperty("detail") val detail: DetailVip? = null,
+        @JsonProperty("data") val data: DataVip? = null,
     )
 
     data class Providers(

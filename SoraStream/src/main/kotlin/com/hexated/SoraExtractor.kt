@@ -302,45 +302,30 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invokeSoraVIP(
-        id: Int? = null,
+        title: String? = null,
+        orgTitle: String? = null,
+        year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        val apiUrl = base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
         val url = if(season == null) {
-            "$mainServerAPI/movies/$id/?_data=routes/movies/\$movieId"
+            "$apiUrl/search/one?title=$title&orgTitle=$orgTitle&year=$year"
         } else {
-            "$mainServerAPI/tv-shows/$id/?_data=routes/tv-shows/\$tvId"
-        }
-        val data = app.get(url).parsedSafe<DetailVipResult>()?.detail
-        val title = data?.title ?: data?.name
-        val origTitle = data?.original_title ?: data?.original_name
-        val providerId = if (season == null) {
-            val airDate = (data?.release_date ?: data?.first_air_date)?.substringBefore("-")
-            app.get(
-                "$mainServerAPI/api/provider?title=$title&type=movie&origTitle=$origTitle&year=$airDate&_data=routes/api/provider"
-            )
-                .parsedSafe<ProvidersResult>()?.provider?.first { it.provider == "Loklok" }?.id
-
-        } else {
-            val airDate = data?.seasons?.first { it.season_number == season }?.air_date?.substringBefore("-")
-            app.get(
-                "$mainServerAPI/api/provider?title=$title&type=tv&origTitle=$origTitle&year=$airDate&season=$season&_data=routes/api/provider"
-            )
-                .parsedSafe<ProvidersResult>()?.provider?.first { it.provider == "Loklok" }?.id
+            "$apiUrl/search/one?title=$title&orgTitle=$orgTitle&year=$year&season=$season"
         }
 
-        val query = if (season == null) {
-            "$mainServerAPI/movies/$id/watch?provider=Loklok&id=$providerId&_data=routes/movies/\$movieId.watch"
+        val id = app.get(url).parsedSafe<DetailVipResult>()?.data?.id
+
+        val sourcesUrl = if(season == null) {
+            "$apiUrl/movie/detail?id=$id"
         } else {
-            "$mainServerAPI/tv-shows/$id/season/$season/episode/$episode?provider=Loklok&id=$providerId&_data=routes/tv-shows/\$tvId.season.\$seasonId.episode.\$episodeId"
+            "$apiUrl/tv/detail?id=$id&episodeId=${episode?.minus(1)}"
         }
 
-        val json = app.get(
-            query,
-            headers = mapOf("User-Agent" to RandomUserAgent.getRandomUserAgent())
-        ).parsedSafe<LoadLinks>()
+        val json = app.get(sourcesUrl).parsedSafe<LoadVIPLinks>()
 
         json?.sources?.map { source ->
             callback.invoke(
@@ -348,10 +333,9 @@ object SoraExtractor : SoraStream() {
                     "${this.name} (VIP)",
                     "${this.name} (VIP)",
                     source.url ?: return@map null,
-                    "$mainServerAPI/",
-                    source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                    isM3u8 = source.isM3U8,
-                    headers = mapOf("Origin" to mainServerAPI)
+                    "$apiUrl/",
+                    source.quality ?: Qualities.Unknown.value,
+                    isM3u8 = source.url.contains(".m3u8"),
                 )
             )
         }
@@ -359,7 +343,7 @@ object SoraExtractor : SoraStream() {
         json?.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    getLanguage(sub.lang.toString()),
+                    getLanguage(sub.language.toString()),
                     sub.url ?: return@map null
                 )
             )
