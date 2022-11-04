@@ -37,10 +37,10 @@ class Movierulzhd : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page,
-            interceptor = interceptor,
-            referer = mainUrl
-        ).document
+        var document = app.get(request.data + page,).document
+        if(document.select("title").text() == "Just a moment...") {
+            document = app.get(request.data + page, interceptor = interceptor).document
+        }
         val home =
             document.select("div.items.normal article, div#archive-content article").mapNotNull {
                 it.toSearchResult()
@@ -81,9 +81,10 @@ class Movierulzhd : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/search/$query"
-        val document = app.get(link
-            , interceptor = interceptor
-        ).document
+        var document = app.get(link,).document
+        if(document.select("title").text() == "Just a moment...") {
+            document = app.get(link, interceptor = interceptor).document
+        }
 
         return document.select("div.result-item").map {
             val title =
@@ -92,16 +93,16 @@ class Movierulzhd : MainAPI() {
             val posterUrl = it.selectFirst("img")!!.attr("src").toString()
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
+                posterHeaders = interceptor.getCookieHeaders(mainUrl).toMap()
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url
-            , interceptor = interceptor
-        ).document
-
+        var document = app.get(url,).document
+        if(document.select("title").text() == "Just a moment...") {
+            document = app.get(url, interceptor = interceptor).document
+        }
         val title =
             document.selectFirst("div.data > h1")?.text()?.trim().toString()
         val poster = document.select("div.poster > img").attr("src").toString()
@@ -218,9 +219,10 @@ class Movierulzhd : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data
-            , interceptor = interceptor
-        ).document
+        var document = app.get(data).document
+        if(document.select("title").text() == "Just a moment...") {
+            document = app.get(data, interceptor = interceptor).document
+        }
         val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
         val type = if (data.contains("/movies/")) "movie" else "tv"
 
