@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 
 class IdlixProvider : MainAPI() {
-    override var mainUrl = "https://109.234.36.69"
+    override var mainUrl = "https://88.210.3.94"
     override var name = "Idlix"
     override val hasMainPage = true
     override var lang = "id"
