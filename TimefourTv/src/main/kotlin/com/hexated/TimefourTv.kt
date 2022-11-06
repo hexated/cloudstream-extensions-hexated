@@ -67,7 +67,7 @@ open class TimefourTv : MainAPI() {
     private fun Element.toSearchSchedule(): LiveSearchResponse? {
         return LiveSearchResponse(
             this.text() ?: return null,
-            Schedule(this.text()).toJson(),
+            this.text(),
             this@TimefourTv.name,
             TvType.Live,
             posterUrl = time4tvPoster
@@ -86,10 +86,11 @@ open class TimefourTv : MainAPI() {
     }
 
     private suspend fun loadSchedule(url: String): LoadResponse {
+        val name = url.removePrefix("$mainUrl/")
         val doc = app.get("$mainUrl/schedule.php").document
 
         val episode =
-            doc.selectFirst("div.search_p h2:contains($url)")?.nextElementSibling()?.select("span")
+            doc.selectFirst("div.search_p h2:contains($name)")?.nextElementSibling()?.select("span")
                 ?.mapIndexedNotNull { index, ele ->
                     val title = ele.select("a").text()
                     val href = ele.select("a").attr("href")
@@ -102,16 +103,15 @@ open class TimefourTv : MainAPI() {
                     )
                 } ?: throw ErrorLoadingException("Referest Page")
 
-        return newTvSeriesLoadResponse(url, url, TvType.TvSeries, episode) {
+        return newTvSeriesLoadResponse(name, url, TvType.TvSeries, episode) {
         }
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val data = AppUtils.parseJson<Schedule>(url)
-
-        if (data.name?.startsWith("http") == false) return loadSchedule(data.name)
 
         val res = app.get(url)
+        if (!res.isSuccessful) return loadSchedule(url)
+
         val document = res.document
         val title = document.selectFirst("div.channelHeading h1")?.text() ?: return null
         val poster =
@@ -175,9 +175,5 @@ open class TimefourTv : MainAPI() {
         }
         return true
     }
-
-    data class Schedule(
-        val name: String? = null
-    )
 
 }
