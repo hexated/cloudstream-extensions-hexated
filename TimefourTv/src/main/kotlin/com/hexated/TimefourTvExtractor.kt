@@ -71,7 +71,7 @@ object TimefourTvExtractor : TimefourTv() {
             return getSportLink(url)
         }
 
-        val (channel, iframe) = if (url.contains("width=")) {
+        val (channel, iframe) = if (url.contains("width=") || url.contains("/link")) {
             val doc = app.get(url, referer = "$mainUrl/").document
             val tempIframe = doc.selectFirst("iframe")?.attr("src") ?: return null
 

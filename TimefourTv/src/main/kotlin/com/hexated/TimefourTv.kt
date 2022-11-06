@@ -2,6 +2,8 @@ package com.hexated
 
 import com.hexated.TimefourTvExtractor.getLink
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.AppUtils
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Element
@@ -11,6 +13,7 @@ open class TimefourTv : MainAPI() {
     override var name = "Time4tv"
     override val hasDownloadSupport = false
     override val hasMainPage = true
+    private val time4tvPoster = "$mainUrl/images/logo.png"
     override val supportedTypes = setOf(
         TvType.Live
     )
@@ -22,6 +25,7 @@ open class TimefourTv : MainAPI() {
         "$mainUrl/sports-channels" to "Sport Channels",
         "$mainUrl/live-sports-streams" to "Live Sport Channels",
         "$mainUrl/news-channels" to "News Channels",
+        "$mainUrl/schedule.php" to "Schedule",
     )
 
     override suspend fun getMainPage(
@@ -49,7 +53,25 @@ open class TimefourTv : MainAPI() {
             items.add(HomePageList(request.name, home, true))
         }
 
+        if (nonPaged && request.name == "Schedule") {
+            val res = app.get(request.data).document
+            val schedule = res.select("div.search_p h2").mapNotNull {
+                it.toSearchSchedule()
+            }
+            items.add(HomePageList(request.name, schedule, true))
+        }
+
         return newHomePageResponse(items)
+    }
+
+    private fun Element.toSearchSchedule(): LiveSearchResponse? {
+        return LiveSearchResponse(
+            this.text() ?: return null,
+            Schedule(this.text()).toJson(),
+            this@TimefourTv.name,
+            TvType.Live,
+            posterUrl = time4tvPoster
+        )
     }
 
     private fun Element.toSearchResult(): LiveSearchResponse? {
@@ -63,8 +85,34 @@ open class TimefourTv : MainAPI() {
 
     }
 
+    private suspend fun loadSchedule(url: String): LoadResponse {
+        val doc = app.get("$mainUrl/schedule.php").document
+
+        val episode =
+            doc.selectFirst("div.search_p h2:contains($url)")?.nextElementSibling()?.select("span")
+                ?.mapIndexedNotNull { index, ele ->
+                    val title = ele.select("a").text()
+                    val href = ele.select("a").attr("href")
+                    val desc = ele.parent()?.textNodes()?.get(index).toString()
+                    Episode(
+                        href,
+                        title,
+                        posterUrl = time4tvPoster,
+                        description = desc,
+                    )
+                } ?: throw ErrorLoadingException("Referest Page")
+
+        return newTvSeriesLoadResponse(url, url, TvType.TvSeries, episode) {
+        }
+    }
+
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
+        val data = AppUtils.parseJson<Schedule>(url)
+
+        if (data.name?.startsWith("http") == false) return loadSchedule(data.name)
+
+        val res = app.get(url)
+        val document = res.document
         val title = document.selectFirst("div.channelHeading h1")?.text() ?: return null
         val poster =
             fixUrlNull(document.selectFirst("meta[property=\"og:image\"]")?.attr("content"))
@@ -104,10 +152,14 @@ open class TimefourTv : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val link = if (data.startsWith(mainUrl)) {
-            app.get(data, allowRedirects = false).document.selectFirst("iframe")?.attr("src")
-        } else {
-            data
+        val link = when {
+            data.contains("/channel") -> app.get(data).document.selectFirst("div.tv_palyer iframe")?.attr("src")
+            data.startsWith(mainUrl) -> {
+                app.get(data, allowRedirects = false).document.selectFirst("iframe")?.attr("src")
+            }
+            else -> {
+                data
+            }
         } ?: throw ErrorLoadingException()
         getLink(fixUrl(link))?.let { m3uLink ->
             callback.invoke(
@@ -123,5 +175,9 @@ open class TimefourTv : MainAPI() {
         }
         return true
     }
+
+    data class Schedule(
+        val name: String? = null
+    )
 
 }
