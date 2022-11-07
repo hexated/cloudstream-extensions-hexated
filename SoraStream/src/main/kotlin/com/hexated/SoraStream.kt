@@ -9,6 +9,7 @@ import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeGogo
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
+import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeLocalSources
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNoverse
@@ -61,6 +62,7 @@ open class SoraStream : TmdbProvider() {
         const val olgplyAPI = "https://olgply.xyz"
         const val uniqueStreamAPI = "https://uniquestream.net"
         const val filmxyAPI = "https://www.filmxy.vip"
+        const val kimcartoonAPI = "https://kimcartoon.li"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -332,46 +334,46 @@ open class SoraStream : TmdbProvider() {
         }
 
         argamap(
-            {
-                invokeSoraVIP(
-                    res.title,
-                    res.orgTitle,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
-                val json = app.get(
-                    query,
-                    referer = referer,
-                    headers = mapOf("User-Agent" to getRandomUserAgent())
-                ).parsedSafe<LoadLinks>()
-
-                json?.sources?.map { source ->
-                    callback.invoke(
-                        ExtractorLink(
-                            this.name,
-                            this.name,
-                            source.url ?: return@map null,
-                            "$mainServerAPI/",
-                            source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                            isM3u8 = source.isM3U8,
-                            headers = mapOf("Origin" to mainServerAPI)
-                        )
-                    )
-                }
-                json?.subtitles?.map { sub ->
-                    subtitleCallback.invoke(
-                        SubtitleFile(
-                            getLanguage(sub.lang.toString()),
-                            sub.url ?: return@map null
-                        )
-                    )
-                }
-            },
+//            {
+//                invokeSoraVIP(
+//                    res.title,
+//                    res.orgTitle,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
+//            {
+//                val json = app.get(
+//                    query,
+//                    referer = referer,
+//                    headers = mapOf("User-Agent" to getRandomUserAgent())
+//                ).parsedSafe<LoadLinks>()
+//
+//                json?.sources?.map { source ->
+//                    callback.invoke(
+//                        ExtractorLink(
+//                            this.name,
+//                            this.name,
+//                            source.url ?: return@map null,
+//                            "$mainServerAPI/",
+//                            source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+//                            isM3u8 = source.isM3U8,
+//                            headers = mapOf("Origin" to mainServerAPI)
+//                        )
+//                    )
+//                }
+//                json?.subtitles?.map { sub ->
+//                    subtitleCallback.invoke(
+//                        SubtitleFile(
+//                            getLanguage(sub.lang.toString()),
+//                            sub.url ?: return@map null
+//                        )
+//                    )
+//                }
+//            },
             {
                 invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
             },
@@ -444,6 +446,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
         )
 

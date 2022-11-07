@@ -153,7 +153,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
 
-        var iframeDbgo: String? = null
+        val iframeDbgo: String?
         val script = if (season == null) {
             val doc = app.get("$dbgoAPI/imdb.php?id=$id").document
             iframeDbgo = doc.select("div.myvideo iframe").attr("src")
@@ -181,10 +181,11 @@ object SoraExtractor : SoraStream() {
                 1
             )
 
+        val ref = getBaseUrl(iframeDbgo)
         decryptStreamUrl(source.toString()).split(",").map { links ->
             val quality =
                 Regex("\\[([0-9]*p.*?)]").find(links)?.groupValues?.getOrNull(1).toString().trim()
-            links.replace("[$quality]", "").split("or").map { it.trim() }
+            links.replace("[$quality]", "").split(" or ").map { it.trim() }
                 .map { link ->
                     val name = if (link.contains(".m3u8")) "Dbgo (Main)" else "Dbgo (Backup)"
                     callback.invoke(
@@ -192,11 +193,11 @@ object SoraExtractor : SoraStream() {
                             name,
                             name,
                             link,
-                            "${getBaseUrl(iframeDbgo)}/",
+                            "$ref/",
                             getQuality(quality),
                             isM3u8 = link.contains(".m3u8"),
                             headers = mapOf(
-                                "Origin" to getBaseUrl(iframeDbgo)
+                                "Origin" to ref
                             )
                         )
                     )
@@ -715,6 +716,46 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeKimcartoon(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.fixKimTitle()
+        val url = if(season == null) {
+            "$kimcartoonAPI/Cartoon/$fixTitle"
+        } else {
+            "$kimcartoonAPI/Cartoon/$fixTitle-season-$season"
+        }
+
+        val doc = app.get(url).document
+        val iframe = if (season == null) {
+            doc.select("table.listing tr td a").firstNotNullOf { it.attr("href") }
+        } else {
+            doc.select("table.listing tr td a").map {
+                it.attr("href")
+            }.first { it.contains("Season-$season", true) && it.contains("Episode-$episode", true) }
+        } ?: return
+
+        val source = app.get(fixUrl(iframe, kimcartoonAPI)).document.select("div#divContentVideo iframe").attr("src")
+        loadExtractor(source, "$kimcartoonAPI/", subtitleCallback) { link ->
+            callback.invoke(
+                ExtractorLink(
+                    "Luxubu",
+                    "Luxubu",
+                    link.url,
+                    link.referer,
+                    link.quality,
+                    link.isM3u8,
+                    link.headers,
+                    link.extractorData
+                )
+            )
+        }
+    }
+
 }
 
 data class FilmxyCookies(
@@ -769,6 +810,10 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Filmx
 
 private fun String?.fixTitle(): String? {
     return this?.replace(":", "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
+}
+
+private fun String?.fixKimTitle(): String? {
+    return this?.replace(Regex("[!%:]|( &)"), "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
 }
 
 fun getLanguage(str: String): String {
@@ -845,6 +890,25 @@ suspend fun loadLinksWithWebView(
             true
         )
     )
+}
+
+fun fixUrl(url: String, domain: String): String {
+    if (url.startsWith("http")) {
+        return url
+    }
+    if (url.isEmpty()) {
+        return ""
+    }
+
+    val startsWithNoHttp = url.startsWith("//")
+    if (startsWithNoHttp) {
+        return "https:$url"
+    } else {
+        if (url.startsWith('/')) {
+            return domain + url
+        }
+        return "$domain/$url"
+    }
 }
 
 data class HdMovieBoxSource(
