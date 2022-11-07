@@ -334,46 +334,46 @@ open class SoraStream : TmdbProvider() {
         }
 
         argamap(
-//            {
-//                invokeSoraVIP(
-//                    res.title,
-//                    res.orgTitle,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
-//            {
-//                val json = app.get(
-//                    query,
-//                    referer = referer,
-//                    headers = mapOf("User-Agent" to getRandomUserAgent())
-//                ).parsedSafe<LoadLinks>()
-//
-//                json?.sources?.map { source ->
-//                    callback.invoke(
-//                        ExtractorLink(
-//                            this.name,
-//                            this.name,
-//                            source.url ?: return@map null,
-//                            "$mainServerAPI/",
-//                            source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-//                            isM3u8 = source.isM3U8,
-//                            headers = mapOf("Origin" to mainServerAPI)
-//                        )
-//                    )
-//                }
-//                json?.subtitles?.map { sub ->
-//                    subtitleCallback.invoke(
-//                        SubtitleFile(
-//                            getLanguage(sub.lang.toString()),
-//                            sub.url ?: return@map null
-//                        )
-//                    )
-//                }
-//            },
+            {
+                invokeSoraVIP(
+                    res.title,
+                    res.orgTitle,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                val json = app.get(
+                    query,
+                    referer = referer,
+                    headers = mapOf("User-Agent" to getRandomUserAgent())
+                ).parsedSafe<LoadLinks>()
+
+                json?.sources?.map { source ->
+                    callback.invoke(
+                        ExtractorLink(
+                            this.name,
+                            this.name,
+                            source.url ?: return@map null,
+                            "$mainServerAPI/",
+                            source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+                            isM3u8 = source.isM3U8,
+                            headers = mapOf("Origin" to mainServerAPI)
+                        )
+                    )
+                }
+                json?.subtitles?.map { sub ->
+                    subtitleCallback.invoke(
+                        SubtitleFile(
+                            getLanguage(sub.lang.toString()),
+                            sub.url ?: return@map null
+                        )
+                    )
+                }
+            },
             {
                 invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
             },
