@@ -515,7 +515,9 @@ object SoraExtractor : SoraStream() {
                 referer = url
             ).parsed<ResponseHash>().embed_url
 
+            if(!source.contains("youtube")) {
             loadExtractor(source, "$idlixAPI/", subtitleCallback, callback)
+            }
         }
     }
 
@@ -833,7 +835,7 @@ object SoraExtractor : SoraStream() {
         json?.subtitlingList?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    getVipLanguage(sub.languageAbbr ?: return@map),
+                    sub.language ?: "",
                     sub.subtitlingUrl ?: return@map
                 )
             )
@@ -903,16 +905,6 @@ private fun String?.fixKimTitle(): String? {
 
 fun getLanguage(str: String): String {
     return if (str.contains("(in_ID)")) "Indonesian" else str
-}
-
-private fun getVipLanguage(str: String): String {
-    return when (str) {
-        "in_ID" -> "Indonesian"
-        "pt" -> "Portuguese"
-        else -> str.split("_").first().let {
-            SubtitleHelper.fromTwoLettersToLanguage(it).toString()
-        }
-    }
 }
 
 private fun getQuality(str: String): Int {

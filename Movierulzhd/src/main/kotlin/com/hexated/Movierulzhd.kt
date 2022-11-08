@@ -249,7 +249,8 @@ class Movierulzhd : MainAPI() {
 //                    source.startsWith("https://series.databasegdriveplayer.co") -> {
 //                        invokeDatabase(source, callback, subtitleCallback)
 //                    }
-                    else -> loadExtractor(source, data, subtitleCallback, callback)
+                    !source.contains("youtube") -> loadExtractor(source, data, subtitleCallback, callback)
+                    else -> {}
                 }
             }
         }
