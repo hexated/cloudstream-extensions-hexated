@@ -302,7 +302,7 @@ object SoraExtractor : SoraStream() {
         loadExtractor(url, databaseGdriveAPI, subtitleCallback, callback)
     }
 
-    suspend fun invokeSoraVIP(
+/*    suspend fun invokeSoraVIP(
         title: String? = null,
         orgTitle: String? = null,
         year: Int? = null,
@@ -350,7 +350,7 @@ object SoraExtractor : SoraStream() {
             )
         }
     }
-
+ */
     suspend fun invokeGogo(
         aniId: String? = null,
         animeId: String? = null,
@@ -756,6 +756,91 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    suspend fun invokeSoraVIP(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val headers = mapOf(
+            "lang" to "en",
+            "versioncode" to "11",
+            "clienttype" to "ios_jike_default"
+        )
+        val vipAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
+        val vipUrl = base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
+
+        val doc = app.get(
+            "$vipUrl/search?keyword=$title",
+        ).document
+
+        val scriptData = doc.select("div.search-list div.search-video-card").map {
+            Triple(
+                it.selectFirst("h2.title")?.text().toString(),
+                it.selectFirst("div.desc")?.text()
+                    ?.substringBefore(".")?.toIntOrNull(),
+                it.selectFirst("a")?.attr("href")?.split("/")
+            )
+        }
+
+        val script = if (scriptData.size == 1) {
+            scriptData.first()
+        } else {
+            scriptData.first {
+                if (season == null) {
+                    it.first.equals(
+                        title,
+                        true
+                    ) && it.second == year
+                } else {
+                    it.first.contains(
+                        "$title",
+                        true
+                    ) && (it.second == year || it.first.contains("Season $season", true))
+                }
+            }
+        }
+
+        val id = script.third?.last()
+        val type = script.third?.get(2)
+
+        val json = app.get(
+            "$vipAPI/movieDrama/get?id=${id}&category=${type}",
+            headers = headers
+        ).parsedSafe<Load>()?.data?.episodeVo?.first { it.seriesNo == (episode ?: 0) }
+
+        json?.definitionList?.apmap { video ->
+            app.get(
+                "${vipAPI}/media/previewInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
+                headers = headers
+            ).parsedSafe<Video>()?.data.let { link ->
+                callback.invoke(
+                    ExtractorLink(
+                        "${this.name} (vip)",
+                        "${this.name} (vip)",
+                        link?.mediaUrl ?: return@let,
+                        "",
+                        getQualityFromName(video.description),
+                        isM3u8 = true,
+                        headers = headers
+                    )
+                )
+            }
+        }
+
+        json?.subtitlingList?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    getVipLanguage(sub.languageAbbr ?: return@map),
+                    sub.subtitlingUrl ?: return@map
+                )
+            )
+        }
+
+    }
+
 }
 
 data class FilmxyCookies(
@@ -818,6 +903,16 @@ private fun String?.fixKimTitle(): String? {
 
 fun getLanguage(str: String): String {
     return if (str.contains("(in_ID)")) "Indonesian" else str
+}
+
+private fun getVipLanguage(str: String): String {
+    return when (str) {
+        "in_ID" -> "Indonesian"
+        "pt" -> "Portuguese"
+        else -> str.split("_").first().let {
+            SubtitleHelper.fromTwoLettersToLanguage(it).toString()
+        }
+    }
 }
 
 private fun getQuality(str: String): Int {
@@ -934,5 +1029,39 @@ data class Track(
 data class RabbitSources(
     @JsonProperty("sources") val sources: String? = null,
     @JsonProperty("tracks") val tracks: ArrayList<Track>? = arrayListOf(),
+)
+
+data class VideoData(
+    @JsonProperty("mediaUrl") val mediaUrl: String? = null,
+)
+
+data class Video(
+    @JsonProperty("data") val data: VideoData? = null,
+)
+
+data class SubtitlingList(
+    @JsonProperty("languageAbbr") val languageAbbr: String? = null,
+    @JsonProperty("language") val language: String? = null,
+    @JsonProperty("subtitlingUrl") val subtitlingUrl: String? = null,
+)
+
+data class DefinitionList(
+    @JsonProperty("code") val code: String? = null,
+    @JsonProperty("description") val description: String? = null,
+)
+
+data class EpisodeVo(
+    @JsonProperty("id") val id: Int? = null,
+    @JsonProperty("seriesNo") val seriesNo: Int? = null,
+    @JsonProperty("definitionList") val definitionList: ArrayList<DefinitionList>? = arrayListOf(),
+    @JsonProperty("subtitlingList") val subtitlingList: ArrayList<SubtitlingList>? = arrayListOf(),
+)
+
+data class MediaDetail(
+    @JsonProperty("episodeVo") val episodeVo: ArrayList<EpisodeVo>? = arrayListOf(),
+)
+
+data class Load(
+    @JsonProperty("data") val data: MediaDetail? = null,
 )
 
