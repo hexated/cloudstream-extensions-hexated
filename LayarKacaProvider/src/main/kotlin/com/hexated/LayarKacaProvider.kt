@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://lk21official.org"
+    override var mainUrl = "https://lk21official.art"
 //    private val redirectUrl = "https://nd21x1.github.io"
     private val seriesUrl = "https://nontondrama.icu"
     override var name = "LayarKaca"
