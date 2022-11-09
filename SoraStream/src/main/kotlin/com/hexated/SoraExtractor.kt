@@ -809,10 +809,14 @@ object SoraExtractor : SoraStream() {
         val id = script.third?.last()
         val type = script.third?.get(2)
 
-        val json = app.get(
+        val jsonResponse = app.get(
             "$vipAPI/movieDrama/get?id=${id}&category=${type}",
             headers = headers
-        ).parsedSafe<Load>()?.data?.episodeVo?.first { it.seriesNo == (episode ?: 0) }
+        )
+
+        if(!jsonResponse.isSuccessful) return
+
+        val json = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.first { it.seriesNo == (episode ?: 0) }
 
         json?.definitionList?.apmap { video ->
             delay(1000)
