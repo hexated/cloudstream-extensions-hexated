@@ -11,6 +11,7 @@ import com.lagradost.nicehttp.Session
 import com.lagradost.nicehttp.requestCreator
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import com.google.gson.JsonParser
+import kotlinx.coroutines.delay
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
 
@@ -814,6 +815,7 @@ object SoraExtractor : SoraStream() {
         ).parsedSafe<Load>()?.data?.episodeVo?.first { it.seriesNo == (episode ?: 0) }
 
         json?.definitionList?.apmap { video ->
+            delay(1000)
             app.get(
                 "${vipAPI}/media/previewInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
                 headers = headers
