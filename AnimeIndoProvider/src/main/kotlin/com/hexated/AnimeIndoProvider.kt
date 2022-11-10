@@ -10,7 +10,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class AnimeIndoProvider : MainAPI() {
-    override var mainUrl = "https://animeindo.fun"
+    override var mainUrl = "https://animeindo.cfd"
     override var name = "AnimeIndo"
     override val hasMainPage = true
     override var lang = "id"
@@ -40,7 +40,7 @@ class AnimeIndoProvider : MainAPI() {
         private suspend fun request(url: String): NiceResponse {
             val req = app.get(
                 url,
-                cookies = mapOf("recaptcha_cookie" to "#Asia/Jakarta#-420#win32#Windows#0,false,false#Google Inc. (Intel)~ANGLE (Intel, Intel(R) HD Graphics 400 Direct3D11 vs_5_0 ps_5_0)")
+                headers = mapOf("Cookie" to "_ga_RHDMEL4EDM=GS1.1.1668082390.1.0.1668082390.0.0.0; _ga=GA1.1.916626312.1668082390")
             )
             if (req.isSuccessful) {
                 return req
