@@ -441,9 +441,9 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-//            {
-//                invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-//            },
+            {
+                invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+            },
             {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
