@@ -3,7 +3,7 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 
 class Kitanonton : RebahinProvider() {
-    override var mainUrl = "https://124.150.139.91"
+    override var mainUrl = "http://kitanonton.org"
     override var name = "KitaNonton"
     override var mainServer = "https://199.87.210.226"
 

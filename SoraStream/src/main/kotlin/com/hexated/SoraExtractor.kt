@@ -11,6 +11,7 @@ import com.lagradost.nicehttp.Session
 import com.lagradost.nicehttp.requestCreator
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import com.google.gson.JsonParser
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import kotlinx.coroutines.delay
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
@@ -622,12 +623,8 @@ object SoraExtractor : SoraStream() {
                     name,
                     name,
                     link,
-                    "$noverseAPI/",
+                    "",
                     getQualityFromName("${quality?.substringBefore("p")?.trim()}p"),
-//                    headers = mapOf(
-//                        "Origin" to noverseAPI,
-//                        "Range" to "bytes=0-"
-//                    )
                 )
             )
         }
@@ -654,7 +651,10 @@ object SoraExtractor : SoraStream() {
             "PHPSESSID" to filmxyCookies.phpsessid
         )
 
-        val doc = session.get(url, cookies = cookiesDoc).document
+        val request = session.get(url, cookies = cookiesDoc)
+        if(!request.isSuccessful) return
+
+        val doc = request.document
         val script = doc.selectFirst("script:containsData(var isSingle)")?.data().toString()
         val sourcesData = Regex("listSE\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
         val sourcesDetail = Regex("linkDetails\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
@@ -697,7 +697,7 @@ object SoraExtractor : SoraStream() {
                 "X-Requested-With" to "XMLHttpRequest",
             ),
             cookies = cookiesJson
-        ).text.let { JsonParser().parse(it).asJsonObject }
+        ).text.let { JsonParser.parseString(it).asJsonObject }
 
         sources.map { source ->
             val src = source.asString
@@ -819,7 +819,7 @@ object SoraExtractor : SoraStream() {
         val json = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.first { it.seriesNo == (episode ?: 0) }
 
         json?.definitionList?.apmap { video ->
-            delay(1000)
+            delay(2000)
             app.get(
                 "${vipAPI}/media/previewInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
                 headers = headers
