@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 open class TimefourTv : MainAPI() {
@@ -90,11 +91,12 @@ open class TimefourTv : MainAPI() {
         val doc = app.get("$mainUrl/schedule.php").document
 
         val episode =
-            doc.selectFirst("div.search_p h2:contains($name)")?.nextElementSibling()?.select("span")
-                ?.mapIndexedNotNull { index, ele ->
+            doc.selectFirst("div.search_p h2:contains($name)")?.nextElementSiblings()?.toString()
+                ?.substringBefore("<h2")?.let { Jsoup.parse(it) }?.select("span")
+                ?.mapIndexed { index, ele ->
                     val title = ele.select("a").text()
                     val href = ele.select("a").attr("href")
-                    val desc = ele.parent()?.textNodes()?.get(index).toString()
+                    val desc = ele.parent()?.textNodes()?.getOrNull(index)?.toString()
                     Episode(
                         href,
                         title,
