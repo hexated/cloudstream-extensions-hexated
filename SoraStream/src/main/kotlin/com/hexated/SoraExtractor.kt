@@ -697,7 +697,7 @@ object SoraExtractor : SoraStream() {
                 "X-Requested-With" to "XMLHttpRequest",
             ),
             cookies = cookiesJson
-        ).text.let { JsonParser.parseString(it).asJsonObject }
+        ).text.let { JsonParser().parse(it).asJsonObject }
 
         sources.map { source ->
             val src = source.asString
