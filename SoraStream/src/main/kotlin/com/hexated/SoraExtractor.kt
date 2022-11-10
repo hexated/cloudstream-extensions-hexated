@@ -643,12 +643,12 @@ object SoraExtractor : SoraStream() {
         } else {
             "${filmxyAPI}/tv/$imdbId"
         }
-        val filmxyCookies = getFilmxyCookies(imdbId, season)
+        val filmxyCookies = getFilmxyCookies(imdbId, season) ?: throw ErrorLoadingException("No Cookies Found")
 
         val cookiesDoc = mapOf(
             "G_ENABLED_IDPS" to "google",
-            "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" to filmxyCookies.wLog,
-            "PHPSESSID" to filmxyCookies.phpsessid
+            "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" to "${filmxyCookies.wLog}",
+            "PHPSESSID" to "${filmxyCookies.phpsessid}"
         )
 
         val request = session.get(url, cookies = cookiesDoc)
@@ -681,9 +681,9 @@ object SoraExtractor : SoraStream() {
         val body = "action=get_vid_links$linkIDs&user_id=$userId&nonce=$userNonce".toRequestBody()
         val cookiesJson = mapOf(
             "G_ENABLED_IDPS" to "google",
-            "PHPSESSID" to filmxyCookies.phpsessid,
-            "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" to filmxyCookies.wLog,
-            "wordpress_sec_8bf9d5433ac88cc9a3a396d6b154cd01" to filmxyCookies.wSec
+            "PHPSESSID" to "${filmxyCookies.phpsessid}",
+            "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" to "${filmxyCookies.wLog}",
+            "wordpress_sec_8bf9d5433ac88cc9a3a396d6b154cd01" to "${filmxyCookies.wSec}"
         )
         val json = app.post(
             "$filmxyAPI/wp-admin/admin-ajax.php",
@@ -852,12 +852,12 @@ object SoraExtractor : SoraStream() {
 }
 
 data class FilmxyCookies(
-    val phpsessid: String,
-    val wLog: String,
-    val wSec: String,
+    val phpsessid: String? = null,
+    val wLog: String? = null,
+    val wSec: String? = null,
 )
 
-suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies {
+suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
 
     val url = if (season == null) {
         "${filmxyAPI}/movie/$imdbId"
@@ -872,6 +872,8 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Filmx
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
         ),
     )
+
+    if(!res.isSuccessful) return FilmxyCookies()
 
     val userNonce =
         res.document.select("script").find { it.data().contains("var userNonce") }?.data()?.let {
