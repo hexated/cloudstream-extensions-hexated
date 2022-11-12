@@ -17,6 +17,7 @@ import com.hexated.SoraExtractor.invokeSoraVIP
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeUniqueStream
 import com.hexated.SoraExtractor.invokeVidSrc
+import com.hexated.SoraExtractor.invokeXmovies
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
@@ -46,7 +47,8 @@ open class SoraStream : TmdbProvider() {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         private const val apiKey = "b030404650f279792a8d3287232358e3" // PLEASE DON'T STEAL
         val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
-        var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
+        var mainServerAPI =
+            base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
@@ -61,6 +63,7 @@ open class SoraStream : TmdbProvider() {
         const val uniqueStreamAPI = "https://uniquestream.net"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
+        const val xMovieAPI = "https://xemovies.net"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -446,6 +449,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeXmovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
         )
 

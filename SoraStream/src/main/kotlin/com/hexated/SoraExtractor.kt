@@ -127,7 +127,7 @@ object SoraExtractor : SoraStream() {
                     link.name,
                     link.url,
                     link.referer,
-                    Qualities.P1080.value,
+                    if (link.name == "VidSrc") Qualities.P1080.value else link.quality,
                     link.isM3u8,
                     link.headers,
                     link.extractorData
@@ -177,14 +177,14 @@ object SoraExtractor : SoraStream() {
         val source =
             Regex("['|\"]file['|\"]:\\s['|\"](#\\S+?)['|\"]").find(script.toString())?.groupValues?.get(
                 1
-            )
+            ) ?: return
         val subtitle =
             Regex("['|\"]subtitle['|\"]:\\s['|\"](\\S+?)['|\"]").find(script.toString())?.groupValues?.get(
                 1
             )
 
         val ref = getBaseUrl(iframeDbgo)
-        decryptStreamUrl(source.toString()).split(",").map { links ->
+        decryptStreamUrl(source).split(",").map { links ->
             val quality =
                 Regex("\\[([0-9]*p.*?)]").find(links)?.groupValues?.getOrNull(1).toString().trim()
             links.replace("[$quality]", "").split(" or ").map { it.trim() }
@@ -726,7 +726,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val fixTitle = title.fixKimTitle()
+        val fixTitle = title.fixTitle()
         val url = if(season == null) {
             "$kimcartoonAPI/Cartoon/$fixTitle"
         } else {
@@ -849,6 +849,74 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeXmovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if (season == null || season == 1) {
+            "$xMovieAPI/search?q=$title"
+        } else {
+            "$xMovieAPI/search?q=$title Season $season"
+        }
+
+        val res = app.get(url).document
+        val scriptData = (if (season == null) {
+            res.select("div.py-10")
+                .find { it.selectFirst("h2")?.text()?.contains("Movie", true) == true }
+        } else {
+            res.select("div.py-10")
+                .find { it.selectFirst("h2")?.text()?.contains("TV Shows", true) == true }
+        })?.select("div.grid > div")?.map {
+            Triple(
+                it.selectFirst("h6")?.text(),
+                it.select("div.float-right.text-neutral-dark").last()?.text(),
+                it.selectFirst("a")?.attr("href")
+            )
+        }
+
+        val script = if (scriptData?.size == 1) {
+            scriptData.first()
+        } else {
+            scriptData?.first {
+                it.first?.contains(
+                    "$title",
+                    true
+                ) == true && (it.first?.contains("$season") == true || it.second?.contains(
+                    "$year"
+                ) == true)
+            }
+        }
+
+        val doc = app.get(script?.third ?: return).document
+        val iframe = if (season == null) {
+            doc.selectFirst("div.flex.gap-3.py-3 a")?.attr("href")
+        } else {
+            doc.select("div.grid.grid-cols-3.gap-3 a")[episode?.minus(1)!!]?.attr("href")
+        }
+
+        val link = app.get(iframe ?: return).text.let {
+            Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.mp4)[\"|'],").find(it)?.groupValues?.getOrNull(
+                1
+            )
+        }
+
+        callback.invoke(
+            ExtractorLink(
+                "Xmovie",
+                "Xmovie",
+                link ?: return,
+                "",
+                Qualities.Unknown.value,
+            )
+        )
+
+
+    }
+
 }
 
 data class FilmxyCookies(
@@ -904,11 +972,8 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Filmx
 }
 
 private fun String?.fixTitle(): String? {
-    return this?.replace(":", "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
-}
-
-private fun String?.fixKimTitle(): String? {
-    return this?.replace(Regex("[!%:]|( &)"), "")?.replace(" ", "-")?.lowercase()?.replace("-–-", "-")
+    return this?.replace(Regex("[!%:]|( &)"), "")?.replace(" ", "-")?.lowercase()
+        ?.replace("-–-", "-")
 }
 
 fun getLanguage(str: String): String {
