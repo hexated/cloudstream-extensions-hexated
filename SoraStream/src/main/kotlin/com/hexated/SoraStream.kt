@@ -2,9 +2,11 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.RandomUserAgent.getRandomUserAgent
+import com.hexated.SoraExtractor.invoKisskh
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
+import com.hexated.SoraExtractor.invokeFlixhq
 import com.hexated.SoraExtractor.invokeGogo
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
@@ -64,6 +66,8 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.net"
+        const val consumetFlixhqAPI = "https://api.consumet.org/movies/flixhq"
+        const val kissKhAPI = "https://kisskh.me"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -452,6 +456,12 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeXmovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeFlixhq(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invoKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
             },
         )
 
