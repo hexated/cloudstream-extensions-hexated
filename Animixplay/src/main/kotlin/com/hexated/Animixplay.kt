@@ -218,20 +218,42 @@ class Animixplay : MainAPI() {
         val dubEpisodes = mutableListOf<Episode>()
 
         app.post("$mainUrl/api/search", data = mapOf("recomended" to "$malId"))
-            .parsedSafe<Data>()?.data?.filter { it.type == "GOGO" }?.map { item ->
-                item.items?.apmap { server ->
-                    val dataEps =
-                        app.get(fixUrl(server.url.toString())).document.select("div#epslistplace")
+            .parsedSafe<Data>()?.data?.map { server ->
+                server.items?.apmap { data ->
+                    val jsonData =
+                        app.get(
+                            fixUrl(
+                                data.url ?: return@apmap null
+                            )
+                        ).document.select("div#epslistplace")
                             .text().trim()
-                    Regex("\"([0-9]+)\":\"(\\S+?)\"").findAll(dataEps).toList()
-                        .map { it.groupValues[1] to it.groupValues[2] }.map { (ep, link) ->
-                            val episode = Episode(fixUrl(link), episode = ep.toInt() + 1)
-                            if (server.url?.contains("-dub") == true) {
-                                dubEpisodes.add(episode)
-                            } else {
-                                subEpisodes.add(episode)
+                    val episodeData = when (server.type) {
+                        "AL" -> Regex("\"([0-9]+)\":\\[(.*?)]").findAll(jsonData).toList()
+                            .map { it.groupValues[1] to it.groupValues[2] }.map { (ep, link) ->
+                                Episode(link, episode = ep.toInt() + 1)
                             }
+                        "RUSH" -> Regex("\"([0-9]+)\":\\[(.*?)]").findAll(jsonData).toList()
+                            .map { it.groupValues[1] to it.groupValues[2] }.map { (ep, link) ->
+                                val linkData =
+                                    Regex("\"vid\":\"(\\S+?)\"").findAll(link)
+                                        .map { it.groupValues[1] }
+                                        .toList().joinToString("")
+                                Episode(linkData, episode = ep.toInt() + 1)
+                            }
+                        else -> {
+                            Regex("\"([0-9]+)\":\"(\\S+?)\"").findAll(jsonData).toList()
+                                .map { it.groupValues[1] to it.groupValues[2] }.map { (ep, link) ->
+                                    Episode(fixUrl(link), episode = ep.toInt() + 1)
+                                }
                         }
+                    }
+                    episodeData.map {
+                        if (data.url.contains("-dub")) {
+                            dubEpisodes.add(it)
+                        } else {
+                            subEpisodes.add(it)
+                        }
+                    }
                 }
             }
 
@@ -262,8 +284,8 @@ class Animixplay : MainAPI() {
             addMalId(malId?.toIntOrNull())
             addAniListId(anilistId?.toIntOrNull())
             addTrailer(res.trailerUrl)
-            if (subEpisodes.isNotEmpty()) addEpisodes(DubStatus.Subbed, subEpisodes)
-            if (dubEpisodes.isNotEmpty()) addEpisodes(DubStatus.Dubbed, dubEpisodes)
+            if (subEpisodes.isNotEmpty()) addEpisodes(DubStatus.Subbed, groupEpisodes(subEpisodes))
+            if (dubEpisodes.isNotEmpty()) addEpisodes(DubStatus.Dubbed, groupEpisodes(dubEpisodes))
         }
 
     }
@@ -274,10 +296,51 @@ class Animixplay : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        if (!data.contains("\"")) {
+            invokeGogo(data, subtitleCallback, callback)
+        } else {
+            data.split("http").apmap {
+                val link = it.replace("\"", "").let { url -> "http$url".trim() }
+                if (link.startsWith("https://gogohd.net")) {
+                    invokeGogo(link, subtitleCallback, callback)
+                } else {
+                    loadExtractor(link, "$mainUrl/", subtitleCallback) { links ->
+                        val name =
+                            if (link.startsWith("https://streamsb.net")) "StreamNet" else links.name
+                        callback.invoke(
+                            ExtractorLink(
+                                name,
+                                name,
+                                links.url,
+                                links.referer,
+                                links.quality,
+                                links.isM3u8,
+                                links.headers,
+                                links.extractorData
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        return true
+    }
 
-        val iframe = app.get(data)
+    private fun groupEpisodes(episodes: List<Episode>): List<Episode> {
+        return episodes.groupBy { it.episode }.map { eps ->
+            val epsNum = eps.key
+            val epsLink = eps.value.joinToString("") { it.data }.replace("\",\"", "")
+            Episode(epsLink, episode = epsNum)
+        }
+    }
+
+    private suspend fun invokeGogo(
+        link: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val iframe = app.get(link)
         val iframeDoc = iframe.document
-
         argamap({
             iframeDoc.select(".list-server-items > .linkserver")
                 .forEach { element ->
@@ -302,7 +365,6 @@ class Animixplay : MainAPI() {
                 iframeDocument = iframeDoc
             )
         })
-        return true
     }
 
     private data class IdAni(
