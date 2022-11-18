@@ -1102,6 +1102,7 @@ object SoraExtractor : SoraStream() {
                 it.number == episode
             }?.id ?: return
 
+        delay(1000)
         val sources = app.get("$consumetZoroAPI/watch?episodeId=$episodeId")
             .parsedSafe<ConsumetSourcesResponse>() ?: return
 
