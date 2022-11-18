@@ -1,13 +1,11 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.hexated.RandomUserAgent.getRandomUserAgent
 import com.hexated.SoraExtractor.invoKisskh
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixhq
-import com.hexated.SoraExtractor.invokeGogo
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
@@ -21,14 +19,12 @@ import com.hexated.SoraExtractor.invokeUniqueStream
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeXmovies
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
+import com.hexated.SoraExtractor.invoZoro
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
 import kotlin.math.roundToInt
 
 open class SoraStream : TmdbProvider() {
@@ -48,6 +44,8 @@ open class SoraStream : TmdbProvider() {
     companion object {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         private const val apiKey = "b030404650f279792a8d3287232358e3" // PLEASE DON'T STEAL
+        const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
+
         val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
         var mainServerAPI =
             base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
@@ -67,6 +65,7 @@ open class SoraStream : TmdbProvider() {
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.net"
         const val consumetFlixhqAPI = "https://api.consumet.org/movies/flixhq"
+        const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val kissKhAPI = "https://kisskh.me"
 
         fun getType(t: String?): TvType {
@@ -157,17 +156,6 @@ open class SoraStream : TmdbProvider() {
         }
     }
 
-    private fun Anime.toSearchResponse(): AnimeSearchResponse? {
-        return newAnimeSearchResponse(
-            title?.romaji ?: title?.english ?: title?.native ?: title?.userPreferred ?: return null,
-            Data(aniId = id, malId = malId).toJson(),
-            TvType.Anime
-        ) {
-            this.posterUrl = image
-            addSub(totalEpisodes)
-        }
-    }
-
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
 
@@ -179,50 +167,11 @@ open class SoraStream : TmdbProvider() {
         }
         if (mainResponse?.isNotEmpty() == true) searchResponse.addAll(mainResponse)
 
-//        val animeResponse =
-//            app.get("$mainServerAPI/search/anime/$query?_data=routes/search/anime/\$animeKeyword")
-//                .parsedSafe<SearchAnime>()?.searchResults?.results?.mapNotNull { anime -> anime.toSearchResponse() }
-//        if (animeResponse?.isNotEmpty() == true) searchResponse.addAll(animeResponse)
-
         return searchResponse
-    }
-
-    private suspend fun loadAnime(aniId: String? = null, malId: Int? = null): LoadResponse? {
-
-        val res = app.get("$mainServerAPI/anime/$aniId/overview?_data=routes/anime/\$animeId")
-            .parsedSafe<DetailAnimeResult>()?.detail ?: throw ErrorLoadingException()
-
-        val episodes = res.episodes?.map { eps ->
-            Episode(
-                LinkData(aniId = aniId, animeId = eps.id).toJson(),
-                name = eps.title,
-                episode = eps.number
-            )
-        }
-
-        return newAnimeLoadResponse(
-            res.title?.romaji ?: res.title?.english ?: res.title?.native ?: res.title?.userPreferred
-            ?: return null,
-            "",
-            TvType.Anime
-        ) {
-            posterUrl = res.image
-            this.year = res.releaseDate
-            plot = res.description
-            this.tags = res.genres
-            this.recommendations = res.recommendations?.mapNotNull { it.toSearchResponse() }
-            addMalId(malId)
-            addAniListId(aniId?.toIntOrNull())
-            addEpisodes(DubStatus.Subbed, episodes)
-        }
     }
 
     override suspend fun load(url: String): LoadResponse? {
         val data = parseJson<Data>(url)
-
-        if (data.aniId?.isNotEmpty() == true) {
-            return loadAnime(data.aniId, data.malId)
-        }
 
         val buildId =
             app.get("$mainAPI/").text.substringAfterLast("\"buildId\":\"").substringBefore("\",")
@@ -327,16 +276,16 @@ open class SoraStream : TmdbProvider() {
     ): Boolean {
 
         val res = parseJson<LinkData>(data)
-        val query = if (res.type == "tv") {
-            "$mainServerAPI/tv-shows/${res.id}/season/${res.season}/episode/${res.episode}?_data=routes/tv-shows/\$tvId.season.\$seasonId.episode.\$episodeId"
-        } else {
-            "$mainServerAPI/movies/${res.id}/watch?_data=routes/movies/\$movieId.watch"
-        }
-        val referer = if (res.type == "tv") {
-            "$mainServerAPI/tv-shows/${res.id}/season/${res.season}/episode/${res.episode}"
-        } else {
-            "$mainServerAPI/movies/${res.id}/watch"
-        }
+//        val query = if (res.type == "tv") {
+//            "$mainServerAPI/tv-shows/${res.id}/season/${res.season}/episode/${res.episode}?_data=routes/tv-shows/\$tvId.season.\$seasonId.episode.\$episodeId"
+//        } else {
+//            "$mainServerAPI/movies/${res.id}/watch?_data=routes/movies/\$movieId.watch"
+//        }
+//        val referer = if (res.type == "tv") {
+//            "$mainServerAPI/tv-shows/${res.id}/season/${res.season}/episode/${res.episode}"
+//        } else {
+//            "$mainServerAPI/movies/${res.id}/watch"
+//        }
 
         argamap(
             {
@@ -349,35 +298,35 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                val json = app.get(
-                    query,
-                    referer = referer,
-                    headers = mapOf("User-Agent" to getRandomUserAgent())
-                ).parsedSafe<LoadLinks>()
-
-                json?.sources?.map { source ->
-                    callback.invoke(
-                        ExtractorLink(
-                            this.name,
-                            this.name,
-                            source.url ?: return@map null,
-                            "$mainServerAPI/",
-                            source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                            isM3u8 = source.isM3U8,
-                            headers = mapOf("Origin" to mainServerAPI)
-                        )
-                    )
-                }
-                json?.subtitles?.map { sub ->
-                    subtitleCallback.invoke(
-                        SubtitleFile(
-                            getLanguage(sub.lang.toString()),
-                            sub.url ?: return@map null
-                        )
-                    )
-                }
-            },
+//            {
+//                val json = app.get(
+//                    query,
+//                    referer = referer,
+//                    headers = mapOf("User-Agent" to getRandomUserAgent())
+//                ).parsedSafe<LoadLinks>()
+//
+//                json?.sources?.map { source ->
+//                    callback.invoke(
+//                        ExtractorLink(
+//                            this.name,
+//                            this.name,
+//                            source.url ?: return@map null,
+//                            "$mainServerAPI/",
+//                            source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+//                            isM3u8 = source.isM3U8,
+//                            headers = mapOf("Origin" to mainServerAPI)
+//                        )
+//                    )
+//                }
+//                json?.subtitles?.map { sub ->
+//                    subtitleCallback.invoke(
+//                        SubtitleFile(
+//                            getLanguage(sub.lang.toString()),
+//                            sub.url ?: return@map null
+//                        )
+//                    )
+//                }
+//            },
             {
                 invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
             },
@@ -413,9 +362,11 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (res.aniId?.isNotEmpty() == true) invokeGogo(
-                    res.aniId,
-                    res.animeId,
+                if (res.season != null) invoZoro(
+                    res.id,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
                     callback
                 )
             },
@@ -502,16 +453,6 @@ open class SoraStream : TmdbProvider() {
 
     data class LoadLinks(
         @JsonProperty("sources") val sources: ArrayList<Sources>? = arrayListOf(),
-        @JsonProperty("subtitles") val subtitles: ArrayList<Subtitles>? = arrayListOf(),
-    )
-
-    data class SourcesVIP(
-        @JsonProperty("url") val url: String? = null,
-        @JsonProperty("quality") val quality: Int? = null,
-    )
-
-    data class LoadVIPLinks(
-        @JsonProperty("sources") val sources: ArrayList<SourcesVIP>? = arrayListOf(),
         @JsonProperty("subtitles") val subtitles: ArrayList<Subtitles>? = arrayListOf(),
     )
 
@@ -608,81 +549,6 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("link") val link: String? = null,
         @JsonProperty("sources") val sources: List<String?> = arrayListOf(),
         @JsonProperty("tracks") val tracks: List<String>? = null,
-    )
-
-    data class TitleAnime(
-        @JsonProperty("romaji") val romaji: String? = null,
-        @JsonProperty("english") val english: String? = null,
-        @JsonProperty("native") val native: String? = null,
-        @JsonProperty("userPreferred") val userPreferred: String? = null,
-    )
-
-    data class Anime(
-        @JsonProperty("title") val title: TitleAnime? = null,
-        @JsonProperty("id") val id: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("totalEpisodes") val totalEpisodes: Int? = null,
-    )
-
-    data class SearchResults(
-        @JsonProperty("results") val results: ArrayList<Anime>? = null,
-    )
-
-    data class SearchAnime(
-        @JsonProperty("searchResults") val searchResults: SearchResults? = null,
-    )
-
-    data class TrailerAnime(
-        @JsonProperty("id") val id: String? = null,
-    )
-
-    data class EpisodesAnime(
-        @JsonProperty("id") val id: String? = null,
-        @JsonProperty("title") val title: String? = null,
-        @JsonProperty("number") val number: Int? = null,
-    )
-
-    data class DetailAnime(
-        @JsonProperty("title") val title: TitleAnime? = null,
-        @JsonProperty("id") val aniId: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("description") val description: String? = null,
-        @JsonProperty("releaseDate") val releaseDate: Int? = null,
-        @JsonProperty("rating") val rating: Int? = null,
-        @JsonProperty("duration") val duration: Int? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("recommendations") val recommendations: ArrayList<Anime>? = arrayListOf(),
-        @JsonProperty("episodes") val episodes: ArrayList<EpisodesAnime>? = arrayListOf(),
-        @JsonProperty("genres") val genres: ArrayList<String>? = arrayListOf(),
-        @JsonProperty("trailer") val trailer: TrailerAnime? = null,
-    )
-
-    data class DetailAnimeResult(
-        @JsonProperty("detail") val detail: DetailAnime? = null,
-    )
-
-    data class SeasonsVip(
-        @JsonProperty("air_date") val air_date: String? = null,
-        @JsonProperty("season_number") val season_number: Int? = null,
-    )
-
-    data class DataVip(
-        @JsonProperty("id") val id: String? = null,
-    )
-
-    data class DetailVipResult(
-        @JsonProperty("data") val data: DataVip? = null,
-    )
-
-    data class Providers(
-        @JsonProperty("id") val id: String? = null,
-        @JsonProperty("provider") val provider: String? = null,
-    )
-
-    data class ProvidersResult(
-        @JsonProperty("provider") val provider: ArrayList<Providers>? = arrayListOf(),
     )
 
     data class MovieHabData(
