@@ -523,7 +523,7 @@ object SoraExtractor : SoraStream() {
         val res = app.get(url)
         if (!res.isSuccessful) return
         val document = res.document
-        val type = if (url.contains("/movie/")) "movie" else "tv"
+        val type = if (url.contains("/movies/")) "movie" else "tv"
         document.select("ul#playeroptionsul > li").apmap { el ->
             val id = el.attr("data-post")
             val nume = el.attr("data-nume")
