@@ -539,37 +539,41 @@ object SoraExtractor : SoraStream() {
                 referer = url
             ).parsed<ResponseHash>().embed_url.let { fixUrl(it) }
 
-            if (source.contains("uniquestream")) {
-                val resDoc = app.get(
-                    source, referer = "$uniqueStreamAPI/", headers = mapOf(
-                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-                    )
-                ).document
-                val srcm3u8 = resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
-                    Regex("['|\"](.*?.m3u8)['|\"]").find(it)?.groupValues?.getOrNull(1)
-                } ?: return@apmap null
-                val quality = app.get(
-                    srcm3u8, referer = source, headers = mapOf(
-                        "Accept" to "*/*",
-                    )
-                ).text.let { quality ->
-                    if (quality.contains("RESOLUTION=1920")) Qualities.P1080.value else Qualities.P720.value
-                }
-                callback.invoke(
-                    ExtractorLink(
-                        "UniqueStream",
-                        "UniqueStream",
-                        srcm3u8,
-                        source,
-                        quality,
-                        true,
-                        headers = mapOf(
+            when {
+                source.contains("uniquestream") -> {
+                    val resDoc = app.get(
+                        source, referer = "$uniqueStreamAPI/", headers = mapOf(
+                            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                        )
+                    ).document
+                    val srcm3u8 = resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
+                        Regex("['|\"](.*?.m3u8)['|\"]").find(it)?.groupValues?.getOrNull(1)
+                    } ?: return@apmap null
+                    val quality = app.get(
+                        srcm3u8, referer = source, headers = mapOf(
                             "Accept" to "*/*",
                         )
+                    ).text.let { quality ->
+                        if (quality.contains("RESOLUTION=1920")) Qualities.P1080.value else Qualities.P720.value
+                    }
+                    callback.invoke(
+                        ExtractorLink(
+                            "UniqueStream",
+                            "UniqueStream",
+                            srcm3u8,
+                            source,
+                            quality,
+                            true,
+                            headers = mapOf(
+                                "Accept" to "*/*",
+                            )
+                        )
                     )
-                )
-            } else {
-                loadExtractor(source, "$uniqueStreamAPI/", subtitleCallback, callback)
+                }
+                !source.contains("youtube") -> loadExtractor(source, "$uniqueStreamAPI/", subtitleCallback, callback)
+                else -> {
+                    // pass
+                }
             }
         }
     }
