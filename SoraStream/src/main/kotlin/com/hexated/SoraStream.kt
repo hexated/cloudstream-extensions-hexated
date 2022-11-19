@@ -22,6 +22,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invoZoro
+import com.hexated.SoraExtractor.invokeLing
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -67,6 +68,7 @@ open class SoraStream : TmdbProvider() {
         const val consumetFlixhqAPI = "https://api.consumet.org/movies/flixhq"
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val kissKhAPI = "https://kisskh.me"
+        const val lingAPI = "https://ling-online.net"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -181,9 +183,13 @@ open class SoraStream : TmdbProvider() {
                 ?: throw ErrorLoadingException("Invalid Json Response")
         val res = responses.result ?: return null
         val title = res.title ?: res.name ?: return null
+        val poster = getOriImageUrl(res.backdropPath)
         val orgTitle = res.originalTitle ?: res.originalName ?: return null
         val type = getType(data.type)
         val year = (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
+        val genres = res.genres?.mapNotNull { it.name }
+        val show =
+            if (genres?.contains("Animation") == true && res.original_language == "ja") "Anime" else "Series/Movies"
 
         val actors = responses.cast?.mapNotNull { cast ->
             ActorData(
@@ -216,6 +222,8 @@ open class SoraStream : TmdbProvider() {
                                 title = title,
                                 year = season.airDate?.split("-")?.first()?.toIntOrNull(),
                                 orgTitle = orgTitle,
+                                show = show,
+                                airedYear = year
                             ).toJson(),
                             name = eps.name,
                             season = eps.seasonNumber,
@@ -234,10 +242,10 @@ open class SoraStream : TmdbProvider() {
                 TvType.TvSeries,
                 episodes
             ) {
-                this.posterUrl = getOriImageUrl(res.backdropPath)
+                this.posterUrl = poster
                 this.year = year
                 this.plot = res.overview
-                this.tags = res.genres?.mapNotNull { it.name }
+                this.tags = genres
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
                 this.actors = actors
@@ -255,12 +263,13 @@ open class SoraStream : TmdbProvider() {
                     title = title,
                     year = year,
                     orgTitle = orgTitle,
+                    show = show,
                 ).toJson(),
             ) {
-                this.posterUrl = getOriImageUrl(res.backdropPath)
+                this.posterUrl = poster
                 this.year = year
                 this.plot = res.overview
-                this.tags = res.genres?.mapNotNull { it.name }
+                this.tags = genres
                 this.recommendations = recommendations
                 this.actors = actors
                 addTrailer(trailer)
@@ -362,7 +371,7 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (res.season != null) invoZoro(
+                if (res.season != null && res.show == "Anime") invoZoro(
                     res.id,
                     res.season,
                     res.episode,
@@ -406,13 +415,37 @@ open class SoraStream : TmdbProvider() {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeXmovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                invokeXmovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
-                invokeFlixhq(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                invokeFlixhq(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invoKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeLing(
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
         )
 
@@ -430,6 +463,8 @@ open class SoraStream : TmdbProvider() {
         val title: String? = null,
         val year: Int? = null,
         val orgTitle: String? = null,
+        val show: String? = null,
+        val airedYear: Int? = null,
     )
 
     data class Data(
@@ -525,6 +560,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("release_date") val releaseDate: String? = null,
         @JsonProperty("first_air_date") val firstAirDate: String? = null,
         @JsonProperty("overview") val overview: String? = null,
+        @JsonProperty("original_language") val original_language: String? = null,
         @JsonProperty("status") val status: String? = null,
         @JsonProperty("genres") val genres: ArrayList<Genres>? = arrayListOf(),
         @JsonProperty("seasons") val seasons: ArrayList<Seasons>? = arrayListOf(),

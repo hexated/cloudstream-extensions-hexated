@@ -1046,20 +1046,8 @@ object SoraExtractor : SoraStream() {
                         link?.substringBefore("=http") ?: return@apmap null,
                         "$kissKhAPI/",
                         subtitleCallback,
-                    ) { links ->
-                        callback.invoke(
-                            ExtractorLink(
-                                "StreamSS",
-                                "StreamSS",
-                                links.url,
-                                links.referer,
-                                links.quality,
-                                links.isM3u8,
-                                links.headers,
-                                links.extractorData
-                            )
-                        )
-                    }
+                        callback
+                    )
                 }
             }
         }
@@ -1128,6 +1116,75 @@ object SoraExtractor : SoraStream() {
             )
         }
 
+
+    }
+
+    suspend fun invokeLing(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title?.replace("–", "-")
+        val url = if(season == null) {
+            "$lingAPI/en/videos/films/?title=$fixTitle"
+        } else {
+            "$lingAPI/en/videos/serials/?title=$fixTitle"
+        }
+
+        val scriptData = app.get(url).document.select("div.blk.padding_b0 div.col-sm-30").map {
+            Triple(
+                it.selectFirst("div.video-body h5")?.text(),
+                it.selectFirst("div.video-body > p")?.text(),
+                it.selectFirst("div.video-body a")?.attr("href"),
+            )
+        }
+
+        val script = if (scriptData.size == 1) {
+            scriptData.first()
+        } else {
+            scriptData.find {
+                it.first?.contains("$fixTitle", true) == true && it.second?.contains("$year") == true
+            }
+        }
+
+        val doc = app.get(fixUrl(script?.third ?: return, lingAPI)).document
+        val iframe = (if(season == null) {
+            doc.selectFirst("a.video-js.vjs-default-skin")?.attr("data-href")
+        } else {
+            doc.select("div.blk div#tab_$season li")[episode!!.minus(1)].select("h5 a").attr("data-href")
+        })?.let { fixUrl(it, lingAPI) }
+
+        val source = app.get(iframe ?: return)
+        val link = Regex("((https:|http:)//.*\\.mp4)").find(source.text)?.value ?: return
+        val quality = when {
+            link.contains("1080p") -> Qualities.P1080.value
+            link.contains("720p") -> Qualities.P720.value
+            else -> Qualities.Unknown.value
+        }
+        callback.invoke(
+            ExtractorLink(
+                "Ling",
+                "Ling",
+                link,
+                "$lingAPI/",
+                quality,
+                headers = mapOf(
+                    "Range" to "bytes=0-"
+                )
+            )
+        )
+
+        source.document.select("div#player-tracks track").map {
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    SubtitleHelper.fromTwoLettersToLanguage(it.attr("srclang")) ?: return@map null,
+                    it.attr("src")
+                )
+            )
+        }
 
     }
 
