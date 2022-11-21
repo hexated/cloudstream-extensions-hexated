@@ -1215,14 +1215,14 @@ object SoraExtractor : SoraStream() {
                 .mapNotNull {
                     if (season == null) {
                         Triple(
-                            it.ownText(),
-                            it.selectFirst("span")?.text(),
+                            it.text(),
+                            it.selectFirst("span")?.text() ?: it.select("strong").last()?.text() ?: "",
                             it.nextElementSibling()?.select("a")?.attr("href")
                         )
                     } else {
                         Triple(
-                            it.ownText(),
-                            it.selectFirst("span")?.text(),
+                            it.text(),
+                            it.selectFirst("span")?.text() ?: it.select("strong").last()?.text() ?: "",
                             it.nextElementSibling()?.select("a:contains(Episode $episode)")
                                 ?.attr("href")
                         )
@@ -1246,7 +1246,7 @@ object SoraExtractor : SoraStream() {
 
             val videoQuality = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                 ?: Qualities.Unknown.value
-            val videoSize = size?.substringBeforeLast("/")
+            val videoSize = size.substringBeforeLast("/")
             callback.invoke(
                 ExtractorLink(
                     "UHDMovies [$videoSize]",
