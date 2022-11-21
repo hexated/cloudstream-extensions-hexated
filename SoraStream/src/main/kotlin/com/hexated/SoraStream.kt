@@ -23,6 +23,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invoZoro
 import com.hexated.SoraExtractor.invokeLing
+import com.hexated.SoraExtractor.invokeUhdmovies
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -69,6 +70,7 @@ open class SoraStream : TmdbProvider() {
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
+        const val uhdmoviesAPI = "https://uhdmovies.site"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -209,6 +211,7 @@ open class SoraStream : TmdbProvider() {
 
         return if (type == TvType.TvSeries) {
             val episodes = mutableListOf<Episode>()
+            val lastSeason = res.seasons?.lastOrNull()?.seasonNumber
             res.seasons?.apmap { season ->
                 app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey")
                     .parsedSafe<MediaDetailEpisodes>()?.episodes?.map { eps ->
@@ -223,7 +226,8 @@ open class SoraStream : TmdbProvider() {
                                 year = season.airDate?.split("-")?.first()?.toIntOrNull(),
                                 orgTitle = orgTitle,
                                 show = show,
-                                airedYear = year
+                                airedYear = year,
+                                lastSeason = lastSeason
                             ).toJson(),
                             name = eps.name,
                             season = eps.seasonNumber,
@@ -342,9 +346,9 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeVidSrc(res.id, res.season, res.episode, subtitleCallback, callback)
             },
-            {
-                invokeOlgply(res.id, res.season, res.episode, callback)
-            },
+//            {
+//                invokeOlgply(res.id, res.season, res.episode, callback)
+//            },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
@@ -447,6 +451,17 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
+            {
+                invokeUhdmovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.lastSeason,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
         )
 
         return true
@@ -465,6 +480,7 @@ open class SoraStream : TmdbProvider() {
         val orgTitle: String? = null,
         val show: String? = null,
         val airedYear: Int? = null,
+        val lastSeason: Int? = null,
     )
 
     data class Data(

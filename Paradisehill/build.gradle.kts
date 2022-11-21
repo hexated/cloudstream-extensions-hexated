@@ -7,7 +7,7 @@ cloudstream {
     // All of these properties are optional, you can safely remove them
 
      description = "Series porn (use VPN if links not working)"
-     authors = listOf("Hexated")
+     authors = listOf("Sora")
 
     /**
      * Status int as the following:

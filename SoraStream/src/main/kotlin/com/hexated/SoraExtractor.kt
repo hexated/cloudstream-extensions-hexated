@@ -1163,18 +1163,13 @@ object SoraExtractor : SoraStream() {
 
         val source = app.get(iframe ?: return)
         val link = Regex("((https:|http:)//.*\\.mp4)").find(source.text)?.value ?: return
-        val quality = when {
-            link.contains("1080p") -> Qualities.P1080.value
-            link.contains("720p") -> Qualities.P720.value
-            else -> Qualities.Unknown.value
-        }
         callback.invoke(
             ExtractorLink(
                 "Ling",
                 "Ling",
                 link,
                 "$lingAPI/",
-                quality,
+                Qualities.Unknown.value,
                 headers = mapOf(
                     "Range" to "bytes=0-"
                 )
@@ -1192,6 +1187,81 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeUhdmovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        lastSeason: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+
+        val doc = app.get("$uhdmoviesAPI/?s=$title").document
+        val scriptData = doc.select("div.row.gridlove-posts article").map {
+            it.selectFirst("a")?.attr("href") to it.selectFirst("h1")?.text()
+        }
+        val script = if (scriptData.size == 1) {
+            scriptData.first()
+        } else {
+            scriptData.find { it.second?.filterMedia(title, year, lastSeason) == true }
+        }
+
+        val detailDoc = app.get(script?.first ?: return).document
+
+        val iframe =
+            detailDoc.select("div.entry-content p").map { it }
+                .filter { it.text().filterIframe(season, year) }
+                .mapNotNull {
+                    if (season == null) {
+                        Triple(
+                            it.ownText(),
+                            it.selectFirst("span")?.text(),
+                            it.nextElementSibling()?.select("a")?.attr("href")
+                        )
+                    } else {
+                        Triple(
+                            it.ownText(),
+                            it.selectFirst("span")?.text(),
+                            it.nextElementSibling()?.select("a:contains(Episode $episode)")
+                                ?.attr("href")
+                        )
+                    }
+                }
+
+        iframe.apmap { (quality, size, link) ->
+            val res = app.get(link ?: return@apmap null).document
+            val base = getBaseUrl(link)
+            val bitLink =
+                res.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
+            val downLink =
+                app.get(fixUrl(bitLink, base)).document.selectFirst("div.mb-4 a")?.attr("href")
+            val mirrorLink = app.get(
+                downLink ?: return@apmap null
+            ).document.selectFirst("form[method=post] a.btn.btn-primary")
+                ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')")?.let {
+                    app.get(it).document.selectFirst("script:containsData(input.value =)")
+                        ?.data()?.substringAfter("input.value = '")?.substringBefore("';")
+                }
+
+            val videoQuality = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                ?: Qualities.Unknown.value
+            val videoSize = size?.substringBeforeLast("/")
+            callback.invoke(
+                ExtractorLink(
+                    "UHDMovies [$videoSize]",
+                    "UHDMovies [$videoSize]",
+                    mirrorLink ?: return@apmap null,
+                    "",
+                    videoQuality
+                )
+            )
+
+        }
+
+
+    }
+
 }
 
 data class FilmxyCookies(
@@ -1199,6 +1269,31 @@ data class FilmxyCookies(
     val wLog: String? = null,
     val wSec: String? = null,
 )
+
+fun String.filterIframe(seasonNum: Int?, year: Int?): Boolean {
+    return if (seasonNum != null) {
+        this.contains(Regex("(?i)(S0?$seasonNum)")) && !this.contains("Download", true)
+    } else {
+        this.contains("$year", true) && !this.contains("Download", true)
+    }
+}
+
+fun String.filterMedia(title: String?, yearNum: Int?, seasonNum: Int?): Boolean {
+    return if (seasonNum != null) {
+        when {
+            seasonNum > 1 -> this.contains(Regex("(?i)(Season\\s0?1-0?$seasonNum)|(S0?1-S?0?$seasonNum)")) && this.contains(
+                "$title",
+                true
+            ) && this.contains("$yearNum")
+            else -> this.contains(Regex("(?i)(Season\\s0?1)|(S0?1)")) && this.contains(
+                "$title",
+                true
+            ) && this.contains("$yearNum")
+        }
+    } else {
+        this.contains("$title", true) && this.contains("$yearNum")
+    }
+}
 
 suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
 

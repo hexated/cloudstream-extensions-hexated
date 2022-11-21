@@ -1,12 +1,12 @@
 // use an integer for version numbers
-version = 32
+version = 33
 
 
 cloudstream {
     language = "en"
     // All of these properties are optional, you can safely remove them
 
-     description = "#2 best extention based on MultiAPI"
+     description = "#1 best extention based on MultiAPI"
      authors = listOf("Hexated", "Sora")
 
     /**
