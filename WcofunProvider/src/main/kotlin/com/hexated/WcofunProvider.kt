@@ -149,7 +149,7 @@ class WcofunProvider : MainAPI() {
                                 "${this.name} ${source.second}",
                                 "${this.name} ${source.second}",
                                 "${it.server}/getvid?evid=${source.first}",
-                                mainUrl,
+                                referer = mainUrl,
                                 if (source.second == "HD") Qualities.P720.value else Qualities.P480.value
                             )
                         )

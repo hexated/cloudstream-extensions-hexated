@@ -1,5 +1,6 @@
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import com.android.build.gradle.BaseExtension
+import java.util.Properties
 
 buildscript {
     repositories {
@@ -47,6 +48,12 @@ subprojects {
         defaultConfig {
             minSdk = 21
             targetSdk = 32
+
+//            val properties = Properties()
+//            properties.load(project.rootProject.file("local.properties").inputStream())
+//
+//            buildConfigField("String", "API_KEY", "\"${properties.getProperty("API_KEY")}\"")
+
         }
 
         compileOptions {

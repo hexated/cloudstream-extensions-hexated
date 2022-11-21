@@ -6,7 +6,7 @@ cloudstream {
     language = "en"
     // All of these properties are optional, you can safely remove them
 
-    description = "#1 best extension based on Loklok API"
+    description = "#2 best extension based on Loklok API"
     authors = listOf("Hexated")
 
     /**
