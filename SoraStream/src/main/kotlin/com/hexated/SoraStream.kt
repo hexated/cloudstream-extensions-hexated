@@ -22,6 +22,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invoZoro
+import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -70,6 +71,7 @@ open class SoraStream : TmdbProvider() {
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
         const val uhdmoviesAPI = "https://uhdmovies.site"
+        const val fwatayakoAPI = "https://5100.svetacdn.in"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -439,6 +441,9 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
+            },
+            {
+                invokeFwatayako(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
         )
 

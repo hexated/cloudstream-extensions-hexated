@@ -1234,7 +1234,7 @@ object SoraExtractor : SoraStream() {
             delay(1000)
             val res = app.get(link ?: return@apmap null).document
             val bitLink = res.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
-            val downLink = app.get(fixUrl(bitLink, base)).document.selectFirst("div.mb-4 a")?.attr("href")
+            val downLink = app.get(fixUrl(bitLink, base)).document.select("div.mb-4 a").randomOrNull()?.attr("href")
             val downPage = app.get(downLink ?: return@apmap null).document
 
             val downloadLink = downPage.selectFirst("form[method=post] a.btn.btn-success")
@@ -1261,6 +1261,48 @@ object SoraExtractor : SoraStream() {
         }
 
 
+    }
+
+    suspend fun invokeFwatayako(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val request = app.get("$fwatayakoAPI/IAF0wWTdNYZm?imdb_id=$imdbId")
+        if (!request.isSuccessful) return
+        val files = request.document.selectFirst("input#files")?.attr("value")
+            .let {
+                if (season == null) {
+                    it?.replace("\"381\"", "\"movie\"")
+                } else {
+                    it?.replace("\"381\"", "\"tv\"")
+                }
+            }.let { tryParseJson<SourcesFwatayako>(it) } ?: return
+
+        val sourcesLink = if (season == null) {
+            files.sourcesMovie
+        } else {
+            files.sourcesTv?.find { it.id == season }?.folder?.find { it.id == "${season}_${episode}" }?.file
+        }
+
+        sourcesLink?.split(",")?.map {
+            val source = it.substringBefore("or").trim()
+            val quality =
+                Regex("\\[([0-9]{3,4})p]").find(source)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val link = httpsify(source.replace("[${quality}p]", "").trim())
+            callback.invoke(
+                ExtractorLink(
+                    "Fwatayako",
+                    "Fwatayako",
+                    link,
+                    "$fwatayakoAPI/",
+                    quality ?: Qualities.Unknown.value,
+                    isM3u8 = true
+                )
+            )
+        }
     }
 
 }
@@ -1578,3 +1620,17 @@ data class AnimixData(
     @JsonProperty("title_japanese") val title_japanese: String? = null,
 )
 
+data class EpisodesFwatayako(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("file") val file: String? = null,
+)
+
+data class SeasonFwatayako(
+    @JsonProperty("id") val id: Int? = null,
+    @JsonProperty("folder") val folder: ArrayList<EpisodesFwatayako>? = arrayListOf(),
+)
+
+data class SourcesFwatayako(
+    @JsonProperty("movie") val sourcesMovie: String? = null,
+    @JsonProperty("tv") val sourcesTv: ArrayList<SeasonFwatayako>? = arrayListOf(),
+)
