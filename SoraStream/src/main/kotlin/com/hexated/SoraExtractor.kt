@@ -1227,22 +1227,23 @@ object SoraExtractor : SoraStream() {
                                 ?.attr("href")
                         )
                     }
-                }
+                }.filter { it.third?.contains(Regex("(https:)|(http:)")) == true }
 
+        val base = getBaseUrl(iframe.first().third ?: return)
         iframe.apmap { (quality, size, link) ->
+            delay(1000)
             val res = app.get(link ?: return@apmap null).document
-            val base = getBaseUrl(link)
-            val bitLink =
-                res.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
-            val downLink =
-                app.get(fixUrl(bitLink, base)).document.selectFirst("div.mb-4 a")?.attr("href")
-            val mirrorLink = app.get(
-                downLink ?: return@apmap null
-            ).document.selectFirst("form[method=post] a.btn.btn-primary")
-                ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')")?.let {
-                    app.get(it).document.selectFirst("script:containsData(input.value =)")
-                        ?.data()?.substringAfter("input.value = '")?.substringBefore("';")
-                }
+            val bitLink = res.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
+            val downLink = app.get(fixUrl(bitLink, base)).document.selectFirst("div.mb-4 a")?.attr("href")
+            val downPage = app.get(downLink ?: return@apmap null).document
+
+            val downloadLink = downPage.selectFirst("form[method=post] a.btn.btn-success")
+                ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')") ?: run {
+                val mirror = downPage.selectFirst("form[method=post] a.btn.btn-primary")
+                    ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')")
+                app.get(mirror ?: return@apmap null).document.selectFirst("script:containsData(input.value =)")
+                    ?.data()?.substringAfter("input.value = '")?.substringBefore("';")
+            }
 
             val videoQuality = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                 ?: Qualities.Unknown.value
@@ -1251,7 +1252,7 @@ object SoraExtractor : SoraStream() {
                 ExtractorLink(
                     "UHDMovies [$videoSize]",
                     "UHDMovies [$videoSize]",
-                    mirrorLink ?: return@apmap null,
+                    downloadLink ?: return@apmap null,
                     "",
                     videoQuality
                 )
