@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import java.net.URI
 
 class Movierulzhd : MainAPI() {
     override var mainUrl = "https://movierulzhd.life"
@@ -212,6 +213,12 @@ class Movierulzhd : MainAPI() {
             )
     }
 
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -219,7 +226,9 @@ class Movierulzhd : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        var document = app.get(data).document
+        val req = app.get(data)
+        val directUrl = getBaseUrl(req.url)
+        var document = req.document
         if(document.select("title").text() == "Just a moment...") {
             document = app.get(data, interceptor = interceptor).document
         }
@@ -231,7 +240,7 @@ class Movierulzhd : MainAPI() {
         }.apmap { nume ->
             safeApiCall {
                 val source = app.post(
-                    url = "$mainUrl/wp-admin/admin-ajax.php",
+                    url = "$directUrl/wp-admin/admin-ajax.php",
                     data = mapOf(
                         "action" to "doo_player_ajax",
                         "post" to id,
