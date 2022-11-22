@@ -78,14 +78,6 @@ open class SoraStream : TmdbProvider() {
             }
         }
 
-        fun getActorRole(t: String?): ActorRole {
-            return when (t) {
-                "Acting" -> ActorRole.Main
-                else -> ActorRole.Background
-            }
-        }
-
-
         fun getStatus(t: String?): ShowStatus {
             return when (t) {
                 "Returning Series" -> ShowStatus.Ongoing
@@ -97,15 +89,6 @@ open class SoraStream : TmdbProvider() {
             return api.chunked(4).map { base64Decode(it) }.reversed().joinToString("")
         }
 
-    }
-
-    private suspend fun checkMainServer() {
-        val check = app.get(mainServerAPI)
-        mainServerAPI = if (check.isSuccessful) {
-            mainServerAPI
-        } else {
-            base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=Ny4=bjQ=cmE=aHQ=YW4=a2g=ZS0=dmk=bW8=eC0=bWk=cmU=Ly8=czo=dHA=aHQ=")
-        }
     }
 
     override val mainPage = mainPageOf(
@@ -175,38 +158,34 @@ open class SoraStream : TmdbProvider() {
 
     override suspend fun load(url: String): LoadResponse? {
         val data = parseJson<Data>(url)
+        val type = getType(data.type)
+        val resUrl = if(type == TvType.Movie) {
+            "$tmdbAPI/movie/${data.id}?api_key=$apiKey&append_to_response=credits,external_ids,videos,recommendations"
+        } else {
+            "$tmdbAPI/tv/${data.id}?api_key=$apiKey&append_to_response=credits,external_ids,videos,recommendations"
+        }
+        val res = app.get(resUrl).parsedSafe<MediaDetail>() ?: throw ErrorLoadingException("Invalid Json Response")
 
-        val buildId =
-            app.get("$mainAPI/").text.substringAfterLast("\"buildId\":\"").substringBefore("\",")
-        val responses =
-            app.get("$mainAPI/_next/data/$buildId/${data.type}/${data.id}.json?id=${data.id}")
-                .parsedSafe<Detail>()?.pageProps
-                ?: throw ErrorLoadingException("Invalid Json Response")
-        val res = responses.result ?: return null
         val title = res.title ?: res.name ?: return null
         val poster = getOriImageUrl(res.backdropPath)
         val orgTitle = res.originalTitle ?: res.originalName ?: return null
-        val type = getType(data.type)
         val year = (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
         val genres = res.genres?.mapNotNull { it.name }
-        val show =
-            if (genres?.contains("Animation") == true && res.original_language == "ja") "Anime" else "Series/Movies"
+        val show = if (genres?.contains("Animation") == true && res.original_language == "ja") "Anime" else "Series/Movies"
 
-        val actors = responses.cast?.mapNotNull { cast ->
+        val actors = res.credits?.cast?.mapNotNull { cast ->
             ActorData(
                 Actor(
                     cast.name ?: cast.originalName ?: return@mapNotNull null,
                     getImageUrl(cast.profilePath)
                 ),
-                getActorRole(cast.knownForDepartment)
+                roleString = cast.character
             )
         } ?: return null
-        val recommendations =
-            responses.recommandations?.mapNotNull { media -> media.toSearchResponse() }
+        val recommendations = res.recommendations?.results?.mapNotNull { media -> media.toSearchResponse() }
 
-        val trailer =
-            responses.result.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }
-                ?.randomOrNull()
+        val trailer = res.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }
+            ?.randomOrNull()
 
         return if (type == TvType.TvSeries) {
             val episodes = mutableListOf<Episode>()
@@ -217,7 +196,7 @@ open class SoraStream : TmdbProvider() {
                         episodes.add(Episode(
                             LinkData(
                                 data.id,
-                                responses.imdbId,
+                                res.external_ids?.imdb_id,
                                 data.type,
                                 eps.seasonNumber,
                                 eps.episodeNumber,
@@ -261,7 +240,7 @@ open class SoraStream : TmdbProvider() {
                 TvType.Movie,
                 LinkData(
                     data.id,
-                    responses.imdbId,
+                    res.external_ids?.imdb_id,
                     data.type,
                     title = title,
                     year = year,
@@ -563,6 +542,19 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("results") val results: ArrayList<Trailers>? = arrayListOf(),
     )
 
+    data class ExternalIds(
+        @JsonProperty("imdb_id") val imdb_id: String? = null,
+        @JsonProperty("tvdb_id") val tvdb_id: String? = null,
+    )
+
+    data class Credits(
+        @JsonProperty("cast") val cast: ArrayList<Cast>? = arrayListOf(),
+    )
+
+    data class ResultsRecommendations(
+        @JsonProperty("results") val results: ArrayList<Media>? = arrayListOf(),
+    )
+
     data class MediaDetail(
         @JsonProperty("id") val id: Int? = null,
         @JsonProperty("imdb_id") val imdbId: String? = null,
@@ -580,20 +572,18 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("genres") val genres: ArrayList<Genres>? = arrayListOf(),
         @JsonProperty("seasons") val seasons: ArrayList<Seasons>? = arrayListOf(),
         @JsonProperty("videos") val videos: ResultsTrailer? = null,
-
-        )
-
-    data class PageProps(
-        @JsonProperty("id") val id: String? = null,
-        @JsonProperty("imdb") val imdbId: String? = null,
-        @JsonProperty("result") val result: MediaDetail? = null,
-        @JsonProperty("recommandations") val recommandations: ArrayList<Media>? = arrayListOf(),
-        @JsonProperty("cast") val cast: ArrayList<Cast>? = arrayListOf(),
+        @JsonProperty("external_ids") val external_ids: ExternalIds? = null,
+        @JsonProperty("credits") val credits: Credits? = null,
+        @JsonProperty("recommendations") val recommendations: ResultsRecommendations? = null,
     )
 
-    data class Detail(
-        @JsonProperty("pageProps") val pageProps: PageProps? = null,
-    )
+//    data class PageProps(
+//        @JsonProperty("id") val id: String? = null,
+//        @JsonProperty("imdb") val imdbId: String? = null,
+//        @JsonProperty("result") val result: MediaDetail? = null,
+//        @JsonProperty("recommandations") val recommandations: ArrayList<Media>? = arrayListOf(),
+//        @JsonProperty("cast") val cast: ArrayList<Cast>? = arrayListOf(),
+//    )
 
     data class EmbedJson(
         @JsonProperty("type") val type: String? = null,
