@@ -172,6 +172,7 @@ open class SoraStream : TmdbProvider() {
         val poster = getOriImageUrl(res.backdropPath)
         val orgTitle = res.originalTitle ?: res.originalName ?: return null
         val year = (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
+        val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
         val show = if (genres?.contains("Animation") == true && res.original_language == "ja") "Anime" else "Series/Movies"
 
@@ -230,6 +231,7 @@ open class SoraStream : TmdbProvider() {
                 this.year = year
                 this.plot = res.overview
                 this.tags = genres
+                this.rating = rating
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
                 this.actors = actors
@@ -254,6 +256,7 @@ open class SoraStream : TmdbProvider() {
                 this.year = year
                 this.plot = res.overview
                 this.tags = genres
+                this.rating = rating
                 this.recommendations = recommendations
                 this.actors = actors
                 addTrailer(trailer)
@@ -431,17 +434,17 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                invokeUhdmovies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.lastSeason,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeUhdmovies(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.lastSeason,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 invokeFwatayako(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
@@ -572,6 +575,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("release_date") val releaseDate: String? = null,
         @JsonProperty("first_air_date") val firstAirDate: String? = null,
         @JsonProperty("overview") val overview: String? = null,
+        @JsonProperty("vote_average") val vote_average: Any? = null,
         @JsonProperty("original_language") val original_language: String? = null,
         @JsonProperty("status") val status: String? = null,
         @JsonProperty("genres") val genres: ArrayList<Genres>? = arrayListOf(),
