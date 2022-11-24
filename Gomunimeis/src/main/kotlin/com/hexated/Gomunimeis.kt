@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.*
 import java.util.ArrayList
 
@@ -21,7 +23,7 @@ class Gomunimeis : MainAPI() {
     )
 
     companion object {
-
+        private const val jikanAPI = "https://api.jikan.moe/v4"
         private const val mainImageUrl = "https://upload.anoboy.live"
 
         fun getType(t: String): TvType {
@@ -92,26 +94,38 @@ class Gomunimeis : MainAPI() {
         val title = document.selectFirst(".entry-title")?.text().toString()
         val poster = document.selectFirst(".thumbposter > img")?.attr("src")
         val tags = document.select(".genxed > a").map { it.text() }
-        val type = getType(document.selectFirst("div.info-content .spe span:last-child")?.ownText().toString())
+        val type = document.selectFirst("div.info-content .spe span:last-child")?.ownText()?.lowercase() ?: "tv"
+
         val year = Regex("\\d, ([0-9]*)").find(
             document.selectFirst("div.info-content .spe span.split")?.ownText().toString()
         )?.groupValues?.get(1)?.toIntOrNull()
         val status = getStatus(document.selectFirst(".spe > span")!!.ownText())
         val description = document.select("div[itemprop = description] > p").text()
 
+        val malId = app.get("${jikanAPI}/anime?q=$title&start_date=${year}&type=$type&limit=1")
+            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+        val anilistId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
+
         val episodes = document.select(".eplister > ul > li").map {
-            val header = it.select(".epl-title").text()
-            val name = Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
+            val episode = Regex("Episode\\s?([0-9]+)").find(
+                it.select(".epl-title").text()
+            )?.groupValues?.getOrNull(0)
             val link = it.select("a").attr("href")
-            Episode(link, name)
+            Episode(link, episode = episode?.toIntOrNull())
         }.reversed()
 
-        return newAnimeLoadResponse(title, url, type) {
+        return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
             posterUrl = poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
             plot = description
             this.tags = tags
         }
@@ -126,11 +140,13 @@ class Gomunimeis : MainAPI() {
 
         val document = app.get(data).document
 
-        document.select("div.player-container iframe").attr("src").substringAfter("html#").let { id ->
-            app.get("https://gomunimes.com/stream?id=$id").parsedSafe<Sources>()?.server?.streamsb?.link?.let { link ->
-                loadExtractor(link, "https://vidgomunime.xyz/", subtitleCallback, callback)
+        document.select("div.player-container iframe").attr("src").substringAfter("html#")
+            .let { id ->
+                app.get("https://gomunimes.com/stream?id=$id")
+                    .parsedSafe<Sources>()?.server?.streamsb?.link?.let { link ->
+                        loadExtractor(link, "https://vidgomunime.xyz/", subtitleCallback, callback)
+                    }
             }
-        }
 
         return true
     }
@@ -157,6 +173,26 @@ class Gomunimeis : MainAPI() {
         @JsonProperty("image") val image: String?,
         @JsonProperty("total_episode") val totalEpisode: String?,
         @JsonProperty("salt") val salt: String?,
+    )
+
+    data class Data(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
     )
 
 }

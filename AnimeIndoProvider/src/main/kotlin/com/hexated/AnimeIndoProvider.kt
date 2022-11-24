@@ -1,7 +1,10 @@
 package com.hexated
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -23,9 +26,11 @@ class AnimeIndoProvider : MainAPI() {
     )
 
     companion object {
+        private const val jikanAPI = "https://api.jikan.moe/v4"
+
         fun getType(t: String): TvType {
-            return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie")) TvType.AnimeMovie
+            return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
+            else if (t.contains("Movie", true)) TvType.AnimeMovie
             else TvType.Anime
         }
 
@@ -126,34 +131,37 @@ class AnimeIndoProvider : MainAPI() {
         }
     }
 
-    override suspend fun load(url: String): LoadResponse {
+    override suspend fun load(url: String): LoadResponse? {
         val document = request(url).document
 
-        val title = document.selectFirst("h1.entry-title")?.text().toString().trim()
+        val title = document.selectFirst("h1.entry-title")?.text()?.replace("Subtitle Indonesia", "")
+            ?.trim() ?: return null
         val poster = document.selectFirst("div.thumb > img[itemprop=image]")?.attr("src")
         val tags = document.select("div.genxed > a").map { it.text() }
-        val type = getType(
-            document.selectFirst("div.info-content > div.spe > span:nth-child(6)")?.ownText()
-                .toString()
-        )
-        val year = Regex("\\d, ([0-9]*)").find(
-            document.select("div.info-content > div.spe > span:nth-child(9) > time").text()
-        )?.groupValues?.get(1)?.toIntOrNull()
-        val status = getStatus(
-            document.selectFirst("div.info-content > div.spe > span:nth-child(1)")!!.ownText()
-                .trim()
-        )
+        val type = document.selectFirst("div.info-content > div.spe > span:contains(Type:)")?.ownText()
+            ?.trim()?.lowercase() ?: "tv"
+        val year = document.selectFirst("div.info-content > div.spe > span:contains(Released:)")?.ownText()?.let {
+            Regex("\\d,\\s([0-9]*)").find(it)?.groupValues?.get(1)?.toIntOrNull()
+        }
+        val status = getStatus(document.selectFirst("div.info-content > div.spe > span:nth-child(1)")!!.ownText().trim())
         val description = document.select("div[itemprop=description] > p").text()
+
+        val malId = app.get("${jikanAPI}/anime?q=$title&start_date=${year}&type=$type&limit=1")
+            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+        val anilistId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
         val trailer = document.selectFirst("div.player-embed iframe")?.attr("src")
         val episodes = document.select("div.lstepsiode.listeps ul li").mapNotNull {
             val header = it.selectFirst("span.lchx > a") ?: return@mapNotNull null
-            val name = header.text().trim()
             val episode = header.text().trim().replace("Episode", "").trim().toIntOrNull()
             val link = fixUrl(header.attr("href"))
-            Episode(link, name = name, episode = episode)
+            Episode(link, episode = episode)
         }.reversed()
 
-        return newAnimeLoadResponse(title, url, type) {
+        return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
             posterUrl = poster
             this.year = year
@@ -161,6 +169,8 @@ class AnimeIndoProvider : MainAPI() {
             showStatus = status
             plot = description
             this.tags = tags
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
             addTrailer(trailer)
         }
     }
@@ -187,6 +197,26 @@ class AnimeIndoProvider : MainAPI() {
 
         return true
     }
+
+    data class Data(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
+    )
 
 
 }
