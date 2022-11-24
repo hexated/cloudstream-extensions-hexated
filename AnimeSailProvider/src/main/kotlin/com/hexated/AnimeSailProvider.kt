@@ -1,6 +1,9 @@
 package com.hexated
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
@@ -23,9 +26,11 @@ class AnimeSailProvider : MainAPI() {
     )
 
     companion object {
+        private const val jikanAPI = "https://api.jikan.moe/v4"
+
         fun getType(t: String): TvType {
-            return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie")) TvType.AnimeMovie
+            return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
+            else if (t.contains("Movie", true)) TvType.AnimeMovie
             else TvType.Anime
         }
 
@@ -104,28 +109,38 @@ class AnimeSailProvider : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val document = request(url).document
 
-        val title = document.selectFirst("h1.entry-title")?.text().toString().trim()
-        val type = getType(
-            document.select("tbody th:contains(Tipe)").next().text()
-        )
+        val title = document.selectFirst("h1.entry-title")?.text().toString()
+            .replace("Subtitle Indonesia", "").trim()
+        val type = document.select("tbody th:contains(Tipe)").next().text().lowercase()
+        val year = document.select("tbody th:contains(Dirilis)").next().text().trim().toIntOrNull()
+
+        val malId = app.get("${jikanAPI}/anime?q=$title&start_date=${year}&type=$type&limit=1")
+            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+        val anilistId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
+
         val episodes = document.select("ul.daftar > li").map {
-            val header = it.select("a").text().trim()
-            val name =
-                Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
+            val episode = Regex("Episode\\s?([0-9]+)").find(
+                it.select("a").text().trim()
+            )?.groupValues?.getOrNull(0)
             val link = fixUrl(it.select("a").attr("href"))
-            Episode(link, name = name)
+            Episode(link, episode = episode?.toIntOrNull())
         }.reversed()
 
-        return newAnimeLoadResponse(title, url, type) {
+        return newAnimeLoadResponse(title, url, getType(type)) {
             posterUrl = document.selectFirst("div.entry-content > img")?.attr("src")
-            this.year =
-                document.select("tbody th:contains(Dirilis)").next().text().trim().toIntOrNull()
+            this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus =
                 getStatus(document.select("tbody th:contains(Status)").next().text().trim())
             plot = document.selectFirst("div.entry-content > p")?.text()
             this.tags =
                 document.select("tbody th:contains(Genre)").next().select("a").map { it.text() }
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
         }
     }
 
@@ -172,7 +187,9 @@ class AnimeSailProvider : MainAPI() {
 //                    iframe.startsWith("$mainUrl/utils/player/fichan/") -> ""
 //                    iframe.startsWith("$mainUrl/utils/player/blogger/") -> ""
                     iframe.startsWith("https://aghanim.xyz/tools/redirect/") -> {
-                        val link = "https://rasa-cintaku-semakin-berantai.xyz/v/${iframe.substringAfter("id=").substringBefore("&token")}"
+                        val link = "https://rasa-cintaku-semakin-berantai.xyz/v/${
+                            iframe.substringAfter("id=").substringBefore("&token")
+                        }"
                         loadExtractor(link, mainUrl, subtitleCallback, callback)
                     }
                     iframe.startsWith("$mainUrl/utils/player/framezilla/") || iframe.startsWith("https://uservideo.xyz") -> {
@@ -191,5 +208,24 @@ class AnimeSailProvider : MainAPI() {
         return true
     }
 
+    data class Data(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
+    )
 
 }
