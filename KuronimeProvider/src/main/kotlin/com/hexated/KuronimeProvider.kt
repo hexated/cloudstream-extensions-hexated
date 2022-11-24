@@ -134,8 +134,7 @@ class KuronimeProvider : MainAPI() {
         val description = document.select("span.const > p").text()
 
         val episodes = document.select("div.bixbox.bxcl > ul > li").map {
-            val episode =
-                it.selectFirst("a")?.text()?.trim()?.replace("Episode", "")?.trim()?.toIntOrNull()
+            val episode = it.selectFirst("a")?.text()?.trim()?.replace("Episode", "")?.trim()?.toIntOrNull()
             val link = it.selectFirst("a")!!.attr("href")
             Episode(link, episode = episode)
         }.reversed()
