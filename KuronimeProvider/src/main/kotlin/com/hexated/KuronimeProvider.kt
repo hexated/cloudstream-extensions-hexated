@@ -30,8 +30,8 @@ class KuronimeProvider : MainAPI() {
         private const val jikanAPI = "https://api.jikan.moe/v4"
 
         fun getType(t: String): TvType {
-            return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie")) TvType.AnimeMovie
+            return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
+            else if (t.contains("Movie", true)) TvType.AnimeMovie
             else TvType.Anime
         }
 
