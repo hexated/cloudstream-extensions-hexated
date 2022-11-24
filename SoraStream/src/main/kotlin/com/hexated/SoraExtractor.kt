@@ -957,7 +957,7 @@ object SoraExtractor : SoraStream() {
         ).apmap { server ->
             delay(1000)
             val sources =
-                app.get("$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server")
+                app.get("$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server", timeout = 120L)
                     .parsedSafe<ConsumetSourcesResponse>()
             val name = fixTitle(server)
             sources?.sources?.map {
@@ -1095,7 +1095,7 @@ object SoraExtractor : SoraStream() {
             }?.id ?: return
 
         delay(1000)
-        val sources = app.get("$consumetZoroAPI/watch?episodeId=$episodeId")
+        val sources = app.get("$consumetZoroAPI/watch?episodeId=$episodeId", timeout = 120L)
             .parsedSafe<ConsumetSourcesResponse>() ?: return
 
         sources.sources?.map {
@@ -1315,7 +1315,7 @@ data class FilmxyCookies(
 
 fun String.filterIframe(seasonNum: Int?, year: Int?): Boolean {
     return if (seasonNum != null) {
-        this.contains(Regex("(?i)(S0?$seasonNum)")) && !this.contains("Download", true)
+        this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)")) && !this.contains("Download", true)
     } else {
         this.contains("$year", true) && !this.contains("Download", true)
     }
