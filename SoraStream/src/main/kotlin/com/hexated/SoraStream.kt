@@ -434,17 +434,17 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-//            {
-//                invokeUhdmovies(
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.lastSeason,
-//                    res.episode,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
+            {
+                invokeUhdmovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.lastSeason,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
             {
                 invokeFwatayako(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
