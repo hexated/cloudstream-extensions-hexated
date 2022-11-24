@@ -1,6 +1,9 @@
 package com.hexated
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -24,6 +27,8 @@ class KuronimeProvider : MainAPI() {
     )
 
     companion object {
+        private const val jikanAPI = "https://api.jikan.moe/v4"
+
         fun getType(t: String): TvType {
             return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
             else if (t.contains("Movie")) TvType.AnimeMovie
@@ -108,13 +113,20 @@ class KuronimeProvider : MainAPI() {
         val title = document.selectFirst(".entry-title")?.text().toString().trim()
         val poster = document.selectFirst("div.l[itemprop=image] > img")?.attr("data-src")
         val tags = document.select(".infodetail > ul > li:nth-child(2) > a").map { it.text() }
-        val type = getType(
-            document.selectFirst(".infodetail > ul > li:nth-child(7)")?.ownText()?.trim().toString()
-        )
+        val type = document.selectFirst(".infodetail > ul > li:nth-child(7)")?.ownText()?.removePrefix(":")
+            ?.lowercase()?.trim() ?: "tv"
+
         val trailer = document.selectFirst("div.tply iframe")?.attr("data-src")
         val year = Regex("\\d, ([0-9]*)").find(
             document.select(".infodetail > ul > li:nth-child(5)").text()
         )?.groupValues?.get(1)?.toIntOrNull()
+        val malId = app.get("$jikanAPI/anime?q=$title&start_date=${year}&type=$type&limit=1")
+            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+        val anilistId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
         val status = getStatus(
             document.selectFirst(".infodetail > ul > li:nth-child(3)")!!.ownText()
                 .replace(Regex("\\W"), "")
@@ -129,13 +141,15 @@ class KuronimeProvider : MainAPI() {
             Episode(link, name = name, episode = episode)
         }.reversed()
 
-        return newAnimeLoadResponse(title, url, type) {
+        return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
             posterUrl = poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             plot = description
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
             addTrailer(trailer)
             this.tags = tags
         }
@@ -193,5 +207,25 @@ class KuronimeProvider : MainAPI() {
         }
         return true
     }
+
+    data class Data(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
+    )
 
 }

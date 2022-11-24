@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup
@@ -23,6 +25,8 @@ class OploverzProvider : MainAPI() {
     )
 
     companion object {
+        private const val jikanAPI = "https://api.jikan.moe/v4"
+
         fun getType(t: String): TvType {
             return when {
                 t.contains("TV") -> TvType.Anime
@@ -142,12 +146,19 @@ class OploverzProvider : MainAPI() {
         val description = document.select(".entry-content > p").text().trim()
         val trailer = document.selectFirst("a.trailerbutton")?.attr("href")
 
+        val malId = app.get("${jikanAPI}/anime?q=$title&start_date=${year}&${typeCheck.lowercase()}&limit=1")
+            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+        val anilistId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
+
         val episodes = document.select(".eplister > ul > li").map {
             val header = it.select(".epl-title").text()
-            val name =
-                Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
+            val episode = Regex("Episode\\s?0?0?([0-9]+)").find(header)?.groupValues?.getOrNull(0)
             val link = fixUrl(it.select("a").attr("href"))
-            Episode(link, name)
+            Episode(link, episode = episode?.toIntOrNull())
         }.reversed()
 
         val recommendations =
@@ -171,6 +182,8 @@ class OploverzProvider : MainAPI() {
             showStatus = status
             plot = description
             this.tags = tags
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
             this.recommendations = recommendations
             addTrailer(trailer)
         }
@@ -199,5 +212,25 @@ class OploverzProvider : MainAPI() {
 
         return true
     }
+
+    data class Data(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
+    )
 
 }
