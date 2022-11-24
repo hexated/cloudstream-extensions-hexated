@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -23,10 +25,12 @@ class NontonAnimeIDProvider : MainAPI() {
     )
 
     companion object {
+        private const val jikanAPI = "https://api.jikan.moe/v4"
+
         fun getType(t: String): TvType {
             return when {
-                t.contains("TV") -> TvType.Anime
-                t.contains("Movie") -> TvType.AnimeMovie
+                t.contains("TV",true) -> TvType.Anime
+                t.contains("Movie",true) -> TvType.AnimeMovie
                 else -> TvType.OVA
             }
         }
@@ -126,10 +130,18 @@ class NontonAnimeIDProvider : MainAPI() {
         val status = getStatus(
             document.select("span.statusseries").text().trim()
         )
-        val type = getType(document.select("span.typeseries").text().trim())
+        val type = document.select("span.typeseries").text().trim().lowercase()
         val rating = document.select("span.nilaiseries").text().trim().toIntOrNull()
         val description = document.select(".entry-content.seriesdesc > p").text().trim()
         val trailer = document.selectFirst("a.trailerbutton")?.attr("href")
+
+        val malId = app.get("${jikanAPI}/anime?q=$title&start_date=${year}&type=$type&limit=1")
+            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+        val anilistId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
 
         val episodes = if (document.select("button.buttfilter").isNotEmpty()) {
             val id = document.select("input[name=series_id]").attr("value")
@@ -147,19 +159,19 @@ class NontonAnimeIDProvider : MainAPI() {
                     )
                 ).parsed<EpResponse>().content
             ).select("li").map {
-                val name = Regex("(Episode\\s?[0-9]+)").find(
+                val episode = Regex("Episode\\s?([0-9]+)").find(
                     it.selectFirst("a")?.text().toString()
                 )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = fixUrl(it.selectFirst("a")!!.attr("href"))
-                Episode(link, name)
+                Episode(link, episode = episode?.toIntOrNull())
             }.reversed()
         } else {
             document.select("ul.misha_posts_wrap2 > li").map {
-                val name = Regex("(Episode\\s?[0-9]+)").find(
+                val episode = Regex("Episode\\s?([0-9]+)").find(
                     it.selectFirst("a")?.text().toString()
                 )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = it.select("a").attr("href")
-                Episode(link, name)
+                Episode(link, episode = episode?.toIntOrNull())
             }.reversed()
         }
 
@@ -175,7 +187,7 @@ class NontonAnimeIDProvider : MainAPI() {
             }
         }
 
-        return newAnimeLoadResponse(title, url, type) {
+        return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
             posterUrl = poster
             this.year = year
@@ -183,6 +195,8 @@ class NontonAnimeIDProvider : MainAPI() {
             showStatus = status
             this.rating = rating
             plot = description
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
             addTrailer(trailer)
             this.tags = tags
             this.recommendations = recommendations
@@ -232,5 +246,25 @@ class NontonAnimeIDProvider : MainAPI() {
         @JsonProperty("max_page") val max_page: Int?,
         @JsonProperty("found_posts") val found_posts: Int?,
         @JsonProperty("content") val content: String
+    )
+
+    data class Data(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
     )
 }
