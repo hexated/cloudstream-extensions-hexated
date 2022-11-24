@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -23,11 +25,12 @@ class OtakudesuProvider : MainAPI() {
     )
 
     companion object {
-//        private val interceptor = CloudflareKiller()
+        //        private val interceptor = CloudflareKiller()
+        private const val jikanAPI = "https://api.jikan.moe/v4"
 
         fun getType(t: String): TvType {
-            return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie")) TvType.AnimeMovie
+            return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
+            else if (t.contains("Movie", true)) TvType.AnimeMovie
             else TvType.Anime
         }
 
@@ -49,7 +52,8 @@ class OtakudesuProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page
+        val document = app.get(
+            request.data + page
 //            , interceptor = interceptor
         ).document
         val home = document.select("div.venz > ul > li").mapNotNull {
@@ -74,7 +78,8 @@ class OtakudesuProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/?s=$query&post_type=anime"
-        val document = app.get(link
+        val document = app.get(
+            link
 //            , interceptor = interceptor
         ).document
 
@@ -91,7 +96,8 @@ class OtakudesuProvider : MainAPI() {
 
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url
+        val document = app.get(
+            url
 //            , interceptor = interceptor
         ).document
 
@@ -99,10 +105,9 @@ class OtakudesuProvider : MainAPI() {
             ?.replace(":", "")?.trim().toString()
         val poster = document.selectFirst("div.fotoanime > img")?.attr("src")
         val tags = document.select("div.infozingle > p:nth-child(11) > span > a").map { it.text() }
-        val type = getType(
-            document.selectFirst("div.infozingle > p:nth-child(5) > span")?.ownText()
-                ?.replace(":", "")?.trim().toString()
-        )
+        val type = document.selectFirst("div.infozingle > p:nth-child(5) > span")?.ownText()
+            ?.replace(":", "")?.trim() ?: "tv"
+
         val year = Regex("\\d, ([0-9]*)").find(
             document.select("div.infozingle > p:nth-child(9) > span").text()
         )?.groupValues?.get(1)?.toIntOrNull()
@@ -112,13 +117,20 @@ class OtakudesuProvider : MainAPI() {
                 .trim()
         )
         val description = document.select("div.sinopc > p").text()
+        val malId = app.get("${jikanAPI}/anime?q=$title&start_date=${year}&type=$type&limit=1")
+            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+        val anilistId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
 
         val episodes = document.select("div.episodelist")[1].select("ul > li").mapNotNull {
-            val name = Regex("(Episode\\s?[0-9]+)").find(
-                it.selectFirst("a")?.text().toString()
-            )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
+            val name = it.selectFirst("a")?.text() ?: return@mapNotNull null
+            val episode = Regex("Episode\\s?([0-9]+)").find(name)?.groupValues?.getOrNull(0)
+                ?: it.selectFirst("a")?.text()
             val link = fixUrl(it.selectFirst("a")!!.attr("href"))
-            Episode(link, name)
+            Episode(link, name, episode = episode?.toIntOrNull())
         }.reversed()
 
         val recommendations =
@@ -132,7 +144,7 @@ class OtakudesuProvider : MainAPI() {
                 }
             }
 
-        return newAnimeLoadResponse(title, url, type) {
+        return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
             posterUrl = poster
             this.year = year
@@ -140,6 +152,8 @@ class OtakudesuProvider : MainAPI() {
             showStatus = status
             plot = description
             this.tags = tags
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
             this.recommendations = recommendations
 //            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
@@ -163,7 +177,8 @@ class OtakudesuProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data
+        val document = app.get(
+            data
 //            , interceptor = interceptor
         ).document
         val scriptData = document.select("script").last()?.data()
@@ -214,5 +229,25 @@ class OtakudesuProvider : MainAPI() {
 
         return true
     }
+
+    data class Data(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
+    )
 
 }
