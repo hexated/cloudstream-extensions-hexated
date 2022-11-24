@@ -134,11 +134,10 @@ class KuronimeProvider : MainAPI() {
         val description = document.select("span.const > p").text()
 
         val episodes = document.select("div.bixbox.bxcl > ul > li").map {
-            val name = it.selectFirst("a")?.text()?.trim()
             val episode =
                 it.selectFirst("a")?.text()?.trim()?.replace("Episode", "")?.trim()?.toIntOrNull()
             val link = it.selectFirst("a")!!.attr("href")
-            Episode(link, name = name, episode = episode)
+            Episode(link, episode = episode)
         }.reversed()
 
         return newAnimeLoadResponse(title, url, getType(type)) {
