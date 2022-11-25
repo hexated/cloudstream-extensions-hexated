@@ -89,21 +89,23 @@ open class TimefourTv : MainAPI() {
     private suspend fun loadSchedule(url: String): LoadResponse {
         val name = url.removePrefix("$mainUrl/")
         val doc = app.get("$mainUrl/schedule.php").document
-
-        val episode =
-            doc.selectFirst("div.search_p h2:contains($name)")?.nextElementSiblings()?.toString()
-                ?.substringBefore("<h2")?.let { Jsoup.parse(it) }?.select("span")
-                ?.mapIndexed { index, ele ->
+        val episode = mutableListOf<Episode>()
+        doc.selectFirst("div.search_p h2:contains($name)")?.nextElementSiblings()?.toString()
+            ?.substringBefore("<h2")?.split("<br>")?.map {
+                val desc = it.substringBefore("<span").replace(Regex("</?strong>"), "").replace("<p>", "")
+                Jsoup.parse(it).select("span").map { ele ->
                     val title = ele.select("a").text()
                     val href = ele.select("a").attr("href")
-                    val desc = ele.parent()?.textNodes()?.getOrNull(index)?.toString()
-                    Episode(
-                        href,
-                        title,
-                        posterUrl = time4tvPoster,
-                        description = desc,
+                    episode.add(
+                        Episode(
+                            href,
+                            title,
+                            description = desc,
+                            posterUrl = time4tvPoster
+                        )
                     )
-                } ?: throw ErrorLoadingException("Referest Page")
+                }
+            }
 
         return newTvSeriesLoadResponse(name, url, TvType.TvSeries, episode) {
         }
