@@ -8,9 +8,9 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://lk21official.art"
-//    private val redirectUrl = "https://nd21x1.github.io"
-    private val seriesUrl = "https://nontondrama.icu"
+    override var mainUrl = "https://lk21official.info"
+    //    private val redirectUrl = "https://nd21x1.github.io"
+    private val seriesUrl = "https://drama.nontondrama.lol"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
@@ -49,21 +49,21 @@ class LayarKacaProvider : MainAPI() {
         }
     }
 
-    private fun changesUrl(url: String): String {
-        val startsWithNoHttp = url.startsWith("//")
-        if (startsWithNoHttp) {
-            return "https:$url"
-        } else {
-            if (url.startsWith('/')) {
-                return seriesUrl + url
-            }
-            return "$seriesUrl/$url"
-        }
-    }
+//    private fun changesUrl(url: String): String {
+//        val startsWithNoHttp = url.startsWith("//")
+//        if (startsWithNoHttp) {
+//            return "https:$url"
+//        } else {
+//            if (url.startsWith('/')) {
+//                return seriesUrl + url
+//            }
+//            return "$seriesUrl/$url"
+//        }
+//    }
 
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h1.grid-title > a")?.ownText()?.trim() ?: return null
-        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
+        val href = getProperLink(this.selectFirst("a")!!.attr("href"), title)
         val posterUrl = fixUrlNull(this.selectFirst(".grid-poster > a > img")?.attr("src"))
         val type =
             if (this.selectFirst("div.last-episode") == null) TvType.Movie else TvType.TvSeries
@@ -130,7 +130,7 @@ class LayarKacaProvider : MainAPI() {
 
         return if (tvType == TvType.TvSeries) {
             val episodes = document.select("div.episode-list > a:matches(\\d+)").map {
-                val href = changesUrl(it.attr("href"))
+                val href = fixUrl(it.attr("href"))
                 val episode = it.text().toIntOrNull()
                 val season =
                     it.attr("href").substringAfter("season-").substringBefore("-").toIntOrNull()
