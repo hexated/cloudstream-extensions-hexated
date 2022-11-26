@@ -1233,10 +1233,19 @@ object SoraExtractor : SoraStream() {
         iframe.apmap { (quality, size, link) ->
             delay(1000)
             val res = app.get(link ?: return@apmap null).document
-            val bitLink = res.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
-            val downLink = app.get(fixUrl(bitLink, base)).document.select("div.mb-4 a").randomOrNull()?.attr("href")
+            val resDoc = res.selectFirst("script")?.data()?.substringAfter("replace(\"")
+                ?.substringBefore("\")")?.let {
+                    app.get(fixUrl(it, base)).document
+                }
+            val bitLink = resDoc?.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
+            val baseDoc = app.get(fixUrl(bitLink, base)).document
+            val downLink = baseDoc.select("div.mb-4 a").randomOrNull()
+                ?.attr("href") ?: run {
+                val server = baseDoc.select("div.text-center a:contains(Server 2)").attr("href")
+                app.get(fixUrl(server, base)).document.selectFirst("div.mb-4 a")
+                    ?.attr("href")
+            }
             val downPage = app.get(downLink ?: return@apmap null).document
-
             val downloadLink = downPage.selectFirst("form[method=post] a.btn.btn-success")
                 ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')") ?: run {
                 val mirror = downPage.selectFirst("form[method=post] a.btn.btn-primary")
