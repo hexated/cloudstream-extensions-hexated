@@ -1,6 +1,9 @@
 package com.hexated
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -22,9 +25,11 @@ class NeonimeProvider : MainAPI() {
     )
 
     companion object {
+        private const val jikanAPI = "https://api.jikan.moe/v4"
+
         fun getType(t: String): TvType {
-            return if (t.contains("OVA") || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie")) TvType.AnimeMovie
+            return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
+            else if (t.contains("Movie", true)) TvType.AnimeMovie
             else TvType.Anime
         }
 
@@ -49,8 +54,8 @@ class NeonimeProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get(request.data + page).document
         val home = document.select("tbody tr,div.item").mapNotNull {
-                it.toSearchResult()
-            }
+            it.toSearchResult()
+        }
         return newHomePageResponse(request.name, home)
     }
 
@@ -115,41 +120,62 @@ class NeonimeProvider : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
-            if (url.contains("movie") || url.contains("live-action")) {
-                val mTitle = document.selectFirst(".sbox > .data > h1[itemprop = name]")?.text().toString().trim()
-                val mTrailer = document.selectFirst("div.youtube_id iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
-
-                return newMovieLoadResponse(name = mTitle, url = url, type = TvType.Movie, dataUrl = url) {
-                    posterUrl = document.selectFirst(".sbox > .imagen > .fix > img[itemprop = image]")?.attr("data-src")
-                    year = document.selectFirst("a[href*=release-year]")!!.text().toIntOrNull()
-                    plot = document.select("div[itemprop = description]").text().trim()
-                    rating = document.select("span[itemprop = ratingValue]").text().toIntOrNull()
-                    tags = document.select("p.meta_dd > a").map { it.text() }
-                    addTrailer(mTrailer)
-                }
+        if (url.contains("movie") || url.contains("live-action")) {
+            val mTitle = document.selectFirst(".sbox > .data > h1[itemprop = name]")?.text().toString().replace("Subtitle Indonesia", "").trim()
+            val mTrailer = document.selectFirst("div.youtube_id iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
+            val year = document.selectFirst("a[href*=release-year]")!!.text().toIntOrNull()
+            val malId = getMalId(mTitle, year, "movie")
+            val anilistId = getAniId(malId)
+            return newMovieLoadResponse(name = mTitle, url = url, type = TvType.Movie, dataUrl = url) {
+                posterUrl = document.selectFirst(".sbox > .imagen > .fix > img[itemprop = image]")?.attr("data-src")
+                this.year = year
+                plot = document.select("div[itemprop = description]").text().trim()
+                rating = document.select("span[itemprop = ratingValue]").text().toIntOrNull()
+                tags = document.select("p.meta_dd > a").map { it.text() }
+                addTrailer(mTrailer)
+                addMalId(malId?.toIntOrNull())
+                addAniListId(anilistId?.toIntOrNull())
             }
-            else {
-                val title = document.select("h1[itemprop = name]").text().trim()
-                val trailer = document.selectFirst("div.youtube_id_tv iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
+        }
+        else {
+            val title = document.select("h1[itemprop = name]").text().replace("Subtitle Indonesia", "").trim()
+            val trailer = document.selectFirst("div.youtube_id_tv iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
+            val year = document.select("#info a[href*=\"-year/\"]").text().toIntOrNull()
+            val malId = getMalId(title, year, "tv")
+            val anilistId = getAniId(malId)
+            val episodes = document.select("ul.episodios > li").mapNotNull {
+                val header = it.selectFirst(".episodiotitle > a")?.ownText().toString()
+                val name = Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
+                val link = fixUrl(it.selectFirst(".episodiotitle > a")!!.attr("href"))
+                Episode(link, name)
+            }.reversed()
 
-                val episodes = document.select("ul.episodios > li").mapNotNull {
-                    val header = it.selectFirst(".episodiotitle > a")?.ownText().toString()
-                    val name = Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
-                    val link = fixUrl(it.selectFirst(".episodiotitle > a")!!.attr("href"))
-                    Episode(link, name)
-                }.reversed()
-
-                return newAnimeLoadResponse(title, url, TvType.Anime) {
-                    engName = title
-                    posterUrl = document.selectFirst(".imagen > img")?.attr("data-src")
-                    year = document.select("#info a[href*=\"-year/\"]").text().toIntOrNull()
-                    addEpisodes(DubStatus.Subbed, episodes)
-                    showStatus = getStatus(document.select("div.metadatac > span").last()!!.text().trim())
-                    plot = document.select("div[itemprop = description] > p").text().trim()
-                    tags = document.select("#info a[href*=\"-genre/\"]").map { it.text() }
-                    addTrailer(trailer)
-                }
+            return newAnimeLoadResponse(title, url, TvType.Anime) {
+                engName = title
+                posterUrl = document.selectFirst(".imagen > img")?.attr("data-src")
+                this.year = year
+                addEpisodes(DubStatus.Subbed, episodes)
+                showStatus = getStatus(document.select("div.metadatac > span").last()!!.text().trim())
+                plot = document.select("div[itemprop = description] > p").text().trim()
+                tags = document.select("#info a[href*=\"-genre/\"]").map { it.text() }
+                addTrailer(trailer)
+                addMalId(malId?.toIntOrNull())
+                addAniListId(anilistId?.toIntOrNull())
             }
+        }
+    }
+
+    private suspend fun getAniId(malId: String?) : String? {
+        return app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
+    }
+
+    private suspend fun getMalId(title: String?, year: Int?, type: String?) : String? {
+        return app.get("${jikanAPI}/anime?q=$title&start_date=${year}&type=$type&limit=1")
+            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
     }
 
     override suspend fun loadLinks(
@@ -174,5 +200,25 @@ class NeonimeProvider : MainAPI() {
 
         return true
     }
+
+    data class Data(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
+    )
 
 }
