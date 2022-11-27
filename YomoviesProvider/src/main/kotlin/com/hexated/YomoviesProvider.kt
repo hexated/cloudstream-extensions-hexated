@@ -7,9 +7,10 @@ import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
+import java.net.URI
 
 class YomoviesProvider : MainAPI() {
-    override var mainUrl = "https://yomovies.fyi"
+    override var mainUrl = "https://yomovies.icu"
     override var name = "Yomovies"
     override val hasMainPage = true
     override var lang = "hi"
@@ -126,6 +127,12 @@ class YomoviesProvider : MainAPI() {
         }
     }
 
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -134,23 +141,25 @@ class YomoviesProvider : MainAPI() {
     ): Boolean {
 
         if (data.startsWith(mainUrl)) {
-            app.get(data).document.select("div.movieplay iframe").map { fixUrl(it.attr("src")) }
+            val req = app.get(data)
+            val ref = getBaseUrl(req.url)
+            req.document.select("div.movieplay iframe").map { fixUrl(it.attr("src")) }
                 .apmap { source ->
                     safeApiCall {
                         when {
                             source.startsWith("https://membed.net") -> app.get(
                                 source,
-                                referer = "$mainUrl/"
+                                referer = "$ref/"
                             ).document.select("ul.list-server-items li")
                                 .apmap {
                                     loadExtractor(
                                         it.attr("data-video").substringBefore("=https://msubload"),
-                                        "$mainUrl/",
+                                        "$ref/",
                                         subtitleCallback,
                                         callback
                                     )
                                 }
-                            else -> loadExtractor(source, "$mainUrl/", subtitleCallback, callback)
+                            else -> loadExtractor(source, "$ref/", subtitleCallback, callback)
                         }
                     }
                 }
