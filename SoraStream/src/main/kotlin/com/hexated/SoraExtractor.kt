@@ -11,6 +11,7 @@ import com.lagradost.nicehttp.Session
 import com.lagradost.nicehttp.requestCreator
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import com.google.gson.JsonParser
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import kotlinx.coroutines.delay
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
@@ -1196,8 +1197,11 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-
-        val doc = app.get("$uhdmoviesAPI/?s=$title").document
+        val url = "$uhdmoviesAPI/?s=$title"
+        var doc = app.get(url).document
+        if(doc.select("title").text() == "Just a moment...") {
+            doc = app.get(url, interceptor = CloudflareKiller()).document
+        }
         val scriptData = doc.select("div.row.gridlove-posts article").map {
             it.selectFirst("a")?.attr("href") to it.selectFirst("h1")?.text()
         }
@@ -1231,7 +1235,7 @@ object SoraExtractor : SoraStream() {
 
         val base = getBaseUrl(iframe.first().third ?: return)
         iframe.apmap { (quality, size, link) ->
-            delay(1000)
+            delay(2000)
             val res = app.get(link ?: return@apmap null).document
             val resDoc = res.selectFirst("script")?.data()?.substringAfter("replace(\"")
                 ?.substringBefore("\")")?.let {
