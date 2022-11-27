@@ -38,7 +38,7 @@ open class TimefourTv : MainAPI() {
             val home = res.select("div.tab-content ul li").mapNotNull {
                 it.toSearchResult()
             }
-            items.add(HomePageList(request.name, home, true))
+            if(home.isNotEmpty()) items.add(HomePageList(request.name, home, true))
         }
         if (request.name == "All Channels") {
             val res = if (page == 1) {
@@ -49,12 +49,12 @@ open class TimefourTv : MainAPI() {
             val home = res.select("div.tab-content ul li").mapNotNull {
                 it.toSearchResult()
             }
-            items.add(HomePageList(request.name, home, true))
+            if(home.isNotEmpty()) items.add(HomePageList(request.name, home, true))
         }
 
         if (nonPaged && request.name == "Schedule") {
             val res = app.get(request.data).document
-            val schedule = res.select("div.search_p h2").mapNotNull {
+            val schedule = res.select("div.search_p h1,div.search_p h2").mapNotNull {
                 it.toSearchSchedule()
             }
             items.add(HomePageList(request.name, schedule, true))
@@ -88,8 +88,8 @@ open class TimefourTv : MainAPI() {
         val name = url.removePrefix("$mainUrl/")
         val doc = app.get("$mainUrl/schedule.php").document
         val episode = mutableListOf<Episode>()
-        doc.selectFirst("div.search_p h2:contains($name)")?.nextElementSiblings()?.toString()
-            ?.substringBefore("<h2")?.split("<br>")?.map {
+        doc.selectFirst("div.search_p h1:contains($name)")?.nextElementSiblings()?.toString()
+            ?.substringBefore("<h1")?.split("<br>")?.map {
                 val desc = it.substringBefore("<span").replace(Regex("</?strong>"), "").replace("<p>", "")
                 Jsoup.parse(it).select("span").map { ele ->
                     val title = ele.select("a").text()
