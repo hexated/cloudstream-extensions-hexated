@@ -12,7 +12,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 
 class Xcinetop : MainAPI() {
-    override var mainUrl = "https://xcine.top"
+    override var mainUrl = "https://xcine.click"
     override var name = "Xcine.top"
     override val hasMainPage = true
     override val hasDownloadSupport = true
