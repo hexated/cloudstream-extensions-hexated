@@ -73,21 +73,8 @@ class Xcineio : MainAPI() {
         val id = url.replace("$mainUrl/", "")
 
         val res = app.get("$mainAPI/data/watch/?_id=$id", referer = "$mainUrl/")
-            .parsedSafe<MediaDetail>() ?: throw ErrorLoadingException("Try Again")
+            .parsedSafe<MediaDetail>() ?: throw ErrorLoadingException()
         val type = if (res.tv == 1) "tv" else "movie"
-//        val actors = res.credits?.map { cast ->
-//            ActorData(
-//                Actor(
-//                    cast.name ?: return null,
-//                    getImageUrl(cast.profile_path)
-//                ),
-//                roleString = cast.character
-//            )
-//        } ?: res.cast?.map { cast ->
-//            ActorData(
-//                Actor(cast)
-//            )
-//        }
 
         val recommendations =
             app.get("$mainAPI/data/related_movies/?lang=2&cat=$type&_id=$id&server=0").text.let {
@@ -120,7 +107,6 @@ class Xcineio : MainAPI() {
                 this.plot = res.storyline ?: res.overview
                 this.tags = listOf(res.genres ?: "")
                 this.recommendations = recommendations
-//                this.actors = actors
             }
         } else {
             newMovieLoadResponse(
@@ -134,7 +120,6 @@ class Xcineio : MainAPI() {
                 this.plot = res.storyline ?: res.overview
                 this.tags = listOf(res.genres ?: "")
                 this.recommendations = recommendations
-//                this.actors = actors
             }
         }
 
@@ -177,10 +162,6 @@ class Xcineio : MainAPI() {
         val link: String?,
     )
 
-//    data class Data(
-//        val id: String?,
-//    )
-
     data class Season(
         @JsonProperty("_id") val _id: String? = null,
         @JsonProperty("s") val s: Int? = null,
@@ -188,12 +169,6 @@ class Xcineio : MainAPI() {
         @JsonProperty("year") val year: Int? = null,
         @JsonProperty("streams") val streams: ArrayList<Streams>? = arrayListOf(),
     )
-
-//    data class Credits(
-//        @JsonProperty("name") val name: String? = null,
-//        @JsonProperty("character") val character: String? = null,
-//        @JsonProperty("profile_path") val profile_path: String? = null,
-//    )
 
     data class Streams(
         @JsonProperty("_id") val _id: String? = null,
@@ -215,8 +190,6 @@ class Xcineio : MainAPI() {
         @JsonProperty("genres") val genres: String? = null,
         @JsonProperty("storyline") val storyline: String? = null,
         @JsonProperty("overview") val overview: String? = null,
-        @JsonProperty("cast") val cast: ArrayList<String>? = arrayListOf(),
-//        @JsonProperty("credits") val credits: ArrayList<Credits>? = arrayListOf(),
         @JsonProperty("streams") val streams: ArrayList<Streams>? = arrayListOf(),
     )
 
