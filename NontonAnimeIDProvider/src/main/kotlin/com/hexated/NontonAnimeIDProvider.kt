@@ -120,7 +120,7 @@ class NontonAnimeIDProvider : MainAPI() {
 
         val document = app.get(fixUrl ?: return null).document
 
-        val title = document.selectFirst("h1.entry-title.cs")!!.text().trim()
+        val title = document.selectFirst("h1.entry-title.cs")!!.text().removeSurrounding("Nonton Anime", "Sub Indo").trim()
         val poster = document.selectFirst(".poster > img")?.attr("data-src")
         val tags = document.select(".tagline > a").map { it.text() }
 
