@@ -547,9 +547,10 @@ object SoraExtractor : SoraStream() {
                             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
                         )
                     ).document
-                    val srcm3u8 = resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
-                        Regex("['|\"](.*?.m3u8)['|\"]").find(it)?.groupValues?.getOrNull(1)
-                    } ?: return@apmap null
+                    val srcm3u8 =
+                        resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
+                            Regex("['|\"](.*?.m3u8)['|\"]").find(it)?.groupValues?.getOrNull(1)
+                        } ?: return@apmap null
                     val quality = app.get(
                         srcm3u8, referer = source, headers = mapOf(
                             "Accept" to "*/*",
@@ -571,7 +572,12 @@ object SoraExtractor : SoraStream() {
                         )
                     )
                 }
-                !source.contains("youtube") -> loadExtractor(source, "$uniqueStreamAPI/", subtitleCallback, callback)
+                !source.contains("youtube") -> loadExtractor(
+                    source,
+                    "$uniqueStreamAPI/",
+                    subtitleCallback,
+                    callback
+                )
                 else -> {
                     // pass
                 }
@@ -958,7 +964,10 @@ object SoraExtractor : SoraStream() {
         ).apmap { server ->
             delay(1000)
             val sources =
-                app.get("$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server", timeout = 120L)
+                app.get(
+                    "$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server",
+                    timeout = 120L
+                )
                     .parsedSafe<ConsumetSourcesResponse>()
             val name = fixTitle(server)
             sources?.sources?.map {
@@ -1085,9 +1094,10 @@ object SoraExtractor : SoraStream() {
             } ?: return
 
         val animeId =
-            app.get("$consumetZoroAPI/$japTitle").parsedSafe<ConsumetSearchResponse>()?.results?.find {
+            app.get("$consumetZoroAPI/$japTitle")
+                .parsedSafe<ConsumetSearchResponse>()?.results?.find {
                 val title = it.title ?: return
-                (title.equals(engTitle, true) || title.equals(japTitle, true) ) && it.type == "TV"
+                (title.equals(engTitle, true) || title.equals(japTitle, true)) && it.type == "TV"
             }?.id ?: return
 
         val episodeId = app.get("$consumetZoroAPI/info?id=$animeId")
@@ -1133,7 +1143,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title?.replace("–", "-")
-        val url = if(season == null) {
+        val url = if (season == null) {
             "$lingAPI/en/videos/films/?title=$fixTitle"
         } else {
             "$lingAPI/en/videos/serials/?title=$fixTitle"
@@ -1151,15 +1161,19 @@ object SoraExtractor : SoraStream() {
             scriptData.first()
         } else {
             scriptData.find {
-                it.first?.contains("$fixTitle", true) == true && it.second?.contains("$year") == true
+                it.first?.contains(
+                    "$fixTitle",
+                    true
+                ) == true && it.second?.contains("$year") == true
             }
         }
 
         val doc = app.get(fixUrl(script?.third ?: return, lingAPI)).document
-        val iframe = (if(season == null) {
+        val iframe = (if (season == null) {
             doc.selectFirst("a.video-js.vjs-default-skin")?.attr("data-href")
         } else {
-            doc.select("div.blk div#tab_$season li")[episode!!.minus(1)].select("h5 a").attr("data-href")
+            doc.select("div.blk div#tab_$season li")[episode!!.minus(1)].select("h5 a")
+                .attr("data-href")
         })?.let { fixUrl(it, lingAPI) }
 
         val source = app.get(iframe ?: return)
@@ -1199,7 +1213,7 @@ object SoraExtractor : SoraStream() {
     ) {
         val url = "$uhdmoviesAPI/?s=$title"
         var doc = app.get(url).document
-        if(doc.select("title").text() == "Just a moment...") {
+        if (doc.select("title").text() == "Just a moment...") {
             doc = app.get(url, interceptor = CloudflareKiller()).document
         }
         val scriptData = doc.select("div.row.gridlove-posts article").map {
@@ -1220,13 +1234,15 @@ object SoraExtractor : SoraStream() {
                     if (season == null) {
                         Triple(
                             it.text(),
-                            it.selectFirst("span")?.text() ?: it.select("strong").last()?.text() ?: "",
+                            it.selectFirst("span")?.text() ?: it.select("strong").last()?.text()
+                            ?: "",
                             it.nextElementSibling()?.select("a")?.attr("href")
                         )
                     } else {
                         Triple(
                             it.text(),
-                            it.selectFirst("span")?.text() ?: it.select("strong").last()?.text() ?: "",
+                            it.selectFirst("span")?.text() ?: it.select("strong").last()?.text()
+                            ?: "",
                             it.nextElementSibling()?.select("a:contains(Episode $episode)")
                                 ?.attr("href")
                         )
@@ -1241,7 +1257,8 @@ object SoraExtractor : SoraStream() {
                 ?.substringBefore("\")")?.let {
                     app.get(fixUrl(it, base)).document
                 }
-            val bitLink = resDoc?.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
+            val bitLink =
+                resDoc?.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
             val baseDoc = app.get(fixUrl(bitLink, base)).document
             val downLink = baseDoc.select("div.mb-4 a").randomOrNull()
                 ?.attr("href") ?: run {
@@ -1254,13 +1271,17 @@ object SoraExtractor : SoraStream() {
                 ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')") ?: run {
                 val mirror = downPage.selectFirst("form[method=post] a.btn.btn-primary")
                     ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')")
-                app.get(mirror ?: return@apmap null).document.selectFirst("script:containsData(input.value =)")
+                app.get(
+                    mirror ?: return@apmap null
+                ).document.selectFirst("script:containsData(input.value =)")
                     ?.data()?.substringAfter("input.value = '")?.substringBefore("';")
             }
 
-            val videoQuality = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
-                ?: Qualities.Unknown.value
-            val videoSize = size.substringBeforeLast("/").let { if(it.contains("[")) it else "[$it]" }
+            val videoQuality =
+                Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                    ?: Qualities.Unknown.value
+            val videoSize =
+                size.substringBeforeLast("/").let { if (it.contains("[")) it else "[$it]" }
             callback.invoke(
                 ExtractorLink(
                     "UHDMovies $videoSize",
@@ -1328,7 +1349,17 @@ data class FilmxyCookies(
 
 fun String.filterIframe(seasonNum: Int?, year: Int?): Boolean {
     return if (seasonNum != null) {
-        this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)|([0-9]{3,4}p)")) && !this.contains("Download", true)
+        if (seasonNum == 1) {
+            this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)|([0-9]{3,4}p)")) && !this.contains(
+                "Download",
+                true
+            )
+        } else {
+            this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)")) && !this.contains(
+                "Download",
+                true
+            )
+        }
     } else {
         this.contains("$year", true) && !this.contains("Download", true)
     }
