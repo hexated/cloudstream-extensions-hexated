@@ -1260,7 +1260,7 @@ object SoraExtractor : SoraStream() {
 
             val videoQuality = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                 ?: Qualities.Unknown.value
-            val videoSize = size.substringBeforeLast("/")
+            val videoSize = size.substringBefore("/").let { if(it.contains("[")) it else "[$it]" }
             callback.invoke(
                 ExtractorLink(
                     "UHDMovies [$videoSize]",
