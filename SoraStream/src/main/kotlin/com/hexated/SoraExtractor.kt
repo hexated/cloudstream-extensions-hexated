@@ -1263,8 +1263,8 @@ object SoraExtractor : SoraStream() {
             val videoSize = size.substringBefore("/").let { if(it.contains("[")) it else "[$it]" }
             callback.invoke(
                 ExtractorLink(
-                    "UHDMovies [$videoSize]",
-                    "UHDMovies [$videoSize]",
+                    "UHDMovies $videoSize",
+                    "UHDMovies $videoSize",
                     downloadLink ?: return@apmap null,
                     "",
                     videoQuality
