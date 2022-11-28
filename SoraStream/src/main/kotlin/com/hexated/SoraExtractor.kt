@@ -1328,7 +1328,7 @@ data class FilmxyCookies(
 
 fun String.filterIframe(seasonNum: Int?, year: Int?): Boolean {
     return if (seasonNum != null) {
-        this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)")) && !this.contains("Download", true)
+        this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)|([0-9]{3,4}p)")) && !this.contains("Download", true)
     } else {
         this.contains("$year", true) && !this.contains("Download", true)
     }
