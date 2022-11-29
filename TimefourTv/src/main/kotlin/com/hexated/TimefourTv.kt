@@ -88,8 +88,8 @@ open class TimefourTv : MainAPI() {
         val name = url.removePrefix("$mainUrl/")
         val doc = app.get("$mainUrl/schedule.php").document
         val episode = mutableListOf<Episode>()
-        doc.selectFirst("div.search_p h1:contains($name)")?.nextElementSiblings()?.toString()
-            ?.substringBefore("<h1")?.split("<br>")?.map {
+        doc.selectFirst("div.search_p h2:contains($name)")?.nextElementSiblings()?.toString()
+            ?.substringBefore("<h2")?.split("<br>")?.map {
                 val desc = it.substringBefore("<span").replace(Regex("</?strong>"), "").replace("<p>", "")
                 Jsoup.parse(it).select("span").map { ele ->
                     val title = ele.select("a").text()
