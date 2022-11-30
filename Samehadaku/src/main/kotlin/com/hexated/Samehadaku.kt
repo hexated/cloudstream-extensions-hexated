@@ -12,7 +12,6 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
-//test
 class Samehadaku : MainAPI() {
     override var mainUrl = "https://samehadaku.win"
     override var name = "Samehadaku"
