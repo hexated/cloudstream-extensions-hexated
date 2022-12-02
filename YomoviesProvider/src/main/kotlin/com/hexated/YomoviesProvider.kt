@@ -10,7 +10,8 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class YomoviesProvider : MainAPI() {
-    override var mainUrl = "https://yomovies.icu"
+    override var mainUrl = "https://yomovies.run"
+    private var directUrl = mainUrl
     override var name = "Yomovies"
     override val hasMainPage = true
     override var lang = "hi"
@@ -64,8 +65,9 @@ class YomoviesProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
-
+        val request = app.get(url)
+        directUrl = getBaseUrl(request.url)
+        val document = request.document
         val title = document.selectFirst("div.mvic-desc h3")?.text()?.trim() ?: return null
         val poster = fixUrlNull(document.selectFirst("div.thumb.mvic-thumb img")?.attr("src"))
         val tags = document.select("div.mvici-left p:nth-child(1) a").map { it.text() }
@@ -140,31 +142,30 @@ class YomoviesProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        if (data.startsWith(mainUrl)) {
-            val req = app.get(data)
-            val ref = getBaseUrl(req.url)
-            req.document.select("div.movieplay iframe").map { fixUrl(it.attr("src")) }
+        if (data.contains("yomovies")) {
+            val doc = app.get(data).document
+            doc.select("div.movieplay iframe").map { fixUrl(it.attr("src")) }
                 .apmap { source ->
                     safeApiCall {
                         when {
                             source.startsWith("https://membed.net") -> app.get(
                                 source,
-                                referer = "$ref/"
+                                referer = "$directUrl/"
                             ).document.select("ul.list-server-items li")
                                 .apmap {
                                     loadExtractor(
                                         it.attr("data-video").substringBefore("=https://msubload"),
-                                        "$ref/",
+                                        "$directUrl/",
                                         subtitleCallback,
                                         callback
                                     )
                                 }
-                            else -> loadExtractor(source, "$ref/", subtitleCallback, callback)
+                            else -> loadExtractor(source, "$directUrl/", subtitleCallback, callback)
                         }
                     }
                 }
         } else {
-            loadExtractor(data, "$mainUrl/", subtitleCallback, callback)
+            loadExtractor(data, "$directUrl/", subtitleCallback, callback)
         }
 
         return true

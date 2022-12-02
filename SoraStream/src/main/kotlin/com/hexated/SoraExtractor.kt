@@ -1,20 +1,15 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.hexated.SoraStream.Companion.filmxyAPI
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
-import com.lagradost.nicehttp.requestCreator
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import com.google.gson.JsonParser
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import kotlinx.coroutines.delay
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.net.URI
 
 val session = Session(Requests().baseClient)
 
@@ -1339,198 +1334,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-}
-
-data class FilmxyCookies(
-    val phpsessid: String? = null,
-    val wLog: String? = null,
-    val wSec: String? = null,
-)
-
-fun String.filterIframe(seasonNum: Int?, year: Int?): Boolean {
-    return if (seasonNum != null) {
-        if (seasonNum == 1) {
-            this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)|([0-9]{3,4}p)")) && !this.contains(
-                "Download",
-                true
-            )
-        } else {
-            this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)")) && !this.contains(
-                "Download",
-                true
-            )
-        }
-    } else {
-        this.contains("$year", true) && !this.contains("Download", true)
-    }
-}
-
-fun String.filterMedia(title: String?, yearNum: Int?, seasonNum: Int?): Boolean {
-    return if (seasonNum != null) {
-        when {
-            seasonNum > 1 -> this.contains(Regex("(?i)(Season\\s0?1-0?$seasonNum)|(S0?1-S?0?$seasonNum)")) && this.contains(
-                "$title",
-                true
-            ) && this.contains("$yearNum")
-            else -> this.contains(Regex("(?i)(Season\\s0?1)|(S0?1)")) && this.contains(
-                "$title",
-                true
-            ) && this.contains("$yearNum")
-        }
-    } else {
-        this.contains("$title", true) && this.contains("$yearNum")
-    }
-}
-
-suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
-
-    val url = if (season == null) {
-        "${filmxyAPI}/movie/$imdbId"
-    } else {
-        "${filmxyAPI}/tv/$imdbId"
-    }
-    val cookieUrl = "${filmxyAPI}/wp-admin/admin-ajax.php"
-
-    val res = session.get(
-        url,
-        headers = mapOf(
-            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-        ),
-    )
-
-    if (!res.isSuccessful) return FilmxyCookies()
-
-    val userNonce =
-        res.document.select("script").find { it.data().contains("var userNonce") }?.data()?.let {
-            Regex("var\\suserNonce.*?\"(\\S+?)\";").find(it)?.groupValues?.get(1)
-        }
-
-    var phpsessid = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
-        .first { it.name == "PHPSESSID" }.value
-
-    session.post(
-        cookieUrl,
-        data = mapOf(
-            "action" to "guest_login",
-            "nonce" to "$userNonce",
-        ),
-        headers = mapOf(
-            "Cookie" to "PHPSESSID=$phpsessid; G_ENABLED_IDPS=google",
-            "X-Requested-With" to "XMLHttpRequest",
-        )
-    )
-
-    val cookieJar = session.baseClient.cookieJar.loadForRequest(cookieUrl.toHttpUrl())
-    phpsessid = cookieJar.first { it.name == "PHPSESSID" }.value
-    val wLog =
-        cookieJar.first { it.name == "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" }.value
-    val wSec = cookieJar.first { it.name == "wordpress_sec_8bf9d5433ac88cc9a3a396d6b154cd01" }.value
-
-    return FilmxyCookies(phpsessid, wLog, wSec)
-}
-
-private fun String?.fixTitle(): String? {
-    return this?.replace(Regex("[!%:]|( &)"), "")?.replace(" ", "-")?.lowercase()
-        ?.replace("-–-", "-")
-}
-
-fun getLanguage(str: String): String {
-    return if (str.contains("(in_ID)")) "Indonesian" else str
-}
-
-private fun getKisskhTitle(str: String?): String? {
-    return str?.replace(Regex("[^a-zA-Z0-9]"), "-")
-}
-
-private fun getQuality(str: String): Int {
-    return when (str) {
-        "360p" -> Qualities.P240.value
-        "480p" -> Qualities.P360.value
-        "720p" -> Qualities.P480.value
-        "1080p" -> Qualities.P720.value
-        "1080p Ultra" -> Qualities.P1080.value
-        else -> getQualityFromName(str)
-    }
-}
-
-private fun getBaseUrl(url: String): String {
-    return URI(url).let {
-        "${it.scheme}://${it.host}"
-    }
-}
-
-private fun decryptStreamUrl(data: String): String {
-
-    fun getTrash(arr: List<String>, item: Int): List<String> {
-        val trash = ArrayList<List<String>>()
-        for (i in 1..item) {
-            trash.add(arr)
-        }
-        return trash.reduce { acc, list ->
-            val temp = ArrayList<String>()
-            acc.forEach { ac ->
-                list.forEach { li ->
-                    temp.add(ac.plus(li))
-                }
-            }
-            return@reduce temp
-        }
-    }
-
-    val trashList = listOf("@", "#", "!", "^", "$")
-    val trashSet = getTrash(trashList, 2) + getTrash(trashList, 3)
-    var trashString = data.replace("#2", "").split("//_//").joinToString("")
-
-    trashSet.forEach {
-        val temp = base64Encode(it.toByteArray())
-        trashString = trashString.replace(temp, "")
-    }
-
-    return base64Decode(trashString)
-
-}
-
-suspend fun loadLinksWithWebView(
-    url: String,
-    callback: (ExtractorLink) -> Unit
-) {
-    val foundVideo = WebViewResolver(
-        Regex("""\.m3u8|i7njdjvszykaieynzsogaysdgb0hm8u1mzubmush4maopa4wde\.com""")
-    ).resolveUsingWebView(
-        requestCreator(
-            "GET", url, referer = "https://olgply.com/"
-        )
-    ).first ?: return
-
-    callback.invoke(
-        ExtractorLink(
-            "Olgply",
-            "Olgply",
-            foundVideo.url.toString(),
-            "",
-            Qualities.P1080.value,
-            true
-        )
-    )
-}
-
-fun fixUrl(url: String, domain: String): String {
-    if (url.startsWith("http")) {
-        return url
-    }
-    if (url.isEmpty()) {
-        return ""
-    }
-
-    val startsWithNoHttp = url.startsWith("//")
-    if (startsWithNoHttp) {
-        return "https:$url"
-    } else {
-        if (url.startsWith('/')) {
-            return domain + url
-        }
-        return "$domain/$url"
-    }
 }
 
 data class HdMovieBoxSource(
