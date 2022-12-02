@@ -23,6 +23,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invoZoro
 import com.hexated.SoraExtractor.invokeFwatayako
+import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -48,6 +49,7 @@ open class SoraStream : TmdbProvider() {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
         const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
+        const val gdbot = "https://gdbot.xyz"
 
         private val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
         private var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
@@ -72,6 +74,7 @@ open class SoraStream : TmdbProvider() {
         const val lingAPI = "https://ling-online.net"
         const val uhdmoviesAPI = "https://uhdmovies.site"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
+        const val gMoviesAPI = "https://gdrivemovies.xyz"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -450,6 +453,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeFwatayako(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeGMovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
         )
 
