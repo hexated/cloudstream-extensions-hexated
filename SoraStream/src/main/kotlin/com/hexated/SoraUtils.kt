@@ -1,5 +1,7 @@
 package com.hexated
 
+import com.hexated.SoraStream.Companion.gdbot
+import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.base64Encode
 import com.lagradost.cloudstream3.network.WebViewResolver
@@ -49,6 +51,34 @@ fun String.filterMedia(title: String?, yearNum: Int?, seasonNum: Int?): Boolean 
     } else {
         this.contains("$title", true) && this.contains("$yearNum")
     }
+}
+
+suspend fun extractGdbot(url: String): String? {
+    val headers = mapOf(
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    )
+    val res = app.get(
+        "$gdbot/", headers = headers
+    )
+    val token = res.document.selectFirst("input[name=_token]")?.attr("value")
+    val cookiesSet = res.headers.filter { it.first == "set-cookie" }
+    val xsrf = cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
+        ?.substringBefore(";")
+    val session = cookiesSet.find { it.second.contains("gdtot_proxy_session") }?.second?.substringAfter("gdtot_proxy_session=")
+        ?.substringBefore(";")
+
+    val cookies = mapOf(
+        "gdtot_proxy_session" to "$session",
+        "XSRF-TOKEN" to "$xsrf"
+    )
+    val requestFile = app.post(
+        "$gdbot/file", data = mapOf(
+            "link" to url,
+            "_token" to "$token"
+        ), headers = headers, referer = "$gdbot/", cookies = cookies
+    ).document
+
+    return requestFile.selectFirst("div.mt-8 a.float-right")?.attr("href")
 }
 
 suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
@@ -119,6 +149,16 @@ fun getQuality(str: String): Int {
         "1080p" -> Qualities.P720.value
         "1080p Ultra" -> Qualities.P1080.value
         else -> getQualityFromName(str)
+    }
+}
+
+fun getGMoviesQuality(str: String): Int {
+    return when {
+        str.contains("480P", true) -> Qualities.P480.value
+        str.contains("720P", true) -> Qualities.P720.value
+        str.contains("1080", true) -> Qualities.P1080.value
+        str.contains("4K", true) -> Qualities.P2160.value
+        else -> Qualities.Unknown.value
     }
 }
 

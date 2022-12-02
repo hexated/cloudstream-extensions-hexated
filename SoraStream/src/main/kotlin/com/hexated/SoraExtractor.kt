@@ -9,6 +9,7 @@ import com.lagradost.nicehttp.Session
 import com.google.gson.JsonParser
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import kotlinx.coroutines.delay
+import okhttp3.FormBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 val session = Session(Requests().baseClient)
@@ -1091,9 +1092,12 @@ object SoraExtractor : SoraStream() {
         val animeId =
             app.get("$consumetZoroAPI/$japTitle")
                 .parsedSafe<ConsumetSearchResponse>()?.results?.find {
-                val title = it.title ?: return
-                (title.equals(engTitle, true) || title.equals(japTitle, true)) && it.type == "TV"
-            }?.id ?: return
+                    val title = it.title ?: return
+                    (title.equals(engTitle, true) || title.equals(
+                        japTitle,
+                        true
+                    )) && it.type == "TV"
+                }?.id ?: return
 
         val episodeId = app.get("$consumetZoroAPI/info?id=$animeId")
             .parsedSafe<ConsumetDetails>()?.episodes?.find {
@@ -1334,7 +1338,85 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    suspend fun invokeGMovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.fixTitle()
+        val url = if (season == null) {
+            "$gMoviesAPI/$fixTitle-$year"
+        } else {
+            "$gMoviesAPI/$fixTitle-$year-season-$season"
+        }
+
+        val doc = app.get(url).document
+
+        val iframe = (if (season == null) {
+            doc.select("div.is-content-justification-center div.wp-block-button").map {
+                it.select("a").attr("href") to it.text()
+            }
+        } else {
+            doc.select("div.is-content-justification-center").find {
+                it.previousElementSibling()?.text()?.contains("episode $episode", true) == true
+            }?.select("div.wp-block-button")?.map {
+                it.select("a").attr("href") to it.text()
+            }
+        })?.filter { it.first.contains("gdtot") } ?: return
+
+        iframe.apmap { (iframeLink, title) ->
+            val gdBotLink = extractGdbot(iframeLink)
+            val iframeGdbot = app.get(
+                gdBotLink ?: return@apmap null
+            ).document.selectFirst("ul.divide-y li.flex.flex-col a:contains(Drivebot)")
+                ?.attr("href")
+            val driveDoc = app.get(iframeGdbot ?: return@apmap null)
+
+            val ssid = driveDoc.cookies["PHPSESSID"]
+            val script = driveDoc.document.selectFirst("script:containsData(var formData)")?.data()
+
+            val baseUrl = getBaseUrl(iframeGdbot)
+            val token = script?.substringAfter("'token', '")?.substringBefore("');")
+            val link = script?.substringAfter("fetch('")?.substringBefore("',").let { "$baseUrl$it" }
+
+            val body = FormBody.Builder()
+                .addEncoded("token", "$token")
+                .build()
+            val cookies = mapOf("PHPSESSID" to "$ssid")
+
+            val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)?.let { "[$it]" } ?: ""
+            app.post(
+                link,
+                requestBody = body,
+                headers = mapOf(
+                    "Accept" to "*/*",
+                    "Origin" to baseUrl,
+                    "Sec-Fetch-Site" to "same-origin"
+                ),
+                cookies = cookies
+            ).parsedSafe<GdBotLink>()?.url?.let { videoLink ->
+                callback.invoke(
+                    ExtractorLink(
+                        "GMovies $size",
+                        "GMovies $size",
+                        videoLink,
+                        "",
+                        getGMoviesQuality(title)
+                    )
+                )
+            }
+        }
+    }
+
+
 }
+
+data class GdBotLink(
+    @JsonProperty("url") val url: String? = null,
+)
 
 data class HdMovieBoxSource(
     @JsonProperty("videoUrl") val videoUrl: String? = null,
