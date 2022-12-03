@@ -359,25 +359,20 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
-        val url = "$hdMovieBoxAPI/watch/$fixTitle"
-//        val ref = if (season == null) {
-//            "$hdMovieBoxAPI/watch/$fixTitle"
-//        } else {
-//            "$hdMovieBoxAPI/watch/$fixTitle/season-$season/episode-$episode"
-//        }
-
-        val doc = app.get(url).document
+        val request = app.get("$hdMovieBoxAPI/watch/$fixTitle")
+        if (!request.isSuccessful) return
+        val doc = request.document
         val id = if (season == null) {
             doc.selectFirst("div.player div#not-loaded")?.attr("data-whatwehave")
         } else {
             doc.select("div.season-list-column div[data-season=$season] div.list div.item")[episode?.minus(
                 1
             ) ?: 0].selectFirst("div.ui.checkbox")?.attr("data-episode")
-        }
+        } ?: return
 
         val iframeUrl = app.post(
             "$hdMovieBoxAPI/ajax/service", data = mapOf(
-                "e_id" to "$id",
+                "e_id" to id,
                 "v_lang" to "en",
                 "type" to "get_whatwehave",
             ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
@@ -1231,25 +1226,15 @@ object SoraExtractor : SoraStream() {
                 .filter { it.text().filterIframe(season, year) }
                 .mapNotNull {
                     if (season == null) {
-                        Triple(
-                            it.text(),
-                            it.selectFirst("span")?.text() ?: it.select("strong").last()?.text()
-                            ?: "",
-                            it.nextElementSibling()?.select("a")?.attr("href")
-                        )
+                        it.text() to it.nextElementSibling()?.select("a")?.attr("href")
                     } else {
-                        Triple(
-                            it.text(),
-                            it.selectFirst("span")?.text() ?: it.select("strong").last()?.text()
-                            ?: "",
-                            it.nextElementSibling()?.select("a:contains(Episode $episode)")
-                                ?.attr("href")
-                        )
+                        it.text() to it.nextElementSibling()?.select("a:contains(Episode $episode)")
+                            ?.attr("href")
                     }
-                }.filter { it.third?.contains(Regex("(https:)|(http:)")) == true }
+                }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
 
-        val base = getBaseUrl(iframe.first().third ?: return)
-        iframe.apmap { (quality, size, link) ->
+        val base = getBaseUrl(iframe.first().second ?: return)
+        iframe.apmap { (quality, link) ->
             delay(2000)
             val res = app.get(link ?: return@apmap null).document
             val resDoc = res.selectFirst("script")?.data()?.substringAfter("replace(\"")
@@ -1279,12 +1264,12 @@ object SoraExtractor : SoraStream() {
             val videoQuality =
                 Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                     ?: Qualities.Unknown.value
-            val videoSize =
-                size.substringBeforeLast("/").let { if (it.contains("[")) it else "[$it]" }
+            val size = Regex("(?i)\\[(\\S+\\s?gb|mb)[]/]").find(quality)?.groupValues?.getOrNull(1)
+                ?.let { "[$it]" } ?: quality
             callback.invoke(
                 ExtractorLink(
-                    "UHDMovies $videoSize",
-                    "UHDMovies $videoSize",
+                    "UHDMovies $size",
+                    "UHDMovies $size",
                     downloadLink ?: return@apmap null,
                     "",
                     videoQuality
