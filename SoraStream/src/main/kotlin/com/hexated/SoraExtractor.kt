@@ -472,6 +472,7 @@ object SoraExtractor : SoraStream() {
 
         val res = app.get(url)
         if (!res.isSuccessful) return
+        val referer = getBaseUrl(res.url)
         val document = res.document
         val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
         val type = if (url.contains("/movie/")) "movie" else "tv"
@@ -480,7 +481,7 @@ object SoraExtractor : SoraStream() {
             it.attr("data-nume")
         }.apmap { nume ->
             val source = app.post(
-                url = "$idlixAPI/wp-admin/admin-ajax.php",
+                url = "$referer/wp-admin/admin-ajax.php",
                 data = mapOf(
                     "action" to "doo_player_ajax",
                     "post" to id,
@@ -492,7 +493,7 @@ object SoraExtractor : SoraStream() {
             ).parsed<ResponseHash>().embed_url
 
             if (!source.contains("youtube")) {
-                loadExtractor(source, "$idlixAPI/", subtitleCallback, callback)
+                loadExtractor(source, "$referer/", subtitleCallback, callback)
             }
         }
     }
