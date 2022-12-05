@@ -18,9 +18,9 @@ data class FilmxyCookies(
     val wSec: String? = null,
 )
 
-fun String.filterIframe(seasonNum: Int?, year: Int?): Boolean {
+fun String.filterIframe(seasonNum: Int?, lastSeason: Int?, year: Int?): Boolean {
     return if (seasonNum != null) {
-        if (seasonNum == 1) {
+        if (lastSeason == 1) {
             this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)|([0-9]{3,4}p)")) && !this.contains(
                 "Download",
                 true
