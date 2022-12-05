@@ -6,11 +6,12 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
+import java.net.URI
 
 class IdlixProvider : MainAPI() {
-    override var mainUrl = "https://88.210.3.94"
+    override var mainUrl = "https://88.210.12.206"
+    private var directUrl = mainUrl
     override var name = "Idlix"
     override val hasMainPage = true
     override var lang = "id"
@@ -32,6 +33,12 @@ class IdlixProvider : MainAPI() {
         "$mainUrl/genre/anime/page/" to "Anime",
         "$mainUrl/genre/drama-korea/page/" to "Drama Korea",
     )
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
+    }
 
     override suspend fun getMainPage(
         page: Int,
@@ -100,8 +107,9 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
-
+        val request = app.get(url)
+        directUrl = getBaseUrl(request.url)
+        val document = request.document
         val title =
             document.selectFirst("div.data > h1")?.text()?.replace(Regex("\\(\\d{4}\\)"), "")
                 ?.trim().toString()
@@ -172,94 +180,6 @@ class IdlixProvider : MainAPI() {
         }
     }
 
-    private fun getLanguage(str: String): String {
-        return when {
-            str.lowercase().contains("indonesia") || str.lowercase()
-                .contains("bahasa") -> "Indonesian"
-            else -> str
-        }
-    }
-
-    private suspend fun invokeLokalSource(
-        url: String,
-        subCallback: (SubtitleFile) -> Unit,
-        sourceCallback: (ExtractorLink) -> Unit
-    ) {
-        val document = app.get(url, referer = "$mainUrl/").document
-        val hash = url.split("/").last().substringAfter("data=")
-
-        val m3uLink = app.post(
-            url = "https://jeniusplay.com/player/index.php?data=$hash&do=getVideo",
-            data = mapOf("hash" to hash, "r" to "$mainUrl/"),
-            referer = url,
-            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-        ).parsed<ResponseSource>().videoSource
-
-        M3u8Helper.generateM3u8(
-            this.name,
-            m3uLink,
-            url,
-        ).forEach(sourceCallback)
-
-
-        document.select("script").map { script ->
-            if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
-                val subData =
-                    getAndUnpack(script.data()).substringAfter("\"tracks\":[").substringBefore("],")
-                tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
-                    subCallback.invoke(
-                        SubtitleFile(
-                            getLanguage(subtitle.label!!),
-                            subtitle.file
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    private suspend fun invokeLaviolaSource(
-        url: String,
-        subCallback: (SubtitleFile) -> Unit,
-        sourceCallback: (ExtractorLink) -> Unit
-    ) {
-        val document = app.get(url, referer = "$mainUrl/").document
-        val baseName = "Laviola"
-        val baseUrl = "https://laviola.live/"
-        document.select("script").map { script ->
-            if (script.data().contains("var config = {")) {
-                val data = script.data().substringAfter("sources: [").substringBefore("],")
-                tryParseJson<List<ResponseLaviolaSource>>("[$data]")?.map { m3u ->
-                    val m3uData = app.get(m3u.file, referer = baseUrl).text
-                    val quality =
-                        Regex("\\d{3,4}\\.m3u8").findAll(m3uData).map { it.value }.toList()
-                    quality.forEach {
-                        sourceCallback.invoke(
-                            ExtractorLink(
-                                source = baseName,
-                                name = baseName,
-                                url = m3u.file.replace("video.m3u8", it),
-                                referer = baseUrl,
-                                quality = getQualityFromName("${it.replace(".m3u8", "")}p"),
-                                isM3u8 = true
-                            )
-                        )
-                    }
-                }
-
-                val subData = script.data().substringAfter("tracks: [").substringBefore("],")
-                tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
-                    subCallback.invoke(
-                        SubtitleFile(
-                            getLanguage(subtitle.label!!),
-                            (if (subtitle.kind!!.contains("captions")) subtitle.file else null)!!
-                        )
-                    )
-                }
-            }
-        }
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -276,7 +196,7 @@ class IdlixProvider : MainAPI() {
         }.apmap { nume ->
             safeApiCall {
                 var source = app.post(
-                    url = "$mainUrl/wp-admin/admin-ajax.php",
+                    url = "$directUrl/wp-admin/admin-ajax.php",
                     data = mapOf(
                         "action" to "doo_player_ajax",
                         "post" to id,
@@ -287,24 +207,11 @@ class IdlixProvider : MainAPI() {
                     referer = data
                 ).parsed<ResponseHash>().embed_url
 
-                when {
-                    source.startsWith("https://jeniusplay.com") -> invokeLokalSource(
-                        source,
-                        subtitleCallback,
-                        callback
-                    )
-                    source.startsWith("https://laviola.live") -> invokeLaviolaSource(
-                        source,
-                        subtitleCallback,
-                        callback
-                    )
-                    else -> {
-                        if (source.startsWith("https://uservideo.xyz")) {
-                            source = app.get(source).document.select("iframe").attr("src")
-                        }
-                        loadExtractor(source, data, subtitleCallback, callback)
-                    }
+                if (source.startsWith("https://uservideo.xyz")) {
+                    source = app.get(source).document.select("iframe").attr("src")
                 }
+                loadExtractor(source, directUrl, subtitleCallback, callback)
+
             }
         }
 
@@ -314,23 +221,6 @@ class IdlixProvider : MainAPI() {
     data class ResponseHash(
         @JsonProperty("embed_url") val embed_url: String,
         @JsonProperty("type") val type: String?,
-    )
-
-    data class ResponseSource(
-        @JsonProperty("hls") val hls: Boolean,
-        @JsonProperty("videoSource") val videoSource: String,
-        @JsonProperty("securedLink") val securedLink: String?,
-    )
-
-    data class Tracks(
-        @JsonProperty("kind") val kind: String?,
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String?,
-    )
-
-    data class ResponseLaviolaSource(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String?,
     )
 
 }
