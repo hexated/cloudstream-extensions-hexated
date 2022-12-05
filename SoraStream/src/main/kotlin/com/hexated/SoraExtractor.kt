@@ -1223,7 +1223,7 @@ object SoraExtractor : SoraStream() {
 
         val iframe =
             detailDoc.select("div.entry-content p").map { it }
-                .filter { it.text().filterIframe(season, year) }
+                .filter { it.text().filterIframe(season, lastSeason, year) }
                 .mapNotNull {
                     if (season == null) {
                         it.text() to it.nextElementSibling()?.select("a")?.attr("href")
@@ -1264,7 +1264,7 @@ object SoraExtractor : SoraStream() {
             val videoQuality =
                 Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                     ?: Qualities.Unknown.value
-            val size = Regex("(?i)\\[(\\S+\\s?gb|mb)[]/]").find(quality)?.groupValues?.getOrNull(1)
+            val size = Regex("(?i)\\[(\\S+\\s?(gb|mb))[]/]").find(quality)?.groupValues?.getOrNull(1)
                 ?.let { "[$it]" } ?: quality
             callback.invoke(
                 ExtractorLink(
