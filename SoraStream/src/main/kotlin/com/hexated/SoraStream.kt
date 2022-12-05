@@ -98,9 +98,9 @@ open class SoraStream : TmdbProvider() {
 
     override val mainPage = mainPageOf(
         "$tmdbAPI/trending/all/day?api_key=$apiKey&region=&page=" to "Trending",
-        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=&page=" to "Airing Today TV Shows",
         "$tmdbAPI/movie/popular?api_key=$apiKey&region=&page=" to "Popular Movies",
         "$tmdbAPI/tv/popular?api_key=$apiKey&region=&page=" to "Popular TV Shows",
+        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=&page=" to "Airing Today TV Shows",
         "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=&page=" to "On The Air TV Shows",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=213&page=" to "Netflix",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=1024&page=" to "Amazon",
