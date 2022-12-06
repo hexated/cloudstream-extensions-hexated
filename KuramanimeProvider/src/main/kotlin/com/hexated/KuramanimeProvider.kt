@@ -13,7 +13,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class KuramanimeProvider : MainAPI() {
-    override var mainUrl = "https://kuramanime.com"
+    override var mainUrl = "https://kuramanime.net"
     override var name = "Kuramanime"
     override val hasQuickSearch = false
     override val hasMainPage = true
