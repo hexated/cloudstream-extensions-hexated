@@ -6,10 +6,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.extractors.XStreamCdn
-import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
-import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
 class Samehadaku : MainAPI() {
@@ -48,16 +46,6 @@ class Samehadaku : MainAPI() {
         "$mainUrl/" to "HomePage",
     )
 
-    private val interceptor = CloudflareKiller()
-
-    private suspend fun request(url: String, document: Document): Document {
-        return if(document.select("title").text() == "Just a moment...") {
-            app.get(url, interceptor = interceptor).document
-        } else {
-            document
-        }
-    }
-
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
@@ -65,9 +53,8 @@ class Samehadaku : MainAPI() {
         val items = mutableListOf<HomePageList>()
 
         if (request.name != "Episode Terbaru" && page <= 1) {
-            var document = app.get(request.data).document
-            document = request(request.data, document)
-            document.select("div.widget_senction").forEach { block ->
+            val doc = app.get(request.data).document
+            doc.select("div.widget_senction").forEach { block ->
                 val header = block.selectFirst("div.widget-title h3")?.ownText() ?: return@forEach
                 val home = block.select("div.animepost").mapNotNull {
                     it.toSearchResult()
@@ -77,9 +64,8 @@ class Samehadaku : MainAPI() {
         }
 
         if (request.name == "Episode Terbaru") {
-            var document = app.get(request.data + page).document
-            document = request(request.data + page, document)
-            val home = document.selectFirst("div.post-show")?.select("ul li")
+            val home =
+                app.get(request.data + page).document.selectFirst("div.post-show")?.select("ul li")
                     ?.mapNotNull {
                         it.toSearchResult()
                     } ?: throw ErrorLoadingException("No Media Found")
@@ -98,15 +84,12 @@ class Samehadaku : MainAPI() {
         return newAnimeSearchResponse(title, href ?: return null, TvType.Anime) {
             this.posterUrl = posterUrl
             addSub(epNum)
-            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
 
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/?s=$query"
-        var document = app.get(link).document
-        document = request(link, document)
+        val document = app.get("$mainUrl/?s=$query").document
         return document.select("main#main div.animepost").mapNotNull {
             it.toSearchResult()
         }
@@ -116,20 +99,16 @@ class Samehadaku : MainAPI() {
         val fixUrl = if (url.contains("/anime/")) {
             url
         } else {
-            var document = app.get(url).document
-            document = request(url, document)
-            document.selectFirst("div.nvs.nvsc a")?.attr("href")
+            app.get(url).document.selectFirst("div.nvs.nvsc a")?.attr("href")
         }
 
-        var document = app.get(fixUrl ?: return null).document
-        document = request(fixUrl, document)
+        val document = app.get(fixUrl ?: return null).document
         val title = document.selectFirst("h1.entry-title")?.text()?.removeSurrounding("Nonton", "Subtitle Indonesia")?.trim() ?: return null
         val poster = document.selectFirst("div.thumb > img")?.attr("src")
         val tags = document.select("div.genre-info > a").map { it.text() }
-
-        val year = Regex("\\d,\\s([0-9]*)").find(
-            document.selectFirst("div.spe > span:contains(Released)")?.ownText() ?: return null
-        )?.groupValues?.get(1)?.toIntOrNull()
+        val year = document.selectFirst("div.spe > span:contains(Rilis)")?.ownText()?.let {
+            Regex("\\d,\\s([0-9]*)").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        }
         val status = getStatus(document.selectFirst("div.spe > span:contains(Status)")?.ownText() ?: return null)
         val type = document.selectFirst("div.spe > span:contains(Type)")?.ownText()?.trim()?.lowercase() ?: "tv"
         val rating = document.selectFirst("span.ratingValue")?.text()?.trim()?.toRatingInt()
@@ -168,7 +147,6 @@ class Samehadaku : MainAPI() {
             addTrailer(trailer)
             this.tags = tags
             this.recommendations = recommendations
-            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
 
     }
@@ -180,8 +158,7 @@ class Samehadaku : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        var document = app.get(data).document
-        document = request(data, document)
+        val document = app.get(data).document
         val sources = ArrayList<String>()
 
         document.select("div#server ul li div").apmap {
