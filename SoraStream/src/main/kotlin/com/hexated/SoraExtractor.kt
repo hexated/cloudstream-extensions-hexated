@@ -820,6 +820,15 @@ object SoraExtractor : SoraStream() {
             it.seriesNo == (episode ?: 0)
         }
 
+        json?.subtitlingList?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.language ?: "",
+                    sub.subtitlingUrl ?: return@map
+                )
+            )
+        }
+
         json?.definitionList?.apmap { video ->
             delay(1000)
             app.get(
@@ -838,15 +847,6 @@ object SoraExtractor : SoraStream() {
                     )
                 )
             }
-        }
-
-        json?.subtitlingList?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.language ?: "",
-                    sub.subtitlingUrl ?: return@map
-                )
-            )
         }
 
     }
