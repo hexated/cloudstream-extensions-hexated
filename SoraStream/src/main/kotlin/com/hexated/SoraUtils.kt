@@ -5,10 +5,12 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.base64Encode
 import com.lagradost.cloudstream3.network.WebViewResolver
+import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.nicehttp.requestCreator
+import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.net.URI
 
@@ -62,10 +64,12 @@ suspend fun extractGdbot(url: String): String? {
     )
     val token = res.document.selectFirst("input[name=_token]")?.attr("value")
     val cookiesSet = res.headers.filter { it.first == "set-cookie" }
-    val xsrf = cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
-        ?.substringBefore(";")
-    val session = cookiesSet.find { it.second.contains("gdtot_proxy_session") }?.second?.substringAfter("gdtot_proxy_session=")
-        ?.substringBefore(";")
+    val xsrf =
+        cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
+            ?.substringBefore(";")
+    val session =
+        cookiesSet.find { it.second.contains("gdtot_proxy_session") }?.second?.substringAfter("gdtot_proxy_session=")
+            ?.substringBefore(";")
 
     val cookies = mapOf(
         "gdtot_proxy_session" to "$session",
@@ -79,6 +83,67 @@ suspend fun extractGdbot(url: String): String? {
     ).document
 
     return requestFile.selectFirst("div.mt-8 a.float-right")?.attr("href")
+}
+
+suspend fun extractDrivebot(url: String): String? {
+    val iframeGdbot =
+        app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(Drivebot)")
+            ?.attr("href")
+    val driveDoc = app.get(iframeGdbot ?: return null)
+
+    val ssid = driveDoc.cookies["PHPSESSID"]
+    val script = driveDoc.document.selectFirst("script:containsData(var formData)")?.data()
+
+    val baseUrl = getBaseUrl(iframeGdbot)
+    val token = script?.substringAfter("'token', '")?.substringBefore("');")
+    val link =
+        script?.substringAfter("fetch('")?.substringBefore("',").let { "$baseUrl$it" }
+
+    val body = FormBody.Builder()
+        .addEncoded("token", "$token")
+        .build()
+    val cookies = mapOf("PHPSESSID" to "$ssid")
+
+    val result = app.post(
+        link,
+        requestBody = body,
+        headers = mapOf(
+            "Accept" to "*/*",
+            "Origin" to baseUrl,
+            "Sec-Fetch-Site" to "same-origin"
+        ),
+        cookies = cookies,
+        referer = iframeGdbot
+    ).text
+    return AppUtils.tryParseJson<DriveBotLink>(result)?.url
+}
+
+suspend fun bypassFdAds(url: String): String? {
+    val res = app.get(url).document
+    val freeRedirect = res.selectFirst("a#link")?.attr("href")
+    val res2 = app.get(freeRedirect ?: return null , verify = false).document
+    val formLink = res2.select("form#landing").attr("action")
+    val value = res2.select("form#landing input").attr("value")
+    val res3 = app.post(formLink, data = mapOf("go" to value), verify = false).document
+    val formLink2 = res3.select("form#landing").attr("action")
+    val humanVer = res3.select("form#landing input[name=humanverification]").attr("value")
+    val newwp = res3.select("form#landing input[name=newwpsafelink]").attr("value")
+    val res4 = app.post(
+        formLink2,
+        data = mapOf("humanverification" to humanVer, "newwpsafelink" to newwp),
+        verify = false
+    ).document
+    val formLink3 = res4.select("form#wpsafelink-landing").attr("action")
+    val newwpsafelink =
+        res4.select("form#wpsafelink-landing input[name=newwpsafelink]").attr("value")
+    val res5 = app.post(
+        formLink3,
+        data = mapOf("newwpsafelink" to newwpsafelink),
+        verify = false
+    ).document
+    val finalLink = res5.selectFirst("div#wpsafe-link a")?.attr("onclick")?.substringAfter("open('")
+        ?.substringBefore("',")
+    return app.get(finalLink ?: return null, verify = false).url
 }
 
 suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {

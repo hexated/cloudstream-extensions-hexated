@@ -1,5 +1,6 @@
 package com.hexated
 
+import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -1354,47 +1355,64 @@ object SoraExtractor : SoraStream() {
         })?.filter { it.first.contains("gdtot") } ?: return
 
         iframe.apmap { (iframeLink, title) ->
+            val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)
             val gdBotLink = extractGdbot(iframeLink)
-            val iframeGdbot = app.get(
-                gdBotLink ?: return@apmap null
-            ).document.selectFirst("ul.divide-y li.flex.flex-col a:contains(Drivebot)")
-                ?.attr("href")
-            val driveDoc = app.get(iframeGdbot ?: return@apmap null)
+            val videoLink = extractDrivebot(gdBotLink ?: return@apmap null)
 
-            val ssid = driveDoc.cookies["PHPSESSID"]
-            val script = driveDoc.document.selectFirst("script:containsData(var formData)")?.data()
+            callback.invoke(
+                ExtractorLink(
+                    "GMovies [$size]",
+                    "GMovies [$size]",
+                    videoLink ?: return@apmap null,
+                    "",
+                    getGMoviesQuality(title)
+                )
+            )
+        }
+    }
 
-            val baseUrl = getBaseUrl(iframeGdbot)
-            val token = script?.substringAfter("'token', '")?.substringBefore("');")
-            val link = script?.substringAfter("fetch('")?.substringBefore("',").let { "$baseUrl$it" }
+    suspend fun invokeFDMovies(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.fixTitle()
+        val url = if (season == null) {
+            "$fdMoviesAPI/movies/$fixTitle"
+        } else {
+            "$fdMoviesAPI/episodes/$fixTitle-s${season}xe${episode}/"
+        }
 
-            val body = FormBody.Builder()
-                .addEncoded("token", "$token")
-                .build()
-            val cookies = mapOf("PHPSESSID" to "$ssid")
+        val request = app.get(url)
+        if(!request.isSuccessful) return
 
-            val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)?.let { "[$it]" } ?: ""
-            app.post(
-                link,
-                requestBody = body,
-                headers = mapOf(
-                    "Accept" to "*/*",
-                    "Origin" to baseUrl,
-                    "Sec-Fetch-Site" to "same-origin"
-                ),
-                cookies = cookies
-            ).parsedSafe<GdBotLink>()?.url?.let { videoLink ->
-                callback.invoke(
-                    ExtractorLink(
-                        "GMovies $size",
-                        "GMovies $size",
-                        videoLink,
-                        "",
-                        getGMoviesQuality(title)
-                    )
+        val iframe = request.document.select("div#download tbody tr").map { it }
+            .filter { it.select("img").attr("src").contains("gdtot") }.map {
+                Triple(
+                    it.select("a").attr("href"),
+                    it.select("strong.quality").text(),
+                    it.select("td:nth-child(4)").text()
                 )
             }
+        Log.i("fdMoviesAPI", "$iframe")
+        iframe.apmap { (link, quality, size) ->
+            val fdLink = bypassFdAds(link)
+            val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
+            val videoLink = extractDrivebot(gdBotLink ?: return@apmap null)
+
+            callback.invoke(
+                ExtractorLink(
+                    "FDMovies [$size]",
+                    "FDMovies [$size]",
+                    videoLink ?: return@apmap null,
+                    "",
+                    getGMoviesQuality(quality)
+                )
+            )
         }
+
     }
 
 
@@ -1548,4 +1566,8 @@ data class SeasonFwatayako(
 data class SourcesFwatayako(
     @JsonProperty("movie") val sourcesMovie: String? = null,
     @JsonProperty("tv") val sourcesTv: ArrayList<SeasonFwatayako>? = arrayListOf(),
+)
+
+data class DriveBotLink(
+    @JsonProperty("url") val url: String? = null,
 )
