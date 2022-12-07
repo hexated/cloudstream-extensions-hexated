@@ -1243,28 +1243,14 @@ object SoraExtractor : SoraStream() {
                 ?.substringBefore("\")")?.let {
                     app.get(fixUrl(it, base)).document
                 }
-            val bitLink =
-                resDoc?.selectFirst("a.btn.btn-outline-success")?.attr("href") ?: return@apmap null
-            val baseDoc = app.get(fixUrl(bitLink, base)).document
-            val downLink = baseDoc.select("div.mb-4 a").randomOrNull()
-                ?.attr("href") ?: run {
-                val server = baseDoc.select("div.text-center a:contains(Server 2)").attr("href")
-                app.get(fixUrl(server, base)).document.selectFirst("div.mb-4 a")
-                    ?.attr("href")
+            val bitLink = resDoc?.selectFirst("a.btn.btn-outline-success")?.attr("href")
+            val downloadLink = if(bitLink.isNullOrEmpty()) {
+                val backupIframe = resDoc?.select("a.btn.btn-outline-warning")?.attr("href")
+                extractBackupUHD(backupIframe ?: return@apmap null)
+            } else {
+                extractMirrorUHD(bitLink, base)
             }
-            val downPage = app.get(downLink ?: return@apmap null).document
-            val downloadLink = downPage.selectFirst("form[method=post] a.btn.btn-success")
-                ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')") ?: run {
-                val mirror = downPage.selectFirst("form[method=post] a.btn.btn-primary")
-                    ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')")
-                app.get(
-                    mirror ?: return@apmap null
-                ).document.selectFirst("script:containsData(input.value =)")
-                    ?.data()?.substringAfter("input.value = '")?.substringBefore("';")
-            }
-
-            val videoQuality =
-                Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val videoQuality = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                     ?: Qualities.Unknown.value
             val size = Regex("(?i)\\[(\\S+\\s?(gb|mb))[]/]").find(quality)?.groupValues?.getOrNull(1)
                 ?.let { "[$it]" } ?: quality
@@ -1418,7 +1404,7 @@ object SoraExtractor : SoraStream() {
 
 }
 
-data class GdBotLink(
+data class UHDBackupUrl(
     @JsonProperty("url") val url: String? = null,
 )
 
