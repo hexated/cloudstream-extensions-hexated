@@ -1,11 +1,13 @@
 package com.hexated
 
+import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.base64Encode
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.AppUtils
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -53,6 +55,55 @@ fun String.filterMedia(title: String?, yearNum: Int?, seasonNum: Int?): Boolean 
     } else {
         this.contains("$title", true) && this.contains("$yearNum")
     }
+}
+
+suspend fun extractMirrorUHD(url: String, ref: String): String? {
+    val baseDoc = app.get(fixUrl(url, ref)).document
+    val downLink = baseDoc.select("div.mb-4 a").randomOrNull()
+        ?.attr("href") ?: run {
+        val server = baseDoc.select("div.text-center a:contains(Server 2)").attr("href")
+        app.get(fixUrl(server, ref)).document.selectFirst("div.mb-4 a")
+            ?.attr("href")
+    }
+    val downPage = app.get(downLink ?: return null).document
+    return downPage.selectFirst("form[method=post] a.btn.btn-success")
+        ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')") ?: run {
+        val mirror = downPage.selectFirst("form[method=post] a.btn.btn-primary")
+            ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')")
+        app.get(
+            mirror ?: return null
+        ).document.selectFirst("script:containsData(input.value =)")
+            ?.data()?.substringAfter("input.value = '")?.substringBefore("';")
+    }
+}
+
+suspend fun extractBackupUHD(url: String): String? {
+    val resumeDoc = app.get(url)
+
+    val script = resumeDoc.document.selectFirst("script:containsData(FormData.)")?.data()
+
+    val ssid = resumeDoc.cookies["PHPSESSID"]
+    val baseIframe = getBaseUrl(url)
+    val fetchLink = script?.substringAfter("fetch('")?.substringBefore("',")?.let { fixUrl(it, baseIframe) }
+    val token = script?.substringAfter("'token', '")?.substringBefore("');")
+
+    val body = FormBody.Builder()
+        .addEncoded("token", "$token")
+        .build()
+    val cookies = mapOf("PHPSESSID" to "$ssid")
+
+    val result = app.post(
+        fetchLink ?: return null,
+        requestBody = body,
+        headers = mapOf(
+            "Accept" to "*/*",
+            "Origin" to baseIframe,
+            "Sec-Fetch-Site" to "same-origin"
+        ),
+        cookies = cookies,
+        referer = url
+    ).text
+    return tryParseJson<UHDBackupUrl>(result)?.url
 }
 
 suspend fun extractGdbot(url: String): String? {
@@ -115,13 +166,13 @@ suspend fun extractDrivebot(url: String): String? {
         cookies = cookies,
         referer = iframeGdbot
     ).text
-    return AppUtils.tryParseJson<DriveBotLink>(result)?.url
+    return tryParseJson<DriveBotLink>(result)?.url
 }
 
 suspend fun bypassFdAds(url: String): String? {
     val res = app.get(url).document
     val freeRedirect = res.selectFirst("a#link")?.attr("href")
-    val res2 = app.get(freeRedirect ?: return null , verify = false).document
+    val res2 = app.get(freeRedirect ?: return null, verify = false).document
     val formLink = res2.select("form#landing").attr("action")
     val value = res2.select("form#landing input").attr("value")
     val res3 = app.post(formLink, data = mapOf("go" to value), verify = false).document
@@ -149,11 +200,11 @@ suspend fun bypassFdAds(url: String): String? {
 suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
 
     val url = if (season == null) {
-        "${SoraStream.filmxyAPI}/movie/$imdbId"
+        "${filmxyAPI}/movie/$imdbId"
     } else {
-        "${SoraStream.filmxyAPI}/tv/$imdbId"
+        "${filmxyAPI}/tv/$imdbId"
     }
-    val cookieUrl = "${SoraStream.filmxyAPI}/wp-admin/admin-ajax.php"
+    val cookieUrl = "${filmxyAPI}/wp-admin/admin-ajax.php"
 
     val res = session.get(
         url,
