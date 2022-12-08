@@ -420,12 +420,12 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeFwatayako(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
-            {
-                if(!res.isAnime) invokeGMovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
-                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
-            },
+//            {
+//                if(!res.isAnime) invokeGMovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+//            },
+//            {
+//                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+//            },
         )
 
         return true
