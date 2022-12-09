@@ -2,13 +2,13 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.mvvm.safeApiCall
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.SubtitleHelper
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import kotlinx.coroutines.delay
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.nicehttp.RequestBodyTypes
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class Loklok : MainAPI() {
     override var name = "Loklok"
@@ -188,26 +188,26 @@ class Loklok : MainAPI() {
 
         val res = parseJson<UrlEpisode>(data)
 
-        res.definitionList?.apmap { video ->
-            safeApiCall {
-                delay(500)
-                app.get(
-                    "$apiUrl/media/previewInfo?category=${res.category}&contentId=${res.id}&episodeId=${res.epId}&definition=${video.code}",
-                    headers = headers
-                ).parsedSafe<Video>()?.data.let { link ->
-                    callback.invoke(
-                        ExtractorLink(
-                            this.name,
-                            this.name,
-                            link?.mediaUrl ?: return@let,
-                            "",
-                            getQualityFromName(video.description),
-                            isM3u8 = true,
-                            headers = headers
-                        )
-                    )
-                }
-            }
+        val video = res.definitionList?.map {
+            MetaData(res.category, res.id, res.epId, it.code)
+        } ?: return false
+
+        val json = app.post(
+            "$apiUrl/media/bathGetplayInfo",
+            requestBody = video.toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull()),
+            headers = headers,
+        ).text
+        tryParseJson<PreviewResponse>(json)?.data?.map { link ->
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    link.mediaUrl ?: return@map null,
+                    "",
+                    getQuality(link.currentDefinition ?: ""),
+                    isM3u8 = true,
+                )
+            )
         }
 
         res.subtitlingList?.map { sub ->
@@ -220,6 +220,16 @@ class Loklok : MainAPI() {
         }
 
         return true
+    }
+
+    private fun getQuality(quality: String): Int {
+        return when (quality) {
+            "GROOT_FD" -> Qualities.P360.value
+            "GROOT_LD" -> Qualities.P480.value
+            "GROOT_SD" -> Qualities.P720.value
+            "GROOT_HD" -> Qualities.P1080.value
+            else -> Qualities.Unknown.value
+        }
     }
 
     data class UrlData(
@@ -246,12 +256,20 @@ class Loklok : MainAPI() {
         val subtitlingList: List<Subtitling>? = arrayListOf(),
     )
 
-    data class VideoData(
-        @JsonProperty("mediaUrl") val mediaUrl: String? = null,
+    data class MetaData(
+        val category: Int? = null,
+        val contentId: Any? = null,
+        val episodeId: Int? = null,
+        val definition: String? = null,
     )
 
-    data class Video(
-        @JsonProperty("data") val data: VideoData? = null,
+    data class PreviewResponse(
+        @JsonProperty("data") val data: ArrayList<PreviewVideos>? = arrayListOf(),
+    )
+
+    data class PreviewVideos(
+        @JsonProperty("mediaUrl") val mediaUrl: String? = null,
+        @JsonProperty("currentDefinition") val currentDefinition: String? = null,
     )
 
     data class SubtitlingList(
@@ -286,21 +304,6 @@ class Loklok : MainAPI() {
 
     data class Load(
         @JsonProperty("data") val data: MediaDetail? = null,
-    )
-
-    data class MediaSearch(
-        @JsonProperty("id") val id: String? = null,
-        @JsonProperty("domainType") val domainType: Int? = null,
-        @JsonProperty("name") val name: String? = null,
-        @JsonProperty("coverVerticalUrl") val coverVerticalUrl: String? = null,
-    )
-
-    data class Result(
-        @JsonProperty("result") val result: ArrayList<MediaSearch>? = arrayListOf(),
-    )
-
-    data class Search(
-        @JsonProperty("pageProps") val pageProps: Result? = null,
     )
 
     data class Media(
