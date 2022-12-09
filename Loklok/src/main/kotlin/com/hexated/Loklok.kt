@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -34,6 +36,7 @@ class Loklok : MainAPI() {
         private val api = base64DecodeAPI("dg==LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
         private val searchApi = base64Decode("aHR0cHM6Ly9sb2tsb2suY29t")
+        private const val jikanAPI = "https://api.jikan.moe/v4"
         private const val mainImageUrl = "https://images.weserv.nl"
 
         private fun base64DecodeAPI(api: String): String {
@@ -153,6 +156,24 @@ class Loklok : MainAPI() {
             }
         }
 
+        val animeType = if(type == TvType.Anime && data.category == 0) "movie" else "tv"
+
+        val malId = if(type == TvType.Anime) {
+            app.get("${jikanAPI}/anime?q=${res.name}&start_date=${res.year}&type=$animeType&limit=1")
+                .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+        } else {
+            null
+        }
+        val anilistId = if(malId != null) {
+            app.post(
+                "https://graphql.anilist.co/", data = mapOf(
+                    "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+                )
+            ).parsedSafe<DataAni>()?.data?.media?.id
+        } else {
+            null
+        }
+
         return newTvSeriesLoadResponse(
             res.name ?: return null,
             url,
@@ -165,6 +186,8 @@ class Loklok : MainAPI() {
             this.plot = res.introduction
             this.tags = res.tagNameList
             this.rating = res.score.toRatingInt()
+            addMalId(malId?.toIntOrNull())
+            addAniListId(anilistId?.toIntOrNull())
             this.recommendations = recommendations
         }
 
@@ -330,6 +353,26 @@ class Loklok : MainAPI() {
 
     data class Home(
         @JsonProperty("data") val data: Data? = null,
+    )
+
+    data class DataMal(
+        @JsonProperty("mal_id") val mal_id: String? = null,
+    )
+
+    data class JikanResponse(
+        @JsonProperty("data") val data: ArrayList<DataMal>? = arrayListOf(),
+    )
+
+    private data class IdAni(
+        @JsonProperty("id") val id: String? = null,
+    )
+
+    private data class MediaAni(
+        @JsonProperty("Media") val media: IdAni? = null,
+    )
+
+    private data class DataAni(
+        @JsonProperty("data") val data: MediaAni? = null,
     )
 
 }
