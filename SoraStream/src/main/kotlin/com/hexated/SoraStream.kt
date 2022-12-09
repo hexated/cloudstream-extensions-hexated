@@ -25,6 +25,7 @@ import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeLing
+import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -67,7 +68,7 @@ open class SoraStream : TmdbProvider() {
         const val uniqueStreamAPI = "https://uniquestream.net"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
-        const val xMovieAPI = "https://xemovies.net"
+        const val xMovieAPI = "https://xemovies.to"
         const val consumetFlixhqAPI = "https://api.consumet.org/movies/flixhq"
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val kissKhAPI = "https://kisskh.me"
@@ -76,6 +77,7 @@ open class SoraStream : TmdbProvider() {
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.com"
+        const val m4uhdAPI = "https://m4uhd.tv"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -420,12 +422,15 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeFwatayako(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
-//            {
-//                if(!res.isAnime) invokeGMovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
-//            },
-//            {
-//                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
-//            },
+            {
+                if(!res.isAnime) invokeGMovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeM4uhd(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+            }
         )
 
         return true
