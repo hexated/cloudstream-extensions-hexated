@@ -17,6 +17,7 @@ class Loklok : MainAPI() {
     override val hasMainPage = true
     override val hasChromecastSupport = true
     override val instantLinkLoading = true
+    override val hasQuickSearch = true
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -76,6 +77,23 @@ class Loklok : MainAPI() {
             this.posterUrl = (imageUrl ?: coverVerticalUrl)?.let {
                 "$mainImageUrl/?url=${encode(it)}&w=175&h=246&fit=cover&output=webp"
             }
+        }
+    }
+
+    override suspend fun quickSearch(query: String): List<SearchResponse>? {
+        val body = mapOf(
+            "searchKeyWord" to query,
+            "size" to "50",
+            "sort" to "",
+            "searchType" to "",
+        ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
+
+        return app.post(
+            "$apiUrl/search/v1/searchWithKeyWord",
+            requestBody = body,
+            headers = headers
+        ).parsedSafe<QuickSearchRes>()?.data?.searchResults?.mapNotNull { media ->
+            media.toSearchResponse()
         }
     }
 
@@ -159,7 +177,7 @@ class Loklok : MainAPI() {
         val animeType = if(type == TvType.Anime && data.category == 0) "movie" else "tv"
 
         val malId = if(type == TvType.Anime) {
-            app.get("${jikanAPI}/anime?q=${res.name}&start_date=${res.year}&type=$animeType&limit=1")
+            app.get("${jikanAPI}/anime?q=${res.name}&start_date=${res.year}&type=$animeType&order_by=start_date&limit=1")
                 .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
         } else {
             null
@@ -209,26 +227,23 @@ class Loklok : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-
         val res = parseJson<UrlEpisode>(data)
 
-        val video = res.definitionList?.map {
-            MetaData(res.category, res.id, res.epId, it.code)
-        } ?: return false
-
-        val json = app.post(
-            "$apiUrl/media/bathGetplayInfo",
-            requestBody = video.toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull()),
-            headers = headers,
-        ).text
-        tryParseJson<PreviewResponse>(json)?.data?.map { link ->
+        res.definitionList?.map { video ->
+            val body = """[{"category":${res.category},"contentId":"${res.id}","episodeId":${res.epId},"definition":"${video.code}"}]""".toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
+            val response = app.post(
+                "$apiUrl/media/bathGetplayInfo",
+                requestBody = body,
+                headers = headers,
+            ).text
+            val json = tryParseJson<PreviewResponse>(response)?.data?.firstOrNull()
             callback.invoke(
                 ExtractorLink(
                     this.name,
                     this.name,
-                    link.mediaUrl ?: return@map null,
+                    json?.mediaUrl ?: return@map null,
                     "",
-                    getQuality(link.currentDefinition ?: ""),
+                    getQuality(json.currentDefinition ?: ""),
                     isM3u8 = true,
                 )
             )
@@ -280,11 +295,12 @@ class Loklok : MainAPI() {
         val subtitlingList: List<Subtitling>? = arrayListOf(),
     )
 
-    data class MetaData(
-        val category: Int? = null,
-        val contentId: Any? = null,
-        val episodeId: Int? = null,
-        val definition: String? = null,
+    data class QuickSearchData(
+        @JsonProperty("searchResults") val searchResults: ArrayList<Media>? = arrayListOf(),
+    )
+
+    data class QuickSearchRes(
+        @JsonProperty("data") val data: QuickSearchData? = null,
     )
 
     data class PreviewResponse(
