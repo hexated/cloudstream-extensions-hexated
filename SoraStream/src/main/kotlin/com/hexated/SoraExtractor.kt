@@ -832,7 +832,7 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        json?.definitionList?.map { video ->
+        json?.definitionList?.apmap { video ->
             val body = """[{"category":$type,"contentId":"$id","episodeId":${json.id},"definition":"${video.code}"}]""".toRequestBody(
                 RequestBodyTypes.JSON.toMediaTypeOrNull())
             val response = app.post(
@@ -844,7 +844,7 @@ object SoraExtractor : SoraStream() {
                 ExtractorLink(
                     this.name,
                     this.name,
-                    response?.mediaUrl ?: return@map null,
+                    response?.mediaUrl ?: return@apmap null,
                     "",
                     getSoraQuality(response.currentDefinition ?: ""),
                     isM3u8 = true,
