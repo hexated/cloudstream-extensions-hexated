@@ -160,6 +160,7 @@ class Loklok : MainAPI() {
             episodes
         ) {
             this.posterUrl = res.coverVerticalUrl
+            this.backgroundPosterUrl = res.coverHorizontalUrl
             this.year = res.year
             this.plot = res.introduction
             this.tags = res.tagNameList
@@ -296,6 +297,7 @@ class Loklok : MainAPI() {
         @JsonProperty("year") val year: Int? = null,
         @JsonProperty("category") val category: String? = null,
         @JsonProperty("coverVerticalUrl") val coverVerticalUrl: String? = null,
+        @JsonProperty("coverHorizontalUrl") val coverHorizontalUrl: String? = null,
         @JsonProperty("score") val score: String? = null,
         @JsonProperty("episodeVo") val episodeVo: ArrayList<EpisodeVo>? = arrayListOf(),
         @JsonProperty("likeList") val likeList: ArrayList<Media>? = arrayListOf(),
