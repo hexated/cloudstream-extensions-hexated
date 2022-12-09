@@ -10,7 +10,9 @@ import com.lagradost.nicehttp.Session
 import com.google.gson.JsonParser
 import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.CloudflareKiller
+import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
 val session = Session(Requests().baseClient)
@@ -830,26 +832,25 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        json?.definitionList?.apmap { video ->
-            delay(1000)
-            app.get(
-                "${vipAPI}/media/previewInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
-                headers = headers
-            ).parsedSafe<Video>()?.data.let { link ->
-                callback.invoke(
-                    ExtractorLink(
-                        "${this.name} (vip)",
-                        "${this.name} (vip)",
-                        link?.mediaUrl ?: return@let,
-                        "",
-                        getQualityFromName(video.description),
-                        isM3u8 = true,
-                        headers = headers
-                    )
+        json?.definitionList?.map { video ->
+            val body = """[{"category":$type,"contentId":"$id","episodeId":${json.id},"definition":"${video.code}"}]""".toRequestBody(
+                RequestBodyTypes.JSON.toMediaTypeOrNull())
+            val response = app.post(
+                "${vipAPI}/media/bathGetplayInfo",
+                requestBody = body,
+                headers = headers,
+            ).text.let { tryParseJson<PreviewResponse>(it)?.data?.firstOrNull() }
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    response?.mediaUrl ?: return@map null,
+                    "",
+                    getSoraQuality(response.currentDefinition ?: ""),
+                    isM3u8 = true,
                 )
-            }
+            )
         }
-
     }
 
     suspend fun invokeXmovies(
@@ -1653,4 +1654,13 @@ data class DriveBotLink(
 
 data class DirectDl(
     @JsonProperty("download_url") val download_url: String? = null,
+)
+
+data class PreviewResponse(
+    @JsonProperty("data") val data: ArrayList<PreviewVideos>? = arrayListOf(),
+)
+
+data class PreviewVideos(
+    @JsonProperty("mediaUrl") val mediaUrl: String? = null,
+    @JsonProperty("currentDefinition") val currentDefinition: String? = null,
 )

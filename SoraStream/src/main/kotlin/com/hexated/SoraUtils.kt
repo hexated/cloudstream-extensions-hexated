@@ -303,6 +303,16 @@ fun getGMoviesQuality(str: String): Int {
     }
 }
 
+fun getSoraQuality(quality: String): Int {
+    return when (quality) {
+        "GROOT_FD" -> Qualities.P360.value
+        "GROOT_LD" -> Qualities.P480.value
+        "GROOT_SD" -> Qualities.P720.value
+        "GROOT_HD" -> Qualities.P1080.value
+        else -> Qualities.Unknown.value
+    }
+}
+
 fun getBaseUrl(url: String): String {
     return URI(url).let {
         "${it.scheme}://${it.host}"
