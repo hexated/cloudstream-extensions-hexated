@@ -229,7 +229,7 @@ class Loklok : MainAPI() {
     ): Boolean {
         val res = parseJson<UrlEpisode>(data)
 
-        res.definitionList?.map { video ->
+        res.definitionList?.apmap { video ->
             val body = """[{"category":${res.category},"contentId":"${res.id}","episodeId":${res.epId},"definition":"${video.code}"}]""".toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
             val response = app.post(
                 "$apiUrl/media/bathGetplayInfo",
@@ -241,7 +241,7 @@ class Loklok : MainAPI() {
                 ExtractorLink(
                     this.name,
                     this.name,
-                    json?.mediaUrl ?: return@map null,
+                    json?.mediaUrl ?: return@apmap null,
                     "",
                     getQuality(json.currentDefinition ?: ""),
                     isM3u8 = true,
