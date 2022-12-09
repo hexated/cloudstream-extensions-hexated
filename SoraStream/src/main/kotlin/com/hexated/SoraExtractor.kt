@@ -8,9 +8,9 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.google.gson.JsonParser
+import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import kotlinx.coroutines.delay
-import okhttp3.FormBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 val session = Session(Requests().baseClient)
@@ -1343,7 +1343,7 @@ object SoraExtractor : SoraStream() {
         iframe.apmap { (iframeLink, title) ->
             val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)
             val gdBotLink = extractGdbot(iframeLink)
-            val videoLink = extractDrivebot(gdBotLink ?: return@apmap null)
+            val videoLink = extractDirectDl(gdBotLink ?: return@apmap null)
 
             callback.invoke(
                 ExtractorLink(
@@ -1386,7 +1386,7 @@ object SoraExtractor : SoraStream() {
         iframe.apmap { (link, quality, size) ->
             val fdLink = bypassFdAds(link)
             val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
-            val videoLink = extractDrivebot(gdBotLink ?: return@apmap null)
+            val videoLink = extractDirectDl(gdBotLink ?: return@apmap null)
 
             callback.invoke(
                 ExtractorLink(
@@ -1401,7 +1401,100 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeM4uhd(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get("$m4uhdAPI/search/${title.fixTitle()}.html").document
+        val scriptData = res.select("div.row div.item").map {
+            Triple(
+                it.selectFirst("img.imagecover")?.attr("title"),
+                it.selectFirst("div.jtip-top div:last-child")?.text(),
+                it.selectFirst("a")?.attr("href")
+            )
+        }
 
+        val script = if (scriptData.size == 1) {
+            scriptData.firstOrNull()
+        } else {
+            scriptData.find {
+                it.first?.contains(
+                    "Watch Free ${title?.replace(":", "")}",
+                    true
+                ) == true && (it.first?.contains("$year") == true || it.second?.contains(
+                    "$year"
+                ) == true)
+            }
+        }
+
+        val link = fixUrl(script?.third ?: return, m4uhdAPI)
+        val request = app.get(link)
+        var cookiesSet = request.headers.filter { it.first == "set-cookie" }
+        var xsrf = cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
+            ?.substringBefore(";")
+        var session = cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
+            ?.substringBefore(";")
+
+        val doc = request.document
+        val token = doc.selectFirst("meta[name=csrf-token]")?.attr("content")
+        val m4uData = if (season == null) {
+            doc.select("div.le-server span#fem").attr("data")
+        } else {
+            val episodeData = doc.selectFirst("div.col-lg-9.col-xl-9 p:matches((?i)S0?$season-E0?$episode$)") ?: return
+            val idepisode = episodeData.select("button").attr("idepisode") ?: return
+            val requestEmbed = app.post(
+                "$m4uhdAPI/ajaxtv",
+                data = mapOf(
+                    "idepisode" to idepisode,
+                    "_token" to "$token"
+                ),
+                referer = link,
+                headers = mapOf(
+                    "X-Requested-With" to "XMLHttpRequest",
+                ),
+                cookies = mapOf(
+                    "laravel_session" to "$session",
+                    "XSRF-TOKEN" to "$xsrf",
+                )
+            )
+            cookiesSet = requestEmbed.headers.filter { it.first == "set-cookie" }
+            xsrf = cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
+                ?.substringBefore(";")
+            session = cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
+                ?.substringBefore(";")
+            requestEmbed.document.select("span#fem").attr("data")
+        }
+
+        val iframe = app.post(
+            "$m4uhdAPI/ajax",
+            data = mapOf(
+                "m4u" to m4uData,
+                "_token" to "$token"
+            ),
+            referer = link,
+            headers = mapOf(
+                "Accept" to "*/*",
+                "X-Requested-With" to "XMLHttpRequest",
+            ),
+            cookies = mapOf(
+                "laravel_session" to "$session",
+                "XSRF-TOKEN" to "$xsrf",
+            ),
+        ).document.select("iframe").attr("src")
+
+        loadExtractor(iframe, m4uhdAPI, subtitleCallback, callback)
+
+    }
+
+}
+
+class StreamM4u: XStreamCdn() {
+    override val name: String = "StreamM4u"
+    override val mainUrl: String = "https://streamm4u.club"
 }
 
 data class UHDBackupUrl(
@@ -1556,4 +1649,8 @@ data class SourcesFwatayako(
 
 data class DriveBotLink(
     @JsonProperty("url") val url: String? = null,
+)
+
+data class DirectDl(
+    @JsonProperty("download_url") val download_url: String? = null,
 )

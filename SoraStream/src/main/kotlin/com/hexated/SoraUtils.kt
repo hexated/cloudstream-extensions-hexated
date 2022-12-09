@@ -11,9 +11,12 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.requestCreator
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
 
 data class FilmxyCookies(
@@ -134,6 +137,28 @@ suspend fun extractGdbot(url: String): String? {
     ).document
 
     return requestFile.selectFirst("div.mt-8 a.float-right")?.attr("href")
+}
+
+suspend fun extractDirectDl(url: String): String? {
+    val iframe = app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(Direct DL)")?.attr("href")
+    val request = app.get(iframe ?: return null)
+    val driveDoc = request.document
+    val token = driveDoc.select("section#generate_url").attr("data-token")
+    val uid = driveDoc.select("section#generate_url").attr("data-uid")
+
+    val ssid = request.cookies["PHPSESSID"]
+    val body = """{"type":"DOWNLOAD_GENERATE","payload":{"uid":"$uid","access_token":"$token"}}""".toRequestBody(
+        RequestBodyTypes.JSON.toMediaTypeOrNull()
+    )
+
+    val json = app.post(
+        "https://rajbetmovies.com/action", requestBody = body, headers = mapOf(
+            "Accept" to "application/json, text/plain, */*",
+            "Cookie" to "PHPSESSID=$ssid",
+            "X-Requested-With" to "xmlhttprequest"
+        ), referer = request.url
+    ).text
+    return tryParseJson<DirectDl>(json)?.download_url
 }
 
 suspend fun extractDrivebot(url: String): String? {
