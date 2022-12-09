@@ -425,9 +425,9 @@ open class SoraStream : TmdbProvider() {
             {
                 if(!res.isAnime) invokeGMovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
-            {
-                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
-            },
+//            {
+//                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+//            },
             {
                 invokeM4uhd(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             }
