@@ -71,7 +71,7 @@ class Loklok : MainAPI() {
 
         return newMovieSearchResponse(
             title ?: name ?: return null,
-            UrlData(id, category).toJson(),
+            UrlData(id, category ?: domainType).toJson(),
             TvType.Movie,
         ) {
             this.posterUrl = (imageUrl ?: coverVerticalUrl)?.let {
@@ -350,6 +350,7 @@ class Loklok : MainAPI() {
     data class Media(
         @JsonProperty("id") val id: Any? = null,
         @JsonProperty("category") val category: Int? = null,
+        @JsonProperty("domainType") val domainType: Int? = null,
         @JsonProperty("imageUrl") val imageUrl: String? = null,
         @JsonProperty("coverVerticalUrl") val coverVerticalUrl: String? = null,
         @JsonProperty("title") val title: String? = null,
