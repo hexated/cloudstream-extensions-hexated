@@ -17,6 +17,7 @@ import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.jsoup.nodes.Document
 import java.net.URI
 
 data class FilmxyCookies(
@@ -222,6 +223,36 @@ suspend fun bypassFdAds(url: String): String? {
     return app.get(finalLink ?: return null, verify = false).url
 }
 
+suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<String, String?>? {
+
+    val req = app.get(url)
+    if(!req.isSuccessful) return null
+    val doc = req.document
+
+    return if (season == null) {
+        doc.select("table.wp-block-table tr:last-child td:first-child").text() to
+                doc.selectFirst("table.wp-block-table tr a")?.attr("href").let { link ->
+                    app.get(link ?: return null).document.select("div#text-url a")
+                        .mapIndexed { index, element ->
+                            element.attr("href") to element.parent()?.textNodes()?.getOrNull(index)
+                                ?.text()
+                        }.filter { it.second?.contains("Subtitles", true) == false }
+                        .map { it.first }
+                }.lastOrNull()
+    } else {
+        doc.select("div.vc_tta-panels div#Season-$season table.wp-block-table tr:last-child td:first-child")
+            .text() to
+                doc.select("div.vc_tta-panels div#Season-$season table.wp-block-table tr a")
+                    .mapNotNull { ele ->
+                        app.get(ele.attr("href")).document.select("div#text-url a")
+                            .mapIndexed { index, element ->
+                                element.attr("href") to element.parent()?.textNodes()
+                                    ?.getOrNull(index)?.text()
+                            }.find { it.second?.contains("Episode $episode", true) == true }?.first
+                    }.lastOrNull()
+    }
+}
+
 suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
 
     val url = if (season == null) {
@@ -267,6 +298,11 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Filmx
     val wSec = cookieJar.first { it.name == "wordpress_sec_8bf9d5433ac88cc9a3a396d6b154cd01" }.value
 
     return FilmxyCookies(phpsessid, wLog, wSec)
+}
+
+fun Document.findTvMoviesIframe(): String? {
+    return this.selectFirst("script:containsData(var seconds)")?.data()?.substringAfter("href='")
+        ?.substringBefore("'>")
 }
 
 fun String?.fixTitle(): String? {

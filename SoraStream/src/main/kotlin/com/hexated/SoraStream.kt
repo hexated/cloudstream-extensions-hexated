@@ -26,6 +26,7 @@ import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
+import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -78,6 +79,7 @@ open class SoraStream : TmdbProvider() {
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.com"
         const val m4uhdAPI = "https://m4uhd.tv"
+        const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -430,7 +432,10 @@ open class SoraStream : TmdbProvider() {
 //            },
             {
                 invokeM4uhd(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
-            }
+            },
+            {
+                invokeTvMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
         )
 
         return true
