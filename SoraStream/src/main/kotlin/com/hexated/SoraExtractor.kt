@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -792,25 +793,34 @@ object SoraExtractor : SoraStream() {
         }
 
         val script = if (scriptData.size == 1) {
-            scriptData.first()
+            scriptData.firstOrNull()
         } else {
-            scriptData.first {
-                if (season == null) {
-                    it.first.equals(
-                        title,
-                        true
-                    ) && it.second == year
-                } else {
-                    it.first.contains(
-                        "$title",
-                        true
-                    ) && (it.second == year || it.first.contains("Season $season", true))
+            scriptData.find {
+                when (season) {
+                    null -> {
+                        it.first.equals(
+                            title,
+                            true
+                        ) && it.second == year
+                    }
+                    1 -> {
+                        it.first.contains(
+                            "$title",
+                            true
+                        ) && (it.second == year || it.first.contains("Season $season", true))
+                    }
+                    else -> {
+                        it.first.contains(
+                            "$title",
+                            true
+                        ) && it.second == year && it.first.contains("Season $season", true)
+                    }
                 }
             }
         }
 
-        val id = script.third?.last()
-        val type = script.third?.get(2)
+        val id = script?.third?.last() ?: return
+        val type = script.third?.get(2) ?: return
 
         val jsonResponse = app.get(
             "$vipAPI/movieDrama/get?id=${id}&category=${type}",
@@ -1488,6 +1498,81 @@ object SoraExtractor : SoraStream() {
         ).document.select("iframe").attr("src")
 
         loadExtractor(iframe, m4uhdAPI, subtitleCallback, callback)
+
+    }
+
+    suspend fun invokeTvMovies(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.fixTitle()
+        val url = if (season == null) {
+            "$tvMoviesAPI/show/$fixTitle"
+        } else {
+            "$tvMoviesAPI/show/index-of-$fixTitle"
+        }
+
+        val server = getTvMoviesServer(url, season, episode) ?: return
+
+        val request = session.get(server.second ?: return, referer = "$tvMoviesAPI/")
+        var filehosting = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
+            .find { it.name == "filehosting" }?.value
+        val iframe = request.document.findTvMoviesIframe()
+        delay(10000)
+        val request2 = session.get(
+            iframe ?: return, referer = url, headers = mapOf(
+                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Connection" to "keep-alive",
+                "Cookie" to "filehosting=$filehosting",
+            )
+        )
+
+        filehosting = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
+            .find { it.name == "filehosting" }?.value
+        val iframe2 = request2.document.findTvMoviesIframe()
+        delay(11000)
+        val request3 = session.get(
+            iframe2 ?: return, referer = iframe, headers = mapOf(
+                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Connection" to "keep-alive",
+                "Cookie" to "filehosting=$filehosting",
+            )
+        )
+
+        filehosting = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
+            .find { it.name == "filehosting" }?.value
+        val response = request3.document
+        val videoLink =
+            response.selectFirst("button.btn.btn--primary")?.attr("onclick")
+                ?.substringAfter("location = '")?.substringBefore("';")?.let {
+                    app.get(
+                        it, referer = iframe2, headers = mapOf(
+                            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                            "Connection" to "keep-alive",
+                            "Cookie" to "filehosting=$filehosting",
+                        )
+                    ).url
+                }
+
+        val quality =
+            Regex("([0-9]{3,4})p").find(server.first)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        val size =
+            response.selectFirst("ul.row--list li:contains(Filesize) span:last-child")
+                ?.text()
+
+        callback.invoke(
+            ExtractorLink(
+                "TVMovies [$size]",
+                "TVMovies [$size]",
+                videoLink ?: return,
+                "",
+                quality ?: Qualities.Unknown.value
+            )
+        )
+
 
     }
 
