@@ -1349,7 +1349,12 @@ object SoraExtractor : SoraStream() {
             }?.select("div.wp-block-button")?.map {
                 it.select("a").attr("href") to it.text()
             }
-        })?.filter { it.first.contains("gdtot") } ?: return
+        })?.filter {
+            it.first.contains("gdtot") && (it.second.contains(
+                "1080p",
+                true
+            ) || it.second.contains("4k", true))
+        } ?: return
 
         iframe.apmap { (iframeLink, title) ->
             val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)
@@ -1392,7 +1397,7 @@ object SoraExtractor : SoraStream() {
                     it.select("strong.quality").text(),
                     it.select("td:nth-child(4)").text()
                 )
-            }
+            }.filter { it.second.contains("1080p", true) || it.second.contains("4k", true) }
         Log.i("fdMoviesAPI", "$iframe")
         iframe.apmap { (link, quality, size) ->
             val fdLink = bypassFdAds(link)
