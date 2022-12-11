@@ -158,7 +158,7 @@ open class SoraStream : TmdbProvider() {
         val searchResponse = mutableListOf<SearchResponse>()
 
         val mainResponse = app.get(
-            "$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=1&include_adult=false",
+            "$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=1&include_adult=${settingsForProvider.enableAdult}",
             referer = "$mainAPI/"
         ).parsedSafe<Results>()?.results?.mapNotNull { media ->
             media.toSearchResponse()
@@ -427,9 +427,9 @@ open class SoraStream : TmdbProvider() {
             {
                 if(!res.isAnime) invokeGMovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
-//            {
-//                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
-//            },
+            {
+                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
             {
                 invokeM4uhd(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },

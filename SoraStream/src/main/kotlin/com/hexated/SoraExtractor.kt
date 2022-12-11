@@ -1354,7 +1354,7 @@ object SoraExtractor : SoraStream() {
         iframe.apmap { (iframeLink, title) ->
             val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)
             val gdBotLink = extractGdbot(iframeLink)
-            val videoLink = extractDirectDl(gdBotLink ?: return@apmap null)
+            val videoLink = extractDrivebot(gdBotLink ?: return@apmap null)
 
             callback.invoke(
                 ExtractorLink(
@@ -1397,7 +1397,7 @@ object SoraExtractor : SoraStream() {
         iframe.apmap { (link, quality, size) ->
             val fdLink = bypassFdAds(link)
             val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
-            val videoLink = extractDirectDl(gdBotLink ?: return@apmap null)
+            val videoLink = extractDrivebot(gdBotLink ?: return@apmap null)
 
             callback.invoke(
                 ExtractorLink(
