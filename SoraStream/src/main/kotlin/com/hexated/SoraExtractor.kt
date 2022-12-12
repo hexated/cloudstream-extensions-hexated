@@ -871,52 +871,15 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = if (season == null || season == 1) {
-            "$xMovieAPI/search?q=$title"
+        val fixTitle = title.fixTitle()
+        val url = if (season == null) {
+            "$xMovieAPI/movies/$fixTitle/watch"
         } else {
-            "$xMovieAPI/search?q=$title Season $season"
+            "$xMovieAPI/series/$fixTitle-season-$season-episode-$episode/watch"
         }
 
-        val res = app.get(url).document
-        val scriptData = (if (season == null) {
-            res.select("div.py-10")
-                .find { it.selectFirst("h2")?.text()?.contains("Movie", true) == true }
-        } else {
-            res.select("div.py-10")
-                .find { it.selectFirst("h2")?.text()?.contains("TV Shows", true) == true }
-        })?.select("div.grid > div")?.map {
-            Triple(
-                it.selectFirst("h6")?.text(),
-                it.select("div.float-right.text-neutral-dark").last()?.text(),
-                it.selectFirst("a")?.attr("href")
-            )
-        } ?: return
-
-        val script = if (scriptData.size == 1) {
-            scriptData.first()
-        } else {
-            scriptData.first {
-                it.first?.contains(
-                    "$title",
-                    true
-                ) == true && (it.first?.contains("$season") == true || it.second?.contains(
-                    "$year"
-                ) == true)
-            }
-        }
-
-        val doc = app.get(script.third ?: return).document
-        val iframe = if (season == null) {
-            doc.selectFirst("div.flex.gap-3.py-3 a")?.attr("href")
-        } else {
-            doc.select("div.grid.grid-cols-3.gap-3 a")[episode?.minus(1)!!]?.attr("href")
-        }
-
-        val link = app.get(iframe ?: return).text.let {
-            Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.mp4)[\"|'],").find(it)?.groupValues?.getOrNull(
-                1
-            )
-        }
+        val doc = app.get(url).text
+        val link = Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.mp4)[\"|'],").find(doc)?.groupValues?.getOrNull(1)
 
         callback.invoke(
             ExtractorLink(
@@ -1261,17 +1224,19 @@ object SoraExtractor : SoraStream() {
             } else {
                 extractMirrorUHD(bitLink, base)
             }
-            val videoQuality = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
+
+            val videoQuality = Regex("\\d{3,4}p\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)?.trim() ?: ""
+            val qualities = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                     ?: Qualities.Unknown.value
             val size = Regex("(?i)\\[(\\S+\\s?(gb|mb))[]/]").find(quality)?.groupValues?.getOrNull(1)
-                ?.let { "[$it]" } ?: quality
+                    ?.let { "[$it]" } ?: quality
             callback.invoke(
                 ExtractorLink(
-                    "UHDMovies $size",
-                    "UHDMovies $size",
+                    "UHDMovies $videoQuality $size",
+                    "UHDMovies $videoQuality $size",
                     downloadLink ?: return@apmap null,
                     "",
-                    videoQuality
+                    qualities
                 )
             )
 

@@ -312,7 +312,7 @@ fun Document.findTvMoviesIframe(): String? {
 }
 
 fun String?.fixTitle(): String? {
-    return this?.replace(Regex("[!%:]|( &)"), "")?.replace(" ", "-")?.lowercase()
+    return this?.replace(Regex("[!%:']|( &)"), "")?.replace(" ", "-")?.lowercase()
         ?.replace("-–-", "-")
 }
 
