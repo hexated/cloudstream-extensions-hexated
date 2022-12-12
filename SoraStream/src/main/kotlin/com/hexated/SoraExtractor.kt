@@ -1388,21 +1388,37 @@ object SoraExtractor : SoraStream() {
         }
 
         val request = app.get(url)
-        if(!request.isSuccessful) return
+        if (!request.isSuccessful) return
 
-        val iframe = request.document.select("div#download tbody tr").map { it }
-            .filter { it.select("img").attr("src").contains("gdtot") }.map {
-                Triple(
-                    it.select("a").attr("href"),
-                    it.select("strong.quality").text(),
-                    it.select("td:nth-child(4)").text()
-                )
-            }.filter { it.second.contains("1080p", true) || it.second.contains("4k", true) }
-        Log.i("fdMoviesAPI", "$iframe")
-        iframe.apmap { (link, quality, size) ->
+        val iframe = request.document.select("div#download tbody tr").map {
+            FDMovieIFrame(
+                it.select("a").attr("href"),
+                it.select("strong.quality").text(),
+                it.select("td:nth-child(4)").text(),
+                it.select("img").attr("src")
+            )
+        }.filter {
+            (it.quality.contains("1080p", true) || it.quality.contains(
+                "4k",
+                true
+            )) && (it.type.contains("gdtot") || it.type.contains("oiya"))
+        }
+        Log.i("hexated", "$iframe")
+        iframe.apmap { (link, quality, size, type) ->
+            val qualities = getFDoviesQuality(quality)
             val fdLink = bypassFdAds(link)
-            val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
-            val videoLink = extractDrivebot(gdBotLink ?: return@apmap null)
+            val videoLink = when {
+                type.contains("gdtot") -> {
+                    val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
+                    extractDrivebot(gdBotLink ?: return@apmap null)
+                }
+                type.contains("oiya") -> {
+                    extractOiya(fdLink ?: return@apmap null, qualities)
+                }
+                else -> {
+                    return@apmap null
+                }
+            }
 
             callback.invoke(
                 ExtractorLink(
@@ -1410,7 +1426,7 @@ object SoraExtractor : SoraStream() {
                     "FDMovies [$size]",
                     videoLink ?: return@apmap null,
                     "",
-                    getGMoviesQuality(quality)
+                    getQualityFromName(qualities)
                 )
             )
         }
@@ -1587,6 +1603,13 @@ class StreamM4u: XStreamCdn() {
     override val name: String = "StreamM4u"
     override val mainUrl: String = "https://streamm4u.club"
 }
+
+data class FDMovieIFrame(
+    val link: String,
+    val quality: String,
+    val size: String,
+    val type: String,
+)
 
 data class UHDBackupUrl(
     @JsonProperty("url") val url: String? = null,

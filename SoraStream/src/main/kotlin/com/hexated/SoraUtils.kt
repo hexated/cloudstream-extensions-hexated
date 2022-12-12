@@ -195,6 +195,12 @@ suspend fun extractDrivebot(url: String): String? {
     return tryParseJson<DriveBotLink>(result)?.url
 }
 
+suspend fun extractOiya(url: String, quality: String): String? {
+    val doc = app.get(url).document
+    return doc.selectFirst("div.wp-block-button a:matches((?i)$quality)")?.attr("href")
+        ?: doc.selectFirst("div.wp-block-button a")?.attr("href")
+}
+
 suspend fun bypassFdAds(url: String): String? {
     val res = app.get(url).document
     val freeRedirect = res.selectFirst("a#link")?.attr("href")
@@ -333,7 +339,7 @@ fun getGMoviesQuality(str: String): Int {
     return when {
         str.contains("480P", true) -> Qualities.P480.value
         str.contains("720P", true) -> Qualities.P720.value
-        str.contains("1080", true) -> Qualities.P1080.value
+        str.contains("1080P", true) -> Qualities.P1080.value
         str.contains("4K", true) -> Qualities.P2160.value
         else -> Qualities.Unknown.value
     }
@@ -346,6 +352,14 @@ fun getSoraQuality(quality: String): Int {
         "GROOT_SD" -> Qualities.P720.value
         "GROOT_HD" -> Qualities.P1080.value
         else -> Qualities.Unknown.value
+    }
+}
+
+fun getFDoviesQuality(str: String): String {
+    return when {
+        str.contains("1080P", true) -> "1080P"
+        str.contains("4K", true) -> "4K"
+        else -> ""
     }
 }
 
