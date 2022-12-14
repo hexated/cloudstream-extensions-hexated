@@ -1,6 +1,7 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.SoraExtractor.invoCrunchyroll
 import com.hexated.SoraExtractor.invoKisskh
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeDbgo
@@ -49,12 +50,15 @@ open class SoraStream : TmdbProvider() {
     /** AUTHOR : Hexated & Sora */
     companion object {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
-        private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
+        private val apiKey =
+            base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
         const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
         const val gdbot = "https://gdbot.xyz"
 
-        private val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
-//        private var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
+        private val mainAPI =
+            base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
+
+        //        private var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
@@ -72,6 +76,7 @@ open class SoraStream : TmdbProvider() {
         const val xMovieAPI = "https://xemovies.to"
         const val consumetFlixhqAPI = "https://api.consumet.org/movies/flixhq"
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
+        const val consumetCrunchyrollAPI = "https://api.consumet.org/anime/crunchyroll"
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
         const val uhdmoviesAPI = "https://uhdmovies.site"
@@ -221,7 +226,8 @@ open class SoraStream : TmdbProvider() {
                                 orgTitle = orgTitle,
                                 isAnime = isAnime,
                                 airedYear = year,
-                                lastSeason = lastSeason
+                                lastSeason = lastSeason,
+                                epsTitle = eps.name,
                             ).toJson(),
                             name = eps.name,
                             season = eps.seasonNumber,
@@ -343,7 +349,15 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if(!res.isAnime) invokeHDMovieBox(res.title, res.season, res.episode, callback)
+                if (res.season != null && res.isAnime) invoCrunchyroll(
+                    res.title,
+                    res.epsTitle,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeHDMovieBox(res.title, res.season, res.episode, callback)
             },
             {
                 invokeSeries9(res.title, res.season, res.episode, subtitleCallback, callback)
@@ -411,7 +425,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if(!res.isAnime) invokeUhdmovies(
+                if (!res.isAnime) invokeUhdmovies(
                     res.title,
                     res.year,
                     res.season,
@@ -425,13 +439,33 @@ open class SoraStream : TmdbProvider() {
                 invokeFwatayako(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                if(!res.isAnime) invokeGMovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeGMovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
-                if(!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeFDMovies(
+                    res.title,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
-                invokeM4uhd(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                invokeM4uhd(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeTvMovies(res.title, res.season, res.episode, subtitleCallback, callback)
@@ -455,6 +489,7 @@ open class SoraStream : TmdbProvider() {
         val isAnime: Boolean = false,
         val airedYear: Int? = null,
         val lastSeason: Int? = null,
+        val epsTitle: String? = null,
     )
 
     data class Data(

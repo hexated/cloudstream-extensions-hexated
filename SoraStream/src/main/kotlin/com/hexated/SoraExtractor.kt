@@ -1562,6 +1562,51 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invoCrunchyroll(
+        title: String? = null,
+        epsTitle: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val id = app.get("$consumetCrunchyrollAPI/$title")
+            .parsedSafe<ConsumetSearchResponse>()?.results?.find {
+                it.title.equals(
+                    title,
+                    true
+                ) && it.type.equals("series")
+            } ?: return
+
+        val detail = app.get("$consumetCrunchyrollAPI/info?id=${id.id}&mediaType=series").text
+        val episodeId = tryParseJson<ConsumetDetails>(detail)?.episodes?.filter {
+            it.title.equals(epsTitle, true) && (it.type == "Subbed" || it.type == "English Dub")
+        }?.map { it.id to it.type } ?: return
+
+        episodeId.apmap { (id, type) ->
+            delay(1000)
+            val json = app.get("$consumetCrunchyrollAPI/watch?episodeId=$id")
+                .parsedSafe<ConsumetSourcesResponse>()
+
+            json?.sources?.map source@{ source ->
+                M3u8Helper.generateM3u8(
+                    "Crunchyroll [$type]",
+                    source.url ?: return@source null,
+                    "",
+                ).forEach(callback)
+            }
+
+            json?.subtitles?.map subtitle@{ sub ->
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        sub.lang?.replace(Regex("\\[\\S+]"), "")?.trim() ?: "",
+                        sub.url ?: return@subtitle null
+                    )
+                )
+            }
+
+        }
+
+    }
+
 }
 
 class StreamM4u: XStreamCdn() {
@@ -1662,6 +1707,8 @@ data class ConsumetSourcesResponse(
 
 data class ConsumetEpisodes(
     @JsonProperty("id") val id: String? = null,
+    @JsonProperty("type") val type: String? = null,
+    @JsonProperty("title") val title: String? = null,
     @JsonProperty("number") val number: Int? = null,
     @JsonProperty("season") val season: Int? = null,
 )
