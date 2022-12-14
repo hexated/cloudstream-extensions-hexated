@@ -122,7 +122,8 @@ open class SoraStream : TmdbProvider() {
         "$tmdbAPI/tv/top_rated?api_key=$apiKey&region=&page=" to "Top Rated TV Shows",
         "$tmdbAPI/movie/upcoming?api_key=$apiKey&region=&page=" to "Upcoming Movies",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_original_language=ko&page=" to "Korean Shows",
-        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc&page=" to "Latest Anime",
+        "$tmdbAPI/tv/airing_today?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc&page=" to "Airing Today Anime",
+        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc&page=" to "Ongoing Anime",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_keywords=210024|222243&page=" to "Anime",
         "$tmdbAPI/discover/movie?api_key=$apiKey&with_keywords=210024|222243&page=" to "Anime Movies",
     )
