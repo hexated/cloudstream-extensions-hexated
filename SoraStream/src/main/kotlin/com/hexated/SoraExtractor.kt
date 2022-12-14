@@ -1583,7 +1583,7 @@ object SoraExtractor : SoraStream() {
 
         episodeId.apmap { (id, type) ->
             delay(1000)
-            val json = app.get("$consumetCrunchyrollAPI/watch?episodeId=$id")
+            val json = app.get("$consumetCrunchyrollAPI/watch?episodeId=$id&format=srt")
                 .parsedSafe<ConsumetSourcesResponse>()
 
             json?.sources?.map source@{ source ->
