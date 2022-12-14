@@ -1,8 +1,6 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.hexated.SoraExtractor.invoCrunchyroll
-import com.hexated.SoraExtractor.invoKisskh
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
@@ -21,14 +19,16 @@ import com.hexated.SoraExtractor.invokeXmovies
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
-import com.hexated.SoraExtractor.invoZoro
+import com.hexated.SoraExtractor.invokeCrunchyroll
 import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
+import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
+import com.hexated.SoraExtractor.invokeZoro
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -340,7 +340,7 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (res.season != null && res.isAnime) invoZoro(
+                if (res.season != null && res.isAnime) invokeZoro(
                     res.id,
                     res.season,
                     res.episode,
@@ -349,7 +349,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (res.season != null && res.isAnime) invoCrunchyroll(
+                if (res.season != null && res.isAnime) invokeCrunchyroll(
                     res.title,
                     res.epsTitle,
                     subtitleCallback,
@@ -412,7 +412,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invoKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeLing(

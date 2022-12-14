@@ -964,7 +964,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invoKisskh(
+    suspend fun invokeKisskh(
         title: String? = null,
         season: Int? = null,
         episode: Int? = null,
@@ -1047,7 +1047,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invoZoro(
+    suspend fun invokeZoro(
         id: Int? = null,
         season: Int? = null,
         episode: Int? = null,
@@ -1562,7 +1562,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invoCrunchyroll(
+    suspend fun invokeCrunchyroll(
         title: String? = null,
         epsTitle: String? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -1648,14 +1648,6 @@ data class Track(
 data class RabbitSources(
     @JsonProperty("sources") val sources: String? = null,
     @JsonProperty("tracks") val tracks: ArrayList<Track>? = arrayListOf(),
-)
-
-data class VideoData(
-    @JsonProperty("mediaUrl") val mediaUrl: String? = null,
-)
-
-data class Video(
-    @JsonProperty("data") val data: VideoData? = null,
 )
 
 data class SubtitlingList(
