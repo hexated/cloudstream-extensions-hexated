@@ -843,8 +843,10 @@ object SoraExtractor : SoraStream() {
         }
 
         json?.definitionList?.apmap { video ->
-            val body = """[{"category":$type,"contentId":"$id","episodeId":${json.id},"definition":"${video.code}"}]""".toRequestBody(
-                RequestBodyTypes.JSON.toMediaTypeOrNull())
+            val body =
+                """[{"category":$type,"contentId":"$id","episodeId":${json.id},"definition":"${video.code}"}]""".toRequestBody(
+                    RequestBodyTypes.JSON.toMediaTypeOrNull()
+                )
             val response = app.post(
                 "${vipAPI}/media/bathGetplayInfo",
                 requestBody = body,
@@ -879,7 +881,10 @@ object SoraExtractor : SoraStream() {
         }
 
         val doc = app.get(url).text
-        val link = Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.mp4)[\"|'],").find(doc)?.groupValues?.getOrNull(1)
+        val link =
+            Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.mp4)[\"|'],").find(doc)?.groupValues?.getOrNull(
+                1
+            )
 
         callback.invoke(
             ExtractorLink(
@@ -1197,38 +1202,49 @@ object SoraExtractor : SoraStream() {
 
         val detailDoc = app.get(script?.first ?: return).document
 
-        val iframe =
-            detailDoc.select("div.entry-content p").map { it }
-                .filter { it.text().filterIframe(season, lastSeason, year) }
-                .mapNotNull {
-                    if (season == null) {
-                        it.text() to it.nextElementSibling()?.select("a")?.attr("href")
-                    } else {
-                        it.text() to it.nextElementSibling()?.select("a:contains(Episode $episode)")
-                            ?.attr("href")
-                    }
-                }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
+        val iframeList = detailDoc.select("div.entry-content p").map { it }
+            .filter { it.text().filterIframe(season, lastSeason, year) }
+            .mapNotNull {
+                if (season == null) {
+                    it.text() to it.nextElementSibling()?.select("a")?.attr("href")
+                } else {
+                    it.text() to it.nextElementSibling()?.select("a:contains(Episode $episode)")
+                        ?.attr("href")
+                }
+            }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
 
-        val base = getBaseUrl(iframe.first().second ?: return)
+        val iframe = if (iframeList.any { it.first.contains("2160p", true) }) iframeList.filter {
+            it.first.contains(
+                "2160p",
+                true
+            )
+        } else iframeList.filter { it.first.contains("1080p", true) }
+
+        val base = "https://drivebit.in"
         iframe.apmap { (quality, link) ->
             delay(2000)
-            val res = app.get(link ?: return@apmap null).document
+            val driveLink = bypassHrefli(link ?: return@apmap null)
+            val res = app.get(driveLink ?: return@apmap null).document
             val resDoc = res.selectFirst("script")?.data()?.substringAfter("replace(\"")
                 ?.substringBefore("\")")?.let {
                     app.get(fixUrl(it, base)).document
                 }
             val bitLink = resDoc?.selectFirst("a.btn.btn-outline-success")?.attr("href")
-            val downloadLink = if(bitLink.isNullOrEmpty()) {
+            val downloadLink = if (bitLink.isNullOrEmpty()) {
                 val backupIframe = resDoc?.select("a.btn.btn-outline-warning")?.attr("href")
                 extractBackupUHD(backupIframe ?: return@apmap null)
             } else {
                 extractMirrorUHD(bitLink, base)
             }
 
-            val videoQuality = Regex("\\d{3,4}p\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)?.trim() ?: ""
-            val qualities = Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val videoQuality =
+                Regex("\\d{3,4}p\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)?.trim()
+                    ?: ""
+            val qualities =
+                Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                     ?: Qualities.Unknown.value
-            val size = Regex("(?i)\\[(\\S+\\s?(gb|mb))[]/]").find(quality)?.groupValues?.getOrNull(1)
+            val size =
+                Regex("(?i)\\[(\\S+\\s?(gb|mb))[]/]").find(quality)?.groupValues?.getOrNull(1)
                     ?.let { "[$it]" } ?: quality
             callback.invoke(
                 ExtractorLink(
@@ -1431,17 +1447,21 @@ object SoraExtractor : SoraStream() {
         val link = fixUrl(script?.third ?: return, m4uhdAPI)
         val request = app.get(link)
         var cookiesSet = request.headers.filter { it.first == "set-cookie" }
-        var xsrf = cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
-            ?.substringBefore(";")
-        var session = cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
-            ?.substringBefore(";")
+        var xsrf =
+            cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
+                ?.substringBefore(";")
+        var session =
+            cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
+                ?.substringBefore(";")
 
         val doc = request.document
         val token = doc.selectFirst("meta[name=csrf-token]")?.attr("content")
         val m4uData = if (season == null) {
             doc.select("div.le-server span#fem").attr("data")
         } else {
-            val episodeData = doc.selectFirst("div.col-lg-9.col-xl-9 p:matches((?i)S0?$season-E0?$episode$)") ?: return
+            val episodeData =
+                doc.selectFirst("div.col-lg-9.col-xl-9 p:matches((?i)S0?$season-E0?$episode$)")
+                    ?: return
             val idepisode = episodeData.select("button").attr("idepisode") ?: return
             val requestEmbed = app.post(
                 "$m4uhdAPI/ajaxtv",
@@ -1459,10 +1479,12 @@ object SoraExtractor : SoraStream() {
                 )
             )
             cookiesSet = requestEmbed.headers.filter { it.first == "set-cookie" }
-            xsrf = cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
-                ?.substringBefore(";")
-            session = cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
-                ?.substringBefore(";")
+            xsrf =
+                cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
+                    ?.substringBefore(";")
+            session =
+                cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
+                    ?.substringBefore(";")
             requestEmbed.document.select("span#fem").attr("data")
         }
 
@@ -1609,7 +1631,7 @@ object SoraExtractor : SoraStream() {
 
 }
 
-class StreamM4u: XStreamCdn() {
+class StreamM4u : XStreamCdn() {
     override val name: String = "StreamM4u"
     override val mainUrl: String = "https://streamm4u.club"
 }

@@ -228,6 +228,44 @@ suspend fun bypassFdAds(url: String): String? {
     return app.get(finalLink ?: return null, verify = false).url
 }
 
+suspend fun bypassHrefli(url: String): String? {
+    val direct = url.removePrefix("https://href.li/?")
+
+    val res = app.get(direct).document
+    val formLink = res.select("form#landing").attr("action")
+    val wpHttp = res.select("input[name=_wp_http]").attr("value")
+
+    val res2 = app.post(formLink, data = mapOf("_wp_http" to wpHttp)).document
+    val formLink2 = res2.select("form#landing").attr("action")
+    val wpHttp2 = res2.select("input[name=_wp_http2]").attr("value")
+    val token = res2.select("input[name=token]").attr("value")
+
+    val res3 = app.post(
+        formLink2, data = mapOf(
+            "_wp_http2" to wpHttp2, "token" to token
+        )
+    ).document
+
+    val script = res3.selectFirst("script:containsData(verify_button)")?.data()
+    val directLink = script?.substringAfter("\"href\",\"")?.substringBefore("\")")
+    val matchCookies =
+        Regex("sumitbot_\\('(\\S+?)',\n|.?'(\\S+?)',").findAll(script ?: return null).map {
+            it.groupValues[1] to it.groupValues[2]
+        }.toList()
+
+    val cookeName = matchCookies.firstOrNull()?.second ?: return null
+    val cookeValue = matchCookies.lastOrNull()?.second ?: return null
+
+    val cookies = mapOf(
+        cookeName to cookeValue
+    )
+
+    return app.get(
+        directLink ?: return null,
+        cookies = cookies
+    ).document.selectFirst("meta[http-equiv=refresh]")?.attr("content")?.substringAfter("url=")
+}
+
 suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<String, String?>? {
 
     val req = app.get(url)
