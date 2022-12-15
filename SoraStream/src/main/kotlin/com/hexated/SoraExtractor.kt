@@ -1524,58 +1524,14 @@ object SoraExtractor : SoraStream() {
         }
 
         val server = getTvMoviesServer(url, season, episode) ?: return
-
-        val request = session.get(server.second ?: return, referer = "$tvMoviesAPI/")
-        var filehosting = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
-            .find { it.name == "filehosting" }?.value
-        val iframe = request.document.findTvMoviesIframe()
-        delay(10000)
-        val request2 = session.get(
-            iframe ?: return, referer = url, headers = mapOf(
-                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                "Connection" to "keep-alive",
-                "Cookie" to "filehosting=$filehosting",
-            )
-        )
-
-        filehosting = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
-            .find { it.name == "filehosting" }?.value
-        val iframe2 = request2.document.findTvMoviesIframe()
-        delay(11000)
-        val request3 = session.get(
-            iframe2 ?: return, referer = iframe, headers = mapOf(
-                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                "Connection" to "keep-alive",
-                "Cookie" to "filehosting=$filehosting",
-            )
-        )
-
-        filehosting = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
-            .find { it.name == "filehosting" }?.value
-        val response = request3.document
-        val videoLink =
-            response.selectFirst("button.btn.btn--primary")?.attr("onclick")
-                ?.substringAfter("location = '")?.substringBefore("';")?.let {
-                    app.get(
-                        it, referer = iframe2, headers = mapOf(
-                            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                            "Connection" to "keep-alive",
-                            "Cookie" to "filehosting=$filehosting",
-                        )
-                    ).url
-                }
-
-        val quality =
-            Regex("([0-9]{3,4})p").find(server.first)?.groupValues?.getOrNull(1)?.toIntOrNull()
-        val size =
-            response.selectFirst("ul.row--list li:contains(Filesize) span:last-child")
-                ?.text()
+        val videoData = extractCovyn(server.second ?: return)
+        val quality = Regex("([0-9]{3,4})p").find(server.first)?.groupValues?.getOrNull(1)?.toIntOrNull()
 
         callback.invoke(
             ExtractorLink(
-                "TVMovies [$size]",
-                "TVMovies [$size]",
-                videoLink ?: return,
+                "TVMovies [${videoData?.second}]",
+                "TVMovies [${videoData?.second}]",
+                videoData?.first ?: return,
                 "",
                 quality ?: Qualities.Unknown.value
             )
