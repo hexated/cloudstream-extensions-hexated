@@ -2,6 +2,7 @@ package com.hexated
 
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
+import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.base64Encode
@@ -12,6 +13,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.requestCreator
+import kotlinx.coroutines.delay
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -198,6 +200,41 @@ suspend fun extractOiya(url: String, quality: String): String? {
     val doc = app.get(url).document
     return doc.selectFirst("div.wp-block-button a:matches((?i)$quality)")?.attr("href")
         ?: doc.selectFirst("div.wp-block-button a")?.attr("href")
+}
+
+suspend fun extractCovyn(url: String?): Pair<String?, String?>? {
+    val request = session.get(url ?: return null, referer = "${tvMoviesAPI}/")
+    val filehosting = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
+        .find { it.name == "filehosting" }?.value
+    val headers = mapOf(
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Connection" to "keep-alive",
+        "Cookie" to "filehosting=$filehosting",
+    )
+
+    val iframe = request.document.findTvMoviesIframe()
+    delay(10500)
+    val request2 = session.get(
+        iframe ?: return null, referer = url, headers = headers
+    )
+
+    val iframe2 = request2.document.findTvMoviesIframe()
+    delay(10500)
+    val request3 = session.get(
+        iframe2 ?: return null, referer = iframe, headers = headers
+    )
+
+    val response = request3.document
+    val videoLink = response.selectFirst("button.btn.btn--primary")?.attr("onclick")
+        ?.substringAfter("location = '")?.substringBefore("';")?.let {
+            app.get(
+                it, referer = iframe2, headers = headers
+            ).url
+        }
+    val size = response.selectFirst("ul.row--list li:contains(Filesize) span:last-child")
+        ?.text()
+
+    return Pair(videoLink, size)
 }
 
 suspend fun bypassFdAds(url: String): String? {
