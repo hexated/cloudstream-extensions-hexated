@@ -287,11 +287,11 @@ suspend fun bypassHrefli(url: String): String? {
     val directLink = script?.substringAfter("\"href\",\"")?.substringBefore("\")")
     val matchCookies =
         Regex("sumitbot_\\('(\\S+?)',\n|.?'(\\S+?)',").findAll(script ?: return null).map {
-            it.groupValues[1] to it.groupValues[2]
+            it.groupValues[2]
         }.toList()
 
-    val cookeName = matchCookies.firstOrNull()?.second ?: return null
-    val cookeValue = matchCookies.lastOrNull()?.second ?: return null
+    val cookeName = matchCookies.firstOrNull() ?: return null
+    val cookeValue = matchCookies.lastOrNull() ?: return null
 
     val cookies = mapOf(
         cookeName to cookeValue
