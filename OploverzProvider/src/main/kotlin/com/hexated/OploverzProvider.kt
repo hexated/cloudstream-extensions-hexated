@@ -12,7 +12,7 @@ import java.util.ArrayList
 
 
 class OploverzProvider : MainAPI() {
-    override var mainUrl = "https://oploverz.co.in"
+    override var mainUrl = "https://15.235.11.45"
     override var name = "Oploverz"
     override val hasMainPage = true
     override var lang = "id"
