@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 
 class Hdfilmcehennemi : MainAPI() {
-    override var mainUrl = "https://www.hdfilmcehennemi.live"
+    override var mainUrl = "https://www.hdfilmcehennemi.life"
     override var name = "hdfilmcehennemi"
     override val hasMainPage = true
     override var lang = "tr"
@@ -22,8 +22,8 @@ class Hdfilmcehennemi : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        "$mainUrl/category/tavsiye-filmler-izle1/page/" to "Tavsiye Filmler Kategorisi",
-        "$mainUrl/yabancidiziizle/page/" to "Son Eklenen Yabancı Diziler",
+        "$mainUrl/category/tavsiye-filmler-izle2/page/" to "Tavsiye Filmler Kategorisi",
+        "$mainUrl/yabancidiziizle-1/page/" to "Son Eklenen Yabancı Diziler",
         "$mainUrl/imdb-7-puan-uzeri-filmler/page/" to "Imdb 7+ Filmler",
         "$mainUrl/en-cok-yorumlananlar/page/" to "En Çok Yorumlananlar",
         "$mainUrl/en-cok-begenilen-filmleri-izle/page/" to "En Çok Beğenilenler",
