@@ -51,7 +51,7 @@ fun String.filterMedia(title: String?, yearNum: Int?, seasonNum: Int?): Boolean 
             seasonNum > 1 -> this.contains(Regex("(?i)(Season\\s0?1-0?$seasonNum)|(S0?1-S?0?$seasonNum)")) && this.contains(
                 "$title",
                 true
-            ) && this.contains("$yearNum")
+            )
             else -> this.contains(Regex("(?i)(Season\\s0?1)|(S0?1)")) && this.contains(
                 "$title",
                 true
