@@ -164,15 +164,32 @@ suspend fun extractDirectDl(url: String): String? {
 }
 
 suspend fun extractDrivebot(url: String): String? {
-    val iframeGdbot =
-        app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(Drivebot)")
-            ?.attr("href")
-    val driveDoc = app.get(iframeGdbot ?: return null)
+    val iframeDrivebot = app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(Drivebot)")
+            ?.attr("href") ?: return null
+    return getDrivebotLink(iframeDrivebot)
+}
+
+suspend fun extractGdflix(url: String): String? {
+    val iframeGdflix = app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(GDFlix Direct)")
+        ?.attr("href") ?: return null
+    val base = getBaseUrl(iframeGdflix)
+
+    val gdfDoc = app.get(iframeGdflix).document.selectFirst("script")?.data()?.substringAfter("replace(\"")
+        ?.substringBefore("\")")?.let {
+            app.get(fixUrl(it, base)).document
+        }
+    val iframeDrivebot2 = gdfDoc?.selectFirst("a.btn.btn-outline-warning")?.attr("href")
+
+    return getDrivebotLink(iframeDrivebot2)
+}
+
+suspend fun getDrivebotLink(url: String?): String? {
+    val driveDoc = app.get(url ?: return null)
 
     val ssid = driveDoc.cookies["PHPSESSID"]
     val script = driveDoc.document.selectFirst("script:containsData(var formData)")?.data()
 
-    val baseUrl = getBaseUrl(iframeGdbot)
+    val baseUrl = getBaseUrl(url)
     val token = script?.substringAfter("'token', '")?.substringBefore("');")
     val link =
         script?.substringAfter("fetch('")?.substringBefore("',").let { "$baseUrl$it" }
@@ -191,7 +208,7 @@ suspend fun extractDrivebot(url: String): String? {
             "Sec-Fetch-Site" to "same-origin"
         ),
         cookies = cookies,
-        referer = iframeGdbot
+        referer = url
     ).text
     return tryParseJson<DriveBotLink>(result)?.url
 }
