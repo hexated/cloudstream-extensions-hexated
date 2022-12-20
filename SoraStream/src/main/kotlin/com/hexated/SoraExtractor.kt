@@ -1340,7 +1340,7 @@ object SoraExtractor : SoraStream() {
         iframe.apmap { (iframeLink, title) ->
             val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)
             val gdBotLink = extractGdbot(iframeLink)
-            val videoLink = extractDrivebot(gdBotLink ?: return@apmap null)
+            val videoLink = extractGdflix(gdBotLink ?: return@apmap null)
 
             callback.invoke(
                 ExtractorLink(
@@ -1391,7 +1391,7 @@ object SoraExtractor : SoraStream() {
             val videoLink = when {
                 type.contains("gdtot") -> {
                     val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
-                    extractDrivebot(gdBotLink ?: return@apmap null)
+                    extractGdflix(gdBotLink ?: return@apmap null)
                 }
                 type.contains("oiya") -> {
                     extractOiya(fdLink ?: return@apmap null, qualities)
