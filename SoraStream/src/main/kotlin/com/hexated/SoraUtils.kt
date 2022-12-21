@@ -174,7 +174,7 @@ suspend fun extractGdflix(url: String): String? {
         ?.attr("href") ?: return null
     val base = getBaseUrl(iframeGdflix)
 
-    val gdfDoc = app.get(iframeGdflix).document.selectFirst("script")?.data()?.substringAfter("replace(\"")
+    val gdfDoc = app.get(iframeGdflix).document.selectFirst("script:containsData(replace)")?.data()?.substringAfter("replace(\"")
         ?.substringBefore("\")")?.let {
             app.get(fixUrl(it, base)).document
         }

@@ -54,6 +54,7 @@ open class SoraStream : TmdbProvider() {
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
         const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
         const val gdbot = "https://gdbot.xyz"
+        const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
 
         private val mainAPI =
             base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
@@ -79,7 +80,7 @@ open class SoraStream : TmdbProvider() {
         const val consumetCrunchyrollAPI = "https://api.consumet.org/anime/crunchyroll"
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.site"
+        const val uhdmoviesAPI = "https://uhdmovies.org.in"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.com"
@@ -162,18 +163,13 @@ open class SoraStream : TmdbProvider() {
         }
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-
-        val mainResponse = app.get(
+    override suspend fun search(query: String): List<SearchResponse>? {
+        return app.get(
             "$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=1&include_adult=${settingsForProvider.enableAdult}",
             referer = "$mainAPI/"
         ).parsedSafe<Results>()?.results?.mapNotNull { media ->
             media.toSearchResponse()
         }
-        if (mainResponse?.isNotEmpty() == true) searchResponse.addAll(mainResponse)
-
-        return searchResponse
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -246,7 +242,7 @@ open class SoraStream : TmdbProvider() {
             newTvSeriesLoadResponse(
                 title,
                 url,
-                TvType.TvSeries,
+                if(isAnime) TvType.Anime else TvType.TvSeries,
                 episodes
             ) {
                 this.posterUrl = poster
@@ -355,6 +351,8 @@ open class SoraStream : TmdbProvider() {
                 if (res.season != null && res.isAnime) invokeCrunchyroll(
                     res.title,
                     res.epsTitle,
+                    res.season,
+                    res.episode,
                     subtitleCallback,
                     callback
                 )
