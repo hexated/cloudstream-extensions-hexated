@@ -1475,13 +1475,7 @@ object SoraExtractor : SoraStream() {
 
         val detail = app.get("$consumetCrunchyrollAPI/info?id=${id.id}&mediaType=series").text
         val episodeId = tryParseJson<ConsumetDetails>(detail)?.episodes?.filter {
-            (if (season == 1) {
-                it.title.equals(
-                    epsTitle, true
-                ) || it.number == episode
-            } else {
-                it.title.equals(epsTitle, true)
-            }) && (it.type == "Subbed" || it.type == "English Dub")
+            it.title.equals(epsTitle, true) && (it.type == "Subbed" || it.type == "English Dub")
         }?.map { it.id to it.type } ?: return
 
         episodeId.apmap { (id, type) ->
