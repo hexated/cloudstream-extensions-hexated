@@ -351,6 +351,8 @@ open class SoraStream : TmdbProvider() {
                 if (res.season != null && res.isAnime) invokeCrunchyroll(
                     res.title,
                     res.epsTitle,
+                    res.season,
+                    res.episode,
                     subtitleCallback,
                     callback
                 )
