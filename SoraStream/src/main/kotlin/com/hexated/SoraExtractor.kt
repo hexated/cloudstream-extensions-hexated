@@ -1461,43 +1461,44 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeCrunchyroll(
         title: String? = null,
         epsTitle: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val id = app.get("$consumetCrunchyrollAPI/$title")
             .parsedSafe<ConsumetSearchResponse>()?.results?.find {
                 it.title.equals(
-                    title, true
+                    title,
+                    true
                 ) && it.type.equals("series")
             } ?: return
 
         val detail = app.get("$consumetCrunchyrollAPI/info?id=${id.id}&mediaType=series").text
         val episodeId = tryParseJson<ConsumetDetails>(detail)?.episodes?.filter {
-            it.title.equals(epsTitle, true) && (it.type == "Subbed" || it.type == "English Dub")
-        }?.map { it.id to it.type } ?: return
+            (it.number == episode || it.title.equals(epsTitle, true)) && it.type == "Subbed"
+        }?.map { it.id }?.getOrNull(season?.minus(1) ?: 0) ?: return
 
-        episodeId.apmap { (id, type) ->
-            val json = app.get("$consumetCrunchyrollAPI/watch?episodeId=$id&format=srt")
-                .parsedSafe<ConsumetSourcesResponse>()
+        val json = app.get("$consumetCrunchyrollAPI/watch?episodeId=$episodeId&format=srt")
+            .parsedSafe<ConsumetSourcesResponse>()
 
-            json?.sources?.map source@{ source ->
-                M3u8Helper.generateM3u8(
-                    "Crunchyroll [$type]",
-                    source.url ?: return@source null,
-                    "",
-                ).forEach(callback)
-            }
-
-            json?.subtitles?.map subtitle@{ sub ->
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        sub.lang?.replace(Regex("\\[\\S+]"), "")?.trim() ?: "",
-                        sub.url ?: return@subtitle null
-                    )
-                )
-            }
-
+        json?.sources?.map source@{ source ->
+            M3u8Helper.generateM3u8(
+                "Crunchyroll",
+                source.url ?: return@source null,
+                "",
+            ).forEach(callback)
         }
+
+        json?.subtitles?.map subtitle@{ sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.lang?.replace(Regex("\\[\\S+]"), "")?.trim() ?: "",
+                    sub.url ?: return@subtitle null
+                )
+            )
+        }
+
 
     }
 
