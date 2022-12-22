@@ -1461,8 +1461,6 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeCrunchyroll(
         title: String? = null,
         epsTitle: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
