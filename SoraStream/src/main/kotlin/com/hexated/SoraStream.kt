@@ -208,12 +208,11 @@ open class SoraStream : TmdbProvider() {
             ?.randomOrNull()
 
         return if (type == TvType.TvSeries) {
-            val episodes = mutableListOf<Episode>()
             val lastSeason = res.seasons?.lastOrNull()?.seasonNumber
-            res.seasons?.apmap { season ->
+            val episodes = res.seasons?.mapNotNull { season ->
                 app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey")
                     .parsedSafe<MediaDetailEpisodes>()?.episodes?.map { eps ->
-                        episodes.add(Episode(
+                        Episode(
                             LinkData(
                                 data.id,
                                 res.external_ids?.imdb_id,
@@ -236,9 +235,9 @@ open class SoraStream : TmdbProvider() {
                             description = eps.overview
                         ).apply {
                             this.addDate(eps.airDate)
-                        })
+                        }
                     }
-            }
+            }?.flatten() ?: listOf()
             newTvSeriesLoadResponse(
                 title,
                 url,

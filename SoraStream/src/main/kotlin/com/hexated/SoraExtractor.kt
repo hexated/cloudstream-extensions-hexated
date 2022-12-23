@@ -1014,31 +1014,36 @@ object SoraExtractor : SoraStream() {
         val episodeId = app.get("$consumetAnilistAPI/info/$anilistId?provider=zoro")
             .parsedSafe<ConsumetDetails>()?.episodes?.find {
                 it.number == episode
-            }?.id ?: return
+            }?.id?.substringBeforeLast("$") ?: return
 
-        val sources = app.get("$consumetZoroAPI/watch?episodeId=$episodeId", timeout = 120L)
-            .parsedSafe<ConsumetSourcesResponse>() ?: return
+        listOf(
+            "$episodeId\$sub" to "Subbed",
+            "$episodeId\$dub" to "English Dub",
+        ).apmap { (id, type) ->
+            val sources = app.get("$consumetZoroAPI/watch?episodeId=$id")
+                .parsedSafe<ConsumetSourcesResponse>() ?: return@apmap null
 
-        sources.sources?.map {
-            callback.invoke(
-                ExtractorLink(
-                    "Zoro",
-                    "Zoro",
-                    it.url ?: return@map null,
-                    "",
-                    getQualityFromName(it.quality),
-                    it.isM3U8 ?: true
+            sources.sources?.map sources@{
+                callback.invoke(
+                    ExtractorLink(
+                        "Zoro [$type]",
+                        "Zoro [$type]",
+                        it.url ?: return@sources null,
+                        "",
+                        getQualityFromName(it.quality),
+                        it.isM3U8 ?: true
+                    )
                 )
-            )
-        }
+            }
 
-        sources.subtitles?.map {
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    it.lang ?: "",
-                    it.url ?: return@map null
+            sources.subtitles?.map subtitles@{
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        it.lang ?: "",
+                        it.url ?: return@subtitles null
+                    )
                 )
-            )
+            }
         }
 
 
@@ -1476,29 +1481,35 @@ object SoraExtractor : SoraStream() {
 
         val detail = app.get("$consumetCrunchyrollAPI/info?id=${id.id}&mediaType=series").text
         val episodeId = tryParseJson<ConsumetDetails>(detail)?.episodes?.filter {
-            (it.number == episode || it.title.equals(epsTitle, true)) && it.type == "Subbed"
-        }?.map { it.id }?.getOrNull(season?.minus(1) ?: 0) ?: return
-
-        val json = app.get("$consumetCrunchyrollAPI/watch?episodeId=$episodeId&format=srt")
-            .parsedSafe<ConsumetSourcesResponse>()
-
-        json?.sources?.map source@{ source ->
-            M3u8Helper.generateM3u8(
-                "Crunchyroll",
-                source.url ?: return@source null,
-                "",
-            ).forEach(callback)
+            (it.number == episode || it.title.equals(epsTitle, true))
+        }?.let { eps ->
+            listOf(eps.filter { it.type == "Subbed" }.map { it.id }
+                .getOrNull(season?.minus(1) ?: 0) to "Subbed",
+                eps.filter { it.type == "English Dub" }.map { it.id }
+                    .getOrNull(season?.minus(1) ?: 0) to "English Dub")
         }
 
-        json?.subtitles?.map subtitle@{ sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.lang?.replace(Regex("\\[\\S+]"), "")?.trim() ?: "",
-                    sub.url ?: return@subtitle null
+        episodeId?.apmap { (id, type) ->
+            val json = app.get("$consumetCrunchyrollAPI/watch?episodeId=${id ?: return@apmap null}&format=srt")
+                .parsedSafe<ConsumetSourcesResponse>()
+
+            json?.sources?.map source@{ source ->
+                M3u8Helper.generateM3u8(
+                    "Crunchyroll [$type]",
+                    source.url ?: return@source null,
+                    "",
+                ).forEach(callback)
+            }
+
+            json?.subtitles?.map subtitle@{ sub ->
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        sub.lang?.replace(Regex("\\[\\S+]"), "")?.trim() ?: "",
+                        sub.url ?: return@subtitle null
+                    )
                 )
-            )
+            }
         }
-
 
     }
 
