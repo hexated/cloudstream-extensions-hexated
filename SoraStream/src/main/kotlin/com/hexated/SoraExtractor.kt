@@ -1120,21 +1120,25 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = "$uhdmoviesAPI/?s=$title"
-        var doc = app.get(url).document
-        if (doc.select("title").text() == "Just a moment...") {
-            doc = app.get(url, interceptor = CloudflareKiller()).document
-        }
-        val scriptData = doc.select("div.row.gridlove-posts article").map {
-            it.selectFirst("a")?.attr("href") to it.selectFirst("h1")?.text()
-        }
-        val script = if (scriptData.size == 1) {
-            scriptData.first()
+        val url = if(season == null) {
+            "$uhdmoviesAPI/download-${title.fixTitle()}-$year"
         } else {
-            scriptData.find { it.second?.filterMedia(title, year, lastSeason) == true }
+            val url = "$uhdmoviesAPI/?s=$title"
+            var doc = app.get(url).document
+            if (doc.select("title").text() == "Just a moment...") {
+                doc = app.get(url, interceptor = CloudflareKiller()).document
+            }
+            val scriptData = doc.select("div.row.gridlove-posts article").map {
+                it.selectFirst("a")?.attr("href") to it.selectFirst("h1")?.text()
+            }
+            (if (scriptData.size == 1) {
+                scriptData.first()
+            } else {
+                scriptData.find { it.second?.filterMedia(title, year, lastSeason) == true }
+            })?.first
         }
 
-        val detailDoc = app.get(script?.first ?: return).document
+        val detailDoc = app.get(url ?: return).document
 
         val iframeList = detailDoc.select("div.entry-content p").map { it }
             .filter { it.text().filterIframe(season, lastSeason, year) }.mapNotNull {
