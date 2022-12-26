@@ -13,7 +13,7 @@ import java.net.URI
 
 
 class Animixplay : MainAPI() {
-    override var mainUrl = "https://animixplay.to"
+    override var mainUrl = "https://animixplay.red"
     override var name = "Animixplay"
     override val hasMainPage = true
     override var lang = "en"
