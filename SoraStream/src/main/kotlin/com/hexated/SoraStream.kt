@@ -26,6 +26,8 @@ import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
+import com.hexated.SoraExtractor.invokeMoviesbay
+import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeZoro
@@ -86,6 +88,8 @@ open class SoraStream : TmdbProvider() {
         const val fdMoviesAPI = "https://freedrivemovie.com"
         const val m4uhdAPI = "https://m4uhd.tv"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
+        const val moviezAddAPI = "https://moviezaddiction.bloginguru.info"
+        const val moviesbayAPI = "https://moviesbay.live"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -241,7 +245,7 @@ open class SoraStream : TmdbProvider() {
             newTvSeriesLoadResponse(
                 title,
                 url,
-                if(isAnime) TvType.Anime else TvType.TvSeries,
+                if (isAnime) TvType.Anime else TvType.TvSeries,
                 episodes
             ) {
                 this.posterUrl = poster
@@ -469,6 +473,22 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeTvMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if (res.season == null) invokeMoviesbay(
+                    res.title,
+                    res.year,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (res.season == null) invokeMoviezAdd(
+                    res.title,
+                    res.year,
+                    subtitleCallback,
+                    callback
+                )
             },
         )
 
