@@ -1565,17 +1565,13 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val fixTitle = title?.replace(":", "")
+        val fixTitle = title?.fixTitle()?.replace("-", " ")
         val doc = app.get("$moviezAddAPI/?s=$fixTitle").document
 
-        // TODO find better way
         val matchMedia = doc.select("article.mh-loop-item").map {
             it.select("a").attr("href") to it.select("a").text()
         }.find {
-            (it.second.contains("$fixTitle", true) || it.second.contains(
-                "$title",
-                true
-            )) && it.first.contains("$year")
+            it.second.contains(Regex("(?i)($fixTitle)|($title)")) && it.first.contains("$year")
         }
 
         val detailLink =

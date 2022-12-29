@@ -181,7 +181,7 @@ class OtakudesuProvider : MainAPI() {
             data
 //            , interceptor = interceptor
         ).document
-        val scriptData = document.select("script").last()?.data()
+        val scriptData = document.select("script:containsData(action:)").lastOrNull()?.data()
         val token = scriptData?.substringAfter("{action:\"")?.substringBefore("\"}").toString()
 
         val nonce = app.post("$mainUrl/wp-admin/admin-ajax.php", data = mapOf("action" to token))
