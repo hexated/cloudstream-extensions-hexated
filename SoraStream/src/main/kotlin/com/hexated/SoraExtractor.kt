@@ -1536,8 +1536,9 @@ object SoraExtractor : SoraStream() {
             val size = media[index.minus(1)]
             val quality = media[index.minus(2)]
             val qualityName = media[index.minus(3)]
+            val gdriveLink = getDirectGdrive(it)
 
-            val doc = app.get(it).document
+            val doc = app.get(gdriveLink).document
             val form = doc.select("form#download-form").attr("action")
             val uc = doc.select("input#uc-download-link").attr("value")
             val link = app.post(

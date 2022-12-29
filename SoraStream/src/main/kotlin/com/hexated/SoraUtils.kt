@@ -254,6 +254,14 @@ suspend fun extractCovyn(url: String?): Pair<String?, String?>? {
     return Pair(videoLink, size)
 }
 
+fun getDirectGdrive(url: String): String {
+    return if(url.endsWith("share_link")) {
+        "https://drive.google.com/uc?id=${url.substringAfter("/d/").substringBefore("/")}&export=download"
+    } else {
+        url
+    }
+}
+
 suspend fun bypassFdAds(url: String): String? {
     val res = app.get(url).document
     val freeRedirect = res.selectFirst("a#link")?.attr("href")
