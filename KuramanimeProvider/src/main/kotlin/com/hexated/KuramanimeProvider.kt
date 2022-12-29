@@ -91,7 +91,7 @@ class KuramanimeProvider : MainAPI() {
         val link = "$mainUrl/anime?search=$query&order_by=latest"
         val document = app.get(link).document
 
-        return document.select("div#animeList div.col-lg-4.col-md-6.col-sm-6").mapNotNull {
+        return document.select("div#animeList div.product__item").mapNotNull {
             it.toSearchResult()
         }
     }
@@ -123,12 +123,17 @@ class KuramanimeProvider : MainAPI() {
             )
         ).parsedSafe<DataAni>()?.data?.media?.id
 
-        val episodes =
-            Jsoup.parse(document.select("#episodeLists").attr("data-content")).select("a").map {
+        val episodes = mutableListOf<Episode>()
+
+        for (i in 1..5) {
+            val doc = app.get("$url?page=$i").document
+            val eps = Jsoup.parse(doc.select("#episodeLists").attr("data-content")).select("a").mapNotNull {
                 val name = it.text().trim()
                 val link = it.attr("href")
                 Episode(link, name)
-            }
+            }.filter { it.name?.contains(Regex("(?i)(Terlama)|(Terbaru)")) == false }
+            if(eps.isEmpty()) break else episodes.addAll(eps)
+        }
 
         val recommendations = document.select("div#randomList > a").mapNotNull {
             val epHref = it.attr("href")
