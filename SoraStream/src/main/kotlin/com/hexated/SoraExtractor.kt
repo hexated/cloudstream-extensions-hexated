@@ -1517,6 +1517,98 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeMoviesbay(
+        title: String? = null,
+        year: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url =
+            "https://sheets.googleapis.com/v4/spreadsheets/12RD3HX3NkSiCyqQJxemyS8W0R9B7J4VBl35uLBa5W0E/values/main?alt=json&key=AIzaSyA_ZY8GYxyUZYlcKGkDIHuku_gmE4z-AHQ"
+        val json = app.get(url, referer = "$moviesbayAPI/")
+            .parsedSafe<MoviesbayValues>()?.values
+
+        val media = json?.find { it.first() == "${title.fixTitle()}-$year" }
+
+        media?.filter { it.startsWith("https://drive.google.com") }?.apmap {
+            val index = media.indexOf(it)
+            val size = media[index.minus(1)]
+            val quality = media[index.minus(2)]
+            val qualityName = media[index.minus(3)]
+
+            val doc = app.get(it).document
+            val form = doc.select("form#download-form").attr("action")
+            val uc = doc.select("input#uc-download-link").attr("value")
+            val link = app.post(
+                form, data = mapOf(
+                    "uc-download-link" to uc
+                )
+            ).url
+
+            callback.invoke(
+                ExtractorLink(
+                    "Moviesbay $qualityName [$size]",
+                    "Moviesbay $qualityName [$size]",
+                    link,
+                    "",
+                    getQualityFromName(quality)
+                )
+            )
+
+        }
+    }
+
+    suspend fun invokeMoviezAdd(
+        title: String? = null,
+        year: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val doc = app.get("$moviezAddAPI/?s=$title").document
+
+        val matchMedia = doc.select("article.mh-loop-item").map {
+            it.select("a").attr("href") to it.select("a").text()
+        }.find { it.second.contains("$title", true) && it.first.contains("$year") }
+
+        val detailLink =
+            app.get(matchMedia?.first ?: return).document.selectFirst("a#jake1")?.attr("href")
+
+        val iframeDoc = app.get(detailLink ?: return).document
+
+        val media = iframeDoc.selectFirst("div.entry-content pre span")?.text()?.split("|")
+            ?.map { it.trim() }
+
+        media?.apmapIndexed { index, name ->
+            delay(1000)
+            val link = iframeDoc.select("div.entry-content pre")[index.plus(1)].selectFirst("a")
+                ?.attr("href") ?: return@apmapIndexed null
+            val token =
+                app.get(link).document.select("input[name=_csrf_token_645a83a41868941e4692aa31e7235f2]")
+                    .attr("value")
+            val shortLink = app.post(
+                link,
+                data = mapOf("_csrf_token_645a83a41868941e4692aa31e7235f2" to token)
+            ).document.selectFirst("a[rel=nofollow]")?.attr("href")
+
+//            val videoUrl = extractRebrandly(shortLink ?: return@apmapIndexed null )
+            val quality = Regex("([0-9]{3,4})p").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val qualityName = name.replace("${quality}p", "").trim()
+
+            callback.invoke(
+                ExtractorLink(
+                    "MoviezAdd $qualityName",
+                    "MoviezAdd $qualityName",
+                    shortLink ?: return@apmapIndexed null,
+                    "",
+                    quality ?: Qualities.Unknown.value
+                )
+            )
+
+        }
+
+
+    }
+
 }
 
 class StreamM4u : XStreamCdn() {
@@ -1533,6 +1625,10 @@ data class FDMovieIFrame(
 
 data class UHDBackupUrl(
     @JsonProperty("url") val url: String? = null,
+)
+
+data class MoviesbayValues(
+    @JsonProperty("values") val values: List<List<String>>? = arrayListOf(),
 )
 
 data class HdMovieBoxSource(
