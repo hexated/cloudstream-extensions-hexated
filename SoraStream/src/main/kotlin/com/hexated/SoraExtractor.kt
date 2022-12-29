@@ -1120,7 +1120,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = if(season == null) {
+        val url = if (season == null) {
             "$uhdmoviesAPI/download-${title.fixTitle()}-$year"
         } else {
             val url = "$uhdmoviesAPI/?s=$title"
@@ -1494,8 +1494,9 @@ object SoraExtractor : SoraStream() {
         }
 
         episodeId?.apmap { (id, type) ->
-            val json = app.get("$consumetCrunchyrollAPI/watch?episodeId=${id ?: return@apmap null}&format=srt")
-                .parsedSafe<ConsumetSourcesResponse>()
+            val json =
+                app.get("$consumetCrunchyrollAPI/watch?episodeId=${id ?: return@apmap null}&format=srt")
+                    .parsedSafe<ConsumetSourcesResponse>()
 
             json?.sources?.map source@{ source ->
                 M3u8Helper.generateM3u8(
@@ -1564,11 +1565,18 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val doc = app.get("$moviezAddAPI/?s=$title").document
+        val fixTitle = title?.replace(":", "")
+        val doc = app.get("$moviezAddAPI/?s=$fixTitle").document
 
+        // TODO find better way
         val matchMedia = doc.select("article.mh-loop-item").map {
             it.select("a").attr("href") to it.select("a").text()
-        }.find { it.second.contains("$title", true) && it.first.contains("$year") }
+        }.find {
+            (it.second.contains("$fixTitle", true) || it.second.contains(
+                "$title",
+                true
+            )) && it.first.contains("$year")
+        }
 
         val detailLink =
             app.get(matchMedia?.first ?: return).document.selectFirst("a#jake1")?.attr("href")
@@ -1591,7 +1599,8 @@ object SoraExtractor : SoraStream() {
             ).document.selectFirst("a[rel=nofollow]")?.attr("href")
 
 //            val videoUrl = extractRebrandly(shortLink ?: return@apmapIndexed null )
-            val quality = Regex("([0-9]{3,4})p").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val quality =
+                Regex("([0-9]{3,4})p").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
             val qualityName = name.replace("${quality}p", "").trim()
 
             callback.invoke(
