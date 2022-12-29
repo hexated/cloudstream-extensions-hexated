@@ -164,11 +164,12 @@ open class TimefourTv : MainAPI() {
             }
         } ?: throw ErrorLoadingException()
         getLink(fixUrl(link))?.let { m3uLink ->
+            val url = app.get(m3uLink, referer = "$mainServer/")
             callback.invoke(
                 ExtractorLink(
                     this.name,
                     this.name,
-                    m3uLink,
+                    url.url,
                     referer = "$mainServer/",
                     quality = Qualities.Unknown.value,
                     isM3u8 = true,
