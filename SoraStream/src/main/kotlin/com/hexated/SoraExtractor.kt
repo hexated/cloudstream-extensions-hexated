@@ -616,12 +616,13 @@ object SoraExtractor : SoraStream() {
         val doc = request.document
         val script = doc.selectFirst("script:containsData(var isSingle)")?.data().toString()
         val sourcesData = Regex("listSE\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
-        val sourcesDetail =
-            Regex("linkDetails\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
+        val sourcesDetail = Regex("linkDetails\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
+        val subSources = Regex("dSubtitles\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
 
         //Gson is shit, but i don't care
         val sourcesJson = JsonParser().parse(sourcesData).asJsonObject
         val sourcesDetailJson = JsonParser().parse(sourcesDetail).asJsonObject
+        val subJson = JsonParser().parse(subSources).asJsonObject
 
         val sources = if (season == null && episode == null) {
             sourcesJson.getAsJsonObject("movie").getAsJsonArray("movie")
@@ -630,6 +631,14 @@ object SoraExtractor : SoraStream() {
             val sson = if (season!! < 10) "0$season" else season
             sourcesJson.getAsJsonObject("s$sson").getAsJsonArray("e$eps")
         }.asJsonArray
+
+        val subSource = if (season == null && episode == null) {
+            subJson.getAsJsonObject("movie").getAsJsonObject("movie")
+        } else {
+            val eps = if (episode!! < 10) "0$episode" else episode
+            val sson = if (season!! < 10) "0$season" else season
+            subJson.getAsJsonObject("s$sson").getAsJsonObject("e$eps")
+        }.asJsonObject
 
         val scriptUser =
             doc.select("script").find { it.data().contains("var userNonce") }?.data().toString()
@@ -681,6 +690,19 @@ object SoraExtractor : SoraStream() {
                 )
             )
         }
+
+        subSource.toString().removeSurrounding("{", "}").split(",").map {
+            val slug = Regex("\"(\\w+)\":\"(\\d+)\"").find(it)?.groupValues
+            slug?.getOrNull(1) to slug?.getOrNull(2)
+        }.map { (lang, id) ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    SubtitleHelper.fromTwoLettersToLanguage(lang ?: "") ?: "$lang",
+                    "https://www.mysubs.org/get-subtitle/$id"
+                )
+            )
+        }
+
 
     }
 
@@ -1563,6 +1585,8 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeMoviezAdd(
         title: String? = null,
         year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
@@ -1575,43 +1599,53 @@ object SoraExtractor : SoraStream() {
             it.second.contains(Regex("(?i)($fixTitle)|($title)")) && it.first.contains("$year")
         }
 
-        val detailLink =
-            app.get(matchMedia?.first ?: return).document.selectFirst("a#jake1")?.attr("href")
-
-        val iframeDoc = app.get(detailLink ?: return).document
-
-        val media = iframeDoc.selectFirst("div.entry-content pre span")?.text()?.split("|")
+        val mediaLink = app.get(matchMedia?.first ?: return).document.selectFirst("a#jake1")?.attr("href")
+        val detailDoc = app.get(mediaLink ?: return).document
+        val media = detailDoc.selectFirst("div.entry-content pre span")?.text()
+            ?.split("|")
             ?.map { it.trim() }
 
-        media?.apmapIndexed { index, name ->
-            delay(1000)
-            val link = iframeDoc.select("div.entry-content pre")[index.plus(1)].selectFirst("a")
-                ?.attr("href") ?: return@apmapIndexed null
-            val token =
-                app.get(link).document.select("input[name=_csrf_token_645a83a41868941e4692aa31e7235f2]")
-                    .attr("value")
+        val iframe = if (season == null) {
+            media?.mapIndexed { index, name ->
+                detailDoc.select("div.entry-content > pre")[index.plus(1)].selectFirst("a")
+                    ?.attr("href") to name
+            }
+        } else {
+            media?.mapIndexed { index, name ->
+                val linkMedia =
+                    detailDoc.select("div.entry-content > pre")[index.plus(1)].selectFirst("a")
+                        ?.attr("href")
+                app.get(
+                    linkMedia ?: return@mapIndexed null
+                ).document.selectFirst("div.entry-content strong:matches((?i)S0?${season}E0?${episode}) a")
+                    ?.attr("href") to name
+            }
+        }
+
+        iframe?.apmap {
+            val token = app.get(
+                it?.first ?: return@apmap null
+            ).document.select("input[name=_csrf_token_645a83a41868941e4692aa31e7235f2]")
+                .attr("value")
             val shortLink = app.post(
-                link,
+                it.first ?: return@apmap null,
                 data = mapOf("_csrf_token_645a83a41868941e4692aa31e7235f2" to token)
             ).document.selectFirst("a[rel=nofollow]")?.attr("href")
 
 //            val videoUrl = extractRebrandly(shortLink ?: return@apmapIndexed null )
-            val quality =
-                Regex("([0-9]{3,4})p").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
-            val qualityName = name.replace("${quality}p", "").trim()
+            val quality = Regex("([0-9]{3,4})p").find(it.second)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val qualityName = it.second.replace("${quality}p", "").trim()
 
             callback.invoke(
                 ExtractorLink(
                     "MoviezAdd $qualityName",
                     "MoviezAdd $qualityName",
-                    shortLink ?: return@apmapIndexed null,
+                    shortLink ?: return@apmap null,
                     "",
                     quality ?: Qualities.Unknown.value
                 )
             )
-
         }
-
 
     }
 

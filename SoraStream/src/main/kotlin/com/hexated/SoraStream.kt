@@ -483,9 +483,11 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (res.season == null) invokeMoviezAdd(
+                if (!res.isAnime) invokeMoviezAdd(
                     res.title,
                     res.year,
+                    res.season,
+                    res.episode,
                     subtitleCallback,
                     callback
                 )
