@@ -3,6 +3,7 @@ package com.hexated
 import com.hexated.TimefourTvExtractor.getLink
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
@@ -165,16 +166,11 @@ open class TimefourTv : MainAPI() {
         } ?: throw ErrorLoadingException()
         getLink(fixUrl(link))?.let { m3uLink ->
             val url = app.get(m3uLink, referer = "$mainServer/")
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    url.url,
-                    referer = "$mainServer/",
-                    quality = Qualities.Unknown.value,
-                    isM3u8 = true,
-                )
-            )
+            M3u8Helper.generateM3u8(
+                this.name,
+                url.url,
+                "$mainServer/",
+            ).forEach(callback)
         }
         return true
     }
