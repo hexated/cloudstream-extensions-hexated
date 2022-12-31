@@ -112,25 +112,25 @@ open class SoraStream : TmdbProvider() {
     }
 
     override val mainPage = mainPageOf(
-        "$tmdbAPI/trending/all/day?api_key=$apiKey&region=&page=" to "Trending",
-        "$tmdbAPI/movie/popular?api_key=$apiKey&region=&without_keywords=190370|13059|226161&page=" to "Popular Movies",
-        "$tmdbAPI/tv/popular?api_key=$apiKey&region=&without_keywords=190370&page=" to "Popular TV Shows",
-        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=&page=" to "Airing Today TV Shows",
-//        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=&page=" to "On The Air TV Shows",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=213&page=" to "Netflix",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=1024&page=" to "Amazon",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2739&page=" to "Disney+",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=453&page=" to "Hulu",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2552&page=" to "Apple TV+",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=49&page=" to "HBO",
-        "$tmdbAPI/movie/top_rated?api_key=$apiKey&region=&page=" to "Top Rated Movies",
-        "$tmdbAPI/tv/top_rated?api_key=$apiKey&region=&page=" to "Top Rated TV Shows",
-        "$tmdbAPI/movie/upcoming?api_key=$apiKey&region=&page=" to "Upcoming Movies",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_original_language=ko&page=" to "Korean Shows",
-        "$tmdbAPI/tv/airing_today?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc&without_keywords=195669&page=" to "Airing Today Anime",
-        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc&without_keywords=195669&page=" to "Ongoing Anime",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_keywords=210024|222243&without_keywords=195669&page=" to "Anime",
-        "$tmdbAPI/discover/movie?api_key=$apiKey&with_keywords=210024|222243&without_keywords=195669&page=" to "Anime Movies",
+        "$tmdbAPI/trending/all/day?api_key=$apiKey&region=" to "Trending",
+        "$tmdbAPI/movie/popular?api_key=$apiKey&region=" to "Popular Movies",
+        "$tmdbAPI/tv/popular?api_key=$apiKey&region=" to "Popular TV Shows",
+//        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=" to "Airing Today TV Shows",
+        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=" to "On The Air TV Shows",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=213" to "Netflix",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=1024" to "Amazon",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2739" to "Disney+",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=453" to "Hulu",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2552" to "Apple TV+",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=49" to "HBO",
+        "$tmdbAPI/movie/top_rated?api_key=$apiKey&region=" to "Top Rated Movies",
+        "$tmdbAPI/tv/top_rated?api_key=$apiKey&region=" to "Top Rated TV Shows",
+        "$tmdbAPI/movie/upcoming?api_key=$apiKey&region=" to "Upcoming Movies",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_original_language=ko" to "Korean Shows",
+        "$tmdbAPI/tv/airing_today?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc" to "Airing Today Anime",
+        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc" to "Ongoing Anime",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_keywords=210024|222243" to "Anime",
+        "$tmdbAPI/discover/movie?api_key=$apiKey&with_keywords=210024|222243" to "Anime Movies",
     )
 
     private fun getImageUrl(link: String?): String? {
@@ -147,9 +147,9 @@ open class SoraStream : TmdbProvider() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-//        checkMainServer()
+        val adultQuery = if(settingsForProvider.enableAdult) "&page=" else "&without_keywords=190370|13059|226161|195669&page="
         val type = if (request.data.contains("/movie")) "movie" else "tv"
-        val home = app.get(request.data + page)
+        val home = app.get("${request.data}$adultQuery$page")
             .parsedSafe<Results>()?.results
             ?.mapNotNull { media ->
                 media.toSearchResponse(type)
