@@ -113,8 +113,8 @@ open class SoraStream : TmdbProvider() {
 
     override val mainPage = mainPageOf(
         "$tmdbAPI/trending/all/day?api_key=$apiKey&region=&page=" to "Trending",
-        "$tmdbAPI/movie/popular?api_key=$apiKey&region=&page=" to "Popular Movies",
-        "$tmdbAPI/tv/popular?api_key=$apiKey&region=&page=" to "Popular TV Shows",
+        "$tmdbAPI/movie/popular?api_key=$apiKey&region=&without_keywords=190370&page=" to "Popular Movies",
+        "$tmdbAPI/tv/popular?api_key=$apiKey&region=&without_keywords=190370&page=" to "Popular TV Shows",
         "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=&page=" to "Airing Today TV Shows",
 //        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=&page=" to "On The Air TV Shows",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=213&page=" to "Netflix",
@@ -129,8 +129,8 @@ open class SoraStream : TmdbProvider() {
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_original_language=ko&page=" to "Korean Shows",
         "$tmdbAPI/tv/airing_today?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc&page=" to "Airing Today Anime",
         "$tmdbAPI/tv/on_the_air?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc&page=" to "Ongoing Anime",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_keywords=210024|222243&page=" to "Anime",
-        "$tmdbAPI/discover/movie?api_key=$apiKey&with_keywords=210024|222243&page=" to "Anime Movies",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_keywords=210024|222243&without_keywords=195669&page=" to "Anime",
+        "$tmdbAPI/discover/movie?api_key=$apiKey&with_keywords=210024|222243&without_keywords=195669&page=" to "Anime Movies",
     )
 
     private fun getImageUrl(link: String?): String? {
@@ -361,7 +361,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeHDMovieBox(res.title, res.season, res.episode, callback)
+                if (!res.isAnime) invokeHDMovieBox(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeSeries9(res.title, res.season, res.episode, subtitleCallback, callback)
@@ -435,7 +435,6 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.lastSeason,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },
@@ -448,7 +447,6 @@ open class SoraStream : TmdbProvider() {
                     res.year,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },
@@ -457,7 +455,6 @@ open class SoraStream : TmdbProvider() {
                     res.title,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },
@@ -472,13 +469,12 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeTvMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeTvMovies(res.title, res.season, res.episode, callback)
             },
             {
                 if (res.season == null) invokeMoviesbay(
                     res.title,
                     res.year,
-                    subtitleCallback,
                     callback
                 )
             },
@@ -488,7 +484,6 @@ open class SoraStream : TmdbProvider() {
                     res.year,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },

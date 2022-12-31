@@ -1,6 +1,5 @@
 package com.hexated
 
-import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -12,7 +11,6 @@ import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -342,6 +340,7 @@ object SoraExtractor : SoraStream() {
         title: String? = null,
         season: Int? = null,
         episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
@@ -367,9 +366,10 @@ object SoraExtractor : SoraStream() {
         delay(1000)
         val iframe = app.get(iframeUrl, referer = "$hdMovieBoxAPI/").document.selectFirst("iframe")
             ?.attr("src")
+        val base = getBaseUrl(iframe ?: return)
 
         val script = app.get(
-            iframe ?: return, referer = "$hdMovieBoxAPI/"
+            iframe, referer = "$hdMovieBoxAPI/"
         ).document.selectFirst("script:containsData(var vhash =)")?.data()
             ?.substringAfter("vhash, {")?.substringBefore("}, false")
 
@@ -392,6 +392,15 @@ object SoraExtractor : SoraStream() {
                     isM3u8 = true,
                 )
             )
+
+            source?.tracks?.map { sub ->
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        sub.label ?: "",
+                        fixUrl(sub.file ?: return@map null, base),
+                    )
+                )
+            }
         }
     }
 
@@ -853,26 +862,45 @@ object SoraExtractor : SoraStream() {
     ) {
         val fixTitle = title.fixTitle()
         val url = if (season == null) {
-            "$xMovieAPI/movies/$fixTitle/watch"
+            val tempUrl = "$xMovieAPI/movies/$fixTitle/watch"
+            val newUrl = app.get(tempUrl).url
+            if(newUrl == "$xMovieAPI/") "$xMovieAPI/movies/$fixTitle-$year/watch" else tempUrl
         } else {
             "$xMovieAPI/series/$fixTitle-season-$season-episode-$episode/watch"
         }
 
-        val doc = app.get(url).text
-        val link =
-            Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.mp4)[\"|'],").find(doc)?.groupValues?.getOrNull(
+        val doc = app.get(url).document
+        val script = doc.selectFirst("script:containsData(const player =)")?.data() ?: return
+        val link = Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.(mp4|m3u8))[\"|'],").find(script)?.groupValues?.getOrNull(
                 1
-            )
+            ) ?: return
 
-        callback.invoke(
-            ExtractorLink(
+        if(link.contains(".m3u8")) {
+            M3u8Helper.generateM3u8(
                 "Xmovie",
-                "Xmovie",
-                link ?: return,
+                link,
                 "",
-                Qualities.Unknown.value,
+            ).forEach(callback)
+        } else {
+            callback.invoke(
+                ExtractorLink(
+                    "Xmovie",
+                    "Xmovie",
+                    link,
+                    "",
+                    Qualities.P720.value,
+                )
             )
-        )
+        }
+
+        Regex(""""file":\s+?"(\S+\.(vtt|srt))""").find(script)?.groupValues?.getOrNull(1)?.let { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    "English",
+                    sub,
+                )
+            )
+        }
 
 
     }
@@ -1139,7 +1167,6 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         lastSeason: Int? = null,
         episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val url = if (season == null) {
@@ -1265,7 +1292,6 @@ object SoraExtractor : SoraStream() {
         year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
@@ -1314,7 +1340,6 @@ object SoraExtractor : SoraStream() {
         title: String? = null,
         season: Int? = null,
         episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
@@ -1339,7 +1364,6 @@ object SoraExtractor : SoraStream() {
                 "4k", true
             )) && (it.type.contains("gdtot") || it.type.contains("oiya"))
         }
-        Log.i("hexated", "$iframe")
         iframe.apmap { (link, quality, size, type) ->
             val qualities = getFDoviesQuality(quality)
             val fdLink = bypassFdAds(link)
@@ -1461,7 +1485,6 @@ object SoraExtractor : SoraStream() {
         title: String? = null,
         season: Int? = null,
         episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
@@ -1543,7 +1566,6 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeMoviesbay(
         title: String? = null,
         year: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val url =
@@ -1587,7 +1609,6 @@ object SoraExtractor : SoraStream() {
         year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title?.fixTitle()?.replace("-", " ")
@@ -1675,10 +1696,16 @@ data class MoviesbayValues(
     @JsonProperty("values") val values: List<List<String>>? = arrayListOf(),
 )
 
+data class HdMovieBoxTracks(
+    @JsonProperty("label") val label: String? = null,
+    @JsonProperty("file") val file: String? = null,
+)
+
 data class HdMovieBoxSource(
     @JsonProperty("videoUrl") val videoUrl: String? = null,
     @JsonProperty("videoServer") val videoServer: String? = null,
     @JsonProperty("videoDisk") val videoDisk: Any? = null,
+    @JsonProperty("tracks") val tracks: ArrayList<HdMovieBoxTracks>? = arrayListOf(),
 )
 
 data class HdMovieBoxIframe(
@@ -1792,12 +1819,6 @@ data class KisskhDetail(
 data class KisskhResults(
     @JsonProperty("id") val id: Int?,
     @JsonProperty("title") val title: String?,
-)
-
-data class AnimixData(
-    @JsonProperty("title") val title: String? = null,
-    @JsonProperty("title_english") val title_english: String? = null,
-    @JsonProperty("title_japanese") val title_japanese: String? = null,
 )
 
 data class EpisodesFwatayako(
