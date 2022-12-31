@@ -1596,7 +1596,11 @@ object SoraExtractor : SoraStream() {
         val matchMedia = doc.select("article.mh-loop-item").map {
             it.select("a").attr("href") to it.select("a").text()
         }.find {
-            it.second.contains(Regex("(?i)($fixTitle)|($title)")) && it.first.contains("$year")
+            if(season == null) {
+                it.second.contains(Regex("(?i)($fixTitle)|($title)")) && it.first.contains("$year")
+            } else {
+                it.second.contains(Regex("(?i)($fixTitle)|($title)")) && it.second.contains(Regex("(?i)(Season\\s?$season)|(S0?$season)"))
+            }
         }
 
         val mediaLink = app.get(matchMedia?.first ?: return).document.selectFirst("a#jake1")?.attr("href")
