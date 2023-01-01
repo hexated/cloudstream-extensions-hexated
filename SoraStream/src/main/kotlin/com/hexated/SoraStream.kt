@@ -147,9 +147,9 @@ open class SoraStream : TmdbProvider() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val adultQuery = if(settingsForProvider.enableAdult) "&page=" else "&without_keywords=190370|13059|226161|195669&page="
+        val adultQuery = if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669"
         val type = if (request.data.contains("/movie")) "movie" else "tv"
-        val home = app.get("${request.data}$adultQuery$page")
+        val home = app.get("${request.data}$adultQuery&page=$page")
             .parsedSafe<Results>()?.results
             ?.mapNotNull { media ->
                 media.toSearchResponse(type)
@@ -180,9 +180,9 @@ open class SoraStream : TmdbProvider() {
         val data = parseJson<Data>(url)
         val type = getType(data.type)
         val resUrl = if (type == TvType.Movie) {
-            "$tmdbAPI/movie/${data.id}?api_key=$apiKey&append_to_response=credits,external_ids,videos,recommendations"
+            "$tmdbAPI/movie/${data.id}?api_key=$apiKey&append_to_response=keywords,credits,external_ids,videos,recommendations"
         } else {
-            "$tmdbAPI/tv/${data.id}?api_key=$apiKey&append_to_response=credits,external_ids,videos,recommendations"
+            "$tmdbAPI/tv/${data.id}?api_key=$apiKey&append_to_response=keywords,credits,external_ids,videos,recommendations"
         }
         val res = app.get(resUrl).parsedSafe<MediaDetail>()
             ?: throw ErrorLoadingException("Invalid Json Response")
@@ -195,6 +195,8 @@ open class SoraStream : TmdbProvider() {
         val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
         val isAnime = genres?.contains("Animation") == true && res.original_language == "ja"
+        val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
+            .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
 
         val actors = res.credits?.cast?.mapNotNull { cast ->
             ActorData(
@@ -252,7 +254,7 @@ open class SoraStream : TmdbProvider() {
                 this.backgroundPosterUrl = bgPoster
                 this.year = year
                 this.plot = res.overview
-                this.tags = genres
+                this.tags = if (isAnime) keywords else genres
                 this.rating = rating
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
@@ -278,7 +280,7 @@ open class SoraStream : TmdbProvider() {
                 this.backgroundPosterUrl = bgPoster
                 this.year = year
                 this.plot = res.overview
-                this.tags = genres
+                this.tags = if (isAnime) keywords else genres
                 this.rating = rating
                 this.recommendations = recommendations
                 this.actors = actors
@@ -534,6 +536,16 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("name") val name: String? = null,
     )
 
+    data class Keywords(
+        @JsonProperty("id") val id: Int? = null,
+        @JsonProperty("name") val name: String? = null,
+    )
+
+    data class KeywordResults(
+        @JsonProperty("results") val results: ArrayList<Keywords>? = arrayListOf(),
+        @JsonProperty("keywords") val keywords: ArrayList<Keywords>? = arrayListOf(),
+    )
+
     data class Seasons(
         @JsonProperty("id") val id: Int? = null,
         @JsonProperty("name") val name: String? = null,
@@ -602,20 +614,13 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("original_language") val original_language: String? = null,
         @JsonProperty("status") val status: String? = null,
         @JsonProperty("genres") val genres: ArrayList<Genres>? = arrayListOf(),
+        @JsonProperty("keywords") val keywords: KeywordResults? = null,
         @JsonProperty("seasons") val seasons: ArrayList<Seasons>? = arrayListOf(),
         @JsonProperty("videos") val videos: ResultsTrailer? = null,
         @JsonProperty("external_ids") val external_ids: ExternalIds? = null,
         @JsonProperty("credits") val credits: Credits? = null,
         @JsonProperty("recommendations") val recommendations: ResultsRecommendations? = null,
     )
-
-//    data class PageProps(
-//        @JsonProperty("id") val id: String? = null,
-//        @JsonProperty("imdb") val imdbId: String? = null,
-//        @JsonProperty("result") val result: MediaDetail? = null,
-//        @JsonProperty("recommandations") val recommandations: ArrayList<Media>? = arrayListOf(),
-//        @JsonProperty("cast") val cast: ArrayList<Cast>? = arrayListOf(),
-//    )
 
     data class EmbedJson(
         @JsonProperty("type") val type: String? = null,

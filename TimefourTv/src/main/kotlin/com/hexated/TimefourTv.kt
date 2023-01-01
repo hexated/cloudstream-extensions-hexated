@@ -9,6 +9,7 @@ import org.jsoup.nodes.Element
 
 open class TimefourTv : MainAPI() {
     final override var mainUrl = "https://time4tv.stream"
+    val daddyUrl = "https://daddyhd.com"
     override var name = "Time4tv"
     override val hasDownloadSupport = false
     override val hasMainPage = true
@@ -25,7 +26,13 @@ open class TimefourTv : MainAPI() {
         "$mainUrl/live-sports-streams" to "Live Sport Channels",
         "$mainUrl/news-channels" to "News Channels",
         "$mainUrl/schedule.php" to "Schedule",
+        "$daddyUrl/24-7-channels.php" to "DaddyHD Channels"
     )
+
+    private fun fixDetailLink(link: String?): String? {
+        if (link == null) return null
+        return if (link.startsWith("/")) "$daddyUrl$link" else link
+    }
 
     override suspend fun getMainPage(
         page: Int,
@@ -38,7 +45,7 @@ open class TimefourTv : MainAPI() {
             val home = res.select("div.tab-content ul li").mapNotNull {
                 it.toSearchResult()
             }
-            if(home.isNotEmpty()) items.add(HomePageList(request.name, home, true))
+            if (home.isNotEmpty()) items.add(HomePageList(request.name, home, true))
         }
         if (request.name == "All Channels") {
             val res = if (page == 1) {
@@ -49,7 +56,15 @@ open class TimefourTv : MainAPI() {
             val home = res.select("div.tab-content ul li").mapNotNull {
                 it.toSearchResult()
             }
-            if(home.isNotEmpty()) items.add(HomePageList(request.name, home, true))
+            if (home.isNotEmpty()) items.add(HomePageList(request.name, home, true))
+        }
+
+        if (nonPaged && request.name == "DaddyHD Channels") {
+            val res = app.get(request.data).document
+            val channelDaddy = res.select("div.grid-container div.grid-item").mapNotNull {
+                it.toSearchDaddy()
+            }
+            if (channelDaddy.isNotEmpty()) items.add(HomePageList(request.name, channelDaddy, true))
         }
 
         if (nonPaged && request.name == "Schedule") {
@@ -57,10 +72,20 @@ open class TimefourTv : MainAPI() {
             val schedule = res.select("div.search_p h1,div.search_p h2").mapNotNull {
                 it.toSearchSchedule()
             }
-            items.add(HomePageList(request.name, schedule, true))
+            if (schedule.isNotEmpty()) items.add(HomePageList(request.name, schedule, true))
         }
 
         return newHomePageResponse(items)
+    }
+
+    private fun Element.toSearchDaddy(): LiveSearchResponse? {
+        return LiveSearchResponse(
+            this.select("strong").text() ?: return null,
+            fixDetailLink(this.select("a").attr("href")) ?: return null,
+            this@TimefourTv.name,
+            TvType.Live,
+            posterUrl = time4tvPoster
+        )
     }
 
     private fun Element.toSearchSchedule(): LiveSearchResponse? {
@@ -115,10 +140,13 @@ open class TimefourTv : MainAPI() {
         if (!res.isSuccessful) return loadSchedule(url)
 
         val document = res.document
-        val title = document.selectFirst("div.channelHeading h1")?.text() ?: return null
+        val title =
+            document.selectFirst("div.channelHeading h1")?.text() ?: document.selectFirst("title")
+                ?.text()?.substringBefore("HD")?.trim() ?: return null
         val poster =
-            fixUrlNull(document.selectFirst("meta[property=\"og:image\"]")?.attr("content"))
-        val description = document.selectFirst("div.tvText")?.text() ?: return null
+            fixUrlNull(document.selectFirst("meta[property=\"og:image\"]")?.attr("content")) ?: time4tvPoster
+        val description = document.selectFirst("div.tvText")?.text()
+            ?: document.selectFirst("meta[name=description]")?.attr("content") ?: return null
         val episodes = document.selectFirst("div.playit")?.attr("onclick")?.substringAfter("open('")
             ?.substringBefore("',")?.let { link ->
                 val doc = app.get(link).document.selectFirst("div.tv_palyer iframe")?.attr("src")
@@ -140,7 +168,11 @@ open class TimefourTv : MainAPI() {
                         )
                     }
                 }
-            } ?: throw ErrorLoadingException("Refresh page")
+            } ?: listOf(
+            Episode(
+                document.selectFirst("div#content iframe")?.attr("src") ?: return null, title
+            )
+        ) ?: throw ErrorLoadingException("Refresh page")
         return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
             this.plot = description
@@ -155,13 +187,13 @@ open class TimefourTv : MainAPI() {
     ): Boolean {
 
         val link = when {
-            data.contains("/channel") -> app.get(data).document.selectFirst("div.tv_palyer iframe")?.attr("src")
-            data.startsWith(mainUrl) -> {
-                app.get(data, allowRedirects = false).document.selectFirst("iframe")?.attr("src")
-            }
-            else -> {
-                data
-            }
+            data.contains("/channel") -> app.get(data).document.selectFirst("div.tv_palyer iframe")
+                ?.attr("src")
+            data.startsWith(mainUrl) -> app.get(
+                data,
+                allowRedirects = false
+            ).document.selectFirst("iframe")?.attr("src")
+            else -> data
         } ?: throw ErrorLoadingException()
         getLink(fixUrl(link))?.let { m3uLink ->
             val url = app.get(m3uLink, referer = "$mainServer/")
