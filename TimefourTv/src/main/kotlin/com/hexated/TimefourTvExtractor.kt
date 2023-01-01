@@ -3,6 +3,7 @@ package com.hexated
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.utils.getAndUnpack
+import com.lagradost.nicehttp.NiceResponse
 import java.net.URI
 
 var mainServer: String? = null
@@ -71,6 +72,11 @@ object TimefourTvExtractor : TimefourTv() {
             return getSportLink(url)
         }
 
+        if(url.contains("daddyhd")) {
+            mainServer = getBaseUrl(url)
+            return getFinalLink(app.get(url, referer = daddyUrl))
+        }
+
         val (channel, iframe) = if (url.contains("width=") || url.contains("/link")) {
             val doc = app.get(url, referer = "$mainUrl/").document
             val tempIframe = doc.selectFirst("iframe")?.attr("src") ?: return null
@@ -105,15 +111,19 @@ object TimefourTvExtractor : TimefourTv() {
         val docThird = app.get(fixUrl(iframeSecond), referer = "$refSecond/")
         mainServer = getBaseUrl(iframeSecond)
 
-        return Regex("""source:['|"](\S+.m3u8)['|"],""").find(docThird.text)?.groupValues?.getOrNull(
+        return getFinalLink(docThird)
+
+    }
+
+    private fun getFinalLink(res: NiceResponse): String? {
+        return Regex("""source:['|"](\S+.m3u8)['|"],""").find(res.text)?.groupValues?.getOrNull(
             1
         ) ?: run {
             val scriptData =
-                docThird.document.selectFirst("div#player")?.nextElementSibling()?.data()
+                res.document.selectFirst("div#player")?.nextElementSibling()?.data()
                     ?.substringAfterLast("return(")?.substringBefore(".join")
             scriptData?.removeSurrounding("[", "]")?.replace("\"", "")?.split(",")
                 ?.joinToString("")
         }
-
     }
 }
