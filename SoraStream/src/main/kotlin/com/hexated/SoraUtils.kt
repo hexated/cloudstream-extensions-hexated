@@ -262,32 +262,47 @@ fun getDirectGdrive(url: String): String {
     }
 }
 
-suspend fun bypassFdAds(url: String): String? {
-    val res = app.get(url).document
-    val freeRedirect = res.selectFirst("a#link")?.attr("href")
-    val res2 = app.get(freeRedirect ?: return null, verify = false).document
-    val formLink = res2.select("form#landing").attr("action")
-    val value = res2.select("form#landing input").attr("value")
-    val res3 = app.post(formLink, data = mapOf("go" to value), verify = false).document
-    val formLink2 = res3.select("form#landing").attr("action")
-    val humanVer = res3.select("form#landing input[name=humanverification]").attr("value")
-    val newwp = res3.select("form#landing input[name=newwpsafelink]").attr("value")
-    val res4 = app.post(
+suspend fun bypassFdAds(url: String?): String? {
+    val freeRedirect = app.get(url ?: return null, verify = false).document.selectFirst("a#link")?.attr("href")
+    val res = app.get(freeRedirect ?: return null,verify = false).document
+    val formLink = res.select("form#landing").attr("action")
+    val value = res.select("form#landing input").attr("value")
+
+    val headers = mapOf(
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Content-Type" to "application/x-www-form-urlencoded"
+    )
+
+    val res2 = app.post(formLink, data = mapOf("go" to value), verify = false, headers = headers).document
+    val formLink2 = res2.select("form#landing").attr("action")
+    val humanVer = res2.select("form#landing input[name=humanverification]").attr("value")
+    val newwp = res2.select("form#landing input[name=newwpsafelink]").attr("value")
+
+    val res3 = app.post(
         formLink2,
-        data = mapOf("humanverification" to humanVer, "newwpsafelink" to newwp),
+        requestBody = FormBody.Builder()
+            .add("humanverification", humanVer)
+            .add("newwpsafelink", newwp)
+            .build(),
+        headers = headers,
         verify = false
     ).document
-    val formLink3 = res4.select("form#wpsafelink-landing").attr("action")
-    val newwpsafelink =
-        res4.select("form#wpsafelink-landing input[name=newwpsafelink]").attr("value")
-    val res5 = app.post(
+
+    val formLink3 = res3.select("form#wpsafelink-landing").attr("action")
+    val newwpsafelink = res3.select("form#wpsafelink-landing input[name=newwpsafelink]").attr("value")
+
+    val res4 = app.post(
         formLink3,
-        data = mapOf("newwpsafelink" to newwpsafelink),
+        requestBody = FormBody.Builder()
+            .add("newwpsafelink", newwpsafelink)
+            .build(),
+        headers = headers,
         verify = false
     ).document
-    val finalLink = res5.selectFirst("div#wpsafe-link a")?.attr("onclick")?.substringAfter("open('")
+
+    val finalLink = res4.selectFirst("div#wpsafe-link a")?.attr("onclick")?.substringAfter("open('")
         ?.substringBefore("',")
-    return app.get(finalLink ?: return null, verify = false).url
+    return app.get(finalLink ?: return null).url
 }
 
 suspend fun bypassHrefli(url: String): String? {
