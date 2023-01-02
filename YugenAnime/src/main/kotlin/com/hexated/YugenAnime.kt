@@ -56,7 +56,7 @@ class YugenAnime : MainAPI() {
         val home = document.select("div.cards-grid a, ul.ep-grid li.ep-card").mapNotNull {
             it.toSearchResult()
         }
-        items.add(HomePageList(request.name, home, request.name == "Recently Released"))
+        items.add(HomePageList(request.name, home))
         return newHomePageResponse(items)
     }
 
@@ -171,6 +171,7 @@ class YugenAnime : MainAPI() {
         return when {
             url.contains("vrv", true) -> "Vrv"
             url.contains("gofcdn", true) -> "Gofcdn"
+            url.contains("cache", true) -> "Cache"
             else -> this.name
         }
     }
