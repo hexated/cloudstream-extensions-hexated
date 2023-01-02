@@ -133,7 +133,7 @@ class YugenAnime : MainAPI() {
             val iframe = doc.select("iframe#main-embed").attr("src") ?: return@apmap null
             val id = iframe.removeSuffix("/").split("/").lastOrNull() ?: return@apmap null
             val source = app.post(
-                "https://yugen.to/api/embed/", data = mapOf(
+                "$mainUrl/api/embed/", data = mapOf(
                     "id" to id,
                     "ac" to "0"
                 ), referer = iframe,
