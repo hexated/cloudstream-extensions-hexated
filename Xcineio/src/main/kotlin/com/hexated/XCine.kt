@@ -9,15 +9,15 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 
-class Xcineio : MainAPI() {
-    override var name = "Xcine.io"
-    override var mainUrl = "https://www5.xcine.io"
+class XCine : MainAPI() {
+    override var name = "XCine"
+    override var mainUrl = "https://xcine.info"
     override var lang = "de"
     override val hasQuickSearch = true
     override val usesWebView = false
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.TvSeries, TvType.Movie)
-    private val mainAPI = "https://api.xcine.io"
+    private val mainAPI = "https://api.xcine.info"
 
     override val mainPage = mainPageOf(
         "$mainAPI/data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=movies&order_by=trending&page=" to "Trending",
