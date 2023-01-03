@@ -1864,3 +1864,11 @@ data class MediaAni(
 data class DataAni(
     @JsonProperty("data") val data: MediaAni? = null,
 )
+
+data class Safelink(
+    @JsonProperty("safelink") val safelink: String? = null,
+)
+
+data class FDAds(
+    @JsonProperty("linkr") val linkr: String? = null,
+)
