@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.SubtitleHelper
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.requestCreator
@@ -273,8 +274,8 @@ suspend fun bypassFdAds(url: String?): String? {
         verify = false
     ).document
     val json = lastDoc.select("form#landing input[name=newwpsafelink]").attr("value").let { base64Decode(it) }
-    val finaJson = tryParseJson<FDAds>(json)?.linkr?.substringAfter("redirect=")?.let { base64Decode(it) }
-    return tryParseJson<Safelink>(finaJson)?.safelink
+    val finalJson = tryParseJson<FDAds>(json)?.linkr?.substringAfter("redirect=")?.let { base64Decode(it) }
+    return tryParseJson<Safelink>(finalJson)?.safelink
 }
 
 suspend fun bypassHrefli(url: String): String? {
@@ -446,6 +447,16 @@ fun getFDoviesQuality(str: String): String {
         str.contains("1080P", true) -> "1080P"
         str.contains("4K", true) -> "4K"
         else -> ""
+    }
+}
+
+fun getVipLanguage(str: String): String {
+    return when (str) {
+        "in_ID" -> "Indonesian"
+        "pt" -> "Portuguese"
+        else -> str.split("_").first().let {
+            SubtitleHelper.fromTwoLettersToLanguage(it).toString()
+        }
     }
 }
 
