@@ -625,8 +625,10 @@ object SoraExtractor : SoraStream() {
         val doc = request.document
         val script = doc.selectFirst("script:containsData(var isSingle)")?.data().toString()
         val sourcesData = Regex("listSE\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
-        val sourcesDetail = Regex("linkDetails\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
-        val subSources = Regex("dSubtitles\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
+        val sourcesDetail =
+            Regex("linkDetails\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
+        val subSources =
+            Regex("dSubtitles\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
 
         //Gson is shit, but i don't care
         val sourcesJson = JsonParser().parse(sourcesData).asJsonObject
@@ -824,7 +826,8 @@ object SoraExtractor : SoraStream() {
         json?.subtitlingList?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    sub.language ?: "", sub.subtitlingUrl ?: return@map
+                    getVipLanguage(sub.languageAbbr ?: return@map),
+                    sub.subtitlingUrl ?: return@map
                 )
             )
         }
@@ -864,18 +867,19 @@ object SoraExtractor : SoraStream() {
         val url = if (season == null) {
             val tempUrl = "$xMovieAPI/movies/$fixTitle/watch"
             val newUrl = app.get(tempUrl).url
-            if(newUrl == "$xMovieAPI/") "$xMovieAPI/movies/$fixTitle-$year/watch" else tempUrl
+            if (newUrl == "$xMovieAPI/") "$xMovieAPI/movies/$fixTitle-$year/watch" else tempUrl
         } else {
             "$xMovieAPI/series/$fixTitle-season-$season-episode-$episode/watch"
         }
 
         val doc = app.get(url).document
         val script = doc.selectFirst("script:containsData(const player =)")?.data() ?: return
-        val link = Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.(mp4|m3u8))[\"|'],").find(script)?.groupValues?.getOrNull(
+        val link =
+            Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.(mp4|m3u8))[\"|'],").find(script)?.groupValues?.getOrNull(
                 1
             ) ?: return
 
-        if(link.contains(".m3u8")) {
+        if (link.contains(".m3u8")) {
             M3u8Helper.generateM3u8(
                 "Xmovie",
                 link,
@@ -893,14 +897,15 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        Regex(""""file":\s+?"(\S+\.(vtt|srt))""").find(script)?.groupValues?.getOrNull(1)?.let { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    "English",
-                    sub,
+        Regex(""""file":\s+?"(\S+\.(vtt|srt))""").find(script)?.groupValues?.getOrNull(1)
+            ?.let { sub ->
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        "English",
+                        sub,
+                    )
                 )
-            )
-        }
+            }
 
 
     }
@@ -1617,14 +1622,15 @@ object SoraExtractor : SoraStream() {
         val matchMedia = doc.select("article.mh-loop-item").map {
             it.select("a").attr("href") to it.select("a").text()
         }.find {
-            if(season == null) {
+            if (season == null) {
                 it.second.contains(Regex("(?i)($fixTitle)|($title)")) && it.first.contains("$year")
             } else {
                 it.second.contains(Regex("(?i)($fixTitle)|($title)")) && it.second.contains(Regex("(?i)(Season\\s?$season)|(S0?$season)"))
             }
         }
 
-        val mediaLink = app.get(matchMedia?.first ?: return).document.selectFirst("a#jake1")?.attr("href")
+        val mediaLink =
+            app.get(matchMedia?.first ?: return).document.selectFirst("a#jake1")?.attr("href")
         val detailDoc = app.get(mediaLink ?: return).document
         val media = detailDoc.selectFirst("div.entry-content pre span")?.text()
             ?.split("|")
@@ -1658,7 +1664,8 @@ object SoraExtractor : SoraStream() {
             ).document.selectFirst("a[rel=nofollow]")?.attr("href")
 
 //            val videoUrl = extractRebrandly(shortLink ?: return@apmapIndexed null )
-            val quality = Regex("([0-9]{3,4})p").find(it.second)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val quality =
+                Regex("([0-9]{3,4})p").find(it.second)?.groupValues?.getOrNull(1)?.toIntOrNull()
             val qualityName = it.second.replace("${quality}p", "").trim()
 
             callback.invoke(
