@@ -97,11 +97,17 @@ class YugenAnime : MainAPI() {
 
         val trailer = document.selectFirst("iframe.lozad.video")?.attr("src")
 
-        val episodes = app.get("${url}watch").document.select("ul.ep-grid li.ep-card").map { eps ->
-            val epsTitle = eps.select("a.ep-title").text()
-            val link = fixUrl(eps.select("a.ep-title").attr("href"))
-            val episode = epsTitle.substringBefore(":").filter { it.isDigit() }.toIntOrNull()
-            Episode(link, name = epsTitle.substringAfter(":").trim(), episode = episode)
+        val episodes = mutableListOf<Episode>()
+        for(page in 1..30) {
+            val doc = app.get("${url}watch/?page=$page").document
+            val currentPage = doc.select("ul.pagination div.btn.btn-default").text().toIntOrNull() ?: 1
+            if(page > currentPage) break
+            doc.select("ul.ep-grid li.ep-card").map { eps ->
+                val epsTitle = eps.select("a.ep-title").text()
+                val link = fixUrl(eps.select("a.ep-title").attr("href"))
+                val episode = epsTitle.substringBefore(":").filter { it.isDigit() }.toIntOrNull()
+                episodes.add(Episode(link, name = epsTitle.substringAfter(":").trim(), episode = episode))
+            }
         }
 
         return newAnimeLoadResponse(title, url, type) {
