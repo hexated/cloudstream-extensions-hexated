@@ -1719,6 +1719,8 @@ object SoraExtractor : SoraStream() {
             "$rStreamAPI/Shows/$id/$season/$episode.mp4"
         }
 
+        if(!app.get(url).isSuccessful) return
+
         delay(5000)
         callback.invoke(
             ExtractorLink(
