@@ -1707,6 +1707,30 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeRStream(
+        id: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if(season == null) {
+            "$rStreamAPI/Movies/$id/$id.mp4"
+        } else {
+            "$rStreamAPI/Shows/$id/$season/$episode.mp4"
+        }
+
+        delay(5000)
+        callback.invoke(
+            ExtractorLink(
+                "RStream",
+                "RStream",
+                url,
+                "https://remotestre.am/",
+                Qualities.P720.value
+            )
+        )
+    }
+
 }
 
 class StreamM4u : XStreamCdn() {
