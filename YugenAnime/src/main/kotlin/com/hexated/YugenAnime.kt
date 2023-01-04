@@ -98,7 +98,7 @@ class YugenAnime : MainAPI() {
         val trailer = document.selectFirst("iframe.lozad.video")?.attr("src")
 
         val episodes = mutableListOf<Episode>()
-        for(page in 1..30) {
+        for(page in 1..50) {
             val doc = app.get("${url}watch/?page=$page").document
             val currentPage = doc.select("ul.pagination div.btn.btn-default").text().toIntOrNull() ?: 1
             if(page > currentPage) break
