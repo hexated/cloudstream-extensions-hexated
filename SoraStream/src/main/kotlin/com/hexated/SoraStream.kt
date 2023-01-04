@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke123Movie
+import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixhq
@@ -88,7 +89,8 @@ open class SoraStream : TmdbProvider() {
         const val fdMoviesAPI = "https://freedrivemovie.com"
         const val m4uhdAPI = "https://m4uhd.tv"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
-        const val moviezAddAPI = "https://moviezaddiction.bloginguru.info"
+        const val moviezAddAPI = "https://m.bloginguru.info"
+        const val bollyMazaAPI = "https://b.bloginguru.info"
         const val moviesbayAPI = "https://moviesbay.live"
 
         fun getType(t: String?): TvType {
@@ -147,7 +149,8 @@ open class SoraStream : TmdbProvider() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val adultQuery = if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669"
+        val adultQuery =
+            if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669"
         val type = if (request.data.contains("/movie")) "movie" else "tv"
         val home = app.get("${request.data}$adultQuery&page=$page")
             .parsedSafe<Results>()?.results
@@ -363,7 +366,13 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeHDMovieBox(res.title, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeHDMovieBox(
+                    res.title,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeSeries9(res.title, res.season, res.episode, subtitleCallback, callback)
@@ -482,6 +491,8 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeMoviezAdd(
+                    moviezAddAPI,
+                    "MoviezAdd",
                     res.title,
                     res.year,
                     res.season,
@@ -489,6 +500,17 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
+            {
+                if (!res.isAnime) invokeBollyMaza(
+                    bollyMazaAPI,
+                    "BollyMaza",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            }
         )
 
         return true

@@ -1610,6 +1610,32 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invokeMoviezAdd(
+        apiUrl: String? = null,
+        api: String? = null,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        invokeBloginguru(apiUrl, api, title, year, season, episode, callback)
+    }
+
+    suspend fun invokeBollyMaza(
+        apiUrl: String? = null,
+        api: String? = null,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        invokeBloginguru(apiUrl, api, title, year, season, episode, callback)
+    }
+
+    private suspend fun invokeBloginguru(
+        apiUrl: String? = null,
+        api: String? = null,
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -1617,7 +1643,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title?.fixTitle()?.replace("-", " ")
-        val doc = app.get("$moviezAddAPI/?s=$fixTitle").document
+        val doc = app.get("$apiUrl/?s=$fixTitle").document
 
         val matchMedia = doc.select("article.mh-loop-item").map {
             it.select("a").attr("href") to it.select("a").text()
@@ -1636,7 +1662,7 @@ object SoraExtractor : SoraStream() {
             ?.split("|")
             ?.map { it.trim() }
 
-        val iframe = if (season == null) {
+        val iframe = (if (season == null) {
             media?.mapIndexed { index, name ->
                 detailDoc.select("div.entry-content > pre")[index.plus(1)].selectFirst("a")
                     ?.attr("href") to name
@@ -1651,7 +1677,7 @@ object SoraExtractor : SoraStream() {
                 ).document.selectFirst("div.entry-content strong:matches((?i)S0?${season}E0?${episode}) a")
                     ?.attr("href") to name
             }
-        }
+        })?.filter { it?.first?.startsWith("http") == true }
 
         iframe?.apmap {
             val token = app.get(
@@ -1670,8 +1696,8 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "MoviezAdd $qualityName",
-                    "MoviezAdd $qualityName",
+                    "$api $qualityName",
+                    "$api $qualityName",
                     shortLink ?: return@apmap null,
                     "",
                     quality ?: Qualities.Unknown.value
