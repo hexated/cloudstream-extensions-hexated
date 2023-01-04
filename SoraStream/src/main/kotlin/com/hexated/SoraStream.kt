@@ -29,6 +29,7 @@ import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
+import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeZoro
@@ -92,6 +93,7 @@ open class SoraStream : TmdbProvider() {
         const val moviezAddAPI = "https://m.bloginguru.info"
         const val bollyMazaAPI = "https://b.bloginguru.info"
         const val moviesbayAPI = "https://moviesbay.live"
+        const val rStreamAPI = "https://fsa.remotestre.am"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -510,6 +512,9 @@ open class SoraStream : TmdbProvider() {
                     res.episode,
                     callback
                 )
+            },
+            {
+                invokeRStream(res.id, res.season, res.episode, callback)
             }
         )
 
