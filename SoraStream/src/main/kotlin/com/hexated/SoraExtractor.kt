@@ -520,28 +520,17 @@ object SoraExtractor : SoraStream() {
                             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
                         )
                     ).document
-                    val srcm3u8 =
-                        resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
+                    val srcm3u8 = resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
                             Regex("['|\"](.*?.m3u8)['|\"]").find(it)?.groupValues?.getOrNull(1)
-                        } ?: return@apmap null
-                    val quality = app.get(
-                        srcm3u8, referer = source, headers = mapOf(
-                            "Accept" to "*/*",
-                        )
-                    ).text.let { quality ->
-                        if (quality.contains("RESOLUTION=1920")) Qualities.P1080.value else Qualities.P720.value
-                    }
+                        }
                     callback.invoke(
                         ExtractorLink(
                             "UniqueStream",
                             "UniqueStream",
-                            srcm3u8,
+                            srcm3u8 ?: return@apmap null,
                             source,
-                            quality,
+                            Qualities.P1080.value,
                             true,
-                            headers = mapOf(
-                                "Accept" to "*/*",
-                            )
                         )
                     )
                 }
@@ -759,67 +748,71 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeSoraVIP(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
+    private suspend fun invokeNetMovies(
+        id: String? = null,
+        type: String? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val jsonResponse = app.get(
+            "$netMoviesAPI/detail?category=$type&id=$id",
+        )
+
+        if (!jsonResponse.isSuccessful) return
+        val epsId = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.find {
+            it.seriesNo == (episode ?: 0)
+        }?.id
+
+        val sources = app.get("$netMoviesAPI/episode?category=$type&id=$id&episode=$epsId")
+            .parsedSafe<NetMoviesSources>()?.data ?: return
+
+        sources.subtitles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.language ?: "",
+                    sub.url ?: return@map null
+                )
+            )
+        }
+
+        sources.qualities?.map { source ->
+            callback.invoke(
+                ExtractorLink(
+                    "NetMovies",
+                    "NetMovies",
+                    source.url ?: return@map null,
+                    "",
+                    source.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+                    isM3u8 = true,
+                )
+            )
+        }
+
+    }
+
+    private suspend fun invokeLoklok(
+        id: String? = null,
+        type: String? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val headers = mapOf(
-            "lang" to "en", "versioncode" to "11", "clienttype" to "ios_jike_default"
+            "lang" to "en",
+            "versioncode" to "11",
+            "clienttype" to "ios_jike_default"
         )
         val vipAPI =
             base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
-        val vipUrl = base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
-
-        val doc = app.get(
-            "$vipUrl/search?keyword=$title",
-        ).document
-
-        val scriptData = doc.select("div.search-list div.search-video-card").map {
-            Triple(
-                it.selectFirst("h2.title")?.text().toString(),
-                it.selectFirst("div.desc")?.text()?.substringBefore(".")?.toIntOrNull(),
-                it.selectFirst("a")?.attr("href")?.split("/")
-            )
-        }
-
-        val script = if (scriptData.size == 1) {
-            scriptData.firstOrNull()
-        } else {
-            scriptData.find {
-                when (season) {
-                    null -> {
-                        it.first.equals(
-                            title, true
-                        ) && it.second == year
-                    }
-                    1 -> {
-                        it.first.contains(
-                            "$title", true
-                        ) && (it.second == year || it.first.contains("Season $season", true))
-                    }
-                    else -> {
-                        it.first.contains(
-                            "$title", true
-                        ) && it.second == year && it.first.contains("Season $season", true)
-                    }
-                }
-            }
-        }
-
-        val id = script?.third?.last() ?: return
-        val type = script.third?.get(2) ?: return
 
         val jsonResponse = app.get(
-            "$vipAPI/movieDrama/get?id=${id}&category=${type}", headers = headers
+            "$vipAPI/movieDrama/get?id=${id}&category=${type}",
+            headers = headers
         )
 
         if (!jsonResponse.isSuccessful) return
-
-        val json = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.first {
+        val json = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.find {
             it.seriesNo == (episode ?: 0)
         }
 
@@ -853,6 +846,69 @@ object SoraExtractor : SoraStream() {
                 )
             )
         }
+    }
+
+    suspend fun invokeSoraStream(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val searchUrl = base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
+        val doc = app.get(
+            "$searchUrl/search?keyword=$title",
+        ).document
+
+        val scriptData = doc.select("div.search-list div.search-video-card").map {
+            Triple(
+                it.selectFirst("h2.title")?.text().toString(),
+                it.selectFirst("div.desc")?.text()
+                    ?.substringBefore(".")?.toIntOrNull(),
+                it.selectFirst("a")?.attr("href")?.split("/")
+            )
+        }
+
+        val script = if (scriptData.size == 1) {
+            scriptData.firstOrNull()
+        } else {
+            scriptData.find {
+                when (season) {
+                    null -> {
+                        it.first.equals(
+                            title,
+                            true
+                        ) && it.second == year
+                    }
+                    1 -> {
+                        it.first.contains(
+                            "$title",
+                            true
+                        ) && (it.second == year || it.first.contains("Season $season", true))
+                    }
+                    else -> {
+                        it.first.contains(
+                            "$title",
+                            true
+                        ) && it.second == year && it.first.contains("Season $season", true)
+                    }
+                }
+            }
+        }
+
+        val id = script?.third?.last() ?: return
+        val type = script.third?.get(2) ?: return
+
+        argamap(
+            {
+                invokeLoklok(id, type, episode, subtitleCallback, callback)
+            },
+            {
+                invokeNetMovies(id, type, episode, subtitleCallback, callback)
+            }
+        )
+
     }
 
     suspend fun invokeXmovies(
@@ -1060,13 +1116,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val malId = app.get("$tmdb2mal/?id=$id&s=$season").text.trim()
-        val anilistId = app.post(
-            "https://graphql.anilist.co/", data = mapOf(
-                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
-            )
-        ).parsedSafe<DataAni>()?.data?.media?.id
-
-        val episodeId = app.get("$consumetAnilistAPI/info/$anilistId?provider=zoro")
+        val episodeId = app.get("$consumetMalAPI/info/$malId?provider=zoro")
             .parsedSafe<ConsumetDetails>()?.episodes?.find {
                 it.number == episode
             }?.id?.substringBeforeLast("$") ?: return
@@ -1204,14 +1254,31 @@ object SoraExtractor : SoraStream() {
                 }
             }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
 
-        val iframe = if (iframeList.any { it.first.contains("2160p", true) }) iframeList.filter {
-            it.first.contains(
-                "2160p", true
-            )
-        } else iframeList.filter { it.first.contains("1080p", true) }
+        val sources = mutableListOf<Pair<String, String?>>()
+        if (iframeList.any {
+                it.first.contains(
+                    "2160p",
+                    true
+                )
+            }) {
+            sources.addAll(iframeList.filter {
+                it.first.contains(
+                    "2160p",
+                    true
+                )
+            })
+            sources.add(iframeList.first {
+                it.first.contains(
+                    "1080p",
+                    true
+                )
+            })
+        } else {
+            sources.addAll(iframeList.filter { it.first.contains("1080p", true) })
+        }
 
         val base = "https://drivebit.in"
-        iframe.apmap { (quality, link) ->
+        sources.apmap { (quality, link) ->
             delay(2000)
             val driveLink = bypassHrefli(link ?: return@apmap null)
             val res = app.get(driveLink ?: return@apmap null).document
@@ -1721,7 +1788,7 @@ object SoraExtractor : SoraStream() {
 
         if(!app.get(url).isSuccessful) return
 
-        delay(5000)
+        delay(4000)
         callback.invoke(
             ExtractorLink(
                 "RStream",
@@ -1810,6 +1877,26 @@ data class MediaDetail(
 
 data class Load(
     @JsonProperty("data") val data: MediaDetail? = null,
+)
+
+data class NetMoviesSubtitles(
+    @JsonProperty("lang") val lang: String? = null,
+    @JsonProperty("language") val language: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class NetMoviesQualities(
+    @JsonProperty("quality") val quality: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class NetMoviesData(
+    @JsonProperty("subtitles") val subtitles: ArrayList<NetMoviesSubtitles>? = arrayListOf(),
+    @JsonProperty("qualities") val qualities: ArrayList<NetMoviesQualities>? = arrayListOf(),
+)
+
+data class NetMoviesSources(
+    @JsonProperty("data") val data: NetMoviesData? = null,
 )
 
 data class ConsumetHeaders(
@@ -1910,18 +1997,6 @@ data class PreviewResponse(
 data class PreviewVideos(
     @JsonProperty("mediaUrl") val mediaUrl: String? = null,
     @JsonProperty("currentDefinition") val currentDefinition: String? = null,
-)
-
-data class IdAni(
-    @JsonProperty("id") val id: String? = null,
-)
-
-data class MediaAni(
-    @JsonProperty("Media") val media: IdAni? = null,
-)
-
-data class DataAni(
-    @JsonProperty("data") val data: MediaAni? = null,
 )
 
 data class Safelink(

@@ -12,7 +12,6 @@ import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNoverse
 import com.hexated.SoraExtractor.invokeSeries9
-import com.hexated.SoraExtractor.invokeSoraVIP
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeUniqueStream
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -30,6 +29,7 @@ import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeRStream
+import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeZoro
@@ -58,12 +58,13 @@ open class SoraStream : TmdbProvider() {
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
         const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
         const val gdbot = "https://gdbot.xyz"
-        const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
+        const val consumetMalAPI = "https://api.consumet.org/meta/mal"
 
         private val mainAPI =
             base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
 
         //        private var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
+        var netMoviesAPI = base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=bG0=Zmk=dC0=bmU=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
@@ -75,7 +76,7 @@ open class SoraStream : TmdbProvider() {
         const val idlixAPI = "https://idlixian.com"
         const val noverseAPI = "https://www.nollyverse.com"
         const val olgplyAPI = "https://olgply.xyz"
-        const val uniqueStreamAPI = "https://uniquestream.net"
+        const val uniqueStreamAPI = "https://uniquestreaming.net"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
@@ -305,7 +306,7 @@ open class SoraStream : TmdbProvider() {
 
         argamap(
             {
-                invokeSoraVIP(
+                invokeSoraStream(
                     res.title,
                     res.year,
                     res.season,
