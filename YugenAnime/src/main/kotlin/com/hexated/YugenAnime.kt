@@ -175,10 +175,9 @@ class YugenAnime : MainAPI() {
 
     private fun getSourceType(url: String): String {
         return when {
-            url.contains("vrv", true) -> "Vrv"
-            url.contains("gofcdn", true) -> "Gofcdn"
             url.contains("cache", true) -> "Cache"
-            else -> this.name
+            url.contains("allanime", true) -> "Crunchyroll-AL"
+            else -> Regex("\\.(\\S+)\\.").find(url)?.groupValues?.getOrNull(1)?.let { fixTitle(it) } ?: this.name
         }
     }
 
