@@ -772,7 +772,7 @@ object SoraExtractor : SoraStream() {
         sources.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    sub.language ?: "",
+                    getVipLanguage(sub.lang ?: return@map null),
                     sub.url ?: return@map null
                 )
             )
@@ -793,9 +793,10 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    private suspend fun invokeLoklok(
-        id: String? = null,
-        type: String? = null,
+    suspend fun invokeSoraStream(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
@@ -805,59 +806,7 @@ object SoraExtractor : SoraStream() {
             "versioncode" to "11",
             "clienttype" to "ios_jike_default"
         )
-        val vipAPI =
-            base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
-
-        val jsonResponse = app.get(
-            "$vipAPI/movieDrama/get?id=${id}&category=${type}",
-            headers = headers
-        )
-
-        if (!jsonResponse.isSuccessful) return
-        val json = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.find {
-            it.seriesNo == (episode ?: 0)
-        }
-
-        json?.subtitlingList?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    getVipLanguage(sub.languageAbbr ?: return@map),
-                    sub.subtitlingUrl ?: return@map
-                )
-            )
-        }
-
-        json?.definitionList?.apmap { video ->
-            val body =
-                """[{"category":$type,"contentId":"$id","episodeId":${json.id},"definition":"${video.code}"}]""".toRequestBody(
-                    RequestBodyTypes.JSON.toMediaTypeOrNull()
-                )
-            val response = app.post(
-                "${vipAPI}/media/bathGetplayInfo",
-                requestBody = body,
-                headers = headers,
-            ).text.let { tryParseJson<PreviewResponse>(it)?.data?.firstOrNull() }
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    response?.mediaUrl ?: return@apmap null,
-                    "",
-                    getSoraQuality(response.currentDefinition ?: ""),
-                    isM3u8 = true,
-                )
-            )
-        }
-    }
-
-    suspend fun invokeSoraStream(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
+        val vipAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         val searchUrl = base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
         val doc = app.get(
             "$searchUrl/search?keyword=$title",
@@ -902,14 +851,46 @@ object SoraExtractor : SoraStream() {
         val id = script?.third?.last() ?: return
         val type = script.third?.get(2) ?: return
 
-        argamap(
-            {
-                invokeLoklok(id, type, episode, subtitleCallback, callback)
-            },
-            {
-                invokeNetMovies(id, type, episode, subtitleCallback, callback)
-            }
+        val jsonResponse = app.get(
+            "$vipAPI/movieDrama/get?id=${id}&category=${type}",
+            headers = headers
         )
+
+        if (!jsonResponse.isSuccessful) invokeNetMovies(id, type, episode, subtitleCallback, callback)
+        val json = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.find {
+            it.seriesNo == (episode ?: 0)
+        }
+
+        json?.subtitlingList?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    getVipLanguage(sub.languageAbbr ?: return@map),
+                    sub.subtitlingUrl ?: return@map
+                )
+            )
+        }
+
+        json?.definitionList?.apmap { video ->
+            val body =
+                """[{"category":$type,"contentId":"$id","episodeId":${json.id},"definition":"${video.code}"}]""".toRequestBody(
+                    RequestBodyTypes.JSON.toMediaTypeOrNull()
+                )
+            val response = app.post(
+                "${vipAPI}/media/bathGetplayInfo",
+                requestBody = body,
+                headers = headers,
+            ).text.let { tryParseJson<PreviewResponse>(it)?.data?.firstOrNull() }
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    response?.mediaUrl ?: return@apmap null,
+                    "",
+                    getSoraQuality(response.currentDefinition ?: ""),
+                    isM3u8 = true,
+                )
+            )
+        }
 
     }
 
