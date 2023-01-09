@@ -757,14 +757,11 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val jsonResponse = app.get(
+        val epsId = app.get(
             "$netMoviesAPI/detail?category=$type&id=$id",
-        )
-
-        if (!jsonResponse.isSuccessful) return
-        val epsId = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.find {
+        ).parsedSafe<Load>()?.data?.episodeVo?.find {
             it.seriesNo == (episode ?: 0)
-        }?.id
+        }?.id ?: return
 
         val sources = app.get("$netMoviesAPI/episode?category=$type&id=$id&episode=$epsId")
             .parsedSafe<NetMoviesSources>()?.data ?: return
@@ -854,10 +851,10 @@ object SoraExtractor : SoraStream() {
         val jsonResponse = app.get(
             "$vipAPI/movieDrama/get?id=${id}&category=${type}",
             headers = headers
-        )
+        ).parsedSafe<Load>()?.data
 
-        if (!jsonResponse.isSuccessful) invokeNetMovies(id, type, episode, subtitleCallback, callback)
-        val json = jsonResponse.parsedSafe<Load>()?.data?.episodeVo?.find {
+        if (jsonResponse == null) invokeNetMovies(id, type, episode, subtitleCallback, callback)
+        val json = jsonResponse?.episodeVo?.find {
             it.seriesNo == (episode ?: 0)
         }
 
