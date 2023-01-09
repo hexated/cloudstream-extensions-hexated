@@ -177,7 +177,7 @@ class Loklok : MainAPI() {
         val animeType = if(type == TvType.Anime && data.category == 0) "movie" else "tv"
 
         val malId = if(type == TvType.Anime) {
-            app.get("${jikanAPI}/anime?q=${res.name}&start_date=${res.year}&type=$animeType")
+            app.get("${jikanAPI}/anime?q=${res.name}&start_date=${res.year}&type=$animeType&limit=1")
                 .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
         } else {
             null
