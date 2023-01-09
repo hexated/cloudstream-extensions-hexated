@@ -163,11 +163,11 @@ class Loklok : MainAPI() {
         }
 
         val type = when {
+            res.areaList?.firstOrNull()?.id == 44 && res.tagNameList?.contains("Anime") == true -> {
+                TvType.Anime
+            }
             data.category == 0 -> {
                 TvType.Movie
-            }
-            data.category != 0 && res.tagNameList?.contains("Anime") == true -> {
-                TvType.Anime
             }
             else -> {
                 TvType.TvSeries
@@ -177,7 +177,7 @@ class Loklok : MainAPI() {
         val animeType = if(type == TvType.Anime && data.category == 0) "movie" else "tv"
 
         val malId = if(type == TvType.Anime) {
-            app.get("${jikanAPI}/anime?q=${res.name}&start_date=${res.year}&type=$animeType&order_by=start_date&limit=1")
+            app.get("${jikanAPI}/anime?q=${res.name}&start_date=${res.year}&type=$animeType")
                 .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
         } else {
             null
@@ -195,7 +195,7 @@ class Loklok : MainAPI() {
         return newTvSeriesLoadResponse(
             res.name ?: return null,
             url,
-            type,
+            if(data.category == 0) TvType.Movie else type,
             episodes
         ) {
             this.posterUrl = res.coverVerticalUrl
@@ -330,6 +330,11 @@ class Loklok : MainAPI() {
         @JsonProperty("subtitlingList") val subtitlingList: ArrayList<SubtitlingList>? = arrayListOf(),
     )
 
+    data class Region(
+        @JsonProperty("id") val id: Int? = null,
+        @JsonProperty("name") val name: String? = null,
+    )
+
     data class MediaDetail(
         @JsonProperty("name") val name: String? = null,
         @JsonProperty("introduction") val introduction: String? = null,
@@ -338,6 +343,7 @@ class Loklok : MainAPI() {
         @JsonProperty("coverVerticalUrl") val coverVerticalUrl: String? = null,
         @JsonProperty("coverHorizontalUrl") val coverHorizontalUrl: String? = null,
         @JsonProperty("score") val score: String? = null,
+        @JsonProperty("areaList") val areaList: ArrayList<Region>? = arrayListOf(),
         @JsonProperty("episodeVo") val episodeVo: ArrayList<EpisodeVo>? = arrayListOf(),
         @JsonProperty("likeList") val likeList: ArrayList<Media>? = arrayListOf(),
         @JsonProperty("tagNameList") val tagNameList: ArrayList<String>? = arrayListOf(),
