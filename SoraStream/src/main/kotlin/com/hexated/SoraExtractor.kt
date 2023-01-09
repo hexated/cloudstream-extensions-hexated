@@ -502,13 +502,15 @@ object SoraExtractor : SoraStream() {
 
         val res = app.get(url)
         if (!res.isSuccessful) return
+        val baseApi = getBaseUrl(res.url)
+
         val document = res.document
         val type = if (url.contains("/movies/")) "movie" else "tv"
         document.select("ul#playeroptionsul > li").apmap { el ->
             val id = el.attr("data-post")
             val nume = el.attr("data-nume")
             val source = app.post(
-                url = "$uniqueStreamAPI/wp-admin/admin-ajax.php", data = mapOf(
+                url = "$baseApi/wp-admin/admin-ajax.php", data = mapOf(
                     "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
                 ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = url
             ).parsed<ResponseHash>().embed_url.let { fixUrl(it) }
@@ -516,7 +518,7 @@ object SoraExtractor : SoraStream() {
             when {
                 source.contains("uniquestream") -> {
                     val resDoc = app.get(
-                        source, referer = "$uniqueStreamAPI/", headers = mapOf(
+                        source, referer = "$baseApi/", headers = mapOf(
                             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
                         )
                     ).document
