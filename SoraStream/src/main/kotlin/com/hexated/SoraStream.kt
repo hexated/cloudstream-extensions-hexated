@@ -355,7 +355,7 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (res.isAnime) invokeAnimes(res.id, res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                if (res.isAnime) invokeAnimes(res.id, res.title, res.epsTitle, res.year, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 if (res.season != null && res.isAnime) invokeCrunchyroll(

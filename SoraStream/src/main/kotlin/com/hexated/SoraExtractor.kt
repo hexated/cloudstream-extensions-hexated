@@ -1094,6 +1094,7 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeAnimes(
         id: Int? = null,
         title: String? = null,
+        epsTitle: String? = null,
         year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
@@ -1116,7 +1117,7 @@ object SoraExtractor : SoraStream() {
                 invokeZoro(aniId, episode, subtitleCallback, callback)
             },
             {
-                invokeAnimeKaizoku(malId, season, episode, callback)
+                invokeAnimeKaizoku(malId, epsTitle, season, episode, callback)
             }
         )
     }
@@ -1166,6 +1167,7 @@ object SoraExtractor : SoraStream() {
 
     private suspend fun invokeAnimeKaizoku(
         malId: String? = null,
+        epsTitle: String? = null,
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
@@ -1202,7 +1204,7 @@ object SoraExtractor : SoraStream() {
                 if (season == null) list.firstOrNull() else list.find {
                     it.second.contains(
                         Regex("($eps\\.)|(-\\s$eps)")
-                    )
+                    ) || it.second.contains("$epsTitle", true)
                 }
             } ?: return@apmap null
 

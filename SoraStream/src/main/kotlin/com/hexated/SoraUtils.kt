@@ -4,6 +4,7 @@ import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.lagradost.cloudstream3.APIHolder
+import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.base64Encode
@@ -269,22 +270,26 @@ fun getDirectGdrive(url: String): String {
 
 suspend fun bypassOuo(url: String?) : String? {
     var res = session.get(url ?: return null)
-    (1..2).forEach { _ ->
-        val document = res.document
-        val nextUrl = document.select("form").attr("action")
-        val data = document.select("form input").mapNotNull {
-            it.attr("name") to it.attr("value")
-        }.toMap().toMutableMap()
-        val captchaKey = document.select("script[src*=https://www.google.com/recaptcha/api.js?render=]")
-            .attr("src").substringAfter("render=")
-        val token = APIHolder.getCaptchaToken(url, captchaKey)
-        data["x-token"] = token ?: ""
-        res = session.post(
-            nextUrl,
-            data = data,
-            headers = mapOf("content-type" to "application/x-www-form-urlencoded"),
-            allowRedirects = false
-        )
+    run lit@{
+        (1..2).forEach { _ ->
+            if (res.headers["location"] != null) return@lit
+            val document = res.document
+            val nextUrl = document.select("form").attr("action")
+            val data = document.select("form input").mapNotNull {
+                it.attr("name") to it.attr("value")
+            }.toMap().toMutableMap()
+            val captchaKey =
+                document.select("script[src*=https://www.google.com/recaptcha/api.js?render=]")
+                    .attr("src").substringAfter("render=")
+            val token = getCaptchaToken(url, captchaKey)
+            data["x-token"] = token ?: ""
+            res = session.post(
+                nextUrl,
+                data = data,
+                headers = mapOf("content-type" to "application/x-www-form-urlencoded"),
+                allowRedirects = false
+            )
+        }
     }
 
     return res.headers["location"]
