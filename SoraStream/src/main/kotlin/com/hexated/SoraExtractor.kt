@@ -1094,16 +1094,26 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeAnimes(
         id: Int? = null,
         title: String? = null,
+        year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val malId = if (season != null) app.get("$tmdb2mal/?id=$id&s=$season").text.trim() else null
+        val malId =
+            if (season != null) app.get("$tmdb2mal/?id=$id&s=$season").text.trim()
+            else app.get("${jikanAPI}/anime?q=${title}&start_date=${year}&type=movie&limit=1")
+                .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
+
+        val aniId = app.post(
+            "https://graphql.anilist.co/", data = mapOf(
+                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
+            )
+        ).parsedSafe<DataAni>()?.data?.media?.id
 
         argamap(
             {
-                if (season != null) invokeZoro(malId, episode, subtitleCallback, callback)
+                invokeZoro(aniId, episode, subtitleCallback, callback)
             },
             {
                 invokeAnimeKaizoku(title, malId, season, episode, callback)
@@ -1112,14 +1122,14 @@ object SoraExtractor : SoraStream() {
     }
 
     private suspend fun invokeZoro(
-        malId: String? = null,
+        aniId: String? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val episodeId = app.get("$consumetMalAPI/info/$malId?provider=zoro")
+        val episodeId = app.get("$consumetAnilistAPI/info/$aniId?provider=zoro")
             .parsedSafe<ConsumetDetails>()?.episodes?.find {
-                it.number == episode
+                it.number == (episode ?: 1)
             }?.id?.substringBeforeLast("$") ?: return
 
         listOf(
@@ -1161,15 +1171,12 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val fixTitle = title.fixTitle()
-        val search = app.get("$animeKaizokuAPI/?s=${fixTitle?.replace("-", " ")}").document
+        val fixTitle = title.fixTitle()?.replace("-", " ")
+        val search = app.get("$animeKaizokuAPI/?s=${fixTitle}").document
         val detailHref =
             search.select("ul#posts-container li").map { it.selectFirst("a")?.attr("href") }
                 .find {
-                    if (season == null) it?.contains(
-                        fixTitle ?: return,
-                        true
-                    ) == true else it?.contains(malId ?: return) == true
+                    it?.contains(malId ?: return) == true
                 }?.let { fixUrl(it, animeKaizokuAPI) }
 
         val detail = app.get(detailHref ?: return).document
@@ -1209,7 +1216,7 @@ object SoraExtractor : SoraStream() {
             ).text.substringAfter("openInNewTab(\"")
                 .substringBefore("\")").let { base64Decode(it) }
 
-            if(!ouo.startsWith("https://ouo")) return@apmap null
+            if (!ouo.startsWith("https://ouo")) return@apmap null
             callback.invoke(
                 ExtractorLink(
                     "AnimeKaizoku [${episodeData.third}]",
@@ -2125,4 +2132,24 @@ data class Safelink(
 
 data class FDAds(
     @JsonProperty("linkr") val linkr: String? = null,
+)
+
+data class DataMal(
+    @JsonProperty("mal_id") val mal_id: String? = null,
+)
+
+data class JikanResponse(
+    @JsonProperty("data") val data: ArrayList<DataMal>? = arrayListOf(),
+)
+
+data class IdAni(
+    @JsonProperty("id") val id: String? = null,
+)
+
+data class MediaAni(
+    @JsonProperty("Media") val media: IdAni? = null,
+)
+
+data class DataAni(
+    @JsonProperty("data") val data: MediaAni? = null,
 )
