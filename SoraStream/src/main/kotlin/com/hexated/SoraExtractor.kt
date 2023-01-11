@@ -1116,7 +1116,7 @@ object SoraExtractor : SoraStream() {
                 invokeZoro(aniId, episode, subtitleCallback, callback)
             },
             {
-                invokeAnimeKaizoku(title, malId, season, episode, callback)
+                invokeAnimeKaizoku(malId, season, episode, callback)
             }
         )
     }
@@ -1165,14 +1165,12 @@ object SoraExtractor : SoraStream() {
     }
 
     private suspend fun invokeAnimeKaizoku(
-        title: String? = null,
         malId: String? = null,
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val fixTitle = title.fixTitle()?.replace("-", " ")
-        val search = app.get("$animeKaizokuAPI/?s=${fixTitle}").document
+        val search = app.get("$animeKaizokuAPI/?s=$malId").document
         val detailHref =
             search.select("ul#posts-container li").map { it.selectFirst("a")?.attr("href") }
                 .find {
