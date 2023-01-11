@@ -58,8 +58,9 @@ open class SoraStream : TmdbProvider() {
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
         const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
+        const val jikanAPI = "https://api.jikan.moe/v4"
         const val gdbot = "https://gdbot.xyz"
-        const val consumetMalAPI = "https://api.consumet.org/meta/mal"
+        const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
 
         private val mainAPI =
             base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
@@ -354,7 +355,7 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (res.isAnime) invokeAnimes(res.id, res.title, res.season, res.episode, subtitleCallback, callback)
+                if (res.isAnime) invokeAnimes(res.id, res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 if (res.season != null && res.isAnime) invokeCrunchyroll(
