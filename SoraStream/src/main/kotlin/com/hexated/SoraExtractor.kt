@@ -1896,7 +1896,7 @@ object SoraExtractor : SoraStream() {
             ?.substringAfter("('")?.substringBefore("')")
 
         val unPacker =
-            app.get(iframe ?: return).document.selectFirst("script:containsData(JuicyCodes.Run)")
+            app.get(iframe ?: return, referer = "https://flixon.ru/").document.selectFirst("script:containsData(JuicyCodes.Run)")
                 ?.data()
                 ?.substringAfter("JuicyCodes.Run(")?.substringBefore(");")?.split("+")
                 ?.joinToString("") { it.replace("\"", "").trim() }
@@ -1905,7 +1905,7 @@ object SoraExtractor : SoraStream() {
         val ref = "https://onionflix.ru/"
         val link = Regex("[\"']file[\"']:[\"'](.+?)[\"'],").find(
             unPacker ?: return
-        )?.groupValues?.getOrNull(1)?.let { app.get(it, referer = ref).url }
+        )?.groupValues?.getOrNull(1)
 
         callback.invoke(
             ExtractorLink(
