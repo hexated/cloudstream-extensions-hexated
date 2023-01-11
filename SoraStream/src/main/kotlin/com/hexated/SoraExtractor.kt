@@ -13,6 +13,7 @@ import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.jsoup.Jsoup
 
 val session = Session(Requests().baseClient)
 
@@ -522,7 +523,8 @@ object SoraExtractor : SoraStream() {
                             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
                         )
                     ).document
-                    val srcm3u8 = resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
+                    val srcm3u8 =
+                        resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
                             Regex("['|\"](.*?.m3u8)['|\"]").find(it)?.groupValues?.getOrNull(1)
                         }
                     callback.invoke(
@@ -803,7 +805,8 @@ object SoraExtractor : SoraStream() {
             "versioncode" to "11",
             "clienttype" to "ios_jike_default"
         )
-        val vipAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
+        val vipAPI =
+            base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         val searchUrl = base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
         val doc = app.get(
             "$searchUrl/search?keyword=$title",
@@ -1088,14 +1091,32 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeZoro(
+    suspend fun invokeAnimes(
         id: Int? = null,
+        title: String? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val malId = app.get("$tmdb2mal/?id=$id&s=$season").text.trim()
+        val malId = if (season != null) app.get("$tmdb2mal/?id=$id&s=$season").text.trim() else null
+
+        argamap(
+            {
+                if (season != null) invokeZoro(malId, episode, subtitleCallback, callback)
+            },
+            {
+                invokeAnimeKaizoku(title, malId, season, episode, callback)
+            }
+        )
+    }
+
+    private suspend fun invokeZoro(
+        malId: String? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
         val episodeId = app.get("$consumetMalAPI/info/$malId?provider=zoro")
             .parsedSafe<ConsumetDetails>()?.episodes?.find {
                 it.number == episode
@@ -1131,7 +1152,74 @@ object SoraExtractor : SoraStream() {
             }
         }
 
+    }
 
+    private suspend fun invokeAnimeKaizoku(
+        title: String? = null,
+        malId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.fixTitle()
+        val search = app.get("$animeKaizokuAPI/?s=${fixTitle?.replace("-", " ")}").document
+        val detailHref =
+            search.select("ul#posts-container li").map { it.selectFirst("a")?.attr("href") }
+                .find {
+                    if (season == null) it?.contains(
+                        fixTitle ?: return,
+                        true
+                    ) == true else it?.contains(malId ?: return) == true
+                }?.let { fixUrl(it, animeKaizokuAPI) }
+
+        val detail = app.get(detailHref ?: return).document
+        val postId =
+            detail.selectFirst("link[rel=shortlink]")?.attr("href")?.substringAfter("?p=") ?: return
+        val script = detail.selectFirst("script:containsData(DDL)")?.data()?.splitData() ?: return
+
+        val media = fetchingKaizoku(animeKaizokuAPI, postId, script, detailHref).document
+        val iframe = media.select("tbody td[colspan=2]").map { it.attr("onclick") to it.text() }
+            .filter { it.second.contains("1080p", true) }
+
+        val eps = if (season == null) {
+            null
+        } else {
+            if (episode!! < 10) "0$episode" else episode
+        }
+
+        iframe.apmap { (data, name) ->
+            val worker =
+                fetchingKaizoku(animeKaizokuAPI, postId, data.splitData(), detailHref).document
+                    .select("tbody td")
+                    .map { Triple(it.attr("onclick"), it.text(), it.nextElementSibling()?.text()) }
+
+            val episodeData = worker.let { list ->
+                if (season == null) list.firstOrNull() else list.find {
+                    it.second.contains(
+                        Regex("($eps\\.)|(-\\s$eps)")
+                    )
+                }
+            } ?: return@apmap null
+
+            val ouo = fetchingKaizoku(
+                animeKaizokuAPI,
+                postId,
+                episodeData.first.splitData(),
+                detailHref
+            ).text.substringAfter("openInNewTab(\"")
+                .substringBefore("\")").let { base64Decode(it) }
+
+            if(!ouo.startsWith("https://ouo")) return@apmap null
+            callback.invoke(
+                ExtractorLink(
+                    "AnimeKaizoku [${episodeData.third}]",
+                    "AnimeKaizoku [${episodeData.third}]",
+                    bypassOuo(ouo) ?: return@apmap null,
+                    "$animeKaizokuAPI/",
+                    Qualities.P1080.value,
+                )
+            )
+        }
     }
 
     suspend fun invokeLing(
@@ -1760,13 +1848,13 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = if(season == null) {
+        val url = if (season == null) {
             "$rStreamAPI/Movies/$id/$id.mp4"
         } else {
             "$rStreamAPI/Shows/$id/$season/$episode.mp4"
         }
 
-        if(!app.get(url).isSuccessful) return
+        if (!app.get(url).isSuccessful) return
 
         delay(4000)
         callback.invoke(
@@ -1778,6 +1866,58 @@ object SoraExtractor : SoraStream() {
                 Qualities.P720.value
             )
         )
+    }
+
+    suspend fun invokeFlixon(
+        tmdbId: Int? = null,
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val onionUrl = "https://onionplay.se/"
+        val request = if (season == null) {
+            val res = app.get("$flixonAPI/$imdbId", referer = onionUrl)
+            if (res.text.contains("BEGIN PGP SIGNED MESSAGE")
+            ) app.get("$flixonAPI/$imdbId-1", referer = onionUrl) else res
+        } else {
+            app.get("$flixonAPI/$tmdbId-$season-$episode", referer = onionUrl)
+        }
+
+        val script = request.document.selectFirst("script:containsData(= \"\";)")?.data()
+        val collection = script?.substringAfter("= [")?.substringBefore("];")
+        val num = script?.substringAfterLast("(value) -")?.substringBefore(");")?.trim()?.toInt()
+            ?: return
+
+        val iframe = collection?.split(",")?.map { it.trim().toInt() }?.map { nums ->
+            nums.minus(num).toChar()
+        }?.joinToString("")?.let { Jsoup.parse(it) }?.selectFirst("button.redirect")
+            ?.attr("onclick")
+            ?.substringAfter("('")?.substringBefore("')")
+
+        val unPacker =
+            app.get(iframe ?: return).document.selectFirst("script:containsData(JuicyCodes.Run)")
+                ?.data()
+                ?.substringAfter("JuicyCodes.Run(")?.substringBefore(");")?.split("+")
+                ?.joinToString("") { it.replace("\"", "").trim() }
+                ?.let { getAndUnpack(base64Decode(it)) }
+
+        val ref = "https://onionflix.ru/"
+        val link = Regex("[\"']file[\"']:[\"'](.+?)[\"'],").find(
+            unPacker ?: return
+        )?.groupValues?.getOrNull(1)?.let { app.get(it, referer = ref).url }
+
+        callback.invoke(
+            ExtractorLink(
+                "Flixon",
+                "Flixon",
+                link ?: return,
+                ref,
+                Qualities.P720.value,
+                link.contains(".m3u8")
+            )
+        )
+
     }
 
 }

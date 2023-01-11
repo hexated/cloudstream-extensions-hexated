@@ -3,6 +3,7 @@ package com.hexated
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.tvMoviesAPI
+import com.lagradost.cloudstream3.APIHolder
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.base64Encode
@@ -12,6 +13,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.SubtitleHelper
 import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
@@ -256,11 +258,62 @@ suspend fun extractCovyn(url: String?): Pair<String?, String?>? {
 }
 
 fun getDirectGdrive(url: String): String {
-    return if(url.endsWith("share_link")) {
-        "https://drive.google.com/uc?id=${url.substringAfter("/d/").substringBefore("/")}&export=download"
-    } else {
+    return if (url.contains("&export=download")) {
         url
+    } else {
+        "https://drive.google.com/uc?id=${
+            url.substringAfter("/d/").substringBefore("/")
+        }&export=download"
     }
+}
+
+suspend fun bypassOuo(url: String?) : String? {
+    var res = session.get(url ?: return null)
+    (1..2).forEach { _ ->
+        val document = res.document
+        val nextUrl = document.select("form").attr("action")
+        val data = document.select("form input").mapNotNull {
+            it.attr("name") to it.attr("value")
+        }.toMap().toMutableMap()
+        val captchaKey = document.select("script[src*=https://www.google.com/recaptcha/api.js?render=]")
+            .attr("src").substringAfter("render=")
+        val token = APIHolder.getCaptchaToken(url, captchaKey)
+        data["x-token"] = token ?: ""
+        res = session.post(
+            nextUrl,
+            data = data,
+            headers = mapOf("content-type" to "application/x-www-form-urlencoded"),
+            allowRedirects = false
+        )
+    }
+
+    return res.headers["location"]
+}
+
+suspend fun fetchingKaizoku(
+    domain: String,
+    postId: String,
+    data: List<String>,
+    ref: String
+): NiceResponse {
+    return app.post(
+        "$domain/wp-admin/admin-ajax.php",
+        data = mapOf(
+            "action" to "DDL",
+            "post_id" to postId,
+            "div_id" to data.first(),
+            "tab_id" to data[1],
+            "num" to data[2],
+            "folder" to data.last()
+        ),
+        headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
+        referer = ref
+    )
+}
+
+fun String.splitData(): List<String> {
+    return this.substringAfterLast("DDL(").substringBefore(")").split(",")
+        .map { it.replace("'", "").trim() }
 }
 
 suspend fun bypassFdAds(url: String?): String? {
@@ -399,7 +452,7 @@ fun Document.findTvMoviesIframe(): String? {
 }
 
 fun String?.fixTitle(): String? {
-    return this?.replace(Regex("[!%:']|( &)"), "")?.replace(" ", "-")?.lowercase()
+    return this?.replace(Regex("[!%:'?]|( &)"), "")?.replace(" ", "-")?.lowercase()
         ?.replace("-–-", "-")
 }
 
