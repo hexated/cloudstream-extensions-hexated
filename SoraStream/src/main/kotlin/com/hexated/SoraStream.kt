@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke123Movie
+import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
@@ -21,6 +22,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invokeCrunchyroll
 import com.hexated.SoraExtractor.invokeFDMovies
+import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeKisskh
@@ -32,7 +34,6 @@ import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
-import com.hexated.SoraExtractor.invokeZoro
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -64,7 +65,8 @@ open class SoraStream : TmdbProvider() {
             base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
 
         //        private var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
-        var netMoviesAPI = base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=bG0=Zmk=dC0=bmU=Ly8=czo=dHA=aHQ=")
+        var netMoviesAPI =
+            base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=bG0=Zmk=dC0=bmU=Ly8=czo=dHA=aHQ=")
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
@@ -95,6 +97,8 @@ open class SoraStream : TmdbProvider() {
         const val bollyMazaAPI = "https://b.bloginguru.info"
         const val moviesbayAPI = "https://moviesbay.live"
         const val rStreamAPI = "https://fsa.remotestre.am"
+        const val flixonAPI = "https://flixon.ru"
+        const val animeKaizokuAPI = "https://animekaizoku.com"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -350,13 +354,7 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (res.season != null && res.isAnime) invokeZoro(
-                    res.id,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
+                if (res.isAnime) invokeAnimes(res.id, res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 if (res.season != null && res.isAnime) invokeCrunchyroll(
@@ -516,7 +514,10 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeRStream(res.id, res.season, res.episode, callback)
-            }
+            },
+            {
+                invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
+            },
         )
 
         return true
