@@ -1397,7 +1397,6 @@ object SoraExtractor : SoraStream() {
         imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val request = app.get("$fwatayakoAPI/IAF0wWTdNYZm?imdb_id=$imdbId")
