@@ -855,9 +855,9 @@ object SoraExtractor : SoraStream() {
             "$vipAPI/movieDrama/get?id=${id}&category=${type}",
             headers = headers
         ).parsedSafe<Load>()?.data
+            ?: return invokeNetMovies(id, type, episode, subtitleCallback, callback)
 
-        if (jsonResponse == null) invokeNetMovies(id, type, episode, subtitleCallback, callback)
-        val json = jsonResponse?.episodeVo?.find {
+        val json = jsonResponse.episodeVo?.find {
             it.seriesNo == (episode ?: 0)
         }
 
