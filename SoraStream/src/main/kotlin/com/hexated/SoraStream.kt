@@ -122,20 +122,20 @@ open class SoraStream : TmdbProvider() {
     }
 
     override val mainPage = mainPageOf(
-        "$tmdbAPI/trending/all/day?api_key=$apiKey&region=" to "Trending",
-        "$tmdbAPI/movie/popular?api_key=$apiKey&region=" to "Popular Movies",
-        "$tmdbAPI/tv/popular?api_key=$apiKey&region=" to "Popular TV Shows",
+        "$tmdbAPI/trending/all/day?api_key=$apiKey&region=US" to "Trending",
+        "$tmdbAPI/movie/popular?api_key=$apiKey&region=US" to "Popular Movies",
+        "$tmdbAPI/tv/popular?api_key=$apiKey&region=US" to "Popular TV Shows",
 //        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=" to "Airing Today TV Shows",
-        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=" to "On The Air TV Shows",
+        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=US" to "On The Air TV Shows",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=213" to "Netflix",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=1024" to "Amazon",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2739" to "Disney+",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=453" to "Hulu",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2552" to "Apple TV+",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=49" to "HBO",
-        "$tmdbAPI/movie/top_rated?api_key=$apiKey&region=" to "Top Rated Movies",
-        "$tmdbAPI/tv/top_rated?api_key=$apiKey&region=" to "Top Rated TV Shows",
-        "$tmdbAPI/movie/upcoming?api_key=$apiKey&region=" to "Upcoming Movies",
+        "$tmdbAPI/movie/top_rated?api_key=$apiKey&region=US" to "Top Rated Movies",
+        "$tmdbAPI/tv/top_rated?api_key=$apiKey&region=US" to "Top Rated TV Shows",
+        "$tmdbAPI/movie/upcoming?api_key=$apiKey&region=US" to "Upcoming Movies",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_original_language=ko" to "Korean Shows",
         "$tmdbAPI/tv/airing_today?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc" to "Airing Today Anime",
         "$tmdbAPI/tv/on_the_air?api_key=$apiKey&with_keywords=210024|222243&sort_by=primary_release_date.desc" to "Ongoing Anime",
@@ -452,7 +452,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeFwatayako(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+                invokeFwatayako(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeGMovies(
