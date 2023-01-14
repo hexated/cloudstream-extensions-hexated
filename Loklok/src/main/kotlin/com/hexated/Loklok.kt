@@ -37,7 +37,6 @@ class Loklok : MainAPI() {
         private val api = base64DecodeAPI("dg==LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
         private val searchApi = base64Decode("aHR0cHM6Ly9sb2tsb2suY29t")
-        private const val jikanAPI = "https://api.jikan.moe/v4"
         private const val mainImageUrl = "https://images.weserv.nl"
 
         private fun base64DecodeAPI(api: String): String {
@@ -175,22 +174,11 @@ class Loklok : MainAPI() {
         }
 
         val animeType = if(type == TvType.Anime && data.category == 0) "movie" else "tv"
-
-        val malId = if(type == TvType.Anime) {
-            app.get("${jikanAPI}/anime?q=${res.name}&start_date=${res.year}&type=$animeType&limit=1")
-                .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
-        } else {
-            null
-        }
-        val anilistId = if(malId != null) {
-            app.post(
-                "https://graphql.anilist.co/", data = mapOf(
-                    "query" to "{Media(idMal:$malId,type:ANIME){id}}",
-                )
-            ).parsedSafe<DataAni>()?.data?.media?.id
-        } else {
-            null
-        }
+        val (malId, anilistId) = if (type == TvType.Anime) getTracker(
+            res.name,
+            animeType,
+            res.year
+        ) else Tracker()
 
         return newTvSeriesLoadResponse(
             res.name ?: return null,
@@ -204,7 +192,7 @@ class Loklok : MainAPI() {
             this.plot = res.introduction
             this.tags = res.tagNameList
             this.rating = res.score.toRatingInt()
-            addMalId(malId?.toIntOrNull())
+            addMalId(malId)
             addAniListId(anilistId?.toIntOrNull())
             this.recommendations = recommendations
         }
@@ -271,6 +259,24 @@ class Loklok : MainAPI() {
         }
     }
 
+    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
+        val res = app.get("https://api.consumet.org/meta/anilist/$title")
+            .parsedSafe<AniSearch>()?.results?.find { media ->
+                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
+                    title,
+                    true
+                )) || (media.type.equals(type, true) && media.releaseDate == year)
+            }
+        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
+    }
+
+    data class Tracker(
+        val malId: Int? = null,
+        val aniId: String? = null,
+        val image: String? = null,
+        val cover: String? = null,
+    )
+
     data class UrlData(
         val id: Any? = null,
         val category: Int? = null,
@@ -293,6 +299,25 @@ class Loklok : MainAPI() {
         val epId: Int? = null,
         val definitionList: List<Definition>? = arrayListOf(),
         val subtitlingList: List<Subtitling>? = arrayListOf(),
+    )
+
+    data class Title(
+        @JsonProperty("romaji") val romaji: String? = null,
+        @JsonProperty("english") val english: String? = null,
+    )
+
+    data class Results(
+        @JsonProperty("id") val aniId: String? = null,
+        @JsonProperty("malId") val malId: Int? = null,
+        @JsonProperty("title") val title: Title? = null,
+        @JsonProperty("releaseDate") val releaseDate: Int? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("image") val image: String? = null,
+        @JsonProperty("cover") val cover: String? = null,
+    )
+
+    data class AniSearch(
+        @JsonProperty("results") val results: java.util.ArrayList<Results>? = arrayListOf(),
     )
 
     data class QuickSearchData(
@@ -376,26 +401,6 @@ class Loklok : MainAPI() {
 
     data class Home(
         @JsonProperty("data") val data: Data? = null,
-    )
-
-    data class DataMal(
-        @JsonProperty("mal_id") val mal_id: String? = null,
-    )
-
-    data class JikanResponse(
-        @JsonProperty("data") val data: ArrayList<DataMal>? = arrayListOf(),
-    )
-
-    private data class IdAni(
-        @JsonProperty("id") val id: String? = null,
-    )
-
-    private data class MediaAni(
-        @JsonProperty("Media") val media: IdAni? = null,
-    )
-
-    private data class DataAni(
-        @JsonProperty("data") val data: MediaAni? = null,
     )
 
 }

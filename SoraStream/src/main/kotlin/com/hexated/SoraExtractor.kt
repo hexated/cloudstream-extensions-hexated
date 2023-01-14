@@ -1352,13 +1352,12 @@ object SoraExtractor : SoraStream() {
             sources.addAll(iframeList.filter { it.first.contains("1080p", true) })
         }
 
-        val base = "https://drivebit.in"
         sources.apmap { (quality, link) ->
             delay(2000)
             val driveLink = bypassHrefli(link ?: return@apmap null)
-            val res = app.get(driveLink ?: return@apmap null).document
-            val resDoc = res.selectFirst("script")?.data()?.substringAfter("replace(\"")
-                ?.substringBefore("\")")?.let {
+            val base = getBaseUrl(driveLink ?: return@apmap null)
+            val resDoc = app.get(driveLink).text.substringAfter("replace(\"")
+                .substringBefore("\")").let {
                     app.get(fixUrl(it, base)).document
                 }
             val bitLink = resDoc?.selectFirst("a.btn.btn-outline-success")?.attr("href")

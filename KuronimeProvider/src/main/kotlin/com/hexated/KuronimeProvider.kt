@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.util.ArrayList
 
 class KuronimeProvider : MainAPI() {
     override var mainUrl = "https://45.12.2.2"
@@ -27,8 +28,6 @@ class KuronimeProvider : MainAPI() {
     )
 
     companion object {
-        private const val jikanAPI = "https://api.jikan.moe/v4"
-
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -120,13 +119,7 @@ class KuronimeProvider : MainAPI() {
         val year = Regex("\\d, ([0-9]*)").find(
             document.select(".infodetail > ul > li:nth-child(5)").text()
         )?.groupValues?.get(1)?.toIntOrNull()
-        val malId = app.get("$jikanAPI/anime?q=$title&start_date=${year}&type=$type&limit=1")
-            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
-        val anilistId = app.post(
-            "https://graphql.anilist.co/", data = mapOf(
-                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
-            )
-        ).parsedSafe<DataAni>()?.data?.media?.id
+        val (malId, anilistId, image, cover) = getTracker(title, type, year)
         val status = getStatus(
             document.selectFirst(".infodetail > ul > li:nth-child(3)")!!.ownText()
                 .replace(Regex("\\W"), "")
@@ -141,12 +134,13 @@ class KuronimeProvider : MainAPI() {
 
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
-            posterUrl = poster
+            posterUrl = image ?: poster
+            backgroundPosterUrl = cover ?: image ?: poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             plot = description
-            addMalId(malId?.toIntOrNull())
+            addMalId(malId)
             addAniListId(anilistId?.toIntOrNull())
             addTrailer(trailer)
             this.tags = tags
@@ -206,24 +200,41 @@ class KuronimeProvider : MainAPI() {
         return true
     }
 
-    data class Data(
-        @JsonProperty("mal_id") val mal_id: String? = null,
+    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
+        val res = app.get("https://api.consumet.org/meta/anilist/$title")
+            .parsedSafe<AniSearch>()?.results?.find { media ->
+                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
+                    title,
+                    true
+                )) || (media.type.equals(type, true) && media.releaseDate == year)
+            }
+        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
+    }
+
+    data class Tracker(
+        val malId: Int? = null,
+        val aniId: String? = null,
+        val image: String? = null,
+        val cover: String? = null,
     )
 
-    data class JikanResponse(
-        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    data class Title(
+        @JsonProperty("romaji") val romaji: String? = null,
+        @JsonProperty("english") val english: String? = null,
     )
 
-    private data class IdAni(
-        @JsonProperty("id") val id: String? = null,
+    data class Results(
+        @JsonProperty("id") val aniId: String? = null,
+        @JsonProperty("malId") val malId: Int? = null,
+        @JsonProperty("title") val title: Title? = null,
+        @JsonProperty("releaseDate") val releaseDate: Int? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("image") val image: String? = null,
+        @JsonProperty("cover") val cover: String? = null,
     )
 
-    private data class MediaAni(
-        @JsonProperty("Media") val media: IdAni? = null,
-    )
-
-    private data class DataAni(
-        @JsonProperty("data") val data: MediaAni? = null,
+    data class AniSearch(
+        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
     )
 
 }
