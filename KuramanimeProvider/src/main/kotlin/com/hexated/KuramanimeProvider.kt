@@ -5,12 +5,12 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.mvvm.safeApiCall
-import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.util.ArrayList
 
 class KuramanimeProvider : MainAPI() {
     override var mainUrl = "https://kuramanime.net"
@@ -27,8 +27,6 @@ class KuramanimeProvider : MainAPI() {
     )
 
     companion object {
-        private const val jikanAPI = "https://api.jikan.moe/v4"
-
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -76,9 +74,9 @@ class KuramanimeProvider : MainAPI() {
         val href = getProperAnimeLink(fixUrl(this.selectFirst("a")!!.attr("href")))
         val title = this.selectFirst("h5 a")?.text() ?: return null
         val posterUrl = fixUrl(this.select("div.product__item__pic.set-bg").attr("data-setbg"))
-        val episode = Regex("([0-9*])\\s?/").find(
-            this.select("div.ep span").text()
-        )?.groupValues?.getOrNull(1)?.toIntOrNull()
+        val episode = this.select("div.ep span").text().let {
+            Regex("Ep\\s([0-9]+)\\s/").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        }
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
@@ -114,14 +112,7 @@ class KuramanimeProvider : MainAPI() {
         )
         val type = document.selectFirst("div.col-lg-6.col-md-6 ul li:contains(Tipe:) a")?.text()?.lowercase() ?: "tv"
         val description = document.select(".anime__details__text > p").text().trim()
-
-        val malId = app.get("${jikanAPI}/anime?q=$title&start_date=${year}&type=$type&limit=1")
-            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
-        val anilistId = app.post(
-            "https://graphql.anilist.co/", data = mapOf(
-                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
-            )
-        ).parsedSafe<DataAni>()?.data?.media?.id
+        val (malId, anilistId, image, cover) = getTracker(title, type, year)
 
         val episodes = mutableListOf<Episode>()
 
@@ -148,12 +139,13 @@ class KuramanimeProvider : MainAPI() {
 
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
-            posterUrl = poster
+            posterUrl = image ?: poster
+            backgroundPosterUrl = cover ?: image ?: poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             plot = description
-            addMalId(malId?.toIntOrNull())
+            addMalId(malId)
             addAniListId(anilistId?.toIntOrNull())
             this.tags = tags
             this.recommendations = recommendations
@@ -217,24 +209,41 @@ class KuramanimeProvider : MainAPI() {
         return true
     }
 
-    data class Data(
-        @JsonProperty("mal_id") val mal_id: String? = null,
+    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
+        val res = app.get("https://api.consumet.org/meta/anilist/$title")
+            .parsedSafe<AniSearch>()?.results?.find { media ->
+                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
+                    title,
+                    true
+                )) || (media.type.equals(type, true) && media.releaseDate == year)
+            }
+        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
+    }
+
+    data class Tracker(
+        val malId: Int? = null,
+        val aniId: String? = null,
+        val image: String? = null,
+        val cover: String? = null,
     )
 
-    data class JikanResponse(
-        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    data class Title(
+        @JsonProperty("romaji") val romaji: String? = null,
+        @JsonProperty("english") val english: String? = null,
     )
 
-    private data class IdAni(
-        @JsonProperty("id") val id: String? = null,
+    data class Results(
+        @JsonProperty("id") val aniId: String? = null,
+        @JsonProperty("malId") val malId: Int? = null,
+        @JsonProperty("title") val title: Title? = null,
+        @JsonProperty("releaseDate") val releaseDate: Int? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("image") val image: String? = null,
+        @JsonProperty("cover") val cover: String? = null,
     )
 
-    private data class MediaAni(
-        @JsonProperty("Media") val media: IdAni? = null,
-    )
-
-    private data class DataAni(
-        @JsonProperty("data") val data: MediaAni? = null,
+    data class AniSearch(
+        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
     )
 
 }

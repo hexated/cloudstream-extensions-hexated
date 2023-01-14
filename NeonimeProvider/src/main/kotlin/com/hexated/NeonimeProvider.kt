@@ -25,8 +25,6 @@ class NeonimeProvider : MainAPI() {
     )
 
     companion object {
-        private const val jikanAPI = "https://api.jikan.moe/v4"
-
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -122,27 +120,28 @@ class NeonimeProvider : MainAPI() {
 
         if (url.contains("movie") || url.contains("live-action")) {
             val mTitle = document.selectFirst(".sbox > .data > h1[itemprop = name]")?.text().toString().replace("Subtitle Indonesia", "").trim()
+            val mPoster = document.selectFirst(".sbox > .imagen > .fix > img[itemprop = image]")?.attr("data-src")
             val mTrailer = document.selectFirst("div.youtube_id iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
             val year = document.selectFirst("a[href*=release-year]")!!.text().toIntOrNull()
-            val malId = getMalId(mTitle, year, "movie")
-            val anilistId = getAniId(malId)
+            val (malId, anilistId, image, cover) = getTracker(mTitle, "movie", year)
             return newMovieLoadResponse(name = mTitle, url = url, type = TvType.Movie, dataUrl = url) {
-                posterUrl = document.selectFirst(".sbox > .imagen > .fix > img[itemprop = image]")?.attr("data-src")
+                posterUrl = image ?: mPoster
+                backgroundPosterUrl = cover ?: image ?: mPoster
                 this.year = year
                 plot = document.select("div[itemprop = description]").text().trim()
                 rating = document.select("span[itemprop = ratingValue]").text().toIntOrNull()
                 tags = document.select("p.meta_dd > a").map { it.text() }
                 addTrailer(mTrailer)
-                addMalId(malId?.toIntOrNull())
+                addMalId(malId)
                 addAniListId(anilistId?.toIntOrNull())
             }
         }
         else {
             val title = document.select("h1[itemprop = name]").text().replace("Subtitle Indonesia", "").trim()
+            val poster = document.selectFirst(".imagen > img")?.attr("data-src")
             val trailer = document.selectFirst("div.youtube_id_tv iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
             val year = document.select("#info a[href*=\"-year/\"]").text().toIntOrNull()
-            val malId = getMalId(title, year, "tv")
-            val anilistId = getAniId(malId)
+            val (malId, anilistId, image, cover) = getTracker(title, "tv", year)
             val episodes = document.select("ul.episodios > li").mapNotNull {
                 val header = it.selectFirst(".episodiotitle > a")?.ownText().toString()
                 val name = Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
@@ -152,30 +151,18 @@ class NeonimeProvider : MainAPI() {
 
             return newAnimeLoadResponse(title, url, TvType.Anime) {
                 engName = title
-                posterUrl = document.selectFirst(".imagen > img")?.attr("data-src")
+                posterUrl = image ?: poster
+                backgroundPosterUrl = cover ?: image ?: poster
                 this.year = year
                 addEpisodes(DubStatus.Subbed, episodes)
                 showStatus = getStatus(document.select("div.metadatac > span").last()!!.text().trim())
                 plot = document.select("div[itemprop = description] > p").text().trim()
                 tags = document.select("#info a[href*=\"-genre/\"]").map { it.text() }
                 addTrailer(trailer)
-                addMalId(malId?.toIntOrNull())
+                addMalId(malId)
                 addAniListId(anilistId?.toIntOrNull())
             }
         }
-    }
-
-    private suspend fun getAniId(malId: String?) : String? {
-        return app.post(
-            "https://graphql.anilist.co/", data = mapOf(
-                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
-            )
-        ).parsedSafe<DataAni>()?.data?.media?.id
-    }
-
-    private suspend fun getMalId(title: String?, year: Int?, type: String?) : String? {
-        return app.get("${jikanAPI}/anime?q=$title&start_date=${year}&type=$type&limit=1")
-            .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
     }
 
     override suspend fun loadLinks(
@@ -201,24 +188,41 @@ class NeonimeProvider : MainAPI() {
         return true
     }
 
-    data class Data(
-        @JsonProperty("mal_id") val mal_id: String? = null,
+    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
+        val res = app.get("https://api.consumet.org/meta/anilist/$title")
+            .parsedSafe<AniSearch>()?.results?.find { media ->
+                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
+                    title,
+                    true
+                )) || (media.type.equals(type, true) && media.releaseDate == year)
+            }
+        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
+    }
+
+    data class Tracker(
+        val malId: Int? = null,
+        val aniId: String? = null,
+        val image: String? = null,
+        val cover: String? = null,
     )
 
-    data class JikanResponse(
-        @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+    data class Title(
+        @JsonProperty("romaji") val romaji: String? = null,
+        @JsonProperty("english") val english: String? = null,
     )
 
-    private data class IdAni(
-        @JsonProperty("id") val id: String? = null,
+    data class Results(
+        @JsonProperty("id") val aniId: String? = null,
+        @JsonProperty("malId") val malId: Int? = null,
+        @JsonProperty("title") val title: Title? = null,
+        @JsonProperty("releaseDate") val releaseDate: Int? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("image") val image: String? = null,
+        @JsonProperty("cover") val cover: String? = null,
     )
 
-    private data class MediaAni(
-        @JsonProperty("Media") val media: IdAni? = null,
-    )
-
-    private data class DataAni(
-        @JsonProperty("data") val data: MediaAni? = null,
+    data class AniSearch(
+        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
     )
 
 }

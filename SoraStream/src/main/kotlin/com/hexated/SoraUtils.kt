@@ -66,14 +66,27 @@ fun String.filterMedia(title: String?, yearNum: Int?, seasonNum: Int?): Boolean 
     }
 }
 
+fun Document.getMirrorLink(): String? {
+    return this.select("div.mb-4 a").randomOrNull()
+        ?.attr("href")
+}
+
+fun Document.getMirrorServer(server: Int): String {
+    return this.select("div.text-center a:contains(Server $server)").attr("href")
+}
+
 suspend fun extractMirrorUHD(url: String, ref: String): String? {
-    val baseDoc = app.get(fixUrl(url, ref)).document
-    val downLink = baseDoc.select("div.mb-4 a").randomOrNull()
-        ?.attr("href") ?: run {
-        val server = baseDoc.select("div.text-center a:contains(Server 2)").attr("href")
-        app.get(fixUrl(server, ref)).document.selectFirst("div.mb-4 a")
-            ?.attr("href")
+    var baseDoc = app.get(fixUrl(url, ref)).document
+    var downLink = baseDoc.getMirrorLink()
+    run lit@{
+        (1..2).forEach {
+            if(downLink != null) return@lit
+            val server = baseDoc.getMirrorServer(it.plus(1))
+            baseDoc = app.get(fixUrl(server, ref)).document
+            downLink = baseDoc.getMirrorLink()
+        }
     }
+    if(downLink?.contains(".mkv") == true || downLink?.contains(".mp4") == true) return downLink
     val downPage = app.get(downLink ?: return null).document
     return downPage.selectFirst("form[method=post] a.btn.btn-success")
         ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')") ?: run {
@@ -93,7 +106,8 @@ suspend fun extractBackupUHD(url: String): String? {
 
     val ssid = resumeDoc.cookies["PHPSESSID"]
     val baseIframe = getBaseUrl(url)
-    val fetchLink = script?.substringAfter("fetch('")?.substringBefore("',")?.let { fixUrl(it, baseIframe) }
+    val fetchLink =
+        script?.substringAfter("fetch('")?.substringBefore("',")?.let { fixUrl(it, baseIframe) }
     val token = script?.substringAfter("'token', '")?.substringBefore("');")
 
     val body = FormBody.Builder()
@@ -146,16 +160,18 @@ suspend fun extractGdbot(url: String): String? {
 }
 
 suspend fun extractDirectDl(url: String): String? {
-    val iframe = app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(Direct DL)")?.attr("href")
+    val iframe = app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(Direct DL)")
+        ?.attr("href")
     val request = app.get(iframe ?: return null)
     val driveDoc = request.document
     val token = driveDoc.select("section#generate_url").attr("data-token")
     val uid = driveDoc.select("section#generate_url").attr("data-uid")
 
     val ssid = request.cookies["PHPSESSID"]
-    val body = """{"type":"DOWNLOAD_GENERATE","payload":{"uid":"$uid","access_token":"$token"}}""".toRequestBody(
-        RequestBodyTypes.JSON.toMediaTypeOrNull()
-    )
+    val body =
+        """{"type":"DOWNLOAD_GENERATE","payload":{"uid":"$uid","access_token":"$token"}}""".toRequestBody(
+            RequestBodyTypes.JSON.toMediaTypeOrNull()
+        )
 
     val json = app.post(
         "https://rajbetmovies.com/action", requestBody = body, headers = mapOf(
@@ -168,17 +184,20 @@ suspend fun extractDirectDl(url: String): String? {
 }
 
 suspend fun extractDrivebot(url: String): String? {
-    val iframeDrivebot = app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(Drivebot)")
+    val iframeDrivebot =
+        app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(Drivebot)")
             ?.attr("href") ?: return null
     return getDrivebotLink(iframeDrivebot)
 }
 
 suspend fun extractGdflix(url: String): String? {
-    val iframeGdflix = app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(GDFlix Direct)")
-        ?.attr("href") ?: return null
+    val iframeGdflix =
+        app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(GDFlix Direct)")
+            ?.attr("href") ?: return null
     val base = getBaseUrl(iframeGdflix)
 
-    val gdfDoc = app.get(iframeGdflix).document.selectFirst("script:containsData(replace)")?.data()?.substringAfter("replace(\"")
+    val gdfDoc = app.get(iframeGdflix).document.selectFirst("script:containsData(replace)")?.data()
+        ?.substringAfter("replace(\"")
         ?.substringBefore("\")")?.let {
             app.get(fixUrl(it, base)).document
         }
@@ -268,7 +287,7 @@ fun getDirectGdrive(url: String): String {
     }
 }
 
-suspend fun bypassOuo(url: String?) : String? {
+suspend fun bypassOuo(url: String?): String? {
     var res = session.get(url ?: return null)
     run lit@{
         (1..2).forEach { _ ->
@@ -322,54 +341,47 @@ fun String.splitData(): List<String> {
 }
 
 suspend fun bypassFdAds(url: String?): String? {
-    val directUrl = app.get(url ?: return null, verify = false).document.select("a#link").attr("href")
-        .substringAfter("/go/")
-        .let { base64Decode(it) }
+    val directUrl =
+        app.get(url ?: return null, verify = false).document.select("a#link").attr("href")
+            .substringAfter("/go/")
+            .let { base64Decode(it) }
     val doc = app.get(directUrl, verify = false).document
     val lastDoc = app.post(
         doc.select("form#landing").attr("action"),
         data = mapOf("go" to doc.select("form#landing input").attr("value")),
         verify = false
     ).document
-    val json = lastDoc.select("form#landing input[name=newwpsafelink]").attr("value").let { base64Decode(it) }
-    val finalJson = tryParseJson<FDAds>(json)?.linkr?.substringAfter("redirect=")?.let { base64Decode(it) }
+    val json = lastDoc.select("form#landing input[name=newwpsafelink]").attr("value")
+        .let { base64Decode(it) }
+    val finalJson =
+        tryParseJson<FDAds>(json)?.linkr?.substringAfter("redirect=")?.let { base64Decode(it) }
     return tryParseJson<Safelink>(finalJson)?.safelink
 }
 
 suspend fun bypassHrefli(url: String): String? {
-    val direct = url.removePrefix("https://href.li/?")
-
-    val res = app.get(direct).document
-    val formLink = res.select("form#landing").attr("action")
-    val wpHttp = res.select("input[name=_wp_http]").attr("value")
-
-    val res2 = app.post(formLink, data = mapOf("_wp_http" to wpHttp)).document
-    val formLink2 = res2.select("form#landing").attr("action")
-    val wpHttp2 = res2.select("input[name=_wp_http2]").attr("value")
-    val token = res2.select("input[name=token]").attr("value")
-
-    val res3 = app.post(
-        formLink2, data = mapOf(
-            "_wp_http2" to wpHttp2, "token" to token
+    var res = app.get(url.removePrefix("https://href.li/?"))
+    (1..2).forEach { _ ->
+        val document = res.document
+        val nextUrl = document.select("form").attr("action")
+        val data = document.select("form input").mapNotNull {
+            it.attr("name") to it.attr("value")
+        }.toMap()
+        res = app.post(
+            nextUrl,
+            data = data,
         )
-    ).document
-
-    val script = res3.selectFirst("script:containsData(verify_button)")?.data()
-    val directLink = script?.substringAfter("\"href\",\"")?.substringBefore("\")")
-    val matchCookies =
+    }
+    val script = res.document.selectFirst("script:containsData(verify_button)")?.data()
+    val goUrl = script?.substringAfter("\"href\",\"")?.substringBefore("\")")
+    val cookies =
         Regex("sumitbot_\\('(\\S+?)',\n|.?'(\\S+?)',").findAll(script ?: return null).map {
             it.groupValues[2]
-        }.toList()
-
-    val cookeName = matchCookies.firstOrNull() ?: return null
-    val cookeValue = matchCookies.lastOrNull() ?: return null
-
-    val cookies = mapOf(
-        cookeName to cookeValue
-    )
+        }.toList().let {
+            mapOf(it.first() to it.last())
+        }.ifEmpty { return null }
 
     return app.get(
-        directLink ?: return null,
+        goUrl ?: return null,
         cookies = cookies
     ).document.selectFirst("meta[http-equiv=refresh]")?.attr("content")?.substringAfter("url=")
 }
@@ -377,7 +389,7 @@ suspend fun bypassHrefli(url: String): String? {
 suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<String, String?>? {
 
     val req = app.get(url)
-    if(!req.isSuccessful) return null
+    if (!req.isSuccessful) return null
     val doc = req.document
 
     return if (season == null) {
