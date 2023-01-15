@@ -29,7 +29,7 @@ open class Sbflix : ExtractorApi() {
         val id = regexID.findAll(url).map {
             it.value.replace(Regex("(embed-|/e/)"), "")
         }.first()
-        val master = "$mainUrl/sources49/" + bytesToHex("||$id||||streamsb".toByteArray()) + "/"
+        val master = "$mainUrl/sources50/" + bytesToHex("||$id||||streamsb".toByteArray()) + "/"
         val headers = mapOf(
             "watchsb" to "sbstream",
         )
