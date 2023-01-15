@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -20,6 +22,16 @@ class Anilibria : MainAPI() {
         TvType.AnimeMovie,
         TvType.OVA
     )
+
+    companion object {
+        fun getType(t: String): TvType {
+            return when {
+                t.contains("Фильм", true) -> TvType.Movie
+                t.contains("ТВ", true) -> TvType.Anime
+                else -> TvType.OVA
+            }
+        }
+    }
 
     override val mainPage = mainPageOf(
         "1" to "Новое",
@@ -68,10 +80,21 @@ class Anilibria : MainAPI() {
         } ?: throw ErrorLoadingException("Invalid json responses")
     }
 
-    override suspend fun load(url: String): LoadResponse {
+    override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
-        val title = document.selectFirst("h1.release-title")!!.text().trim()
+        val title = document.selectFirst("h1.release-title")?.text() ?: return null
+        val poster = fixUrlNull(document.selectFirst("img#adminPoster")?.attr("src"))
+        val trackTitle = (document.selectFirst("h1.release-title br")?.nextSibling()
+            ?: document.selectFirst("h1.release-title")?.text()?.substringAfter("/")?.trim()).toString()
+        val type = document.selectFirst("div#xreleaseInfo b:contains(Тип:)")?.nextSibling()
+            .toString().substringBefore(",").trim()
+        val trackType = type.let {
+            if(it.contains("Фильм", true)) "movie" else "tv"
+        }
+        val year = document.selectFirst("div#xreleaseInfo b:contains(Сезон:)")?.nextElementSibling()
+            ?.text()?.filter { it.isDigit() }?.toIntOrNull()
+        val (malId, anilistId, image, cover) = getTracker(trackTitle, trackType, year)
         val episodes = document.select("script").find { it.data().contains("var player =") }?.data()
             ?.substringAfter("file:[")?.substringBefore("],")?.let { data ->
                 tryParseJson<List<Episodes>>("[$data]")?.mapNotNull { eps ->
@@ -82,18 +105,16 @@ class Anilibria : MainAPI() {
                     )
                 }
             }
-
-        return newAnimeLoadResponse(title, url, TvType.Anime) {
-            posterUrl = fixUrlNull(document.selectFirst("img#adminPoster")?.attr("src"))
-            this.year =
-                document.selectFirst("div#xreleaseInfo b:contains(Сезон:)")?.nextElementSibling()
-                    ?.text()?.filter { it.isDigit() }?.toIntOrNull()
+        return newAnimeLoadResponse(title, url, getType(type)) {
+            posterUrl = image ?: poster
+            backgroundPosterUrl = cover ?: image ?: poster
+            this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             plot = document.select("p.detail-description").text().trim()
-            this.tags = document.selectFirst("div#xreleaseInfo").toString().let { tag ->
-                Regex("Жанры:</b>(.*\\n?.*)<br>").find(tag)?.groupValues?.getOrNull(1)?.split(",")
-                    ?.map { it.trim() }
-            }
+            this.tags = document.selectFirst("div#xreleaseInfo b:contains(Жанры:)")?.nextSibling()
+                .toString().split(",").map { it.trim() }
+            addMalId(malId)
+            addAniListId(anilistId?.toIntOrNull())
         }
     }
 
@@ -121,6 +142,43 @@ class Anilibria : MainAPI() {
 
         return true
     }
+
+    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
+        val res = app.get("https://api.consumet.org/meta/anilist/$title")
+            .parsedSafe<AniSearch>()?.results?.find { media ->
+                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
+                    title,
+                    true
+                )) || (media.type.equals(type, true) && media.releaseDate == year)
+            }
+        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
+    }
+
+    data class Tracker(
+        val malId: Int? = null,
+        val aniId: String? = null,
+        val image: String? = null,
+        val cover: String? = null,
+    )
+
+    data class Title(
+        @JsonProperty("romaji") val romaji: String? = null,
+        @JsonProperty("english") val english: String? = null,
+    )
+
+    data class Results(
+        @JsonProperty("id") val aniId: String? = null,
+        @JsonProperty("malId") val malId: Int? = null,
+        @JsonProperty("title") val title: Title? = null,
+        @JsonProperty("releaseDate") val releaseDate: Int? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("image") val image: String? = null,
+        @JsonProperty("cover") val cover: String? = null,
+    )
+
+    data class AniSearch(
+        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
+    )
 
     private data class Episodes(
         @JsonProperty("file") val file: String? = null,
