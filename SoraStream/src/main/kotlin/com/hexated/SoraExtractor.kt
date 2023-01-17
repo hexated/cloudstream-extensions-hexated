@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.google.gson.JsonParser
+import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
@@ -983,7 +984,6 @@ object SoraExtractor : SoraStream() {
         ).apmap { server ->
             val sources = app.get(
                 "$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server",
-                timeout = 120L
             ).parsedSafe<ConsumetSourcesResponse>()
             val name = fixTitle(server)
             sources?.sources?.map {
@@ -1925,6 +1925,81 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeMovie123(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val server = "https://vidcloud9.org"
+        val fixTitle = title.fixTitle()
+        val m = app.get("$movie123NetAPI/searching?q=$title&limit=40")
+            .parsedSafe<Movie123Search>()?.data?.find {
+                if (season == null) {
+                    (it.t.equals(title, true) || it.t.fixTitle()
+                        .equals(fixTitle)) && it.t?.contains("season", true) == false
+                } else {
+                    it.t?.equals(
+                        "$title - Season $season",
+                        true
+                    ) == true || it.s?.contains("$fixTitle-season-$season", true) == true
+                }
+            }?.s?.substringAfterLast("-") ?: return
+
+        listOf(
+            "1",
+            "2"
+        ).apmap { serverNum ->
+            val media = app.post(
+                "$movie123NetAPI/datas",
+                requestBody = """{"m":$m,"e":${episode ?: 1},"s":$serverNum}""".toRequestBody(
+                    RequestBodyTypes.JSON.toMediaTypeOrNull()
+                )
+            ).parsedSafe<Movie123Media>()?.url ?: return@apmap null
+
+            val serverUrl = "$server/watch?v=$media"
+            val token =
+                app.get(serverUrl).document.selectFirst("script:containsData(setRequestHeader)")
+                    ?.data()?.let {
+                        Regex("\\('0x1f2'\\),'(\\S+?)'\\)").find(it)?.groupValues?.getOrNull(1)
+                    } ?: return@apmap null
+
+            val videoUrl = app.post(
+                "$server/data",
+                requestBody = """{"doc":"$media"}""".toRequestBody(
+                    RequestBodyTypes.JSON.toMediaTypeOrNull()
+                ),
+                headers = mapOf(
+                    "x-csrf-token" to token
+                ),
+            ).parsedSafe<Movie123Media>()?.url ?: return@apmap null
+
+            if (videoUrl.startsWith("https")) {
+                loadExtractor(videoUrl, movie123NetAPI, subtitleCallback, callback)
+            } else {
+                callback.invoke(
+                    ExtractorLink(
+                        "123Movies",
+                        "123Movies",
+                        fixUrl(base64Decode(videoUrl), server),
+                        serverUrl,
+                        Qualities.P720.value,
+                        true
+                    )
+                )
+
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        "English",
+                        "https://sub.vxdn.net/sub/$m-${episode ?: 1}.vtt"
+                    )
+                )
+            }
+        }
+
+    }
+
 }
 
 class StreamM4u : XStreamCdn() {
@@ -1932,11 +2007,29 @@ class StreamM4u : XStreamCdn() {
     override val mainUrl: String = "https://streamm4u.club"
 }
 
+class Sblongvu : StreamSB() {
+    override var name = "Sblongvu"
+    override var mainUrl = "https://sblongvu.com"
+}
+
 data class FDMovieIFrame(
     val link: String,
     val quality: String,
     val size: String,
     val type: String,
+)
+
+data class Movie123Media(
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class Movie123Data(
+    @JsonProperty("t") val t: String? = null,
+    @JsonProperty("s") val s: String? = null,
+)
+
+data class Movie123Search(
+    @JsonProperty("data") val data: ArrayList<Movie123Data>? = arrayListOf(),
 )
 
 data class UHDBackupUrl(
