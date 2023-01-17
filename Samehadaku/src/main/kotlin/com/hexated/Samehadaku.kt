@@ -101,7 +101,7 @@ class Samehadaku : MainAPI() {
         }
 
         val document = app.get(fixUrl ?: return null).document
-        val title = document.selectFirst("h1.entry-title")?.text()?.removeSurrounding("Nonton", "Subtitle Indonesia")?.trim() ?: return null
+        val title = document.selectFirst("h1.entry-title")?.text()?.removeBloat() ?: return null
         val poster = document.selectFirst("div.thumb > img")?.attr("src")
         val tags = document.select("div.genre-info > a").map { it.text() }
         val year = document.selectFirst("div.spe > span:contains(Rilis)")?.ownText()?.let {
@@ -178,6 +178,10 @@ class Samehadaku : MainAPI() {
             loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
         }
         return true
+    }
+
+    private fun String.removeBloat() : String{
+        return this.replace(Regex("(Nonton)|(Anime)|(Subtitle\\sIndonesia)"), "").trim()
     }
 
     private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
