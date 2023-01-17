@@ -25,6 +25,9 @@ class OploverzProvider : MainAPI() {
     )
 
     companion object {
+        const val acefile = "https://acefile.co"
+        const val linkbox = "https://www.linkbox.to"
+
         fun getType(t: String): TvType {
             return when {
                 t.contains("TV") -> TvType.Anime
@@ -183,6 +186,27 @@ class OploverzProvider : MainAPI() {
 
     }
 
+    private suspend fun invokeLinkbox(
+        url: String,
+        referer: String,
+        quality: String? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val id = Regex("""(/file/|id=)(\S+)""").find(url)?.groupValues?.get(2)
+        app.get("$linkbox/api/open/get_url?itemId=$id", referer = url)
+            .parsedSafe<Responses>()?.data?.rList?.map { link ->
+                callback.invoke(
+                    ExtractorLink(
+                        "Linkbox",
+                        "Linkbox",
+                        link.url,
+                        referer,
+                        getQualityFromName(quality),
+                    )
+                )
+            }
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -190,15 +214,52 @@ class OploverzProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val sources = document.select(".mobius > .mirror > option").mapNotNull {
-            fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
-        }
+        val sources = mutableListOf<Pair<String?, String>>()
 
-        sources.apmap {
-            loadExtractor(it, data, subtitleCallback, callback)
+        val streamingSources = document.select(".mobius > .mirror > option").mapNotNull {
+            "" to fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
+        }
+        if (streamingSources.isNotEmpty()) sources.addAll(streamingSources)
+
+        val downloadSources =
+            document.select("div.bixbox div.soraddlx.soradlg").lastOrNull()?.select("div.soraurlx")
+                ?.map { item ->
+                    item.select("a").map { item.select("strong").text() to it.attr("href") }
+                }?.flatten()
+        if (downloadSources?.isNotEmpty() == true) sources.addAll(downloadSources)
+
+        sources.apmap { (quality, source) ->
+            if(source.startsWith(linkbox)) {
+                invokeLinkbox(source, data, quality, callback)
+            } else {
+                loadExtractor(fixedIframe(source), data, subtitleCallback) { link ->
+                    callback.invoke(
+                        ExtractorLink(
+                            link.name,
+                            link.name,
+                            link.url,
+                            link.referer,
+                            if (source.startsWith(acefile)) getQualityFromName(quality) else link.quality,
+                            link.isM3u8,
+                            link.headers,
+                            link.extractorData
+                        )
+                    )
+                }
+            }
         }
 
         return true
+    }
+
+    private fun fixedIframe(url: String): String {
+        return if (url.startsWith(acefile)) {
+            Regex("""/f/(\S+)/|/file/(\S+)/""").find(url)?.groupValues?.getOrNull(1).let { id ->
+                "$acefile/player/$id"
+            }
+        } else {
+            url
+        }
     }
 
     private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
@@ -236,6 +297,19 @@ class OploverzProvider : MainAPI() {
 
     data class AniSearch(
         @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
+    )
+
+    data class RList(
+        @JsonProperty("url") val url: String,
+        @JsonProperty("resolution") val resolution: String?,
+    )
+
+    data class Data(
+        @JsonProperty("rList") val rList: List<RList>?,
+    )
+
+    data class Responses(
+        @JsonProperty("data") val data: Data?,
     )
 
 }
