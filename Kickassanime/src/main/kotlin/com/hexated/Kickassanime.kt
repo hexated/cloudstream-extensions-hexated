@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import org.jsoup.Jsoup
 import java.net.URI
 import java.net.URLDecoder
 
@@ -155,8 +156,8 @@ class Kickassanime : MainAPI() {
             val sourceName = fixTitle(name ?: this.name)
             val link = httpsify(iframe ?: return@apmap null)
             when {
-                name?.contains(Regex("(?i)(KICKASSANIMEV2|ORIGINAL-QUALITY-V2|BETA-SERVER)")) == true -> {
-                    invokeAlpha(sourceName, link, callback)
+                name?.contains(Regex("(?i)(KICKASSANIMEV2|ORIGINAL-QUALITY-V2|BETA-SERVER|DAILYMOTION)")) == true -> {
+                    invokeAlpha(sourceName, link, subtitleCallback, callback)
                 }
                 name?.contains(Regex("(?i)(BETAPLAYER)")) == true -> {
                     invokeBeta(sourceName, link, callback)
@@ -177,16 +178,22 @@ class Kickassanime : MainAPI() {
     private suspend fun invokeAlpha(
         name: String,
         url: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val fixUrl = url?.replace(Regex("(player|embed)\\.php"), "pref.php")
-        app.get(
+        val data = app.get(
             fixUrl ?: return,
             referer = kaast
         ).document.selectFirst("script:containsData(Base64.decode)")?.data()
-            ?.substringAfter("Base64.decode(\"")?.substringBefore("\")")?.let { base64Decode(it) }
-            ?.substringAfter("sources: [")?.substringBefore("],")
-            ?.let { tryParseJson<List<AlphaSources>>("[$it]") }?.map {
+            ?.substringAfter("Base64.decode(\"")?.substringBefore("\")")?.let { base64Decode(it) } ?: return
+
+        if(url.contains("/dailymotion/")) {
+            val iframe = Jsoup.parse(data).select("iframe").attr("src")
+            loadExtractor(iframe, mainUrl, subtitleCallback, callback)
+        } else {
+            val json = data.substringAfter("sources: [").substringBefore("],")
+            tryParseJson<List<AlphaSources>>("[$json]")?.map {
                 callback.invoke(
                     ExtractorLink(
                         name,
@@ -197,6 +204,8 @@ class Kickassanime : MainAPI() {
                     )
                 )
             }
+        }
+
     }
 
     private suspend fun invokeBeta(
