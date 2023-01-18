@@ -1858,8 +1858,9 @@ object SoraExtractor : SoraStream() {
         } else {
             "$rStreamAPI/Shows/$id/$season/$episode.mp4"
         }
+        val referer = "https://remotestre.am/"
 
-        if (!app.get(url).isSuccessful) return
+        if (!app.get(url, referer = referer).isSuccessful) return
 
         delay(4000)
         callback.invoke(
@@ -1867,7 +1868,7 @@ object SoraExtractor : SoraStream() {
                 "RStream",
                 "RStream",
                 url,
-                "https://remotestre.am/",
+                referer,
                 Qualities.P720.value
             )
         )

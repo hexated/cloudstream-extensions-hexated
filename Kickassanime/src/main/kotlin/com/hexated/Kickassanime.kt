@@ -1,0 +1,462 @@
+package com.hexated
+
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import java.net.URI
+import java.net.URLDecoder
+
+class Kickassanime : MainAPI() {
+    override var mainUrl = "https://www2.kickassanime.ro"
+    override var name = "Kickassanime"
+    override val hasMainPage = true
+    override var lang = "en"
+    override val hasDownloadSupport = true
+
+    override val supportedTypes = setOf(
+        TvType.Anime,
+        TvType.AnimeMovie,
+        TvType.OVA
+    )
+
+    companion object {
+        private const val kaast = "https://kaast1.com"
+        fun getType(t: String): TvType {
+            return when {
+                t.contains("Ova", true) -> TvType.OVA
+                t.contains("Movie", true) -> TvType.AnimeMovie
+                else -> TvType.Anime
+            }
+        }
+
+        fun getStatus(t: String): ShowStatus {
+            return when (t) {
+                "Finished Airing" -> ShowStatus.Completed
+                "Currently Airing" -> ShowStatus.Ongoing
+                else -> ShowStatus.Completed
+            }
+        }
+    }
+
+    override val mainPage = mainPageOf(
+        "$mainUrl/api/get_anime_list/sub/" to "Sub",
+        "$mainUrl/api/get_anime_list/dub/" to "Dub",
+    )
+
+    override suspend fun getMainPage(
+        page: Int,
+        request: MainPageRequest
+    ): HomePageResponse {
+        val home = app.get(request.data + page).parsedSafe<Responses>()?.data?.mapNotNull { media ->
+            media.toSearchResponse()
+        } ?: throw ErrorLoadingException()
+        return newHomePageResponse(request.name, home)
+    }
+
+    private fun getProperAnimeLink(uri: String): String {
+        return when {
+            uri.contains("/episode") -> fixUrl(uri.substringBeforeLast("/"))
+            else -> fixUrl(uri)
+        }
+    }
+
+    private fun Animes.toSearchResponse(): AnimeSearchResponse? {
+        val href = getProperAnimeLink(this.slug ?: return null)
+        val title = this.name ?: return null
+        val posterUrl = getImageUrl(this.poster)
+        val episode = this.episode?.toIntOrNull()
+        val isDub = this.name.contains("(Dub)")
+
+        return newAnimeSearchResponse(title, href, TvType.Anime) {
+            this.posterUrl = posterUrl
+            addDubStatus(isDub, episode)
+        }
+    }
+
+    override suspend fun search(query: String): List<SearchResponse> {
+        val document = app.get("$mainUrl/search?q=$query").document
+        val data = document.selectFirst("script:containsData(appData)")?.data()
+            ?.substringAfter("\"animes\":[")?.substringBefore("],")
+
+        return tryParseJson<List<Animes>>("[$data]")?.mapNotNull { media -> media.toSearchResponse() }
+            ?: throw ErrorLoadingException()
+
+    }
+
+    override suspend fun load(url: String): LoadResponse? {
+        val document = app.get(url).document
+
+        val res = document.selectFirst("script:containsData(appData)")?.data()
+            ?.substringAfter("\"anime\":{")?.substringBefore("},\"wkl\"")?.let {
+                tryParseJson<DetailAnime>("{$it}")
+            } ?: throw ErrorLoadingException()
+
+        val title = res.name ?: return null
+        val trackerTitle = res.en_title.orEmpty().ifEmpty { res.name }.fixTitle()
+        val poster = getImageUrl(res.image)
+        val tags = res.genres?.map { it.name ?: return null }
+        val year = res.startdate?.substringBefore("-")?.toIntOrNull()
+        val status = getStatus(res.status ?: return null)
+        val description = res.description
+
+        val episodes = res.episodes?.mapNotNull { eps ->
+            Episode(fixUrl(eps.slug ?: return@mapNotNull null), episode = eps.num?.toIntOrNull())
+        }?.reversed() ?: emptyList()
+
+        val type = res.type?.substringBefore(",")?.trim()?.let {
+            when (it) {
+                "TV Series" -> "tv"
+                "Ova" -> "ova"
+                "Movie" -> "movie"
+                else -> "tv"
+            }
+        } ?: if (episodes.size == 1) "movie" else "tv"
+
+        val (malId, anilistId, image, cover) = getTracker(trackerTitle, type, year)
+
+        return newAnimeLoadResponse(title, url, getType(type)) {
+            engName = title
+            posterUrl = image ?: poster
+            backgroundPosterUrl = cover ?: image ?: poster
+            this.year = year
+            addEpisodes(DubStatus.Subbed, episodes)
+            showStatus = status
+            plot = description
+            this.tags = tags
+            addMalId(malId)
+            addAniListId(anilistId?.toIntOrNull())
+        }
+
+    }
+
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+
+        val document = app.get(data).document
+        val sources = document.selectFirst("script:containsData(appData)")?.data()?.let {
+            tryParseJson<Resources>("{${Regex("(\"episode\":.*),\"wkl").find(it)?.groupValues?.get(1)}}")
+        }?.let { server ->
+            listOf(
+                server.episode?.link1,
+                server.ext_servers?.find { it.name == "Vidstreaming" }?.link
+            )
+        }?.filterNotNull()
+
+        sources?.flatMap {
+            httpsify(it).fixIframe()
+        }?.apmap { (name, iframe) ->
+            val sourceName = fixTitle(name ?: this.name)
+            val link = httpsify(iframe ?: return@apmap null)
+            when {
+                name?.contains(Regex("(?i)(KICKASSANIMEV2|ORIGINAL-QUALITY-V2|BETA-SERVER)")) == true -> {
+                    invokeAlpha(sourceName, link, callback)
+                }
+                name?.contains(Regex("(?i)(BETAPLAYER)")) == true -> {
+                    invokeBeta(sourceName, link, callback)
+                }
+                name?.contains(Regex("(?i)(MAVERICKKI)")) == true -> {
+                    invokeMave(sourceName, link, subtitleCallback, callback)
+                }
+                name?.contains(Regex("(?i)(gogo)")) == true -> {
+                    invokeGogo(link, subtitleCallback, callback)
+                }
+                else -> {}
+            }
+        }
+
+        return true
+    }
+
+    private suspend fun invokeAlpha(
+        name: String,
+        url: String? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixUrl = url?.replace(Regex("(player|embed)\\.php"), "pref.php")
+        app.get(
+            fixUrl ?: return,
+            referer = kaast
+        ).document.selectFirst("script:containsData(Base64.decode)")?.data()
+            ?.substringAfter("Base64.decode(\"")?.substringBefore("\")")?.let { base64Decode(it) }
+            ?.substringAfter("sources: [")?.substringBefore("],")
+            ?.let { tryParseJson<List<AlphaSources>>("[$it]") }?.map {
+                callback.invoke(
+                    ExtractorLink(
+                        name,
+                        name,
+                        it.file ?: return@map null,
+                        url,
+                        getQualityFromName(it.label)
+                    )
+                )
+            }
+    }
+
+    private suspend fun invokeBeta(
+        name: String,
+        url: String? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        app.get(
+            url ?: return,
+            referer = kaast
+        ).document.selectFirst("script:containsData(JSON.parse)")?.data()
+            ?.substringAfter("JSON.parse('")?.substringBeforeLast("')")
+            ?.let { tryParseJson<List<BetaSources>>(it) }?.map {
+                callback.invoke(
+                    ExtractorLink(
+                        name,
+                        name,
+                        it.file ?: return@map null,
+                        getBaseUrl(url),
+                        getQualityFromName(it.label)
+                    )
+                )
+            }
+    }
+
+    private suspend fun invokeMave(
+        name: String,
+        url: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val fixUrl = url?.replace("/embed/", "/api/source/") ?: return
+        val base = getBaseUrl(url)
+        val data = app.get(fixUrl, referer = url).parsedSafe<MaveSources>()
+
+        M3u8Helper.generateM3u8(
+            name,
+            fixUrl(data?.hls ?: return, base),
+            url
+        ).forEach(callback)
+
+        data.subtitles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.name ?: "",
+                    fixUrl(sub.src ?: return@map null, base)
+                )
+            )
+        }
+
+    }
+
+    private suspend fun invokeGogo(
+        link: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val iframe = app.get(link)
+        val iframeDoc = iframe.document
+        argamap({
+            iframeDoc.select(".list-server-items > .linkserver")
+                .forEach { element ->
+                    val status = element.attr("data-status") ?: return@forEach
+                    if (status != "1") return@forEach
+                    val extractorData = element.attr("data-video") ?: return@forEach
+                    loadExtractor(extractorData, iframe.url, subtitleCallback, callback)
+                }
+        }, {
+            val iv = "3134003223491201"
+            val secretKey = "37911490979715163134003223491201"
+            val secretDecryptKey = "54674138327930866480207815084989"
+            GogoExtractor.extractVidstream(
+                iframe.url,
+                "Gogoanime",
+                callback,
+                iv,
+                secretKey,
+                secretDecryptKey,
+                isUsingAdaptiveKeys = false,
+                isUsingAdaptiveData = true,
+                iframeDocument = iframeDoc
+            )
+        })
+    }
+
+    private suspend fun String.fixIframe(): List<Pair<String?, String?>> {
+        return when {
+            this.startsWith("$kaast/dust/") -> {
+                val document = app.get(this).document
+                document.selectFirst("script:containsData(sources =)")?.data()
+                    ?.substringAfter("sources = [")?.substringBefore("];")?.let {
+                        tryParseJson<List<Iframe>>("[$it]")?.map { source ->
+                            source.name to source.src
+                        }
+                    } ?: emptyList()
+            }
+            this.startsWith("$kaast/axplayer/") -> {
+                val source = decode(
+                    this.substringAfter("&data=").substringBefore("&vref=")
+                )
+                listOf(URI(source).host.substringBefore(".") to source)
+            }
+            else -> {
+                emptyList()
+            }
+        }
+    }
+
+    private fun decode(input: String): String =
+        URLDecoder.decode(input, "utf-8").replace(" ", "%20")
+
+    private fun String.fixTitle(): String {
+        return this.replace("(Dub)", "").replace("(Uncensored)", "").trim()
+    }
+
+    private fun getImageUrl(link: String?): String? {
+        if (link == null) return null
+        return if (link.startsWith(mainUrl)) link else "$mainUrl/uploads/$link"
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
+    }
+
+    private fun fixUrl(url: String, domain: String): String {
+        if (url.startsWith("http")) {
+            return url
+        }
+        if (url.isEmpty()) {
+            return ""
+        }
+
+        val startsWithNoHttp = url.startsWith("//")
+        if (startsWithNoHttp) {
+            return "https:$url"
+        } else {
+            if (url.startsWith('/')) {
+                return domain + url
+            }
+            return "$domain/$url"
+        }
+    }
+
+    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
+        val res = app.get("https://api.consumet.org/meta/anilist/$title")
+            .parsedSafe<AniSearch>()?.results?.find { media ->
+                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
+                    title,
+                    true
+                )) || (media.type.equals(type, true) && media.releaseDate == year)
+            }
+        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
+    }
+
+    data class Tracker(
+        val malId: Int? = null,
+        val aniId: String? = null,
+        val image: String? = null,
+        val cover: String? = null,
+    )
+
+    data class Title(
+        @JsonProperty("romaji") val romaji: String? = null,
+        @JsonProperty("english") val english: String? = null,
+    )
+
+    data class Results(
+        @JsonProperty("id") val aniId: String? = null,
+        @JsonProperty("malId") val malId: Int? = null,
+        @JsonProperty("title") val title: Title? = null,
+        @JsonProperty("releaseDate") val releaseDate: Int? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("image") val image: String? = null,
+        @JsonProperty("cover") val cover: String? = null,
+    )
+
+    data class AniSearch(
+        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
+    )
+
+    data class Genres(
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("slug") val slug: String? = null,
+    )
+
+    data class Episodes(
+        @JsonProperty("epnum") val epnum: String? = null,
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("slug") val slug: String? = null,
+        @JsonProperty("createddate") val createddate: String? = null,
+        @JsonProperty("num") val num: String? = null,
+    )
+
+    data class DetailAnime(
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("en_title") val en_title: String? = null,
+        @JsonProperty("slug") val slug: String? = null,
+        @JsonProperty("description") val description: String? = null,
+        @JsonProperty("status") val status: String? = null,
+        @JsonProperty("image") val image: String? = null,
+        @JsonProperty("startdate") val startdate: String? = null,
+        @JsonProperty("broadcast_day") val broadcast_day: String? = null,
+        @JsonProperty("broadcast_time") val broadcast_time: String? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("episodes") val episodes: ArrayList<Episodes>? = null,
+        @JsonProperty("genres") val genres: ArrayList<Genres>? = null,
+    )
+
+    data class Animes(
+        @JsonProperty("episode") val episode: String? = null,
+        @JsonProperty("slug") val slug: String? = null,
+        @JsonProperty("type") val type: String? = null,
+        @JsonProperty("episode_date") val episode_date: String? = null,
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("poster") val poster: String? = null,
+    )
+
+    data class Responses(
+        @JsonProperty("data") val data: ArrayList<Animes>? = arrayListOf(),
+    )
+
+    data class Iframe(
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("src") val src: String? = null,
+    )
+
+    data class ExtServers(
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("link") val link: String? = null,
+    )
+
+    data class Eps(
+        @JsonProperty("link1") val link1: String? = null,
+    )
+
+    data class Resources(
+        @JsonProperty("episode") val episode: Eps? = null,
+        @JsonProperty("ext_servers") val ext_servers: ArrayList<ExtServers>? = arrayListOf(),
+    )
+
+    data class BetaSources(
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+    )
+
+    data class AlphaSources(
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+    )
+
+    data class MaveSubtitles(
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("src") val src: String? = null,
+    )
+
+    data class MaveSources(
+        @JsonProperty("hls") val hls: String? = null,
+        @JsonProperty("subtitles") val subtitles: ArrayList<MaveSubtitles>? = null,
+    )
+
+}
