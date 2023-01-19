@@ -1369,10 +1369,10 @@ object SoraExtractor : SoraStream() {
             }
 
             val videoQuality =
-                Regex("\\d{3,4}p\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)?.trim()
+                Regex("\\d{3,4}[Pp]\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)?.trim()
                     ?: ""
             val qualities =
-                Regex("(\\d{3,4})p").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                Regex("(\\d{3,4})[Pp]").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
                     ?: Qualities.Unknown.value
             val size =
                 Regex("(?i)\\[(\\S+\\s?(gb|mb))[]/]").find(quality)?.groupValues?.getOrNull(1)
@@ -1674,38 +1674,40 @@ object SoraExtractor : SoraStream() {
             } ?: return
 
         val detail = app.get("$consumetCrunchyrollAPI/info?id=${id.id}&mediaType=series").text
-        val episodeId = tryParseJson<ConsumetDetails>(detail)?.episodes?.filter {
-            (it.number == episode || it.title.equals(epsTitle, true))
-        }?.let { eps ->
-            listOf(eps.filter { it.type == "Subbed" }.map { it.id }
-                .getOrNull(season?.minus(1) ?: 0) to "Subbed",
-                eps.filter { it.type == "English Dub" }.map { it.id }
-                    .getOrNull(season?.minus(1) ?: 0) to "English Dub")
-        }
+        val epsId = tryParseJson<CrunchyrollDetails>(detail)?.findCrunchyrollId(
+            title,
+            season,
+            episode,
+            epsTitle
+        ) ?: return
 
-        episodeId?.apmap { (id, type) ->
+        epsId.apmap {
             val json =
-                app.get("$consumetCrunchyrollAPI/watch?episodeId=${id ?: return@apmap null}&format=srt")
+                app.get("$consumetCrunchyrollAPI/watch?episodeId=${it?.first ?: return@apmap null}")
                     .parsedSafe<ConsumetSourcesResponse>()
 
             json?.sources?.map source@{ source ->
-                M3u8Helper.generateM3u8(
-                    "Crunchyroll [$type]",
-                    source.url ?: return@source null,
-                    "",
-                ).forEach(callback)
+                callback.invoke(
+                    ExtractorLink(
+                        "Crunchyroll [${it.second ?: ""}]",
+                        "Crunchyroll [${it.second ?: ""}]",
+                        source.url ?: return@source null,
+                        "https://static.crunchyroll.com/",
+                        getQualityFromName(source.quality),
+                        true
+                    )
+                )
             }
 
             json?.subtitles?.map subtitle@{ sub ->
                 subtitleCallback.invoke(
                     SubtitleFile(
-                        sub.lang?.replace(Regex("\\[\\S+]"), "")?.trim() ?: "",
+                        sub.lang ?: "",
                         sub.url ?: return@subtitle null
                     )
                 )
             }
         }
-
     }
 
     suspend fun invokeMoviesbay(
@@ -2149,6 +2151,10 @@ data class ConsumetEpisodes(
 
 data class ConsumetDetails(
     @JsonProperty("episodes") val episodes: ArrayList<ConsumetEpisodes>? = arrayListOf(),
+)
+
+data class CrunchyrollDetails(
+    @JsonProperty("episodes") val episodes: HashMap<String, List<HashMap<String, String>>>? = hashMapOf(),
 )
 
 data class ConsumetResults(

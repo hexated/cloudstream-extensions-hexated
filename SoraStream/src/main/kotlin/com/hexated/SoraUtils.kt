@@ -468,6 +468,28 @@ fun Document.findTvMoviesIframe(): String? {
         ?.substringBefore("'>")
 }
 
+fun CrunchyrollDetails.findCrunchyrollId(
+    title: String?,
+    season: Int?,
+    episode: Int?,
+    epsTitle: String?
+): List<Pair<String?, String?>?> {
+    val sub = when (title) {
+        "One Piece" -> this.episodes?.get("subbed13")?.matchingEpisode(episode) to "Raw"
+        "Hunter x Hunter" -> this.episodes?.get("subbed5")?.matchingEpisode(episode) to "Raw"
+        else -> this.episodes?.get("subbed$season")?.matchingEpisode(episode) to "Raw"
+    }
+    val dub = this.episodes?.get("English Dub$season")?.matchingEpisode(episode) to "English Dub"
+
+    return listOf(sub, dub)
+}
+
+fun List<HashMap<String, String>>?.matchingEpisode(episode: Int?): String? {
+    return this?.find {
+        it["episode_number"] == "$episode"
+    }?.get("id")
+}
+
 fun String?.fixTitle(): String? {
     return this?.replace(Regex("[!%:'?]|( &)"), "")?.replace(" ", "-")?.lowercase()
         ?.replace("-–-", "-")
