@@ -1665,17 +1665,17 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get("$consumetCrunchyrollAPI/$title")
-            .parsedSafe<ConsumetSearchResponse>()?.results ?: return
+        val res = (searchCrunchyroll(title)
+            ?: searchCrunchyroll(title?.substringBefore(" ")))?.results
 
-        val id = (if (res.size == 1) {
+        val id = (if (res?.size == 1) {
             res.firstOrNull()
         } else {
-            res.find {
-                it.title.equals(
+            res?.find {
+                (it.title.equals(
                     title,
                     true
-                ) && it.type.equals("series")
+                ) || it.title.fixTitle().equals(title.fixTitle(), true)) && it.type.equals("series")
             }
         })?.id ?: return
 
