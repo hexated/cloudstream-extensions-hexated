@@ -1134,7 +1134,7 @@ object SoraExtractor : SoraStream() {
             }?.id?.substringBeforeLast("$") ?: return
 
         listOf(
-            "$episodeId\$sub" to "Subbed",
+            "$episodeId\$sub" to "Raw",
             "$episodeId\$dub" to "English Dub",
         ).apmap { (id, type) ->
             val sources = app.get("$consumetZoroAPI/watch?episodeId=$id")
