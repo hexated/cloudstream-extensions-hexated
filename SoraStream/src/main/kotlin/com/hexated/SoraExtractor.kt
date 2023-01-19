@@ -1665,15 +1665,21 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val id = app.get("$consumetCrunchyrollAPI/$title")
-            .parsedSafe<ConsumetSearchResponse>()?.results?.find {
+        val res = app.get("$consumetCrunchyrollAPI/$title")
+            .parsedSafe<ConsumetSearchResponse>()?.results ?: return
+
+        val id = (if (res.size == 1) {
+            res.firstOrNull()
+        } else {
+            res.find {
                 it.title.equals(
                     title,
                     true
                 ) && it.type.equals("series")
-            } ?: return
+            }
+        })?.id ?: return
 
-        val detail = app.get("$consumetCrunchyrollAPI/info?id=${id.id}&mediaType=series").text
+        val detail = app.get("$consumetCrunchyrollAPI/info?id=$id&mediaType=series").text
         val epsId = tryParseJson<CrunchyrollDetails>(detail)?.findCrunchyrollId(
             title,
             season,
@@ -1904,7 +1910,10 @@ object SoraExtractor : SoraStream() {
             ?.substringAfter("('")?.substringBefore("')")
 
         val unPacker =
-            app.get(iframe ?: return, referer = "https://flixon.ru/").document.selectFirst("script:containsData(JuicyCodes.Run)")
+            app.get(
+                iframe ?: return,
+                referer = "https://flixon.ru/"
+            ).document.selectFirst("script:containsData(JuicyCodes.Run)")
                 ?.data()
                 ?.substringAfter("JuicyCodes.Run(")?.substringBefore(");")?.split("+")
                 ?.joinToString("") { it.replace("\"", "").trim() }
