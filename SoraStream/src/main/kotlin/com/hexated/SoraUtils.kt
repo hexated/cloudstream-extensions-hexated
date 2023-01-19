@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.tvMoviesAPI
@@ -466,6 +467,11 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Filmx
 fun Document.findTvMoviesIframe(): String? {
     return this.selectFirst("script:containsData(var seconds)")?.data()?.substringAfter("href='")
         ?.substringBefore("'>")
+}
+
+suspend fun searchCrunchyroll(title: String?) : ConsumetSearchResponse? {
+    return app.get("${consumetCrunchyrollAPI}/$title")
+        .parsedSafe()
 }
 
 fun CrunchyrollDetails.findCrunchyrollId(
