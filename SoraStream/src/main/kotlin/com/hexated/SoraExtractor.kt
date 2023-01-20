@@ -1665,20 +1665,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = (searchCrunchyroll(title)
-            ?: searchCrunchyroll(title?.substringBefore(" ")))?.results
-
-        val id = (if (res?.size == 1) {
-            res.firstOrNull()
-        } else {
-            res?.find {
-                (it.title.equals(
-                    title,
-                    true
-                ) || it.title.fixTitle().equals(title.fixTitle(), true)) && it.type.equals("series")
-            }
-        })?.id ?: return
-
+        val id = searchCrunchyrollAnimeId(title ?: return) ?: searchKamyrollAnimeId(title) ?: return
         val detail = app.get("$consumetCrunchyrollAPI/info?id=$id&mediaType=series").text
         val epsId = tryParseJson<CrunchyrollDetails>(detail)?.findCrunchyrollId(
             title,
@@ -2259,4 +2246,25 @@ data class MediaAni(
 
 data class DataAni(
     @JsonProperty("data") val data: MediaAni? = null,
+)
+
+data class KamyrollSearch(
+    @JsonProperty("items") var items: ArrayList<KamyrollItems> = arrayListOf()
+)
+
+data class KamyrollItems(
+    @JsonProperty("type") var type: String? = null,
+    @JsonProperty("items") var items: ArrayList<KamyrollAnimes> = arrayListOf()
+)
+
+data class KamyrollAnimes(
+    @JsonProperty("id") var id: String? = null,
+    @JsonProperty("slug_title") var slugTitle: String? = null,
+    @JsonProperty("title") var title: String? = null,
+    @JsonProperty("media_type") var mediaType: String? = null
+)
+
+data class KamyrollToken(
+    @JsonProperty("access_token") val access_token: String? = null,
+    @JsonProperty("token_type") val token_type: String? = null,
 )
