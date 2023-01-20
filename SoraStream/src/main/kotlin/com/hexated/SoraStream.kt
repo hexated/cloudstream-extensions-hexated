@@ -62,6 +62,7 @@ open class SoraStream : TmdbProvider() {
         const val jikanAPI = "https://api.jikan.moe/v4"
         const val gdbot = "https://gdbot.xyz"
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
+        const val kamyrollAPI = "https://api.kamyroll.tech"
 
         private val mainAPI =
             base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")

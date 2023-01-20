@@ -3,6 +3,7 @@ package com.hexated
 import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
+import com.hexated.SoraStream.Companion.kamyrollAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.lagradost.cloudstream3.APIHolder
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
@@ -469,9 +470,53 @@ fun Document.findTvMoviesIframe(): String? {
         ?.substringBefore("'>")
 }
 
-suspend fun searchCrunchyroll(title: String?) : ConsumetSearchResponse? {
-    return app.get("${consumetCrunchyrollAPI}/$title")
-        .parsedSafe()
+suspend fun searchKamyrollAnimeId(title: String): String? {
+    return app.get(
+        "$kamyrollAPI/content/v1/search",
+        headers = getCrunchyrollToken(),
+        params = mapOf(
+            "query" to title,
+            "channel_id" to "crunchyroll",
+            "limit" to "10",
+        )
+    ).parsedSafe<KamyrollSearch>()?.items?.find { item ->
+        item.items.any {
+            (it.title?.contains(title, true) == true || it.slugTitle?.contains(
+                "${title.fixTitle()}",
+                true
+            ) == true) && it.mediaType == "series"
+        }
+    }?.items?.firstOrNull()?.id
+}
+
+suspend fun searchCrunchyrollAnimeId(title: String): String? {
+    val res = app.get("${consumetCrunchyrollAPI}/$title")
+        .parsedSafe<ConsumetSearchResponse>()?.results
+    return (if (res?.size == 1) {
+        res.firstOrNull()
+    } else {
+        res?.find {
+            (it.title?.contains(
+                title,
+                true
+            ) == true || it.title.fixTitle()
+                ?.contains("${title.fixTitle()}", true) == true) && it.type.equals("series")
+        }
+    })?.id
+}
+
+suspend fun getCrunchyrollToken(): Map<String, String> {
+    val res = app.get(
+        "$kamyrollAPI/auth/v1/token",
+        params = mapOf(
+            "device_id" to "com.service.data",
+            "device_type" to "sorastream",
+            "access_token" to "HMbQeThWmZq4t7w",
+        )
+    ).parsedSafe<KamyrollToken>()
+    return mapOf(
+        "Authorization" to "${res?.token_type} ${res?.access_token}"
+    )
 }
 
 fun CrunchyrollDetails.findCrunchyrollId(
@@ -497,7 +542,7 @@ fun List<HashMap<String, String>>?.matchingEpisode(episode: Int?): String? {
 }
 
 fun String?.fixTitle(): String? {
-    return this?.replace(Regex("[!%:'?]|( &)"), "")?.replace(" ", "-")?.lowercase()
+    return this?.replace(Regex("[!%:'?,]|( &)"), "")?.replace(" ", "-")?.lowercase()
         ?.replace("-–-", "-")
 }
 
