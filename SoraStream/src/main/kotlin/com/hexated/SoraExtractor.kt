@@ -166,21 +166,21 @@ object SoraExtractor : SoraStream() {
             app.get("https://voidboost.net/serial/$token/iframe?s=$season&e=$episode&h=dbgo.fun").document.select(
                 "script"
             ).find { it.data().contains("CDNplayerConfig =") }?.data()
-        }
+        } ?: return
 
         val source =
-            Regex("['|\"]file['|\"]:\\s['|\"](#\\S+?)['|\"]").find(script.toString())?.groupValues?.get(
+            Regex("['|\"]file['|\"]:\\s['|\"](#\\S+?)['|\"]").find(script)?.groupValues?.get(
                 1
             ) ?: return
         val subtitle =
-            Regex("['|\"]subtitle['|\"]:\\s['|\"](\\S+?)['|\"]").find(script.toString())?.groupValues?.get(
+            Regex("['|\"]subtitle['|\"]:\\s['|\"](\\S+?)['|\"]").find(script)?.groupValues?.get(
                 1
             )
 
         val ref = getBaseUrl(iframeDbgo)
         decryptStreamUrl(source).split(",").map { links ->
             val quality =
-                Regex("\\[([0-9]*p.*?)]").find(links)?.groupValues?.getOrNull(1).toString().trim()
+                Regex("\\[([0-9]*p.*?)]").find(links)?.groupValues?.getOrNull(1)?.trim() ?: return@map null
             links.replace("[$quality]", "").split(" or ").map { it.trim() }.map { link ->
                 val name = if (link.contains(".m3u8")) "Dbgo (Main)" else "Dbgo (Backup)"
                 callback.invoke(
@@ -200,11 +200,11 @@ object SoraExtractor : SoraStream() {
         }
 
         subtitle?.split(",")?.map { sub ->
-            val language = Regex("\\[(.*)]").find(sub)?.groupValues?.getOrNull(1).toString()
+            val language = Regex("\\[(.*)]").find(sub)?.groupValues?.getOrNull(1) ?: return@map null
             val link = sub.replace("[$language]", "").trim()
             subtitleCallback.invoke(
                 SubtitleFile(
-                    language, link
+                    getDbgoLanguage(language), link
                 )
             )
         }
