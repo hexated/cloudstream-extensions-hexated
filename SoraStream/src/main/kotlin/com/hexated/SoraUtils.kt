@@ -5,7 +5,6 @@ import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.kamyrollAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
-import com.lagradost.cloudstream3.APIHolder
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
@@ -600,6 +599,14 @@ fun getVipLanguage(str: String): String {
         else -> str.split("_").first().let {
             SubtitleHelper.fromTwoLettersToLanguage(it).toString()
         }
+    }
+}
+
+fun getDbgoLanguage(str: String): String {
+    return when (str) {
+        "Русский" -> "Russian"
+        "Українська" -> "Ukrainian"
+        else -> str
     }
 }
 

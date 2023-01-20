@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -91,7 +90,7 @@ class HDrezkaProvider : MainAPI() {
             ?: document.selectFirst("div.b-post__title h1")?.text()?.trim()).toString()
         val poster = fixUrlNull(document.selectFirst("div.b-sidecover img")?.attr("src"))
         val tags =
-            document.select("table.b-post__info > tbody > tr:nth-child(5) span[itemprop=genre]")
+            document.select("table.b-post__info > tbody > tr:contains(Жанр) span[itemprop=genre]")
                 .map { it.text() }
         val year = document.select("div.film-info > div:nth-child(2) a").text().toIntOrNull()
         val tvType = if (document.select("div#simple-episodes-tabs")
@@ -108,12 +107,13 @@ class HDrezkaProvider : MainAPI() {
         val rating =
             document.selectFirst("table.b-post__info > tbody > tr:nth-child(1) span.bold")?.text()
                 .toRatingInt()
-        val actors = document.select("table.b-post__info > tbody > tr:last-child span.item").map {
-            Actor(
-                it.selectFirst("span[itemprop=name]")?.text().toString(),
-                it.selectFirst("span[itemprop=actor]")?.attr("data-photo")
-            )
-        }
+        val actors =
+            document.select("table.b-post__info > tbody > tr:last-child span.item").mapNotNull {
+                Actor(
+                    it.selectFirst("span[itemprop=name]")?.text() ?: return@mapNotNull null,
+                    it.selectFirst("span[itemprop=actor]")?.attr("data-photo")
+                )
+            }
 
         val recommendations = document.select("div.b-sidelist div.b-content__inline_item").map {
             it.toSearchResult()
@@ -273,35 +273,25 @@ class HDrezkaProvider : MainAPI() {
     ) {
         decryptStreamUrl(url).split(",").map { links ->
             val quality =
-                Regex("\\[([0-9]*p.*?)]").find(links)?.groupValues?.getOrNull(1)
-                    .toString().trim()
-            links.replace("[$quality]", "").split("or").map { it.trim() }
-                .map { link ->
-
-                    if (link.endsWith(".m3u8")) {
-                        cleanCallback(
-                            "$source (Main)",
-                            link,
-                            quality,
-                            true,
-                            sourceCallback,
-                        )
-                    } else {
-                        cleanCallback(
-                            "$source (Backup)",
-                            link,
-                            quality,
-                            false,
-                            sourceCallback,
-                        )
-                    }
+                Regex("\\[([0-9]{3,4}p\\s?\\w*?)]").find(links)?.groupValues?.getOrNull(1)
+                    ?.trim() ?: return@map null
+            links.replace("[$quality]", "").split(" or ")
+                .map {
+                    val link = it.trim()
+                    val type = if(link.contains(".m3u8")) "(Main)" else "(Backup)"
+                    cleanCallback(
+                        "$source $type",
+                        link,
+                        quality,
+                        link.contains(".m3u8"),
+                        sourceCallback,
+                    )
                 }
         }
 
         subtitle.split(",").map { sub ->
             val language =
-                Regex("\\[(.*)]").find(sub)?.groupValues?.getOrNull(1)
-                    .toString()
+                Regex("\\[(.*)]").find(sub)?.groupValues?.getOrNull(1) ?: return@map null
             val link = sub.replace("[$language]", "").trim()
             subCallback.invoke(
                 SubtitleFile(
@@ -339,30 +329,28 @@ class HDrezkaProvider : MainAPI() {
                 }
             } else {
                 res.server?.apmap { server ->
-                    suspendSafeApiCall {
-                        app.post(
-                            url = "$mainUrl/ajax/get_cdn_series/?t=${Date().time}",
-                            data = mapOf(
-                                "id" to res.id,
-                                "translator_id" to server.translator_id,
-                                "favs" to res.favs,
-                                "is_camrip" to server.camrip,
-                                "is_ads" to server.ads,
-                                "is_director" to server.director,
-                                "season" to res.season,
-                                "episode" to res.episode,
-                                "action" to res.action,
-                            ).filterValues { it != null }.mapValues { it.value as String },
-                            referer = res.ref
-                        ).parsedSafe<Sources>()?.let { source ->
-                            invokeSources(
-                                server.translator_name.toString(),
-                                source.url,
-                                source.subtitle.toString(),
-                                subtitleCallback,
-                                callback
-                            )
-                        }
+                    app.post(
+                        url = "$mainUrl/ajax/get_cdn_series/?t=${Date().time}",
+                        data = mapOf(
+                            "id" to res.id,
+                            "translator_id" to server.translator_id,
+                            "favs" to res.favs,
+                            "is_camrip" to server.camrip,
+                            "is_ads" to server.ads,
+                            "is_director" to server.director,
+                            "season" to res.season,
+                            "episode" to res.episode,
+                            "action" to res.action,
+                        ).filterValues { it != null }.mapValues { it.value as String },
+                        referer = res.ref
+                    ).parsedSafe<Sources>()?.let { source ->
+                        invokeSources(
+                            server.translator_name.toString(),
+                            source.url,
+                            source.subtitle.toString(),
+                            subtitleCallback,
+                            callback
+                        )
                     }
                 }
             }
