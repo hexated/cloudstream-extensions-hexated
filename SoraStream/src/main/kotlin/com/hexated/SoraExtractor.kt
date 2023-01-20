@@ -719,29 +719,31 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
-        val url = if (season == null) {
-            "$kimcartoonAPI/Cartoon/$fixTitle"
+        val doc = if (season == null || season == 1) {
+            app.get("$kimcartoonAPI/Cartoon/$fixTitle").document
         } else {
-            "$kimcartoonAPI/Cartoon/$fixTitle-season-$season"
+            val res = app.get("$kimcartoonAPI/Cartoon/$fixTitle-Season-$season")
+            if (res.url == "$kimcartoonAPI/")
+                app.get("$kimcartoonAPI/Cartoon/$fixTitle-Season-0$season").document else res.document
         }
 
-        val doc = app.get(url).document
         val iframe = if (season == null) {
             doc.select("table.listing tr td a").firstNotNullOf { it.attr("href") }
         } else {
-            doc.select("table.listing tr td a").map {
-                it.attr("href")
-            }.first { it.contains("Season-$season", true) && it.contains("Episode-$episode", true) }
+            doc.select("table.listing tr td a").find {
+                it.attr("href").contains(Regex("(?i)Episode-0*$episode"))
+            }?.attr("href")
         } ?: return
-
         val source =
-            app.get(fixUrl(iframe, kimcartoonAPI)).document.select("div#divContentVideo iframe")
-                .attr("src")
+            app.get(
+                fixUrl(iframe, kimcartoonAPI)
+            ).document.selectFirst("div#divContentVideo iframe")
+                ?.attr("src") ?: return
         loadExtractor(source, "$kimcartoonAPI/", subtitleCallback) { link ->
             callback.invoke(
                 ExtractorLink(
-                    "Luxubu",
-                    "Luxubu",
+                    "Kimcartoon",
+                    "Kimcartoon",
                     link.url,
                     link.referer,
                     link.quality,
@@ -904,15 +906,13 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
-        val url = if (season == null) {
-            val tempUrl = "$xMovieAPI/movies/$fixTitle/watch"
-            val newUrl = app.get(tempUrl).url
-            if (newUrl == "$xMovieAPI/") "$xMovieAPI/movies/$fixTitle-$year/watch" else tempUrl
+        val doc = if(season == null) {
+            val res = app.get("$xMovieAPI/movies/$fixTitle/watch")
+            if(res.url == "$xMovieAPI/") app.get("$xMovieAPI/movies/$fixTitle-$year/watch").document else res.document
         } else {
-            "$xMovieAPI/series/$fixTitle-season-$season-episode-$episode/watch"
+            app.get("$xMovieAPI/series/$fixTitle-season-$season-episode-$episode/watch").document
         }
 
-        val doc = app.get(url).document
         val script = doc.selectFirst("script:containsData(const player =)")?.data() ?: return
         val link =
             Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.(mp4|m3u8))[\"|'],").find(script)?.groupValues?.getOrNull(
