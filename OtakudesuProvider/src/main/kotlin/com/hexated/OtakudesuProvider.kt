@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
+import com.lagradost.cloudstream3.extractors.JWPlayer
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -12,7 +13,7 @@ import org.jsoup.nodes.Element
 import java.util.ArrayList
 
 class OtakudesuProvider : MainAPI() {
-    override var mainUrl = "https://otakudesu.bid"
+    override var mainUrl = "https://otakudesu.is"
     override var name = "Otakudesu"
     override val hasMainPage = true
     override var lang = "id"
@@ -206,10 +207,7 @@ class OtakudesuProvider : MainAPI() {
             ).select("iframe").attr("src")
 
             if (sources.startsWith("https://desustream.me")) {
-                if (!sources.contains("/arcg/") && !sources.contains("/odchan/") && !sources.contains(
-                        "/desudrive/"
-                    )
-                ) {
+                if (!sources.contains(Regex("/arcg/|/odchan/|/desudrive/|/moedesu/"))) {
                     sources = app.get(sources).document.select("iframe").attr("src")
                 }
                 if (sources.startsWith("https://yourupload.com")) {
@@ -261,4 +259,9 @@ class OtakudesuProvider : MainAPI() {
         @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
     )
 
+}
+
+class Moedesu : JWPlayer() {
+    override val name = "Moedesu"
+    override val mainUrl = "https://desustream.me/moedesu/"
 }
