@@ -6,15 +6,13 @@ import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.kamyrollAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
+import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.base64Encode
 import com.lagradost.cloudstream3.network.WebViewResolver
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.SubtitleHelper
-import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.requestCreator
@@ -276,6 +274,68 @@ suspend fun extractCovyn(url: String?): Pair<String?, String?>? {
         ?.text()
 
     return Pair(videoLink, size)
+}
+
+suspend fun invokeSmashy1(
+    player: String,
+    url: String?,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val doc = app.get(url ?: return).document
+    val script = doc.selectFirst("script:containsData(secret)")?.data() ?: return
+    val secret = script.substringAfter("secret = \"").substringBefore("\";").let { base64Decode(it) }
+    val key = script.substringAfter("token = \"").substringBefore("\";")
+    val source = app.get(
+        "$secret$key",
+        headers = mapOf(
+            "Accept" to "application/json, text/javascript, */*; q=0.01",
+            "X-Requested-With" to "XMLHttpRequest"
+        )
+    ).parsedSafe<Smashy1Source>() ?: return
+
+    val videoUrl = base64Decode(source.file ?: return)
+    if(videoUrl.contains(".m3u8")) {
+        M3u8Helper.generateM3u8(
+            "Smashy ($player)",
+            videoUrl,
+            ""
+        ).forEach(callback)
+        source.tracks?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.label ?: return@map null,
+                    sub.file ?: return@map null
+                )
+            )
+        }
+    } else {
+        return
+    }
+}
+
+suspend fun invokeSmashy2(
+    player: String,
+    url: String?,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val base = getBaseUrl(url ?: return)
+    val doc = app.get(url).document
+    val script = doc.selectFirst("script:containsData(playlist:)")?.data() ?: return
+    Regex("""file:[\n\s]+?"(\S+?.m3u8)",[\n\s]+label:"(\S+)",""").findAll(script).map {
+        it.groupValues[1] to it.groupValues[2]
+    }.toList().map { (link, quality) ->
+        callback.invoke(
+            ExtractorLink(
+                "Smashy ($player)",
+                "Smashy ($player)",
+                link,
+                base,
+                quality.toIntOrNull() ?: Qualities.Unknown.value,
+                isM3u8 = link.contains(".m3u8"),
+            )
+        )
+    }
 }
 
 fun getDirectGdrive(url: String): String {
