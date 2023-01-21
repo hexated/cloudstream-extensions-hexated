@@ -285,7 +285,7 @@ class Kickassanime : MainAPI() {
             res?.subtitles?.map { sub ->
                 subtitleCallback.invoke(
                     SubtitleFile(
-                        sub.language ?: "",
+                        getLanguage(sub.language ?: return@map null) ?: sub.language,
                         sub.url ?: return@map null
                     )
                 )
@@ -369,6 +369,11 @@ class Kickassanime : MainAPI() {
         return URI(url).let {
             "${it.scheme}://${it.host}"
         }
+    }
+
+    private fun getLanguage(language: String?): String? {
+        return SubtitleHelper.fromTwoLettersToLanguage(language ?: return null)
+            ?: SubtitleHelper.fromTwoLettersToLanguage(language.substringBefore("-"))
     }
 
     private fun fixUrl(url: String, domain: String): String {
