@@ -1999,6 +1999,29 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeSmashyStream(
+        id: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val url = if (season == null) {
+            "$smashyStreamAPI/playere.php?tmdb=$id"
+        } else {
+            "$smashyStreamAPI/playere.php?tmdb=$id&season=$season&episode=$episode"
+        }
+        app.get(url).document.select("div.dropdown.servers a").map {
+            it.text() to it.attr("data-id")
+        }.apmap { (server, link) ->
+            when (val player = server.replace("Server", "Player").trim()) {
+                "Player 1" -> invokeSmashy1(player, link, subtitleCallback, callback)
+                "Player 2" -> invokeSmashy2(player, link, callback)
+                else -> return@apmap null
+            }
+        }
+    }
+
 }
 
 class StreamM4u : XStreamCdn() {
@@ -2267,4 +2290,14 @@ data class KamyrollAnimes(
 data class KamyrollToken(
     @JsonProperty("access_token") val access_token: String? = null,
     @JsonProperty("token_type") val token_type: String? = null,
+)
+
+data class Smashy1Tracks(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("label") val label: String? = null,
+)
+
+data class Smashy1Source(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("tracks") val tracks: ArrayList<Smashy1Tracks>? = arrayListOf(),
 )

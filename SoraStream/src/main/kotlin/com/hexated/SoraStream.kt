@@ -32,6 +32,7 @@ import com.hexated.SoraExtractor.invokeMovie123
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeRStream
+import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
@@ -103,6 +104,7 @@ open class SoraStream : TmdbProvider() {
         const val flixonAPI = "https://flixon.ru"
         const val animeKaizokuAPI = "https://animekaizoku.com"
         const val movie123NetAPI = "https://ww7.0123movie.net"
+        const val smashyStreamAPI = "https://embed.smashystream.com"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -525,6 +527,9 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeMovie123(res.title, res.season, res.episode, subtitleCallback, callback)
             },
+            {
+                invokeSmashyStream(res.id, res.season, res.episode, subtitleCallback, callback)
+            }
         )
 
         return true
