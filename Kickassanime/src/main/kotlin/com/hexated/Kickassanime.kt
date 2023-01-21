@@ -246,7 +246,7 @@ class Kickassanime : MainAPI() {
         val data = app.get(fixUrl, referer = url).parsedSafe<MaveSources>()
 
         M3u8Helper.generateM3u8(
-            name,
+            if(data?.subtitles.isNullOrEmpty()) "$name [Hardsub]" else "$name [Softsub]",
             fixUrl(data?.hls ?: return, base),
             url
         ).forEach(callback)
