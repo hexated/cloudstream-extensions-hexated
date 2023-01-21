@@ -1,5 +1,6 @@
 package com.hexated
 
+import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
@@ -149,7 +150,7 @@ class Kickassanime : MainAPI() {
                 server.ext_servers?.find { it.name == "Vidstreaming" }?.link
             )
         }?.filterNotNull()
-
+        val isDub = data.contains("-dub-")
         sources?.flatMap {
             httpsify(it).fixIframe()
         }?.apmap { (name, iframe) ->
@@ -168,7 +169,10 @@ class Kickassanime : MainAPI() {
                 name?.contains(Regex("(?i)(gogo)")) == true -> {
                     invokeGogo(link, subtitleCallback, callback)
                 }
-                else -> {}
+                name?.contains(Regex("(?i)(SAPPHIRE-DUCK)")) == true -> {
+                    invokeSapphire(link, isDub, subtitleCallback, callback)
+                }
+                else -> return@apmap null
             }
         }
 
@@ -188,7 +192,7 @@ class Kickassanime : MainAPI() {
         ).document.selectFirst("script:containsData(Base64.decode)")?.data()
             ?.substringAfter("Base64.decode(\"")?.substringBefore("\")")?.let { base64Decode(it) } ?: return
 
-        if(url.contains("/dailymotion/")) {
+        if(name == "DAILYMOTION") {
             val iframe = Jsoup.parse(data).select("iframe").attr("src")
             loadExtractor(iframe, mainUrl, subtitleCallback, callback)
         } else {
@@ -258,6 +262,37 @@ class Kickassanime : MainAPI() {
 
     }
 
+    private suspend fun invokeSapphire(
+        url: String? = null,
+        isDub: Boolean = false,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        var data = app.get("$url&action=config", referer = url).text
+        for(i in 1..20) {
+            data = data.decodeBase64()
+            if(data.startsWith("{")) break
+        }
+        tryParseJson<SapphireSources>(data).let { res ->
+            res?.streams?.filter { it.format == "adaptive_hls" }?.map { source ->
+                val name = if(isDub) source.audio_lang else source.hardsub_lang.orEmpty().ifEmpty { "raw" }
+                M3u8Helper.generateM3u8(
+                    "Crunchyroll [$name]",
+                    source.url ?: return@map null,
+                    "https://static.crunchyroll.com/",
+                ).forEach(callback)
+            }
+            res?.subtitles?.map { sub ->
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        sub.language ?: "",
+                        sub.url ?: return@map null
+                    )
+                )
+            }
+        }
+    }
+
     private suspend fun invokeGogo(
         link: String,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -312,6 +347,10 @@ class Kickassanime : MainAPI() {
                 emptyList()
             }
         }
+    }
+
+    private fun String.decodeBase64(): String {
+        return Base64.decode(this, Base64.DEFAULT).toString(Charsets.UTF_8)
     }
 
     private fun decode(input: String): String =
@@ -465,7 +504,24 @@ class Kickassanime : MainAPI() {
 
     data class MaveSources(
         @JsonProperty("hls") val hls: String? = null,
-        @JsonProperty("subtitles") val subtitles: ArrayList<MaveSubtitles>? = null,
+        @JsonProperty("subtitles") val subtitles: ArrayList<MaveSubtitles>? = arrayListOf(),
+    )
+
+    data class SapphireSubtitles(
+        @JsonProperty("language") val language: String? = null,
+        @JsonProperty("url") val url: String? = null,
+    )
+
+    data class SapphireStreams(
+        @JsonProperty("format") val format: String? = null,
+        @JsonProperty("audio_lang") val audio_lang: String? = null,
+        @JsonProperty("hardsub_lang") val hardsub_lang: String? = null,
+        @JsonProperty("url") val url: String? = null,
+    )
+
+    data class SapphireSources(
+        @JsonProperty("streams") val streams: ArrayList<SapphireStreams>? = arrayListOf(),
+        @JsonProperty("subtitles") val subtitles: ArrayList<SapphireSubtitles>? = arrayListOf(),
     )
 
 }
