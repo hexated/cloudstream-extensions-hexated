@@ -146,7 +146,7 @@ class Kickassanime : MainAPI() {
             tryParseJson<Resources>("{${Regex("(\"episode\":.*),\"wkl").find(it)?.groupValues?.get(1)}}")
         }?.let { server ->
             listOf(
-                server.episode?.link1,
+                server.episode?.link1.orEmpty().ifEmpty { server.episode?.link4 },
                 server.ext_servers?.find { it.name == "Vidstreaming" }?.link
             )
         }?.filterNotNull()
@@ -269,9 +269,9 @@ class Kickassanime : MainAPI() {
         callback: (ExtractorLink) -> Unit,
     ) {
         var data = app.get("$url&action=config", referer = url).text
-        for(i in 1..20) {
-            data = data.decodeBase64()
+        while(true) {
             if(data.startsWith("{")) break
+            data = data.decodeBase64()
         }
         tryParseJson<SapphireSources>(data).let { res ->
             res?.streams?.filter { it.format == "adaptive_hls" }?.map { source ->
@@ -480,6 +480,7 @@ class Kickassanime : MainAPI() {
 
     data class Eps(
         @JsonProperty("link1") val link1: String? = null,
+        @JsonProperty("link4") val link4: String? = null,
     )
 
     data class Resources(
