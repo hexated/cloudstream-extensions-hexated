@@ -270,8 +270,8 @@ class Kickassanime : MainAPI() {
     ) {
         var data = app.get("$url&action=config", referer = url).text
         while(true) {
-            if(data.startsWith("{")) break
-            data = data.decodeBase64()
+            if(data.startsWith("{") || data == "null") break
+            data = data.base64Decode()
         }
         tryParseJson<SapphireSources>(data).let { res ->
             res?.streams?.filter { it.format == "adaptive_hls" }?.map { source ->
@@ -349,7 +349,7 @@ class Kickassanime : MainAPI() {
         }
     }
 
-    private fun String.decodeBase64(): String {
+    private fun String.base64Decode(): String {
         return Base64.decode(this, Base64.DEFAULT).toString(Charsets.UTF_8)
     }
 
