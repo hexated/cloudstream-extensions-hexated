@@ -1,18 +1,20 @@
 package com.hexated
 
-import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.KickassanimeExtractor.invokeAlpha
+import com.hexated.KickassanimeExtractor.invokeBeta
+import com.hexated.KickassanimeExtractor.invokeDailymotion
+import com.hexated.KickassanimeExtractor.invokeGogo
+import com.hexated.KickassanimeExtractor.invokeMave
+import com.hexated.KickassanimeExtractor.invokeSapphire
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import org.jsoup.Jsoup
-import java.net.URI
-import java.net.URLDecoder
 
-class Kickassanime : MainAPI() {
-    override var mainUrl = "https://www2.kickassanime.ro"
+open class Kickassanime : MainAPI() {
+    final override var mainUrl = "https://www2.kickassanime.ro"
     override var name = "Kickassanime"
     override val hasMainPage = true
     override var lang = "en"
@@ -25,7 +27,7 @@ class Kickassanime : MainAPI() {
     )
 
     companion object {
-        private const val kaast = "https://kaast1.com"
+        const val kaast = "https://kaast1.com"
         fun getType(t: String): TvType {
             return when {
                 t.contains("Ova", true) -> TvType.OVA
@@ -71,7 +73,6 @@ class Kickassanime : MainAPI() {
         val posterUrl = getImageUrl(this.poster)
         val episode = this.episode?.toIntOrNull()
         val isDub = this.name.contains("(Dub)")
-
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
             addDubStatus(isDub, episode)
@@ -82,10 +83,8 @@ class Kickassanime : MainAPI() {
         val document = app.get("$mainUrl/search?q=$query").document
         val data = document.selectFirst("script:containsData(appData)")?.data()
             ?.substringAfter("\"animes\":[")?.substringBefore("],")
-
         return tryParseJson<List<Animes>>("[$data]")?.mapNotNull { media -> media.toSearchResponse() }
             ?: throw ErrorLoadingException()
-
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -157,6 +156,9 @@ class Kickassanime : MainAPI() {
             val sourceName = fixTitle(name ?: this.name)
             val link = httpsify(iframe ?: return@apmap null)
             when {
+                link.startsWith("https://www.dailymotion.com") -> {
+                    invokeDailymotion(link, subtitleCallback, callback)
+                }
                 name?.contains(Regex("(?i)(KICKASSANIMEV2|ORIGINAL-QUALITY-V2|BETA-SERVER|DAILYMOTION)")) == true -> {
                     invokeAlpha(sourceName, link, subtitleCallback, callback)
                 }
@@ -177,222 +179,6 @@ class Kickassanime : MainAPI() {
         }
 
         return true
-    }
-
-    private suspend fun invokeAlpha(
-        name: String,
-        url: String? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixUrl = url?.replace(Regex("(player|embed)\\.php"), "pref.php")
-        val data = app.get(
-            fixUrl ?: return,
-            referer = kaast
-        ).document.selectFirst("script:containsData(Base64.decode)")?.data()
-            ?.substringAfter("Base64.decode(\"")?.substringBefore("\")")?.let { base64Decode(it) } ?: return
-
-        if(name == "DAILYMOTION") {
-            val iframe = Jsoup.parse(data).select("iframe").attr("src")
-            loadExtractor(iframe, mainUrl, subtitleCallback, callback)
-        } else {
-            val json = data.substringAfter("sources: [").substringBefore("],")
-            tryParseJson<List<AlphaSources>>("[$json]")?.map {
-                callback.invoke(
-                    ExtractorLink(
-                        name,
-                        name,
-                        it.file ?: return@map null,
-                        url,
-                        getQualityFromName(it.label)
-                    )
-                )
-            }
-        }
-
-    }
-
-    private suspend fun invokeBeta(
-        name: String,
-        url: String? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        app.get(
-            url ?: return,
-            referer = kaast
-        ).document.selectFirst("script:containsData(JSON.parse)")?.data()
-            ?.substringAfter("JSON.parse('")?.substringBeforeLast("')")
-            ?.let { tryParseJson<List<BetaSources>>(it) }?.map {
-                callback.invoke(
-                    ExtractorLink(
-                        name,
-                        name,
-                        it.file ?: return@map null,
-                        getBaseUrl(url),
-                        getQualityFromName(it.label)
-                    )
-                )
-            }
-    }
-
-    private suspend fun invokeMave(
-        name: String,
-        url: String? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val fixUrl = url?.replace("/embed/", "/api/source/") ?: return
-        val base = getBaseUrl(url)
-        val data = app.get(fixUrl, referer = url).parsedSafe<MaveSources>()
-
-        M3u8Helper.generateM3u8(
-            if(data?.subtitles.isNullOrEmpty()) "$name [Hardsub]" else "$name [Softsub]",
-            fixUrl(data?.hls ?: return, base),
-            url
-        ).forEach(callback)
-
-        data.subtitles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.name ?: "",
-                    fixUrl(sub.src ?: return@map null, base)
-                )
-            )
-        }
-
-    }
-
-    private suspend fun invokeSapphire(
-        url: String? = null,
-        isDub: Boolean = false,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        var data = app.get("$url&action=config", referer = url).text
-        while(true) {
-            if(data.startsWith("{") || data == "null") break
-            data = data.base64Decode()
-        }
-        tryParseJson<SapphireSources>(data).let { res ->
-            res?.streams?.filter { it.format == "adaptive_hls" }?.map { source ->
-                val name = if(isDub) source.audio_lang else source.hardsub_lang.orEmpty().ifEmpty { "raw" }
-                M3u8Helper.generateM3u8(
-                    "Crunchyroll [$name]",
-                    source.url ?: return@map null,
-                    "https://static.crunchyroll.com/",
-                ).forEach(callback)
-            }
-            res?.subtitles?.map { sub ->
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        getLanguage(sub.language ?: return@map null) ?: sub.language,
-                        sub.url ?: return@map null
-                    )
-                )
-            }
-        }
-    }
-
-    private suspend fun invokeGogo(
-        link: String,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val iframe = app.get(link)
-        val iframeDoc = iframe.document
-        argamap({
-            iframeDoc.select(".list-server-items > .linkserver")
-                .forEach { element ->
-                    val status = element.attr("data-status") ?: return@forEach
-                    if (status != "1") return@forEach
-                    val extractorData = element.attr("data-video") ?: return@forEach
-                    loadExtractor(extractorData, iframe.url, subtitleCallback, callback)
-                }
-        }, {
-            val iv = "3134003223491201"
-            val secretKey = "37911490979715163134003223491201"
-            val secretDecryptKey = "54674138327930866480207815084989"
-            GogoExtractor.extractVidstream(
-                iframe.url,
-                "Gogoanime",
-                callback,
-                iv,
-                secretKey,
-                secretDecryptKey,
-                isUsingAdaptiveKeys = false,
-                isUsingAdaptiveData = true,
-                iframeDocument = iframeDoc
-            )
-        })
-    }
-
-    private suspend fun String.fixIframe(): List<Pair<String?, String?>> {
-        return when {
-            this.startsWith("$kaast/dust/") -> {
-                val document = app.get(this).document
-                document.selectFirst("script:containsData(sources =)")?.data()
-                    ?.substringAfter("sources = [")?.substringBefore("];")?.let {
-                        tryParseJson<List<Iframe>>("[$it]")?.map { source ->
-                            source.name to source.src
-                        }
-                    } ?: emptyList()
-            }
-            this.startsWith("$kaast/axplayer/") -> {
-                val source = decode(
-                    this.substringAfter("&data=").substringBefore("&vref=")
-                )
-                listOf(URI(source).host.substringBefore(".") to source)
-            }
-            else -> {
-                emptyList()
-            }
-        }
-    }
-
-    private fun String.base64Decode(): String {
-        return Base64.decode(this, Base64.DEFAULT).toString(Charsets.UTF_8)
-    }
-
-    private fun decode(input: String): String =
-        URLDecoder.decode(input, "utf-8").replace(" ", "%20")
-
-    private fun String.fixTitle(): String {
-        return this.replace("(Dub)", "").replace("(Uncensored)", "").trim()
-    }
-
-    private fun getImageUrl(link: String?): String? {
-        if (link == null) return null
-        return if (link.startsWith(mainUrl)) link else "$mainUrl/uploads/$link"
-    }
-
-    private fun getBaseUrl(url: String): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
-        }
-    }
-
-    private fun getLanguage(language: String?): String? {
-        return SubtitleHelper.fromTwoLettersToLanguage(language ?: return null)
-            ?: SubtitleHelper.fromTwoLettersToLanguage(language.substringBefore("-"))
-    }
-
-    private fun fixUrl(url: String, domain: String): String {
-        if (url.startsWith("http")) {
-            return url
-        }
-        if (url.isEmpty()) {
-            return ""
-        }
-
-        val startsWithNoHttp = url.startsWith("//")
-        if (startsWithNoHttp) {
-            return "https:$url"
-        } else {
-            if (url.startsWith('/')) {
-                return domain + url
-            }
-            return "$domain/$url"
-        }
     }
 
     private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
