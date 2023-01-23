@@ -75,7 +75,7 @@ class KuramanimeProvider : MainAPI() {
         val title = this.selectFirst("h5 a")?.text() ?: return null
         val posterUrl = fixUrl(this.select("div.product__item__pic.set-bg").attr("data-setbg"))
         val episode = this.select("div.ep span").text().let {
-            Regex("Ep\\s([0-9]+)\\s/").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            Regex("Ep\\s(\\d+)\\s/").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
         }
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
@@ -102,7 +102,7 @@ class KuramanimeProvider : MainAPI() {
         val tags = document.select("div.anime__details__widget > div > div:nth-child(2) > ul > li:nth-child(1)")
             .text().trim().replace("Genre: ", "").split(", ")
 
-        val year = Regex("[^0-9]").replace(
+        val year = Regex("\\D").replace(
             document.select("div.anime__details__widget > div > div:nth-child(1) > ul > li:nth-child(5)")
                 .text().trim().replace("Musim: ", ""), ""
         ).toIntOrNull()
