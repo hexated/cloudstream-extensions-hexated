@@ -116,7 +116,7 @@ class KuramanimeProvider : MainAPI() {
 
         val episodes = mutableListOf<Episode>()
 
-        for (i in 1..5) {
+        for (i in 1..6) {
             val doc = app.get("$url?page=$i").document
             val eps = Jsoup.parse(doc.select("#episodeLists").attr("data-content")).select("a").mapNotNull {
                 val name = it.text().trim()
@@ -173,9 +173,9 @@ class KuramanimeProvider : MainAPI() {
                     link,
                     referer = "$mainUrl/",
                     quality = quality ?: Qualities.Unknown.value,
-                    headers = mapOf(
-                        "Range" to "bytes=0-"
-                    )
+//                    headers = mapOf(
+//                        "Range" to "bytes=0-"
+//                    )
                 )
             )
         }
