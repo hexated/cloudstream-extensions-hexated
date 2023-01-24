@@ -8,10 +8,12 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
+import java.net.URI
 import java.util.*
 
 class NeonimeProvider : MainAPI() {
-    override var mainUrl = "https://neonime.cloud"
+    override var mainUrl = "https://neonime.fun"
+    private var baseUrl = mainUrl
     override var name = "Neonime"
     override val hasQuickSearch = false
     override val hasMainPage = true
@@ -50,8 +52,9 @@ class NeonimeProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get(request.data + page).document
-        val home = document.select("tbody tr,div.item").mapNotNull {
+        val req = app.get(request.data + page)
+        baseUrl = getBaseUrl(req.url)
+        val home = req.document.select("tbody tr,div.item").mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(request.name, home)
@@ -60,7 +63,7 @@ class NeonimeProvider : MainAPI() {
     private fun getProperAnimeLink(uri: String): String {
         return when {
             uri.contains("/episode") -> {
-                val title = uri.substringAfter("$mainUrl/episode/").let { tt ->
+                val title = uri.substringAfter("$baseUrl/episode/").let { tt ->
                     val fixTitle = Regex("(.*)-\\d{1,2}x\\d+").find(tt)?.groupValues?.getOrNull(1).toString()
                     when {
                         !tt.contains("-season") && !tt.contains(Regex("-1x\\d+")) && !tt.contains("one-piece") -> "$fixTitle-season-${Regex("-(\\d{1,2})x\\d+").find(tt)?.groupValues?.getOrNull(1).toString()}"
@@ -75,7 +78,7 @@ class NeonimeProvider : MainAPI() {
 //                    else -> title
 //                }
 
-                "$mainUrl/tvshows/$title"
+                "$baseUrl/tvshows/$title"
             }
             else -> uri
         }
@@ -86,7 +89,7 @@ class NeonimeProvider : MainAPI() {
         val href = getProperAnimeLink(fixUrl(this.select("a").attr("href")))
         val posterUrl = fixUrl(this.select("img").attr("data-src"))
         val epNum = this.selectFirst("td.bb span")?.text()?.let { eps ->
-            Regex("Episode\\s?([0-9]+)").find(eps)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            Regex("Episode\\s?(\\d+)").find(eps)?.groupValues?.getOrNull(1)?.toIntOrNull()
         }
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
@@ -97,14 +100,12 @@ class NeonimeProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/?s=$query"
-        val document = app.get(link).document
-
+        val document = app.get("$baseUrl/?s=$query").document
         return document.select("div.item.episode-home").mapNotNull {
             val title = it.selectFirst("div.judul-anime > span")!!.text()
             val poster = it.select("img").attr("data-src").toString().trim()
             val episodes = it.selectFirst("div.fixyear > h2.text-center")!!
-                .text().replace(Regex("[^0-9]"), "").trim().toIntOrNull()
+                .text().replace(Regex("\\D"), "").trim().toIntOrNull()
             val tvType = getType(it.selectFirst("span.calidad2.episode")?.text().toString())
             val href = getProperAnimeLink(fixUrl(it.selectFirst("a")!!.attr("href")))
 
@@ -144,7 +145,7 @@ class NeonimeProvider : MainAPI() {
             val (malId, anilistId, image, cover) = getTracker(title, "tv", year)
             val episodes = document.select("ul.episodios > li").mapNotNull {
                 val header = it.selectFirst(".episodiotitle > a")?.ownText().toString()
-                val name = Regex("(Episode\\s?[0-9]+)").find(header)?.groupValues?.getOrNull(0) ?: header
+                val name = Regex("(Episode\\s?\\d+)").find(header)?.groupValues?.getOrNull(0) ?: header
                 val link = fixUrl(it.selectFirst(".episodiotitle > a")!!.attr("href"))
                 Episode(link, name)
             }.reversed()
@@ -186,6 +187,12 @@ class NeonimeProvider : MainAPI() {
         }
 
         return true
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
     }
 
     private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
