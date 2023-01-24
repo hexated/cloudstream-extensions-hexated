@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
+import java.net.URLDecoder
 
 class LayarKacaProvider : MainAPI() {
     override var mainUrl = "https://lk21official.vip"
@@ -196,10 +197,14 @@ class LayarKacaProvider : MainAPI() {
         document.select("ul#loadProviders > li").map {
             fixUrl(it.select("a").attr("href"))
         }.apmap {
-            val link = if (it.startsWith("https://layarkacaxxi.icu")) {
-                it.substringBeforeLast("/")
-            } else {
-                it
+            val link = when {
+                it.startsWith("https://layarkacaxxi.icu") -> {
+                    it.substringBeforeLast("/")
+                }
+                it.startsWith("https://bananalicious.xyz") -> decode(it.substringAfter("url="))
+                else -> {
+                    it
+                }
             }
             loadExtractor(link, data, subtitleCallback, callback)
         }
@@ -207,5 +212,6 @@ class LayarKacaProvider : MainAPI() {
         return true
     }
 
+    private fun decode(input: String): String = URLDecoder.decode(input, "utf-8").replace(" ", "%20")
 
 }
