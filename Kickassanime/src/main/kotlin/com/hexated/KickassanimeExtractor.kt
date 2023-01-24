@@ -103,7 +103,7 @@ object KickassanimeExtractor : Kickassanime() {
             data = data.base64Decode()
         }
         AppUtils.tryParseJson<SapphireSources>(data).let { res ->
-            res?.streams?.filter { it.format == "adaptive_hls" }?.map { source ->
+            res?.streams?.filter { it.format == "adaptive_hls" }?.reversed()?.map { source ->
                 val name = if(isDub) source.audio_lang else source.hardsub_lang.orEmpty().ifEmpty { "raw" }
                 M3u8Helper.generateM3u8(
                     "Crunchyroll [$name]",
