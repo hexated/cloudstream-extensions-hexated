@@ -96,7 +96,7 @@ open class Kickassanime : MainAPI() {
             } ?: throw ErrorLoadingException()
 
         val title = res.name ?: return null
-        val trackerTitle = res.en_title.orEmpty().ifEmpty { res.name }.fixTitle()
+        val trackerTitle = res.en_title.orEmpty().ifEmpty { res.name }.getTrackerTitle()
         val poster = getImageUrl(res.image)
         val tags = res.genres?.map { it.name ?: return null }
         val year = res.startdate?.substringBefore("-")?.toIntOrNull()
@@ -111,12 +111,13 @@ open class Kickassanime : MainAPI() {
             when (it) {
                 "TV Series" -> "tv"
                 "Ova" -> "ova"
+                "ONA" -> "ona"
                 "Movie" -> "movie"
                 else -> "tv"
             }
         } ?: if (episodes.size == 1) "movie" else "tv"
 
-        val (malId, anilistId, image, cover) = getTracker(trackerTitle, type, year)
+        val (malId, anilistId, image, cover) = getTracker(trackerTitle, title.getTrackerTitle(), type, year)
 
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
@@ -181,15 +182,25 @@ open class Kickassanime : MainAPI() {
         return true
     }
 
-    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
-            .parsedSafe<AniSearch>()?.results?.find { media ->
-                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
-                    title,
-                    true
-                )) || (media.type.equals(type, true) && media.releaseDate == year)
-            }
-        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
+    private suspend fun getTracker(
+        title: String?,
+        romajiTitle: String?,
+        type: String?,
+        year: Int?
+    ): Tracker {
+        val res = searchAnime(title).orEmpty().ifEmpty { searchAnime(romajiTitle) }
+        val media = res?.find { media ->
+            (media.title?.english.equals(title, true) || media.title?.romaji.equals(
+                title,
+                true
+            )) || (media.type.equals(type, true) && media.releaseDate == year)
+        }
+        return Tracker(media?.malId, media?.aniId, media?.image, media?.cover)
+    }
+
+    private suspend fun searchAnime(title: String?): ArrayList<Results>? {
+        return app.get("https://api.consumet.org/meta/anilist/$title")
+            .parsedSafe<AniSearch>()?.results
     }
 
     data class Tracker(
