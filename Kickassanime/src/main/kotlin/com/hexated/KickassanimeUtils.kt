@@ -38,8 +38,15 @@ fun String.base64Decode(): String {
 fun decode(input: String): String =
     URLDecoder.decode(input, "utf-8").replace(" ", "%20")
 
-fun String.fixTitle(): String {
-    return this.replace("(Dub)", "").replace("(Uncensored)", "").trim()
+fun String.getTrackerTitle(): String {
+    val blacklist = arrayOf(
+        "Dub",
+        "Uncensored",
+        "TV",
+        "JPN DUB",
+        "Uncensored"
+    ).joinToString("|") { "\\($it\\)" }
+    return this.replace(Regex(blacklist), "").trim()
 }
 
 fun getImageUrl(link: String?): String? {
