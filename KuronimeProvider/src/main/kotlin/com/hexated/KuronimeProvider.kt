@@ -88,7 +88,7 @@ class KuronimeProvider : MainAPI() {
             this.selectFirst("div.view,div.bt")?.nextElementSibling()?.select("img")
                 ?.attr("data-src")
         )
-        val epNum = this.select(".ep").text().replace(Regex("[^0-9]"), "").trim().toIntOrNull()
+        val epNum = this.select(".ep").text().replace(Regex("\\D"), "").trim().toIntOrNull()
         val tvType = getType(this.selectFirst(".bt > span")?.text().toString())
         return newAnimeSearchResponse(title, href, tvType) {
             this.posterUrl = posterUrl
@@ -116,7 +116,7 @@ class KuronimeProvider : MainAPI() {
             ?.lowercase()?.trim() ?: "tv"
 
         val trailer = document.selectFirst("div.tply iframe")?.attr("data-src")
-        val year = Regex("\\d, ([0-9]*)").find(
+        val year = Regex("\\d, (\\d*)").find(
             document.select(".infodetail > ul > li:nth-child(5)").text()
         )?.groupValues?.get(1)?.toIntOrNull()
         val (malId, anilistId, image, cover) = getTracker(title, type, year)
@@ -126,10 +126,11 @@ class KuronimeProvider : MainAPI() {
         )
         val description = document.select("span.const > p").text()
 
-        val episodes = document.select("div.bixbox.bxcl > ul > li").map {
-            val episode = it.selectFirst("a")?.text()?.trim()?.replace("Episode", "")?.trim()?.toIntOrNull()
-            val link = it.selectFirst("a")!!.attr("href")
-            Episode(link, episode = episode)
+        val episodes = document.select("div.bixbox.bxcl > ul > li").mapNotNull {
+            val link = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
+            val name = it.selectFirst("a")?.text() ?: return@mapNotNull null
+//            val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
+            Episode(link, name)
         }.reversed()
 
         return newAnimeLoadResponse(title, url, getType(type)) {
