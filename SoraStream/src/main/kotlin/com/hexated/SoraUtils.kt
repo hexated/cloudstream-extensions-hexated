@@ -1,15 +1,13 @@
 package com.hexated
 
+import com.hexated.SoraStream.Companion.baymovies
 import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.kamyrollAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
+import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
-import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.base64Decode
-import com.lagradost.cloudstream3.base64Encode
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -600,6 +598,23 @@ fun List<HashMap<String, String>>?.matchingEpisode(episode: Int?): String? {
     }?.get("id")
 }
 
+suspend fun getConfig(): BaymoviesConfig {
+    val regex = """const country = "(.*?)";
+const downloadtime = "(.*?)";
+var arrayofworkers = (.*)""".toRegex()
+    val js = app.get(
+        "https://geolocation.zindex.eu.org/api.js",
+        referer = "$baymovies/",
+    ).text
+    val match = regex.find(js) ?: throw ErrorLoadingException()
+    val country = match.groupValues[1]
+    val downloadTime = match.groupValues[2]
+    val workers = tryParseJson<List<String>>(match.groupValues[3])
+        ?: throw ErrorLoadingException()
+
+    return BaymoviesConfig(country, downloadTime, workers)
+}
+
 fun String?.fixTitle(): String? {
     return this?.replace(Regex("[!%:'?,]|( &)"), "")?.replace(" ", "-")?.lowercase()
         ?.replace("-–-", "-")
@@ -608,6 +623,8 @@ fun String?.fixTitle(): String? {
 fun getLanguage(str: String): String {
     return if (str.contains("(in_ID)")) "Indonesian" else str
 }
+
+fun bytesToGigaBytes( number: Double ): Double = number / 1024000000
 
 fun getKisskhTitle(str: String?): String? {
     return str?.replace(Regex("[^a-zA-Z0-9]"), "-")
