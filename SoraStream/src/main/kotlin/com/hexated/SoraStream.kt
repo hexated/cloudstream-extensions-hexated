@@ -3,6 +3,7 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
+import com.hexated.SoraExtractor.invokeBaymovies
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
@@ -65,12 +66,11 @@ open class SoraStream : TmdbProvider() {
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
         const val kamyrollAPI = "https://api.kamyroll.tech"
 
-        private val mainAPI =
-            base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
-
+        private val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
+        var baymovies = base64DecodeAPI("Zw==b3I=dS4=LmU=ZXg=bmQ=emk=aS4=YXA=dXA=cm8=Y2c=bGk=dWI=eHA=ZGU=aW4=YXk=ZWI=dGg=Ly8=czo=dHA=aHQ=")
         //        private var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
-        var netMoviesAPI =
-            base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=bG0=Zmk=dC0=bmU=Ly8=czo=dHA=aHQ=")
+        var netMoviesAPI = base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=bG0=Zmk=dC0=bmU=Ly8=czo=dHA=aHQ=")
+
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
@@ -105,6 +105,7 @@ open class SoraStream : TmdbProvider() {
         const val animeKaizokuAPI = "https://animekaizoku.com"
         const val movie123NetAPI = "https://ww7.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
+        const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -529,6 +530,15 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeSmashyStream(res.id, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if(!res.isAnime) invokeBaymovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
             }
         )
 

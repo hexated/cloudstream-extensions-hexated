@@ -1,5 +1,6 @@
 package com.hexated
 
+import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -14,6 +15,7 @@ import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.ByteString.Companion.encode
 import org.jsoup.Jsoup
 
 val session = Session(Requests().baseClient)
@@ -2022,6 +2024,135 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    //TODO only subs
+    suspend fun invokeWatchsomuch(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+    ) {
+        val watchSomuchAPI = "https://watchsomuch.tv"
+        val id = imdbId?.removePrefix("tt")
+        val epsId = app.post(
+            "$watchSomuchAPI/Watch/ajMovieTorrents.aspx",
+            data = mapOf(
+                "index" to "0",
+                "mid" to "$id",
+                "wsk" to "f6ea6cde-e42b-4c26-98d3-b4fe48cdd4fb",
+                "lid" to "",
+                "liu" to ""
+            ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsedSafe<WatchsomuchResponses>()?.movie?.torrents?.let { eps ->
+            if (season == null) {
+                eps.firstOrNull()?.id
+            } else {
+                eps.find { it.episode == episode && it.season == season }?.id
+            }
+        } ?: return
+
+        val subUrl = if (season == null) {
+            "$watchSomuchAPI/Watch/ajMovieSubtitles.aspx?mid=$id&tid=$epsId&part="
+        } else {
+            "$watchSomuchAPI/Watch/ajMovieSubtitles.aspx?mid=$id&tid=$epsId&part=S0${season}E0${episode}"
+        }
+
+        app.get(subUrl)
+            .parsedSafe<WatchsomuchSubResponses>()?.subtitles
+            ?.filter { it.url?.startsWith("https") == true }
+            ?.map { sub ->
+                Log.i("hexated", "${sub.label} => ${sub.url}")
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        sub.label ?: "",
+                        sub.url ?: return@map null
+                    )
+                )
+            }
+
+
+    }
+
+    suspend fun invokeBaymovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val key = base64DecodeAPI("ZW0=c3Q=c3k=b28=YWQ=Ymg=")
+        val headers = mapOf(
+            "Referer" to "$baymovies/",
+            "Origin" to baymovies,
+            "cf_cache_token" to "UKsVpQqBMxB56gBfhYKbfCVkRIXMh42pk6G4DdkXXoVh7j4BjV"
+        )
+
+        val titleSlug = title.fixTitle()?.replace("-", ".") ?: return
+        val (episodeSlug, seasonSlug) = if (season == null) {
+            listOf("", "")
+        } else {
+            listOf(
+                if (episode!! < 10) "0$episode" else episode,
+                if (season < 10) "0$season" else season
+            )
+        }
+
+        val query = if (season == null) {
+            "$title $year"
+        } else {
+            "$title S${episodeSlug}E${seasonSlug}"
+        }
+
+        val media =
+            app.get("$baymoviesAPI//0:search?q=$query&page_token=&page_index=0", headers = headers)
+                .parsedSafe<BaymoviesSearch>()?.data?.files?.filter { media ->
+                    (if (season == null) {
+                        media.name?.contains("$year") == true
+                    } else {
+                        media.name?.contains(Regex("(?i)S${episodeSlug}E${seasonSlug}")) == true
+                    }) && media.name?.contains(
+                        "720p",
+                        true
+                    ) == false && (media.mimeType == "video/x-matroska" || media.mimeType == "video/mp4") && (media.name.contains(
+                        titleSlug,
+                        true
+                    ) || media.name.contains(title ?: return, true))
+                }?.distinctBy { it.name } ?: return
+
+        media.apmap { file ->
+            val expiry = (System.currentTimeMillis() + 345600000).toString()
+            val hmacSign = "${file.id}@$expiry".encode()
+                .hmacSha256(key.encode()).base64().replace("+", "-")
+            val encryptedId =
+                base64Encode(CryptoAES.encrypt(key, file.id ?: return@apmap null).toByteArray())
+            val encryptedExpiry = base64Encode(CryptoAES.encrypt(key, expiry).toByteArray())
+            val worker = getConfig().workers.randomOrNull() ?: return@apmap null
+
+            val link = "https://api.$worker.workers.dev/download.aspx?file=$encryptedId&expiry=$encryptedExpiry&mac=$hmacSign"
+            val size = file.size?.toDouble() ?: return@apmap null
+            val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
+            val tags = Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4)").find(
+                file.name ?: return@apmap null
+            )?.groupValues?.getOrNull(1)?.replace(".", " ")?.trim()
+                ?: ""
+            val quality =
+                Regex("(\\d{3,4})[pP]").find(file.name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                    ?: Qualities.Unknown.value
+
+            callback.invoke(
+                ExtractorLink(
+                    "Baymovies $tags [$sizeFile]",
+                    "Baymovies $tags [$sizeFile]",
+                    link,
+                    "",
+                    quality,
+                )
+            )
+
+        }
+
+
+    }
+
 }
 
 class StreamM4u : XStreamCdn() {
@@ -2039,6 +2170,12 @@ data class FDMovieIFrame(
     val quality: String,
     val size: String,
     val type: String,
+)
+
+data class BaymoviesConfig(
+    val country: String,
+    val downloadTime: String,
+    val workers: List<String>
 )
 
 data class Movie123Media(
@@ -2300,4 +2437,45 @@ data class Smashy1Tracks(
 data class Smashy1Source(
     @JsonProperty("file") val file: String? = null,
     @JsonProperty("tracks") val tracks: ArrayList<Smashy1Tracks>? = arrayListOf(),
+)
+
+data class WatchsomuchTorrents(
+    @JsonProperty("id") val id: Int? = null,
+    @JsonProperty("movieId") val movieId: Int? = null,
+    @JsonProperty("season") val season: Int? = null,
+    @JsonProperty("episode") val episode: Int? = null,
+)
+
+data class WatchsomuchMovies(
+    @JsonProperty("torrents") val torrents: ArrayList<WatchsomuchTorrents>? = arrayListOf(),
+)
+
+data class WatchsomuchResponses(
+    @JsonProperty("movie") val movie: WatchsomuchMovies? = null,
+)
+
+data class WatchsomuchSubtitles(
+    @JsonProperty("url") val url: String? = null,
+    @JsonProperty("label") val label: String? = null,
+)
+
+data class WatchsomuchSubResponses(
+    @JsonProperty("subtitles") val subtitles: ArrayList<WatchsomuchSubtitles>? = arrayListOf(),
+)
+
+data class Baymovies(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("driveId") val driveId: String? = null,
+    @JsonProperty("mimeType") val mimeType: String? = null,
+    @JsonProperty("size") val size: String? = null,
+    @JsonProperty("name") val name: String? = null,
+    @JsonProperty("modifiedTime") val modifiedTime: String? = null,
+)
+
+data class BaymoviesData(
+    @JsonProperty("files") val files: ArrayList<Baymovies>? = arrayListOf(),
+)
+
+data class BaymoviesSearch(
+    @JsonProperty("data") val data: BaymoviesData? = null,
 )
