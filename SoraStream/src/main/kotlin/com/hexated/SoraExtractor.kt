@@ -182,7 +182,7 @@ object SoraExtractor : SoraStream() {
         val ref = getBaseUrl(iframeDbgo)
         decryptStreamUrl(source).split(",").map { links ->
             val quality =
-                Regex("\\[([0-9]*p.*?)]").find(links)?.groupValues?.getOrNull(1)?.trim()
+                Regex("\\[(\\d*p.*?)]").find(links)?.groupValues?.getOrNull(1)?.trim()
                     ?: return@map null
             links.replace("[$quality]", "").split(" or ").map { it.trim() }.map { link ->
                 val name = if (link.contains(".m3u8")) "Dbgo (Main)" else "Dbgo (Backup)"
@@ -581,7 +581,7 @@ object SoraExtractor : SoraStream() {
         delay(4000)
         links.map { (link, quality) ->
             val name =
-                quality?.replace(Regex("[0-9]{3,4}p"), "Noverse")?.replace(".", " ") ?: "Noverse"
+                quality?.replace(Regex("\\d{3,4}p"), "Noverse")?.replace(".", " ") ?: "Noverse"
             callback.invoke(
                 ExtractorLink(
                     name,
@@ -1363,9 +1363,9 @@ object SoraExtractor : SoraStream() {
                 .substringBefore("\")").let {
                     app.get(fixUrl(it, base)).document
                 }
-            val bitLink = resDoc?.selectFirst("a.btn.btn-outline-success")?.attr("href")
+            val bitLink = resDoc.selectFirst("a.btn.btn-outline-success")?.attr("href")
             val downloadLink = if (bitLink.isNullOrEmpty()) {
-                val backupIframe = resDoc?.select("a.btn.btn-outline-warning")?.attr("href")
+                val backupIframe = resDoc.select("a.btn.btn-outline-warning").attr("href")
                 extractBackupUHD(backupIframe ?: return@apmap null)
             } else {
                 extractMirrorUHD(bitLink, base)
@@ -1420,7 +1420,7 @@ object SoraExtractor : SoraStream() {
         sourcesLink?.split(",")?.map {
             val source = it.substringBefore("or").trim()
             val quality =
-                Regex("\\[([0-9]{3,4})p]").find(source)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                Regex("\\[(\\d{3,4})p]").find(source)?.groupValues?.getOrNull(1)?.toIntOrNull()
             val link = httpsify(source.replace("[${quality}p]", "").trim())
             callback.invoke(
                 ExtractorLink(
@@ -1645,7 +1645,7 @@ object SoraExtractor : SoraStream() {
         val server = getTvMoviesServer(url, season, episode) ?: return
         val videoData = extractCovyn(server.second ?: return)
         val quality =
-            Regex("([0-9]{3,4})p").find(server.first)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            Regex("(\\d{3,4})p").find(server.first)?.groupValues?.getOrNull(1)?.toIntOrNull()
 
         callback.invoke(
             ExtractorLink(
@@ -1829,7 +1829,7 @@ object SoraExtractor : SoraStream() {
 
 //            val videoUrl = extractRebrandly(shortLink ?: return@apmapIndexed null )
             val quality =
-                Regex("([0-9]{3,4})p").find(it.second)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                Regex("(\\d{3,4})p").find(it.second)?.groupValues?.getOrNull(1)?.toIntOrNull()
             val qualityName = it.second.replace("${quality}p", "").trim()
 
             callback.invoke(
@@ -2110,7 +2110,7 @@ object SoraExtractor : SoraStream() {
                     (if (season == null) {
                         media.name?.contains("$year") == true
                     } else {
-                        media.name?.contains(Regex("(?i)S${seasonSlug}E${episodeSlug}")) == true
+                        media.name?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
                     }) && media.name?.contains(
                         "720p",
                         true
