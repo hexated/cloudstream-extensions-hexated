@@ -1371,8 +1371,8 @@ object SoraExtractor : SoraStream() {
                 extractMirrorUHD(bitLink, base)
             }
 
-            val videoQuality =
-                Regex("\\d{3,4}[Pp]\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)?.trim()
+            val tags =
+                Regex("\\d{3,4}[Pp]\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)?.replace(".", " ")?.trim()
                     ?: ""
             val qualities =
                 Regex("(\\d{3,4})[Pp]").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
@@ -1382,8 +1382,8 @@ object SoraExtractor : SoraStream() {
                     ?.let { "[$it]" } ?: quality
             callback.invoke(
                 ExtractorLink(
-                    "UHDMovies $videoQuality $size",
-                    "UHDMovies $videoQuality $size",
+                    "UHDMovies $tags $size",
+                    "UHDMovies $tags $size",
                     downloadLink ?: return@apmap null,
                     "",
                     qualities
