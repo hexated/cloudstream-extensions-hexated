@@ -1372,7 +1372,8 @@ object SoraExtractor : SoraStream() {
             }
 
             val tags =
-                Regex("\\d{3,4}[Pp]\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)?.replace(".", " ")?.trim()
+                Regex("\\d{3,4}[Pp]\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)
+                    ?.replace(".", " ")?.trim()
                     ?: ""
             val qualities =
                 Regex("(\\d{3,4})[Pp]").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
@@ -1443,7 +1444,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.fixTitle()
-        val url = if (season == null) {
+        val url = if (season == null || season == 1) {
             "$gMoviesAPI/$fixTitle-$year"
         } else {
             "$gMoviesAPI/$fixTitle-$year-season-$season"
@@ -1457,7 +1458,8 @@ object SoraExtractor : SoraStream() {
             }
         } else {
             doc.select("div.is-content-justification-center").find {
-                it.previousElementSibling()?.text()?.contains("episode $episode", true) == true
+                it.previousElementSibling()?.text()
+                    ?.contains(Regex("(?i)episode\\s?$episode")) == true
             }?.select("div.wp-block-button")?.map {
                 it.select("a").attr("href") to it.text()
             }
@@ -2114,7 +2116,10 @@ object SoraExtractor : SoraStream() {
                     }) && media.name?.contains(
                         "720p",
                         true
-                    ) == false && (media.mimeType == "video/x-matroska" || media.mimeType == "video/mp4") && (media.name.contains(
+                    ) == false && (media.mimeType == "video/x-matroska" || media.mimeType == "video/mp4") && (media.name.replace(
+                        "-",
+                        "."
+                    ).contains(
                         dotSlug,
                         true
                     ) || media.name.contains(spaceSlug, true))
