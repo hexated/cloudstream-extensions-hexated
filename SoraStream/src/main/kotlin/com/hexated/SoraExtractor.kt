@@ -2139,7 +2139,7 @@ object SoraExtractor : SoraStream() {
                 ?: ""
             val quality =
                 Regex("(\\d{3,4})[pP]").find(file.name)?.groupValues?.getOrNull(1)?.toIntOrNull()
-                    ?: Qualities.Unknown.value
+                    ?: Qualities.P1080.value
 
             callback.invoke(
                 ExtractorLink(
