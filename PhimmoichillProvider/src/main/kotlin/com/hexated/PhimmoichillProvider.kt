@@ -9,7 +9,7 @@ import org.jsoup.nodes.Element
 import java.net.URLDecoder
 
 class PhimmoichillProvider : MainAPI() {
-    override var mainUrl = "https://phimmoichilla.net/"
+    override var mainUrl = "https://phimmoichilla.net"
     override var name = "Phimmoichill"
     override val hasMainPage = true
     override var lang = "vi"
