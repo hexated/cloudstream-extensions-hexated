@@ -2099,7 +2099,7 @@ object SoraExtractor : SoraStream() {
         val query = if (season == null) {
             "$title $year"
         } else {
-            "$title S${episodeSlug}E${seasonSlug}"
+            "$title S${seasonSlug}E${episodeSlug}"
         }
 
         val media =
@@ -2108,7 +2108,7 @@ object SoraExtractor : SoraStream() {
                     (if (season == null) {
                         media.name?.contains("$year") == true
                     } else {
-                        media.name?.contains(Regex("(?i)S${episodeSlug}E${seasonSlug}")) == true
+                        media.name?.contains(Regex("(?i)S${seasonSlug}E${episodeSlug}")) == true
                     }) && media.name?.contains(
                         "720p",
                         true
