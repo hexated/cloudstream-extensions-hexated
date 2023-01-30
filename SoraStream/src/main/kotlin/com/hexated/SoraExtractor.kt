@@ -2089,7 +2089,7 @@ object SoraExtractor : SoraStream() {
             "cf_cache_token" to "UKsVpQqBMxB56gBfhYKbfCVkRIXMh42pk6G4DdkXXoVh7j4BjV"
         )
         val query = getIndexQuery(title, year, season, episode)
-        val search = app.get("$baymoviesAPI//0:search?q=$query&page_token=&page_index=0", headers = headers)
+        val search = app.get("$baymoviesAPI/0:search?q=$query&page_token=&page_index=0", headers = headers)
         val media = searchIndex(title, season, episode, year, search) ?: return
 
         media.apmap { file ->
@@ -2129,7 +2129,49 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeChillmovies0(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeChillmovies(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
+    suspend fun invokeChillmovies1(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeChillmovies(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
     suspend fun invokeChillmovies(
+        apiUrl: String,
+        api: String,
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -2141,14 +2183,14 @@ object SoraExtractor : SoraStream() {
             """{"q":"$query","password":null,"page_token":null,"page_index":0}""".toRequestBody(
                 RequestBodyTypes.JSON.toMediaTypeOrNull()
             )
-        val search = app.post("$chillmoviesAPI/0:search", requestBody = body)
+        val search = app.post("${apiUrl}search", requestBody = body)
         val media = searchIndex(title, season, episode, year, search) ?: return
         media.apmap { file ->
             val pathBody = """{"id":"${file.id ?: return@apmap null}"}""".toRequestBody(
                 RequestBodyTypes.JSON.toMediaTypeOrNull()
             )
-            val path = app.post("$chillmoviesAPI/0:id2path", requestBody = pathBody).text.let {
-                fixUrl(it, "$chillmoviesAPI/0:")
+            val path = app.post("${apiUrl}id2path", requestBody = pathBody).text.let {
+                fixUrl(it, apiUrl)
             }.encodeUrl()
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
@@ -2158,10 +2200,15 @@ object SoraExtractor : SoraStream() {
                 )?.groupValues?.getOrNull(1)?.toIntOrNull()
                     ?: Qualities.P1080.value
 
+            val tags = Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(
+                file.name
+            )?.groupValues?.getOrNull(1)?.replace(".", " ")?.trim()
+                ?: ""
+
             callback.invoke(
                 ExtractorLink(
-                    "Chillmovies [$sizeFile]",
-                    "Chillmovies [$sizeFile]",
+                    "$api $tags [$sizeFile]",
+                    "$api $tags [$sizeFile]",
                     path,
                     "",
                     quality,
