@@ -2103,6 +2103,7 @@ object SoraExtractor : SoraStream() {
 
             val link =
                 "https://api.$worker.workers.dev/download.aspx?file=$encryptedId&expiry=$encryptedExpiry&mac=$hmacSign"
+            if(!app.get(link).isSuccessful) return@apmap null
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val tags = Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4)").find(
