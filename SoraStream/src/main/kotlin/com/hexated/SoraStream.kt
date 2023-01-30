@@ -5,7 +5,8 @@ import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeBaymovies
 import com.hexated.SoraExtractor.invokeBollyMaza
-import com.hexated.SoraExtractor.invokeChillmovies
+import com.hexated.SoraExtractor.invokeChillmovies0
+import com.hexated.SoraExtractor.invokeChillmovies1
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixhq
@@ -107,7 +108,8 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww7.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org"
-        const val chillmoviesAPI = "https://chill.aicirou.workers.dev"
+        const val chillmovies0API = "https://chill.aicirou.workers.dev/0:"
+        const val chillmovies1API = "https://chill.aicirou.workers.dev/1:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -543,14 +545,27 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeChillmovies (
+                invokeChillmovies0(
+                    chillmovies0API,
+                    "Chillmovies0",
                     res.title,
                     res.year,
                     res.season,
                     res.episode,
                     callback
                 )
-            }
+            },
+            {
+                invokeChillmovies1(
+                    chillmovies1API,
+                    "Chillmovies1",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
         )
 
         return true
