@@ -2088,42 +2088,9 @@ object SoraExtractor : SoraStream() {
             "Origin" to baymovies,
             "cf_cache_token" to "UKsVpQqBMxB56gBfhYKbfCVkRIXMh42pk6G4DdkXXoVh7j4BjV"
         )
-
-        val dotSlug = title.fixTitle()?.replace("-", ".") ?: return
-        val spaceSlug = title.fixTitle()?.replace("-", " ") ?: return
-        val (episodeSlug, seasonSlug) = if (season == null) {
-            listOf("", "")
-        } else {
-            listOf(
-                if (episode!! < 10) "0$episode" else episode,
-                if (season < 10) "0$season" else season
-            )
-        }
-
-        val query = if (season == null) {
-            "$title $year"
-        } else {
-            "$title S${seasonSlug}E${episodeSlug}"
-        }
-
-        val media =
-            app.get("$baymoviesAPI//0:search?q=$query&page_token=&page_index=0", headers = headers)
-                .parsedSafe<BaymoviesSearch>()?.data?.files?.filter { media ->
-                    (if (season == null) {
-                        media.name?.contains("$year") == true
-                    } else {
-                        media.name?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
-                    }) && media.name?.contains(
-                        "720p",
-                        true
-                    ) == false && (media.mimeType == "video/x-matroska" || media.mimeType == "video/mp4") && (media.name.replace(
-                        "-",
-                        "."
-                    ).contains(
-                        dotSlug,
-                        true
-                    ) || media.name.contains(spaceSlug, true))
-                }?.distinctBy { it.name } ?: return
+        val query = getIndexQuery(title, year, season, episode)
+        val search = app.get("$baymoviesAPI//0:search?q=$query&page_token=&page_index=0", headers = headers)
+        val media = searchIndex(title, season, episode, year, search) ?: return
 
         media.apmap { file ->
             val expiry = (System.currentTimeMillis() + 345600000).toString()
@@ -2158,6 +2125,49 @@ object SoraExtractor : SoraStream() {
 
         }
 
+
+    }
+
+    suspend fun invokeChillmovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val query = getIndexQuery(title, year, season, episode)
+        val body =
+            """{"q":"$query","password":null,"page_token":null,"page_index":0}""".toRequestBody(
+                RequestBodyTypes.JSON.toMediaTypeOrNull()
+            )
+        val search = app.post("$chillmoviesAPI/0:search", requestBody = body)
+        val media = searchIndex(title, season, episode, year, search) ?: return
+        media.apmap { file ->
+            val pathBody = """{"id":"${file.id ?: return@apmap null}"}""".toRequestBody(
+                RequestBodyTypes.JSON.toMediaTypeOrNull()
+            )
+            val path = app.post("$chillmoviesAPI/0:id2path", requestBody = pathBody).text.let {
+                fixUrl(it, "$chillmoviesAPI/0:")
+            }.encodeUrl()
+            val size = file.size?.toDouble() ?: return@apmap null
+            val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
+            val quality =
+                Regex("(\\d{3,4})[pP]").find(
+                    file.name ?: return@apmap null
+                )?.groupValues?.getOrNull(1)?.toIntOrNull()
+                    ?: Qualities.P1080.value
+
+            callback.invoke(
+                ExtractorLink(
+                    "Chillmovies [$sizeFile]",
+                    "Chillmovies [$sizeFile]",
+                    path,
+                    "",
+                    quality,
+                )
+            )
+
+        }
 
     }
 
@@ -2471,7 +2481,7 @@ data class WatchsomuchSubResponses(
     @JsonProperty("subtitles") val subtitles: ArrayList<WatchsomuchSubtitles>? = arrayListOf(),
 )
 
-data class Baymovies(
+data class IndexMedia(
     @JsonProperty("id") val id: String? = null,
     @JsonProperty("driveId") val driveId: String? = null,
     @JsonProperty("mimeType") val mimeType: String? = null,
@@ -2480,10 +2490,10 @@ data class Baymovies(
     @JsonProperty("modifiedTime") val modifiedTime: String? = null,
 )
 
-data class BaymoviesData(
-    @JsonProperty("files") val files: ArrayList<Baymovies>? = arrayListOf(),
+data class IndexData(
+    @JsonProperty("files") val files: ArrayList<IndexMedia>? = arrayListOf(),
 )
 
-data class BaymoviesSearch(
-    @JsonProperty("data") val data: BaymoviesData? = null,
+data class IndexSearch(
+    @JsonProperty("data") val data: IndexData? = null,
 )

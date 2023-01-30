@@ -21,6 +21,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.nodes.Document
 import java.net.URI
+import java.net.URL
 
 data class FilmxyCookies(
     val phpsessid: String? = null,
@@ -598,6 +599,70 @@ fun List<HashMap<String, String>>?.matchingEpisode(episode: Int?): String? {
     }?.get("id")
 }
 
+fun getEpisodeSlug(
+    season: Int? = null,
+    episode: Int? = null,
+): Pair<String, String> {
+    return if (season == null && episode == null) {
+        "" to ""
+    } else {
+        (if (season!! < 10) "0$season" else "$season") to (if (episode!! < 10) "0$episode" else "$episode")
+    }
+}
+
+fun getTitleSlug(title: String? = null): Pair<String?, String?> {
+    return title.fixTitle()?.replace("-", ".") to title.fixTitle()?.replace("-", " ")
+}
+
+fun getIndexQuery(
+    title: String? = null,
+    year: Int? = null,
+    season: Int? = null,
+    episode: Int? = null
+): String {
+    val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+    return if (season == null) {
+        "$title $year"
+    } else {
+        "$title S${seasonSlug}E${episodeSlug}"
+    }
+}
+
+fun searchIndex(
+    title: String? = null,
+    season: Int? = null,
+    episode: Int? = null,
+    year: Int? = null,
+    response: NiceResponse
+): List<IndexMedia>? {
+    val (dotSlug, spaceSlug) = getTitleSlug(title)
+    val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+    val mimeType = arrayOf(
+        "video/x-matroska",
+        "video/mp4",
+        "video/x-msvideo"
+    )
+    return response.parsedSafe<IndexSearch>()?.data?.files?.filter { media ->
+        (if (season == null) {
+            media.name?.contains("$year") == true
+        } else {
+            media.name?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
+        }) && media.name?.contains(
+            "720p",
+            true
+        ) == false && (media.mimeType in mimeType) && (media.name.replace(
+            "-",
+            "."
+        ).contains(
+            "$dotSlug",
+            true
+        ) || media.name.replace(
+            "-",
+            " "
+        ).contains("$spaceSlug", true))
+    }?.distinctBy { it.name }
+}
+
 suspend fun getConfig(): BaymoviesConfig {
     val regex = """const country = "(.*?)";
 const downloadtime = "(.*?)";
@@ -685,6 +750,12 @@ fun getDbgoLanguage(str: String): String {
         "Українська" -> "Ukrainian"
         else -> str
     }
+}
+
+fun String.encodeUrl() : String {
+    val url = URL(this)
+    val uri = URI(url.protocol, url.userInfo, url.host, url.port, url.path, url.query, url.ref)
+    return uri.toURL().toString()
 }
 
 fun getBaseUrl(url: String): String {

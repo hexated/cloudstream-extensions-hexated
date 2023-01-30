@@ -5,6 +5,7 @@ import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeBaymovies
 import com.hexated.SoraExtractor.invokeBollyMaza
+import com.hexated.SoraExtractor.invokeChillmovies
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixhq
@@ -106,6 +107,7 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww7.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org"
+        const val chillmoviesAPI = "https://chill.aicirou.workers.dev"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -533,6 +535,15 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if(!res.isAnime) invokeBaymovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                invokeChillmovies (
                     res.title,
                     res.year,
                     res.season,
