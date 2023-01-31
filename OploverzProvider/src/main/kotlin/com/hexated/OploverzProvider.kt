@@ -150,10 +150,10 @@ class OploverzProvider : MainAPI() {
         val (malId, anilistId, image, cover) = getTracker(title, typeCheck, year)
 
         val episodes = document.select(".eplister > ul > li").map {
-            val header = it.select(".epl-title").text()
-            val episode = Regex("Episode\\s?0?0?([0-9]+)").find(header)?.groupValues?.getOrNull(0)
             val link = fixUrl(it.select("a").attr("href"))
-            Episode(link, episode = episode?.toIntOrNull())
+            val name = it.select(".epl-title").text()
+            val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
+            Episode(link, name, episode = episode)
         }.reversed()
 
         val recommendations =
