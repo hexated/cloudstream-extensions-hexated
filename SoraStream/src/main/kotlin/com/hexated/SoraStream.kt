@@ -571,7 +571,7 @@ open class SoraStream : TmdbProvider() {
         return true
     }
 
-    private data class LinkData(
+    data class LinkData(
         val id: Int? = null,
         val imdbId: String? = null,
         val type: String? = null,
