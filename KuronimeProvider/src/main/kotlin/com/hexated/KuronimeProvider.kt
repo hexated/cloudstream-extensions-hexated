@@ -129,8 +129,8 @@ class KuronimeProvider : MainAPI() {
         val episodes = document.select("div.bixbox.bxcl > ul > li").mapNotNull {
             val link = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
             val name = it.selectFirst("a")?.text() ?: return@mapNotNull null
-//            val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
-            Episode(link, name)
+            val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
+            Episode(link, name, episode = episode)
         }.reversed()
 
         return newAnimeLoadResponse(title, url, getType(type)) {
@@ -194,7 +194,7 @@ class KuronimeProvider : MainAPI() {
             safeApiCall {
                 when {
                     it.startsWith("https://animeku.org") -> invokeKuroSource(it, callback)
-                    else -> loadExtractor(it, mainUrl, subtitleCallback, callback)
+                    else -> loadExtractor("$it/", mainUrl, subtitleCallback, callback)
                 }
             }
         }

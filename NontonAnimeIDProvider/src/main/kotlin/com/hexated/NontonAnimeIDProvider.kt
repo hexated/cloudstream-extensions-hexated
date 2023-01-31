@@ -11,7 +11,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class NontonAnimeIDProvider : MainAPI() {
-    override var mainUrl = "https://nontonanimeid.click"
+    override var mainUrl = "https://nontonanimeid.best"
     override var name = "NontonAnimeID"
     override val hasQuickSearch = false
     override val hasMainPage = true
@@ -122,7 +122,7 @@ class NontonAnimeIDProvider : MainAPI() {
         val poster = document.selectFirst(".poster > img")?.attr("data-src")
         val tags = document.select(".tagline > a").map { it.text() }
 
-        val year = Regex("\\d, ([0-9]*)").find(
+        val year = Regex("\\d, (\\d*)").find(
             document.select(".bottomtitle > span:nth-child(5)").text()
         )?.groupValues?.get(1)?.toIntOrNull()
         val status = getStatus(
@@ -138,7 +138,7 @@ class NontonAnimeIDProvider : MainAPI() {
         val episodes = if (document.select("button.buttfilter").isNotEmpty()) {
             val id = document.select("input[name=series_id]").attr("value")
             val numEp =
-                document.selectFirst(".latestepisode > a")?.text()?.replace(Regex("[^0-9]"), "")
+                document.selectFirst(".latestepisode > a")?.text()?.replace(Regex("\\D"), "")
                     .toString()
             Jsoup.parse(
                 app.post(
@@ -151,7 +151,7 @@ class NontonAnimeIDProvider : MainAPI() {
                     )
                 ).parsed<EpResponse>().content
             ).select("li").map {
-                val episode = Regex("Episode\\s?([0-9]+)").find(
+                val episode = Regex("Episode\\s?(\\d+)").find(
                     it.selectFirst("a")?.text().toString()
                 )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = fixUrl(it.selectFirst("a")!!.attr("href"))
@@ -159,7 +159,7 @@ class NontonAnimeIDProvider : MainAPI() {
             }.reversed()
         } else {
             document.select("ul.misha_posts_wrap2 > li").map {
-                val episode = Regex("Episode\\s?([0-9]+)").find(
+                val episode = Regex("Episode\\s?(\\d+)").find(
                     it.selectFirst("a")?.text().toString()
                 )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = it.select("a").attr("href")

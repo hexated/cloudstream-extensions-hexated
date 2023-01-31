@@ -144,10 +144,10 @@ class NeonimeProvider : MainAPI() {
             val year = document.select("#info a[href*=\"-year/\"]").text().toIntOrNull()
             val (malId, anilistId, image, cover) = getTracker(title, "tv", year)
             val episodes = document.select("ul.episodios > li").mapNotNull {
-                val header = it.selectFirst(".episodiotitle > a")?.ownText().toString()
-                val name = Regex("(Episode\\s?\\d+)").find(header)?.groupValues?.getOrNull(0) ?: header
                 val link = fixUrl(it.selectFirst(".episodiotitle > a")!!.attr("href"))
-                Episode(link, name)
+                val name = it.selectFirst(".episodiotitle > a")?.ownText().toString()
+                val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
+                Episode(link, name, episode = episode)
             }.reversed()
 
             return newAnimeLoadResponse(title, url, TvType.Anime) {

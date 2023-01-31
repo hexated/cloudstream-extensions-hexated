@@ -86,7 +86,7 @@ class AnimeSailProvider : MainAPI() {
         val title = this.select(".tt > h2").text().trim()
         val posterUrl = fixUrlNull(this.selectFirst("div.limit img")?.attr("src"))
         val epNum = this.selectFirst(".tt > h2")?.text()?.let {
-            Regex("Episode\\s?([0-9]+)").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            Regex("Episode\\s?(\\d+)").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
         }
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
@@ -116,11 +116,10 @@ class AnimeSailProvider : MainAPI() {
         val (malId, anilistId, image, cover) = getTracker(title, type, year)
 
         val episodes = document.select("ul.daftar > li").map {
-            val episode = Regex("Episode\\s?([0-9]+)").find(
-                it.select("a").text().trim()
-            )?.groupValues?.getOrNull(0)
             val link = fixUrl(it.select("a").attr("href"))
-            Episode(link, episode = episode?.toIntOrNull())
+            val name = it.select("a").text()
+            val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
+            Episode(link, name, episode = episode)
         }.reversed()
 
         return newAnimeLoadResponse(title, url, getType(type)) {

@@ -106,7 +106,7 @@ class AnimeIndoProvider : MainAPI() {
         val posterUrl = this.select("img[itemprop=image]").attr("src").toString()
         val type = getType(this.select("div.type").text().trim())
         val epNum =
-            this.selectFirst("span.episode")?.ownText()?.replace(Regex("[^0-9]"), "")?.trim()
+            this.selectFirst("span.episode")?.ownText()?.replace(Regex("\\D"), "")?.trim()
                 ?.toIntOrNull()
         return newAnimeSearchResponse(title, href, type) {
             this.posterUrl = posterUrl
@@ -116,18 +116,22 @@ class AnimeIndoProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/?s=$query"
-        val document = request(link).document
-
-        return document.select(".site-main.relat > article").map {
-            val title = it.selectFirst("div.title > h2")!!.ownText().trim()
-            val href = it.selectFirst("a")!!.attr("href")
-            val posterUrl = it.selectFirst("img")!!.attr("src").toString()
-            val type = getType(it.select("div.type").text().trim())
-            newAnimeSearchResponse(title, href, type) {
-                this.posterUrl = posterUrl
+        val anime = mutableListOf<SearchResponse>()
+        (1..2).forEach { page ->
+            val link = "$mainUrl/page/$page/?s=$query"
+            val document = request(link).document
+            val media = document.select(".site-main.relat > article").mapNotNull {
+                val title = it.selectFirst("div.title > h2")!!.ownText().trim()
+                val href = it.selectFirst("a")!!.attr("href")
+                val posterUrl = it.selectFirst("img")!!.attr("src").toString()
+                val type = getType(it.select("div.type").text().trim())
+                newAnimeSearchResponse(title, href, type) {
+                    this.posterUrl = posterUrl
+                }
             }
+            if(media.isNotEmpty()) anime.addAll(media)
         }
+        return anime
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -140,7 +144,7 @@ class AnimeIndoProvider : MainAPI() {
         val type = document.selectFirst("div.info-content > div.spe > span:contains(Type:)")?.ownText()
             ?.trim()?.lowercase() ?: "tv"
         val year = document.selectFirst("div.info-content > div.spe > span:contains(Released:)")?.ownText()?.let {
-            Regex("\\d,\\s([0-9]*)").find(it)?.groupValues?.get(1)?.toIntOrNull()
+            Regex("\\d,\\s(\\d*)").find(it)?.groupValues?.get(1)?.toIntOrNull()
         }
         val status = getStatus(document.selectFirst("div.info-content > div.spe > span:nth-child(1)")!!.ownText().trim())
         val description = document.select("div[itemprop=description] > p").text()
@@ -151,7 +155,7 @@ class AnimeIndoProvider : MainAPI() {
             val header = it.selectFirst("span.lchx > a") ?: return@mapNotNull null
             val episode = header.text().trim().replace("Episode", "").trim().toIntOrNull()
             val link = fixUrl(header.attr("href"))
-            Episode(link, episode = episode)
+            Episode(link, header.text(), episode = episode)
         }.reversed()
 
         return newAnimeLoadResponse(title, url, getType(type)) {
