@@ -10,7 +10,6 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.util.ArrayList
 
-
 class OploverzProvider : MainAPI() {
     override var mainUrl = "https://15.235.11.45"
     override var name = "Oploverz"
@@ -129,7 +128,7 @@ class OploverzProvider : MainAPI() {
         val poster = document.select(".thumb > img").attr("src")
         val tags = document.select(".genxed > a").map { it.text() }
 
-        val year = Regex("\\d, ([0-9]*)").find(
+        val year = Regex("\\d, (\\d*)").find(
             document.selectFirst(".info-content > .spe > span > time")!!.text().trim()
         )?.groupValues?.get(1).toString().toIntOrNull()
         val status = getStatus(
@@ -152,7 +151,7 @@ class OploverzProvider : MainAPI() {
         val episodes = document.select(".eplister > ul > li").map {
             val link = fixUrl(it.select("a").attr("href"))
             val name = it.select(".epl-title").text()
-            val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
+            val episode = Regex("Episode\\s?(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
             Episode(link, name, episode = episode)
         }.reversed()
 
