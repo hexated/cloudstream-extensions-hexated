@@ -595,7 +595,7 @@ fun CrunchyrollDetails.findCrunchyrollId(
 
 fun List<HashMap<String, String>>?.matchingEpisode(episode: Int?): String? {
     return this?.find {
-        it["episode_number"] == "$episode"
+        it["episode_number"] == "$episode" || indexOf(it).plus(1) == episode
     }?.get("id")
 }
 
