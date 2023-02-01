@@ -28,6 +28,7 @@ import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
+import com.hexated.SoraExtractor.invokeGammovies
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
@@ -110,6 +111,7 @@ open class SoraStream : TmdbProvider() {
         const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org"
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:"
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:"
+        const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -559,6 +561,17 @@ open class SoraStream : TmdbProvider() {
                 invokeChillmovies1(
                     chillmovies1API,
                     "Chillmovies1",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                invokeGammovies(
+                    gamMoviesAPI,
+                    "Gammovies",
                     res.title,
                     res.year,
                     res.season,
