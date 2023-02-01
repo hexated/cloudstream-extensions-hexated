@@ -1691,7 +1691,7 @@ object SoraExtractor : SoraStream() {
                         "Crunchyroll [${it.second ?: ""}]",
                         source.url ?: return@source null,
                         "https://static.crunchyroll.com/",
-                        getQualityFromName(source.quality),
+                        source.quality?.removeSuffix("p")?.toIntOrNull() ?: return@source null,
                         true
                     )
                 )
