@@ -2089,7 +2089,7 @@ object SoraExtractor : SoraStream() {
             "cf_cache_token" to "UKsVpQqBMxB56gBfhYKbfCVkRIXMh42pk6G4DdkXXoVh7j4BjV"
         )
         val query = getIndexQuery(title, year, season, episode)
-        val search = app.get("$baymoviesAPI/0:search?q=$query&page_token=&page_index=0", headers = headers)
+        val search = app.get("$baymoviesAPI/0:search?q=$query&page_token=&page_index=0", headers = headers).text
         val media = searchIndex(title, season, episode, year, search) ?: return
 
         media.apmap { file ->
@@ -2127,6 +2127,26 @@ object SoraExtractor : SoraStream() {
         }
 
 
+    }
+
+    suspend fun invokeGammovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeChillmovies(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
     }
 
     suspend fun invokeChillmovies0(
@@ -2169,7 +2189,7 @@ object SoraExtractor : SoraStream() {
         )
     }
 
-    suspend fun invokeChillmovies(
+    private suspend fun invokeChillmovies(
         apiUrl: String,
         api: String,
         title: String? = null,
@@ -2183,15 +2203,34 @@ object SoraExtractor : SoraStream() {
             """{"q":"$query","password":null,"page_token":null,"page_index":0}""".toRequestBody(
                 RequestBodyTypes.JSON.toMediaTypeOrNull()
             )
-        val search = app.post("${apiUrl}search", requestBody = body)
+        val data = mapOf(
+            "q" to query,
+            "page_token" to "",
+            "page_index" to "0"
+        )
+        val search = if (api == "Gammovies") {
+            decodeIndexJson(app.post("${apiUrl}search", data = data).text)
+        } else {
+            app.post("${apiUrl}search", requestBody = body).text
+        }
         val media = searchIndex(title, season, episode, year, search) ?: return
         media.apmap { file ->
             val pathBody = """{"id":"${file.id ?: return@apmap null}"}""".toRequestBody(
                 RequestBodyTypes.JSON.toMediaTypeOrNull()
             )
-            val path = app.post("${apiUrl}id2path", requestBody = pathBody).text.let {
+            val pathData = mapOf(
+                "id" to file.id,
+            )
+            val path = (if (api == "Gammovies") {
+                app.post(
+                    "${apiUrl}id2path", data = pathData
+                )
+            } else {
+                app.post("${apiUrl}id2path", requestBody = pathBody)
+            }).text.let {
                 fixUrl(it, apiUrl)
             }.encodeUrl()
+            if (!app.get(path).isSuccessful) return@apmap null
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val quality =

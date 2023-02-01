@@ -633,7 +633,7 @@ fun searchIndex(
     season: Int? = null,
     episode: Int? = null,
     year: Int? = null,
-    response: NiceResponse
+    response: String
 ): List<IndexMedia>? {
     val (dotSlug, spaceSlug) = getTitleSlug(title)
     val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
@@ -642,7 +642,7 @@ fun searchIndex(
         "video/mp4",
         "video/x-msvideo"
     )
-    return response.parsedSafe<IndexSearch>()?.data?.files?.filter { media ->
+    return tryParseJson<IndexSearch>(response)?.data?.files?.filter { media ->
         (if (season == null) {
             media.name?.contains("$year") == true
         } else {
@@ -680,6 +680,11 @@ var arrayofworkers = (.*)""".toRegex()
     return BaymoviesConfig(country, downloadTime, workers)
 }
 
+// taken from https://github.com/821938089/cloudstream-extensions/blob/6e41697cbf816d2f57d9922d813c538e3192f708/PiousIndexProvider/src/main/kotlin/com/horis/cloudstreamplugins/PiousIndexProvider.kt#L175-L179
+fun decodeIndexJson(json: String): String {
+    val slug = json.reversed().substring(24)
+    return base64Decode(slug.substring(0, slug.length - 20))
+}
 fun String?.fixTitle(): String? {
     return this?.replace(Regex("[!%:'?,]|( &)"), "")?.replace(" ", "-")?.lowercase()
         ?.replace("-–-", "-")
