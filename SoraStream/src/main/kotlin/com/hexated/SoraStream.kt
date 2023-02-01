@@ -48,10 +48,9 @@ import kotlin.math.roundToInt
 open class SoraStream : TmdbProvider() {
     override var name = "SoraStream"
     override val hasMainPage = true
-    override val hasDownloadSupport = true
     override val instantLinkLoading = true
     override val useMetaLoadResponse = true
-    override val hasChromecastSupport = true
+    override val hasQuickSearch = true
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -61,19 +60,23 @@ open class SoraStream : TmdbProvider() {
     /** AUTHOR : Hexated & Sora */
     companion object {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
-        private val apiKey =
-            base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
         const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
         const val jikanAPI = "https://api.jikan.moe/v4"
         const val gdbot = "https://gdbot.xyz"
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
         const val kamyrollAPI = "https://api.kamyroll.tech"
+        var baymovies = "https://opengatewayindex.pages.dev"
 
-        private val mainAPI = base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
-        var baymovies = base64DecodeAPI("Zw==b3I=dS4=LmU=ZXg=bmQ=emk=aS4=YXA=dXA=cm8=Y2c=bGk=dWI=eHA=ZGU=aW4=YXk=ZWI=dGg=Ly8=czo=dHA=aHQ=")
-        //        private var mainServerAPI = base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
-        var netMoviesAPI = base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=bG0=Zmk=dC0=bmU=Ly8=czo=dHA=aHQ=")
+        private val apiKey =
+            base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
+//        private val mainAPI =
+//            base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
+//        private var mainServerAPI =
+//            base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
+        var netMoviesAPI =
+            base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=bG0=Zmk=dC0=bmU=Ly8=czo=dHA=aHQ=")
 
+        // ALL SOURCES
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
@@ -137,8 +140,8 @@ open class SoraStream : TmdbProvider() {
         "$tmdbAPI/trending/all/day?api_key=$apiKey&region=US" to "Trending",
         "$tmdbAPI/movie/popular?api_key=$apiKey&region=US" to "Popular Movies",
         "$tmdbAPI/tv/popular?api_key=$apiKey&region=US" to "Popular TV Shows",
-//        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=" to "Airing Today TV Shows",
-        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=US" to "On The Air TV Shows",
+        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=US" to "Airing Today TV Shows",
+//        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=US" to "On The Air TV Shows",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=213" to "Netflix",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=1024" to "Amazon",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2739" to "Disney+",
@@ -190,10 +193,11 @@ open class SoraStream : TmdbProvider() {
         }
     }
 
+    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
+
     override suspend fun search(query: String): List<SearchResponse>? {
         return app.get(
-            "$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=1&include_adult=${settingsForProvider.enableAdult}",
-            referer = "$mainAPI/"
+            "$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=1&include_adult=${settingsForProvider.enableAdult}"
         ).parsedSafe<Results>()?.results?.mapNotNull { media ->
             media.toSearchResponse()
         }
@@ -217,7 +221,8 @@ open class SoraStream : TmdbProvider() {
         val year = (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
         val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
-        val isAnime = genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
+        val isAnime =
+            genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
         val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
             .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
 
@@ -367,7 +372,16 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (res.isAnime) invokeAnimes(res.id, res.title, res.epsTitle, res.year, res.season, res.episode, subtitleCallback, callback)
+                if (res.isAnime) invokeAnimes(
+                    res.id,
+                    res.title,
+                    res.epsTitle,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 if (res.season != null && res.isAnime) invokeCrunchyroll(
@@ -538,7 +552,7 @@ open class SoraStream : TmdbProvider() {
                 invokeSmashyStream(res.id, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                if(!res.isAnime) invokeBaymovies(
+                if (!res.isAnime) invokeBaymovies(
                     res.title,
                     res.year,
                     res.season,

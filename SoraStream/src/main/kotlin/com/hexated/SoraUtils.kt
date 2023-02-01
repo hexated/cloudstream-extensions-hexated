@@ -648,9 +648,8 @@ fun searchIndex(
         } else {
             media.name?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
         }) && media.name?.contains(
-            "720p",
-            true
-        ) == false && (media.mimeType in mimeType) && (media.name.replace(
+            Regex("(?i)(2160p|1080p)")
+        ) == true && (media.mimeType in mimeType) && (media.name.replace(
             "-",
             "."
         ).contains(

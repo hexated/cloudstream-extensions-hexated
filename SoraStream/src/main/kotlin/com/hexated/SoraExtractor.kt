@@ -2101,9 +2101,7 @@ object SoraExtractor : SoraStream() {
             val encryptedExpiry = base64Encode(CryptoAES.encrypt(key, expiry).toByteArray())
             val worker = getConfig().workers.randomOrNull() ?: return@apmap null
 
-            val link =
-                "https://api.$worker.workers.dev/download.aspx?file=$encryptedId&expiry=$encryptedExpiry&mac=$hmacSign"
-            if(!app.get(link).isSuccessful) return@apmap null
+            val link = "https://api.$worker.workers.dev/download.aspx?file=$encryptedId&expiry=$encryptedExpiry&mac=$hmacSign"
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val tags = Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4)").find(
@@ -2230,7 +2228,6 @@ object SoraExtractor : SoraStream() {
             }).text.let {
                 fixUrl(it, apiUrl)
             }.encodeUrl()
-            if (!app.get(path).isSuccessful) return@apmap null
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val quality =
