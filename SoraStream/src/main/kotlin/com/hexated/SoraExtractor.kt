@@ -800,7 +800,6 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeSoraStream(
         title: String? = null,
-        isAnime: Boolean = false,
         year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
@@ -846,9 +845,7 @@ object SoraExtractor : SoraStream() {
                         ) && (it.second == year || it.first.contains("Season $season", true))
                     }
                     else -> {
-                        (if (isAnime) it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()})")) else it.first.contains(
-                            Regex("(?i)$title\\s?Season\\s$season")
-                        )) && it.second == year
+                        it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) && it.second == year
                     }
                 }
             }
