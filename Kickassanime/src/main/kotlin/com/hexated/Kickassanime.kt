@@ -10,6 +10,7 @@ import com.hexated.KickassanimeExtractor.invokeSapphire
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
+import com.lagradost.cloudstream3.syncproviders.SyncIdName
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 
@@ -20,6 +21,11 @@ open class Kickassanime : MainAPI() {
     override var lang = "en"
     override val hasDownloadSupport = true
 
+    override val supportedSyncNames = setOf(
+        SyncIdName.MyAnimeList,
+        SyncIdName.Anilist
+    )
+
     override val supportedTypes = setOf(
         TvType.Anime,
         TvType.AnimeMovie,
@@ -28,6 +34,8 @@ open class Kickassanime : MainAPI() {
 
     companion object {
         const val kaast = "https://kaast1.com"
+        private const val consumetAnilist = "https://api.consumet.org/meta/anilist"
+        private const val consumetMal = "https://api.consumet.org/meta/mal"
         fun getType(t: String): TvType {
             return when {
                 t.contains("Ova", true) -> TvType.OVA
@@ -85,6 +93,22 @@ open class Kickassanime : MainAPI() {
             ?.substringAfter("\"animes\":[")?.substringBefore("],")
         return tryParseJson<List<Animes>>("[$data]")?.mapNotNull { media -> media.toSearchResponse() }
             ?: throw ErrorLoadingException()
+    }
+
+    override suspend fun getLoadUrl(name: SyncIdName, id: String): String {
+        val syncId = id.split("/").last()
+        val url = if (name == SyncIdName.Anilist) {
+            "$consumetAnilist/info/$syncId"
+        } else {
+            "$consumetMal/info/$syncId"
+        }
+
+        val res = app.get(url).parsedSafe<SyncInfo>()?.title
+
+        val romanjiUrl = "$mainUrl/anime/${res?.romaji?.createSlug()}"
+        val englishUrl = "$mainUrl/anime/${res?.english?.createSlug()}"
+
+        return if (app.get(romanjiUrl).url != "$mainUrl/") romanjiUrl else englishUrl
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -199,7 +223,7 @@ open class Kickassanime : MainAPI() {
     }
 
     private suspend fun searchAnime(title: String?): ArrayList<Results>? {
-        return app.get("https://api.consumet.org/meta/anilist/$title")
+        return app.get("$consumetAnilist/$title")
             .parsedSafe<AniSearch>()?.results
     }
 
@@ -325,6 +349,15 @@ open class Kickassanime : MainAPI() {
     data class SapphireSources(
         @JsonProperty("streams") val streams: ArrayList<SapphireStreams>? = arrayListOf(),
         @JsonProperty("subtitles") val subtitles: ArrayList<SapphireSubtitles>? = arrayListOf(),
+    )
+
+    data class SyncTitle(
+        @JsonProperty("romaji") val romaji: String? = null,
+        @JsonProperty("english") val english: String? = null,
+    )
+
+    data class SyncInfo(
+        @JsonProperty("title") val title: SyncTitle? = null,
     )
 
 }
