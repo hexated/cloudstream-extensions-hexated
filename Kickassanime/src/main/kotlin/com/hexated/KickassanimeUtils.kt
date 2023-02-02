@@ -38,6 +38,10 @@ fun String.base64Decode(): String {
 fun decode(input: String): String =
     URLDecoder.decode(input, "utf-8").replace(" ", "%20")
 
+fun String.createSlug(): String {
+    return this.replace(Regex("[^\\w ]+"), "").replace(" ", "-").lowercase()
+}
+
 fun String.getTrackerTitle(): String {
     val blacklist = arrayOf(
         "Dub",

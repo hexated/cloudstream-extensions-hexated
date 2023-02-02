@@ -66,7 +66,7 @@ open class SoraStream : TmdbProvider() {
         const val gdbot = "https://gdbot.xyz"
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
         const val kamyrollAPI = "https://api.kamyroll.tech"
-        var baymovies = "https://opengatewayindex.pages.dev"
+        const val baymovies = "https://opengatewayindex.pages.dev"
 
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
