@@ -332,7 +332,6 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeSoraStream(
                     res.title,
-                    res.isAnime,
                     res.year,
                     res.season,
                     res.episode,
