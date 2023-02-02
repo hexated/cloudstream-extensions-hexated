@@ -642,7 +642,7 @@ fun searchIndex(
         "video/mp4",
         "video/x-msvideo"
     )
-    return tryParseJson<IndexSearch>(response)?.data?.files?.filter { media ->
+    val files = tryParseJson<IndexSearch>(response)?.data?.files?.filter { media ->
         (if (season == null) {
             media.name?.contains("$year") == true
         } else {
@@ -659,7 +659,14 @@ fun searchIndex(
             "-",
             " "
         ).contains("$spaceSlug", true))
-    }?.distinctBy { it.name }
+    }?.distinctBy { it.name }?.sortedByDescending { it.size?.toLongOrNull() ?: 0 } ?: return null
+
+    return files.let { file ->
+        listOfNotNull(
+            file.find { it.name?.contains("2160p", true) == true },
+            file.find { it.name?.contains("1080p", true) == true }
+        )
+    }
 }
 
 suspend fun getConfig(): BaymoviesConfig {
