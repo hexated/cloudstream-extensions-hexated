@@ -40,6 +40,7 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
+import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -591,6 +592,14 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     callback
+                )
+            },
+            {
+                invokeWatchsomuch(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    subtitleCallback
                 )
             },
         )
