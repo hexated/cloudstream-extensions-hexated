@@ -800,6 +800,7 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeSoraStream(
         title: String? = null,
+        isAnime: Boolean = false,
         year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
@@ -845,10 +846,9 @@ object SoraExtractor : SoraStream() {
                         ) && (it.second == year || it.first.contains("Season $season", true))
                     }
                     else -> {
-                        it.first.contains(
-                            "$title",
-                            true
-                        ) && it.second == year && it.first.contains("Season $season", true)
+                        (if (isAnime) it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()})")) else it.first.contains(
+                            Regex("(?i)$title\\s?Season\\s$season")
+                        )) && it.second == year
                     }
                 }
             }
@@ -2034,7 +2034,6 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
     ) {
-        val watchSomuchAPI = "https://watchsomuch.tv"
         val id = imdbId?.removePrefix("tt")
         val epsId = app.post(
             "$watchSomuchAPI/Watch/ajMovieTorrents.aspx",
@@ -2089,7 +2088,10 @@ object SoraExtractor : SoraStream() {
             "cf_cache_token" to "UKsVpQqBMxB56gBfhYKbfCVkRIXMh42pk6G4DdkXXoVh7j4BjV"
         )
         val query = getIndexQuery(title, year, season, episode)
-        val search = app.get("$baymoviesAPI/0:search?q=$query&page_token=&page_index=0", headers = headers).text
+        val search = app.get(
+            "$baymoviesAPI/0:search?q=$query&page_token=&page_index=0",
+            headers = headers
+        ).text
         val media = searchIndex(title, season, episode, year, search) ?: return
 
         media.apmap { file ->
@@ -2101,8 +2103,9 @@ object SoraExtractor : SoraStream() {
             val encryptedExpiry = base64Encode(CryptoAES.encrypt(key, expiry).toByteArray())
             val worker = getConfig().workers.randomOrNull() ?: return@apmap null
 
-            val link = "https://api.$worker.workers.dev/download.aspx?file=$encryptedId&expiry=$encryptedExpiry&mac=$hmacSign"
-            if(!app.get(link).isSuccessful) return@apmap null
+            val link =
+                "https://api.$worker.workers.dev/download.aspx?file=$encryptedId&expiry=$encryptedExpiry&mac=$hmacSign"
+            if (!app.get(link).isSuccessful) return@apmap null
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val tags = Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4)").find(
@@ -2229,7 +2232,7 @@ object SoraExtractor : SoraStream() {
             }).text.let {
                 fixUrl(it, apiUrl)
             }.encodeUrl()
-            if(!app.get(path).isSuccessful) return@apmap null
+            if (!app.get(path).isSuccessful) return@apmap null
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val quality =
