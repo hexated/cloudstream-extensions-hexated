@@ -116,6 +116,7 @@ open class SoraStream : TmdbProvider() {
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:"
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:"
         const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:"
+        const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -331,6 +332,7 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeSoraStream(
                     res.title,
+                    res.isAnime,
                     res.year,
                     res.season,
                     res.episode,

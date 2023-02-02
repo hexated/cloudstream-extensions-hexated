@@ -848,3 +848,27 @@ suspend fun loadLinksWithWebView(
         )
     )
 }
+
+fun Int.toRomanNumeral(): String = Symbol.closestBelow(this)
+    .let { symbol ->
+        if (symbol != null) {
+            "$symbol${(this - symbol.decimalValue).toRomanNumeral()}"
+        } else {
+            ""
+        }
+    }
+
+private enum class Symbol(val decimalValue: Int) {
+    I(1),
+    IV(4),
+    V(5),
+    IX(9),
+    X(10);
+
+    companion object {
+        fun closestBelow(value: Int) =
+            values()
+                .sortedByDescending { it.decimalValue }
+                .firstOrNull { value >= it.decimalValue }
+    }
+}
