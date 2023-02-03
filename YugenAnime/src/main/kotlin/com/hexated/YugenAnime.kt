@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.syncproviders.SyncIdName
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.nodes.Document
@@ -18,6 +19,11 @@ class YugenAnime : MainAPI() {
     override var lang = "en"
     override val hasDownloadSupport = true
 
+    override val supportedSyncNames = setOf(
+        SyncIdName.Anilist,
+        SyncIdName.MyAnimeList
+    )
+
     override val supportedTypes = setOf(
         TvType.Anime,
         TvType.AnimeMovie,
@@ -25,6 +31,9 @@ class YugenAnime : MainAPI() {
     )
 
     companion object {
+        private const val consumetAnilist = "https://api.consumet.org/meta/anilist"
+        private const val consumetMal = "https://api.consumet.org/meta/mal"
+
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -79,6 +88,28 @@ class YugenAnime : MainAPI() {
         return document.select("div.cards-grid a.anime-meta").mapNotNull {
             it.toSearchResult()
         }
+    }
+
+    override suspend fun getLoadUrl(name: SyncIdName, id: String): String? {
+        val syncId = id.split("/").last()
+        val url = if (name == SyncIdName.Anilist) {
+            "${consumetAnilist}/info/$syncId"
+        } else {
+            "${consumetMal}/info/$syncId"
+        }
+        val res = app.get(url).parsedSafe<SyncInfo>()
+
+        val title = res?.title?.romaji ?: res?.title?.english
+        val year = res?.startDate?.year
+        val season = res?.season
+
+        val document = app.get("$mainUrl/discover/?q=$title").document
+        val syncUrl = document.select("div.cards-grid a.anime-meta").find {
+            it.attr("title").equals(title, true) || it.select("div.anime-details span").text().equals("$season $year", true)
+        }?.attr("href")
+
+        return fixUrl(syncUrl ?: return null)
+
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -183,6 +214,21 @@ class YugenAnime : MainAPI() {
 
     data class Sources(
         @JsonProperty("hls") val hls: List<String>? = null,
+    )
+
+    data class SyncTitle(
+        @JsonProperty("romaji") val romaji: String? = null,
+        @JsonProperty("english") val english: String? = null,
+    )
+
+    data class StartDate(
+        @JsonProperty("year") val year: Int? = null,
+    )
+
+    data class SyncInfo(
+        @JsonProperty("title") val title: SyncTitle? = null,
+        @JsonProperty("startDate") val startDate: StartDate? = null,
+        @JsonProperty("season") val season: String? = null,
     )
 
 }
