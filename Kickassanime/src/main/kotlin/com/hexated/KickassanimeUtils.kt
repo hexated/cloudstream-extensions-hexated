@@ -23,7 +23,7 @@ suspend fun String.fixIframe(): List<Pair<String?, String?>> {
             val source = decode(
                 this.substringAfter("&data=").substringBefore("&vref=")
             )
-            listOf(URI(source).host.substringBefore(".") to source)
+            listOf("gogo" to source)
         }
         else -> {
             emptyList()

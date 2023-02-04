@@ -118,11 +118,14 @@ class KuramanimeProvider : MainAPI() {
 
         for (i in 1..6) {
             val doc = app.get("$url?page=$i").document
-            val eps = Jsoup.parse(doc.select("#episodeLists").attr("data-content")).select("a").mapNotNull {
-                val name = it.text().trim()
-                val link = it.attr("href")
-                Episode(link, name)
-            }.filter { it.name?.contains(Regex("(?i)(Terlama)|(Terbaru)")) == false }
+            val eps = Jsoup.parse(doc.select("#episodeLists").attr("data-content")).select("a.btn.btn-sm.btn-danger")
+                .mapNotNull {
+                    val name = it.text().trim()
+                    val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)
+                        ?.toIntOrNull()
+                    val link = it.attr("href")
+                    Episode(link, name, episode = episode)
+                }
             if(eps.isEmpty()) break else episodes.addAll(eps)
         }
 
