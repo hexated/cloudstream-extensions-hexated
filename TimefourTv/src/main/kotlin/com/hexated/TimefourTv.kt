@@ -6,10 +6,10 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.net.URI
 
 open class TimefourTv : MainAPI() {
     final override var mainUrl = "https://time4tv.stream"
-    val daddyUrl = "https://daddyhd.com"
     override var name = "Time4tv"
     override val hasDownloadSupport = false
     override val hasMainPage = true
@@ -17,6 +17,11 @@ open class TimefourTv : MainAPI() {
     override val supportedTypes = setOf(
         TvType.Live
     )
+
+    companion object {
+        const val daddyUrl = "https://daddylivehd.sx"
+        val daddyHost: String = URI(daddyUrl).host.split(".").first()
+    }
 
     override val mainPage = mainPageOf(
         "$mainUrl/tv-channels" to "All Channels",
