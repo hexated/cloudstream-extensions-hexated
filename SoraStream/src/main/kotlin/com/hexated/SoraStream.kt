@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeBaymovies
+import com.hexated.SoraExtractor.invokeBlackmovies
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeChillmovies0
 import com.hexated.SoraExtractor.invokeChillmovies1
@@ -29,10 +30,11 @@ import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGammovies
+import com.hexated.SoraExtractor.invokeJsmovies
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
-import com.hexated.SoraExtractor.invokeMovie123
+import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeRStream
@@ -65,7 +67,6 @@ open class SoraStream : TmdbProvider() {
         const val jikanAPI = "https://api.jikan.moe/v4"
         const val gdbot = "https://gdbot.xyz"
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
-        const val kamyrollAPI = "https://api.kamyroll.tech"
         const val baymovies = "https://opengatewayindex.pages.dev"
 
         private val apiKey =
@@ -112,11 +113,13 @@ open class SoraStream : TmdbProvider() {
         const val animeKaizokuAPI = "https://animekaizoku.com"
         const val movie123NetAPI = "https://ww7.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
+        const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org"
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:"
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:"
         const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:"
-        const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
+        const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:"
+        const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -549,10 +552,10 @@ open class SoraStream : TmdbProvider() {
                 invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokeMovie123(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeMovie123Net(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeSmashyStream(res.id, res.season, res.episode, subtitleCallback, callback)
+                invokeSmashyStream(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeBaymovies(
@@ -586,7 +589,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeGammovies(
+                if (!res.isAnime) invokeGammovies(
                     gamMoviesAPI,
                     "Gammovies",
                     res.title,
@@ -602,6 +605,28 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback
+                )
+            },
+            {
+                if (!res.isAnime) invokeBlackmovies(
+                    blackMoviesAPI,
+                    "Blackmovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeJsmovies(
+                    jsMoviesAPI,
+                    "JSMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
                 )
             },
         )

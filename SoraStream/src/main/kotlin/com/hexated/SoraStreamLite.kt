@@ -14,9 +14,11 @@ import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
+import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeSeries9
+import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeUniqueStream
@@ -72,6 +74,15 @@ class SoraStreamLite : SoraStream() {
                 invoke123Movie(
                     res.id,
                     res.imdbId,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                invokeMovie123Net(
+                    res.title,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -140,6 +151,9 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeSmashyStream(res.imdbId, res.season, res.episode, callback)
             },
             {
                 invokeXmovies(
