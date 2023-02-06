@@ -1978,6 +1978,7 @@ object SoraExtractor : SoraStream() {
         val secret =
             script.substringAfter("secret = \"").substringBefore("\";").let { base64Decode(it) }
         val key = script.substringAfter("token = \"").substringBefore("\";")
+        delay(2000)
         val source = app.get(
             "$secret$key",
             headers = mapOf(
