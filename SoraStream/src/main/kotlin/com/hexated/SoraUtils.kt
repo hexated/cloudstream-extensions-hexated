@@ -5,7 +5,6 @@ import com.hexated.SoraStream.Companion.baymovies
 import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
-import com.hexated.SoraStream.Companion.kamyrollAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
@@ -285,68 +284,6 @@ suspend fun extractCovyn(url: String?): Pair<String?, String?>? {
     return Pair(videoLink, size)
 }
 
-suspend fun invokeSmashy1(
-    player: String,
-    url: String?,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    val doc = app.get(url ?: return).document
-    val script = doc.selectFirst("script:containsData(secret)")?.data() ?: return
-    val secret = script.substringAfter("secret = \"").substringBefore("\";").let { base64Decode(it) }
-    val key = script.substringAfter("token = \"").substringBefore("\";")
-    val source = app.get(
-        "$secret$key",
-        headers = mapOf(
-            "Accept" to "application/json, text/javascript, */*; q=0.01",
-            "X-Requested-With" to "XMLHttpRequest"
-        )
-    ).parsedSafe<Smashy1Source>() ?: return
-
-    val videoUrl = base64Decode(source.file ?: return)
-    if(videoUrl.contains(".m3u8")) {
-        M3u8Helper.generateM3u8(
-            "Smashy ($player)",
-            videoUrl,
-            ""
-        ).forEach(callback)
-        source.tracks?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.label ?: return@map null,
-                    sub.file ?: return@map null
-                )
-            )
-        }
-    } else {
-        return
-    }
-}
-
-suspend fun invokeSmashy2(
-    player: String,
-    url: String?,
-    callback: (ExtractorLink) -> Unit,
-) {
-    val base = getBaseUrl(url ?: return)
-    val doc = app.get(url).document
-    val script = doc.selectFirst("script:containsData(playlist:)")?.data() ?: return
-    Regex("""file:[\n\s]+?"(\S+?.m3u8)",[\n\s]+label:"(\S+)",""").findAll(script).map {
-        it.groupValues[1] to it.groupValues[2]
-    }.toList().map { (link, quality) ->
-        callback.invoke(
-            ExtractorLink(
-                "Smashy ($player)",
-                "Smashy ($player)",
-                link,
-                base,
-                quality.toIntOrNull() ?: Qualities.Unknown.value,
-                isM3u8 = link.contains(".m3u8"),
-            )
-        )
-    }
-}
-
 fun getDirectGdrive(url: String): String {
     return if (url.contains("&export=download")) {
         url
@@ -538,25 +475,6 @@ fun Document.findTvMoviesIframe(): String? {
         ?.substringBefore("'>")
 }
 
-suspend fun searchKamyrollAnimeId(title: String): String? {
-    return app.get(
-        "$kamyrollAPI/content/v1/search",
-        headers = getCrunchyrollToken(),
-        params = mapOf(
-            "query" to title,
-            "channel_id" to "crunchyroll",
-            "limit" to "10",
-        )
-    ).parsedSafe<KamyrollSearch>()?.items?.find { item ->
-        item.items.any {
-            (it.title?.contains(title, true) == true || it.slugTitle?.contains(
-                "${title.fixTitle()}",
-                true
-            ) == true) && it.mediaType == "series"
-        }
-    }?.items?.firstOrNull()?.id
-}
-
 suspend fun searchCrunchyrollAnimeId(title: String): String? {
     val res = app.get("${consumetCrunchyrollAPI}/$title")
         .parsedSafe<ConsumetSearchResponse>()?.results
@@ -567,24 +485,10 @@ suspend fun searchCrunchyrollAnimeId(title: String): String? {
             (it.title?.contains(
                 title,
                 true
-            ) == true || it.title.fixTitle()
-                ?.contains("${title.fixTitle()}", true) == true) && it.type.equals("series")
+            ) == true || it.title.createSlug()
+                ?.contains("${title.createSlug()}", true) == true) && it.type.equals("series")
         }
     })?.id
-}
-
-suspend fun getCrunchyrollToken(): Map<String, String> {
-    val res = app.get(
-        "$kamyrollAPI/auth/v1/token",
-        params = mapOf(
-            "device_id" to "com.service.data",
-            "device_type" to "sorastream",
-            "access_token" to "HMbQeThWmZq4t7w",
-        )
-    ).parsedSafe<KamyrollToken>()
-    return mapOf(
-        "Authorization" to "${res?.token_type} ${res?.access_token}"
-    )
 }
 
 fun CrunchyrollDetails.findCrunchyrollId(
@@ -621,7 +525,7 @@ fun getEpisodeSlug(
 }
 
 fun getTitleSlug(title: String? = null): Pair<String?, String?> {
-    return title.fixTitle()?.replace("-", ".") to title.fixTitle()?.replace("-", " ")
+    return title.createSlug()?.replace("-", ".") to title.createSlug()?.replace("-", " ")
 }
 
 fun getIndexQuery(
@@ -701,7 +605,7 @@ fun decodeIndexJson(json: String): String {
     val slug = json.reversed().substring(24)
     return base64Decode(slug.substring(0, slug.length - 20))
 }
-fun String?.fixTitle(): String? {
+fun String?.createSlug(): String? {
     return this?.replace(Regex("[!%:'?,]|( &)"), "")?.replace(" ", "-")?.lowercase()
         ?.replace("-–-", "-")
 }
