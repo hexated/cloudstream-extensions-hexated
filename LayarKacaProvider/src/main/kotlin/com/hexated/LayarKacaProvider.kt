@@ -6,12 +6,12 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
+import java.net.URI
 import java.net.URLDecoder
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://lk21official.vip"
-    //    private val redirectUrl = "https://nd21x1.github.io"
-    private val seriesUrl = "https://drama1.nontondrama.lol"
+    override var mainUrl = "https://a.lk21official.lol"
+    private var seriesUrl = "https://drama2.nontondrama.lol"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
@@ -35,7 +35,17 @@ class LayarKacaProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page).document
+        val res = app.get(request.data + page)
+        val baseUrl = getBaseUrl(res.url)
+        when {
+            request.data.startsWith(mainUrl) -> {
+                mainUrl = baseUrl
+            }
+            request.data.startsWith(seriesUrl) -> {
+                seriesUrl = baseUrl
+            }
+        }
+        val document = res.document
         val home = document.select("article.mega-item").mapNotNull {
             it.toSearchResult()
         }
@@ -87,7 +97,6 @@ class LayarKacaProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-
         return document.select("div.search-item").map {
             val title = it.selectFirst("h2 > a")!!.text().trim()
             val type = it.selectFirst("p.cat-links a")?.attr("href").toString()
@@ -212,6 +221,11 @@ class LayarKacaProvider : MainAPI() {
         return true
     }
 
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
+    }
     private fun decode(input: String): String = URLDecoder.decode(input, "utf-8").replace(" ", "%20")
 
 }
