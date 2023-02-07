@@ -117,7 +117,7 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww7.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org"
+        const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:"
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:"
         const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:"
@@ -562,15 +562,15 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeSmashyStream(res.imdbId, res.season, res.episode, callback)
             },
-            {
-                if (!res.isAnime) invokeBaymovies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
+//            {
+//                if (!res.isAnime) invokeBaymovies(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    callback
+//                )
+//            },
             {
                 invokeChillmovies0(
                     chillmovies0API,
