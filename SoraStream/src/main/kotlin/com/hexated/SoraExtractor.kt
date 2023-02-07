@@ -2115,7 +2115,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        invokeChillmovies(
+        invokeIndex(
             apiUrl,
             api,
             title,
@@ -2135,7 +2135,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        invokeChillmovies(
+        invokeIndex(
             apiUrl,
             api,
             title,
@@ -2155,7 +2155,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        invokeChillmovies(
+        invokeIndex(
             apiUrl,
             api,
             title,
@@ -2175,7 +2175,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        invokeChillmovies(
+        invokeIndex(
             apiUrl,
             api,
             title,
@@ -2195,7 +2195,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        invokeChillmovies(
+        invokeIndex(
             apiUrl,
             api,
             title,
@@ -2215,7 +2215,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        invokeChillmovies(
+        invokeIndex(
             apiUrl,
             api,
             title,
@@ -2236,7 +2236,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
         password: String? = null,
     ) {
-        invokeChillmovies(
+        invokeIndex(
             apiUrl,
             api,
             title,
@@ -2248,7 +2248,7 @@ object SoraExtractor : SoraStream() {
         )
     }
 
-    private suspend fun invokeChillmovies(
+    private suspend fun invokeIndex(
         apiUrl: String,
         api: String,
         title: String? = null,
