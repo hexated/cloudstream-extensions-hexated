@@ -73,13 +73,10 @@ open class SoraStream : TmdbProvider() {
 
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
-
-        //        private val mainAPI =
+//        private val mainAPI =
 //            base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
 //        private var mainServerAPI =
 //            base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
-        var netMoviesAPI =
-            base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=bG0=Zmk=dC0=bmU=Ly8=czo=dHA=aHQ=")
 
         // ALL SOURCES
         const val twoEmbedAPI = "https://www.2embed.to"
@@ -345,7 +342,6 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback,
-                    callback
                 )
             },
             {
