@@ -41,7 +41,7 @@ data class FilmxyCookies(
 fun String.filterIframe(seasonNum: Int?, lastSeason: Int?, year: Int?): Boolean {
     return if (seasonNum != null) {
         if (lastSeason == 1) {
-            this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)|([0-9]{3,4}p)")) && !this.contains(
+            this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)|(\\d{3,4}p)")) && !this.contains(
                 "Download",
                 true
             )
@@ -617,7 +617,7 @@ fun getLanguage(str: String): String {
 fun bytesToGigaBytes( number: Double ): Double = number / 1024000000
 
 fun getKisskhTitle(str: String?): String? {
-    return str?.replace(Regex("[^a-zA-Z0-9]"), "-")
+    return str?.replace(Regex("[^a-zA-Z\\d]"), "-")
 }
 
 fun getQuality(str: String): Int {
@@ -637,16 +637,6 @@ fun getGMoviesQuality(str: String): Int {
         str.contains("720P", true) -> Qualities.P720.value
         str.contains("1080P", true) -> Qualities.P1080.value
         str.contains("4K", true) -> Qualities.P2160.value
-        else -> Qualities.Unknown.value
-    }
-}
-
-fun getSoraQuality(quality: String): Int {
-    return when (quality) {
-        "GROOT_FD" -> Qualities.P360.value
-        "GROOT_LD" -> Qualities.P480.value
-        "GROOT_SD" -> Qualities.P720.value
-        "GROOT_HD" -> Qualities.P1080.value
         else -> Qualities.Unknown.value
     }
 }

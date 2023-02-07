@@ -3,11 +3,8 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
-import com.hexated.SoraExtractor.invokeBaymovies
 import com.hexated.SoraExtractor.invokeBlackmovies
 import com.hexated.SoraExtractor.invokeBollyMaza
-import com.hexated.SoraExtractor.invokeChillmovies0
-import com.hexated.SoraExtractor.invokeChillmovies1
 import com.hexated.SoraExtractor.invokeCodexmovies
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
@@ -342,6 +339,7 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback,
+                    callback,
                 )
             },
             {
