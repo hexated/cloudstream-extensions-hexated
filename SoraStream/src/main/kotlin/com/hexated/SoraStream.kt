@@ -118,8 +118,8 @@ open class SoraStream : TmdbProvider() {
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org" // dead
-        const val chillmovies0API = "https://chill.aicirou.workers.dev/0:"
-        const val chillmovies1API = "https://chill.aicirou.workers.dev/1:"
+        const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
+        const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
         const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:"
         const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:"
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
