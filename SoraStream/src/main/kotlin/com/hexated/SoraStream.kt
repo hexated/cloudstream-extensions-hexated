@@ -8,6 +8,7 @@ import com.hexated.SoraExtractor.invokeBlackmovies
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeChillmovies0
 import com.hexated.SoraExtractor.invokeChillmovies1
+import com.hexated.SoraExtractor.invokeCodexmovies
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixhq
@@ -38,6 +39,7 @@ import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeRStream
+import com.hexated.SoraExtractor.invokeRinzrymovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTvMovies
@@ -71,7 +73,8 @@ open class SoraStream : TmdbProvider() {
 
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
-//        private val mainAPI =
+
+        //        private val mainAPI =
 //            base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
 //        private var mainServerAPI =
 //            base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
@@ -120,6 +123,8 @@ open class SoraStream : TmdbProvider() {
         const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:"
         const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:"
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
+        const val rinzryMoviesAPI = "https://rinzry.stream/0:"
+        const val codexMoviesAPI = "https://packs.codexcloudx.tech/0:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -629,6 +634,29 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
+            {
+                invokeRinzrymovies(
+                    rinzryMoviesAPI,
+                    "Rinzrymovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback,
+                )
+            },
+            {
+                if (!res.isAnime) invokeCodexmovies(
+                    codexMoviesAPI,
+                    "CodexMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback,
+                    "Basic Y29kZXg6Y29kZXhjbG91ZA=="
+                )
+            }
         )
 
         return true
