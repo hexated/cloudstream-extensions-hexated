@@ -2206,7 +2206,7 @@ object SoraExtractor : SoraStream() {
         )
     }
 
-    private suspend fun invokeChillmovies(
+    suspend fun invokeRinzrymovies(
         apiUrl: String,
         api: String,
         title: String? = null,
@@ -2215,10 +2215,63 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
+        invokeChillmovies(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
+    suspend fun invokeCodexmovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+        password: String? = null,
+    ) {
+        invokeChillmovies(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+            password,
+        )
+    }
+
+    private suspend fun invokeChillmovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+        password: String? = null,
+    ) {
         val encodedIndex = arrayOf(
             "Gammovies",
             "JSMovies",
-            "Blackmovies"
+            "Blackmovies",
+            "CodexMovies",
+            "Rinzrymovies",
+        )
+
+        val lockedIndex = arrayOf(
+            "CodexMovies"
+        )
+
+        val passHeaders = mapOf(
+            "Authorization" to password
         )
 
         val query = getIndexQuery(title, year, season, episode)
@@ -2232,7 +2285,13 @@ object SoraExtractor : SoraStream() {
             "page_index" to "0"
         )
         val search = if (api in encodedIndex) {
-            decodeIndexJson(app.post("${apiUrl}search", data = data).text)
+            if (api in lockedIndex) decodeIndexJson(
+                app.post(
+                    "${apiUrl}search",
+                    data = data,
+                    headers = passHeaders.mapValues { it.value as String }
+                ).text
+            ) else decodeIndexJson(app.post("${apiUrl}search", data = data).text)
         } else {
             app.post("${apiUrl}search", requestBody = body).text
         }
@@ -2245,14 +2304,33 @@ object SoraExtractor : SoraStream() {
                 "id" to file.id,
             )
             val path = (if (api in encodedIndex) {
-                app.post(
-                    "${apiUrl}id2path", data = pathData
-                )
+                if (api in lockedIndex) {
+                    app.post(
+                        "${apiUrl}id2path",
+                        data = pathData,
+                        headers = passHeaders.mapValues { it.value as String }
+                    )
+                } else {
+                    app.post(
+                        "${apiUrl}id2path", data = pathData
+                    )
+                }
             } else {
                 app.post("${apiUrl}id2path", requestBody = pathBody)
-            }).text.let {
-                fixUrl(it, apiUrl)
+            }).text.let { path ->
+                if (api == "Rinzrymovies") {
+                    val worker = app.get(
+                        "${fixUrl(path, apiUrl)}?a=view"
+                    ).document.selectFirst("script:containsData(downloaddomain)")?.data()
+                        ?.substringAfter("\"downloaddomain\":\"")?.substringBefore("\",")?.let {
+                            "$it/0:"
+                        }
+                    fixUrl(path, worker ?: return@apmap null)
+                } else {
+                    fixUrl(path, apiUrl)
+                }
             }.encodeUrl()
+
             if (!app.get(path).isSuccessful) return@apmap null
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
