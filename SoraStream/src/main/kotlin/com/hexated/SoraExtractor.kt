@@ -2180,6 +2180,28 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokeEdithxmovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+        password: String? = null,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+            password,
+        )
+    }
+
     private suspend fun invokeIndex(
         apiUrl: String,
         api: String,
@@ -2196,17 +2218,25 @@ object SoraExtractor : SoraStream() {
             "Blackmovies",
             "CodexMovies",
             "Rinzrymovies",
+            "Edithxmovies",
         )
 
         val lockedIndex = arrayOf(
-            "CodexMovies"
+            "CodexMovies",
+            "Edithxmovies",
+        )
+
+        val premiumIndex = arrayOf(
+            "Edithxmovies"
         )
 
         val passHeaders = mapOf(
             "Authorization" to password
         )
 
-        val query = getIndexQuery(title, year, season, episode)
+        val query = getIndexQuery(title, year, season, episode).let {
+            if(api in premiumIndex) "$it mkv" else it
+        }
         val body =
             """{"q":"$query","password":null,"page_token":null,"page_index":0}""".toRequestBody(
                 RequestBodyTypes.JSON.toMediaTypeOrNull()
@@ -2227,8 +2257,8 @@ object SoraExtractor : SoraStream() {
         } else {
             app.post("${apiUrl}search", requestBody = body).text
         }
-        val media = searchIndex(title, season, episode, year, search) ?: return
-        media.apmap { file ->
+        val media = if(api in premiumIndex) searchIndex(title, season, episode, year, search, false) else searchIndex(title, season, episode, year, search)
+        media?.apmap { file ->
             val pathBody = """{"id":"${file.id ?: return@apmap null}"}""".toRequestBody(
                 RequestBodyTypes.JSON.toMediaTypeOrNull()
             )
@@ -2263,7 +2293,9 @@ object SoraExtractor : SoraStream() {
                 }
             }.encodeUrl()
 
-            if (!app.get(path).isSuccessful) return@apmap null
+//            removed due to rate limit
+//            if (!app.get(path).isSuccessful) return@apmap null
+
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val quality =

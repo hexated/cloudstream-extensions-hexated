@@ -547,7 +547,8 @@ fun searchIndex(
     season: Int? = null,
     episode: Int? = null,
     year: Int? = null,
-    response: String
+    response: String,
+    isTrimmed: Boolean = true,
 ): List<IndexMedia>? {
     val (dotSlug, spaceSlug) = getTitleSlug(title)
     val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
@@ -575,11 +576,15 @@ fun searchIndex(
         ).contains("$spaceSlug", true))
     }?.distinctBy { it.name }?.sortedByDescending { it.size?.toLongOrNull() ?: 0 } ?: return null
 
-    return files.let { file ->
-        listOfNotNull(
-            file.find { it.name?.contains("2160p", true) == true },
-            file.find { it.name?.contains("1080p", true) == true }
-        )
+    return if (isTrimmed) {
+        files.let { file ->
+            listOfNotNull(
+                file.find { it.name?.contains("2160p", true) == true },
+                file.find { it.name?.contains("1080p", true) == true }
+            )
+        }
+    } else {
+        files
     }
 }
 
