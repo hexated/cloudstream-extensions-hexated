@@ -356,7 +356,7 @@ open class Kickassanime : MainAPI() {
     )
 
     data class PinkbirdSources(
-        @JsonProperty("data") val data: ArrayList<PinkbirdData>? = null,
+        @JsonProperty("data") val data: ArrayList<PinkbirdData>? = arrayListOf(),
     )
 
     data class PinkbirdData(
