@@ -6,6 +6,7 @@ import com.hexated.KickassanimeExtractor.invokeBeta
 import com.hexated.KickassanimeExtractor.invokeDailymotion
 import com.hexated.KickassanimeExtractor.invokeGogo
 import com.hexated.KickassanimeExtractor.invokeMave
+import com.hexated.KickassanimeExtractor.invokePinkbird
 import com.hexated.KickassanimeExtractor.invokeSapphire
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
@@ -199,6 +200,9 @@ open class Kickassanime : MainAPI() {
                 name?.contains(Regex("(?i)(SAPPHIRE-DUCK)")) == true -> {
                     invokeSapphire(link, isDub, subtitleCallback, callback)
                 }
+                name?.contains(Regex("(?i)(PINK-BIRD)")) == true -> {
+                    invokePinkbird(sourceName, link, callback)
+                }
                 else -> return@apmap null
             }
         }
@@ -349,6 +353,15 @@ open class Kickassanime : MainAPI() {
     data class SapphireSources(
         @JsonProperty("streams") val streams: ArrayList<SapphireStreams>? = arrayListOf(),
         @JsonProperty("subtitles") val subtitles: ArrayList<SapphireSubtitles>? = arrayListOf(),
+    )
+
+    data class PinkbirdSources(
+        @JsonProperty("data") val data: ArrayList<PinkbirdData>? = null,
+    )
+
+    data class PinkbirdData(
+        @JsonProperty("eid") val eid: String? = null,
+        @JsonProperty("lh") val lh: String? = null,
     )
 
     data class SyncTitle(
