@@ -61,6 +61,7 @@ open class SoraStream : TmdbProvider() {
 
     /** AUTHOR : Hexated & Sora */
     companion object {
+        // TOOLS
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
         const val jikanAPI = "https://api.jikan.moe/v4"
@@ -68,12 +69,7 @@ open class SoraStream : TmdbProvider() {
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
         const val baymovies = "https://opengatewayindex.pages.dev"
 
-        private val apiKey =
-            base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
-//        private val mainAPI =
-//            base64DecodeAPI("cHA=LmE=ZWw=cmM=dmU=aC4=dGM=d2E=eHA=Ly8=czo=dHA=aHQ=")
-//        private var mainServerAPI =
-//            base64DecodeAPI("cA==YXA=bC4=Y2U=ZXI=LnY=aWU=b3Y=LW0=cmE=c28=Ly8=czo=dHA=aHQ=")
+        private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
         // ALL SOURCES
         const val twoEmbedAPI = "https://www.2embed.to"
