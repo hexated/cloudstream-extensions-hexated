@@ -1189,34 +1189,33 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         lastSeason: Int? = null,
         episode: Int? = null,
+        epsTitle: String? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = if (season == null) {
-            "$uhdmoviesAPI/download-${title.createSlug()}-$year"
-        } else {
-            val url = "$uhdmoviesAPI/?s=$title"
-            var doc = app.get(url).document
-            if (doc.select("title").text() == "Just a moment...") {
-                doc = app.get(url, interceptor = CloudflareKiller()).document
-            }
-            val scriptData = doc.select("div.row.gridlove-posts article").map {
-                it.selectFirst("a")?.attr("href") to it.selectFirst("h1")?.text()
-            }
-            (if (scriptData.size == 1) {
-                scriptData.first()
-            } else {
-                scriptData.find { it.second?.filterMedia(title, year, lastSeason) == true }
-            })?.first
+        val slug = title.createSlug()?.replace("-", " ")
+        val url = "$uhdmoviesAPI/?s=$slug"
+        var doc = app.get(url).document
+        if (doc.select("title").text() == "Just a moment...") {
+            doc = app.get(url, interceptor = CloudflareKiller()).document
+        }
+        val scriptData = doc.select("div.row.gridlove-posts article").map {
+            it.selectFirst("a")?.attr("href") to it.selectFirst("h1")?.text()
         }
 
-        val detailDoc = app.get(url ?: return).document
+        val detailUrl = (if (scriptData.size == 1) {
+            scriptData.first()
+        } else {
+            scriptData.find { it.second?.filterMedia(title, year, lastSeason) == true }
+        })?.first
+
+        val detailDoc = app.get(detailUrl ?: return).document
 
         val iframeList = detailDoc.select("div.entry-content p").map { it }
-            .filter { it.text().filterIframe(season, lastSeason, year) }.mapNotNull {
+            .filter { it.text().filterIframe(season, lastSeason, year, title) }.mapNotNull {
                 if (season == null) {
                     it.text() to it.nextElementSibling()?.select("a")?.attr("href")
                 } else {
-                    it.text() to it.nextElementSibling()?.select("a:contains(Episode $episode)")
+                    it.text() to it.nextElementSibling()?.select("a:matches((Episode $episode)|($epsTitle))")
                         ?.attr("href")
                 }
             }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }

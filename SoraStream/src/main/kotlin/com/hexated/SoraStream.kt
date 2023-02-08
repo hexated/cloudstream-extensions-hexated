@@ -96,7 +96,7 @@ open class SoraStream : TmdbProvider() {
         const val consumetCrunchyrollAPI = "https://api.consumet.org/anime/crunchyroll"
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.org.in"
+        const val uhdmoviesAPI = "https://uhdmovies.world"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
@@ -480,6 +480,7 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.lastSeason,
                     res.episode,
+                    res.epsTitle,
                     callback
                 )
             },

@@ -38,7 +38,10 @@ data class FilmxyCookies(
     val wSec: String? = null,
 )
 
-fun String.filterIframe(seasonNum: Int?, lastSeason: Int?, year: Int?): Boolean {
+fun String.filterIframe(seasonNum: Int?, lastSeason: Int?, year: Int?, title: String?): Boolean {
+    val slug = title.createSlug()
+    val dotSlug = slug?.replace("-", ".")
+    val spaceSlug = slug?.replace("-", " ")
     return if (seasonNum != null) {
         if (lastSeason == 1) {
             this.contains(Regex("(?i)(S0?$seasonNum)|(Season\\s0?$seasonNum)|(\\d{3,4}p)")) && !this.contains(
@@ -52,24 +55,23 @@ fun String.filterIframe(seasonNum: Int?, lastSeason: Int?, year: Int?): Boolean 
             )
         }
     } else {
-        this.contains("$year", true) && !this.contains("Download", true)
+        this.contains(Regex("(?i)($year)|($dotSlug)|($spaceSlug)")) && !this.contains("Download", true)
     }
 }
 
 fun String.filterMedia(title: String?, yearNum: Int?, seasonNum: Int?): Boolean {
+    val fixTitle = title.createSlug()?.replace("-", " ")
     return if (seasonNum != null) {
         when {
             seasonNum > 1 -> this.contains(Regex("(?i)(Season\\s0?1-0?$seasonNum)|(S0?1-S?0?$seasonNum)")) && this.contains(
-                "$title",
-                true
+                Regex("(?i)($fixTitle)|($title)")
             )
             else -> this.contains(Regex("(?i)(Season\\s0?1)|(S0?1)")) && this.contains(
-                "$title",
-                true
+                Regex("(?i)($fixTitle)|($title)")
             ) && this.contains("$yearNum")
         }
     } else {
-        this.contains("$title", true) && this.contains("$yearNum")
+        this.contains(Regex("(?i)($fixTitle)|($title)")) && this.contains("$yearNum")
     }
 }
 
