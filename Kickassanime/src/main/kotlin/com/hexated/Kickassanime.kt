@@ -142,7 +142,12 @@ open class Kickassanime : MainAPI() {
             }
         } ?: if (episodes.size == 1) "movie" else "tv"
 
-        val (malId, anilistId, image, cover) = getTracker(trackerTitle, title.getTrackerTitle(), type, year)
+        val (malId, anilistId, image, cover) = getTracker(
+            trackerTitle,
+            title.getTrackerTitle(),
+            type,
+            year
+        )
 
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title

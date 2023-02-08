@@ -717,6 +717,7 @@ object SoraExtractor : SoraStream() {
             )
         }
     }
+
     suspend fun invokeSoraStream(
         title: String? = null,
         year: Int? = null,
@@ -730,10 +731,11 @@ object SoraExtractor : SoraStream() {
             "versioncode" to "32",
             "clienttype" to "android_tem3",
         )
-        val vipAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
+        val vipAPI =
+            base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         val searchUrl = base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
 
-        val doc = app.get("$searchUrl/search?keyword=$title",).document
+        val doc = app.get("$searchUrl/search?keyword=$title").document
 
         val scriptData = doc.select("div.search-list div.search-video-card").map {
             Triple(
@@ -1215,7 +1217,8 @@ object SoraExtractor : SoraStream() {
                 if (season == null) {
                     it.text() to it.nextElementSibling()?.select("a")?.attr("href")
                 } else {
-                    it.text() to it.nextElementSibling()?.select("a:matches((Episode $episode)|($epsTitle))")
+                    it.text() to it.nextElementSibling()
+                        ?.select("a:matches((Episode $episode)|($epsTitle))")
                         ?.attr("href")
                 }
             }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
@@ -1918,8 +1921,9 @@ object SoraExtractor : SoraStream() {
         ).parsedSafe<Smashy1Source>() ?: return
 
         val videoUrl = base64Decode(source.file ?: return)
-        val quality = Regex("(\\d{3,4})[Pp]").find(videoUrl)?.groupValues?.getOrNull(1)?.toIntOrNull()
-            ?: Qualities.P720.value
+        val quality =
+            Regex("(\\d{3,4})[Pp]").find(videoUrl)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                ?: Qualities.P720.value
         callback.invoke(
             ExtractorLink(
                 "SmashyStream",
@@ -2234,7 +2238,7 @@ object SoraExtractor : SoraStream() {
         )
 
         val query = getIndexQuery(title, year, season, episode).let {
-            if(api in premiumIndex) "$it mkv" else it
+            if (api in premiumIndex) "$it mkv" else it
         }
         val body =
             """{"q":"$query","password":null,"page_token":null,"page_index":0}""".toRequestBody(
@@ -2256,7 +2260,14 @@ object SoraExtractor : SoraStream() {
         } else {
             app.post("${apiUrl}search", requestBody = body).text
         }
-        val media = if(api in premiumIndex) searchIndex(title, season, episode, year, search, false) else searchIndex(title, season, episode, year, search)
+        val media = if (api in premiumIndex) searchIndex(
+            title,
+            season,
+            episode,
+            year,
+            search,
+            false
+        ) else searchIndex(title, season, episode, year, search)
         media?.apmap { file ->
             val pathBody = """{"id":"${file.id ?: return@apmap null}"}""".toRequestBody(
                 RequestBodyTypes.JSON.toMediaTypeOrNull()
