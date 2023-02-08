@@ -64,6 +64,7 @@ fun getBaseUrl(url: String): String {
     }
 }
 
+
 fun getLanguage(language: String?): String? {
     return SubtitleHelper.fromTwoLettersToLanguage(language ?: return null)
         ?: SubtitleHelper.fromTwoLettersToLanguage(language.substringBefore("-"))
