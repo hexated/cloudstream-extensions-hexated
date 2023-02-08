@@ -8,6 +8,29 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup
 
 object KickassanimeExtractor : Kickassanime() {
+
+    suspend fun invokePinkbird(
+        name: String,
+        url: String? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixUrl = url?.replace(Regex("(player|embed)\\.php"), "pref.php")
+        app.get(fixUrl ?: return,
+        ).parsedSafe<PinkbirdSources>()?.data?.map { source ->
+            val eid = base64Decode(source.eid ?: return@map null)
+            callback.invoke(
+                ExtractorLink(
+                    name,
+                    name,
+                    "https://pb.kaast1.com/manifest/$eid/master.m3u8",
+                    "$kaast/",
+                    Qualities.P1080.value,
+                    true
+                )
+            )
+        }
+    }
+
     suspend fun invokeAlpha(
         name: String,
         url: String? = null,
