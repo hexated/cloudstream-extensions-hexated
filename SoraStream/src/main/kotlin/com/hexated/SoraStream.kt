@@ -42,6 +42,7 @@ import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
+import com.hexated.SoraExtractor.invokeXtrememovies
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -116,6 +117,7 @@ open class SoraStream : TmdbProvider() {
         const val rinzryMoviesAPI = "https://rinzry.stream/0:"
         const val codexMoviesAPI = "https://packs.codexcloudx.tech/0:"
         const val edithxMoviesAPI = "https://index.edithx.ga/0:"
+        const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -588,7 +590,7 @@ open class SoraStream : TmdbProvider() {
 //            {
 //                if (!res.isAnime) invokeGammovies(
 //                    gamMoviesAPI,
-//                    "Gammovies",
+//                    "GamMovies",
 //                    res.title,
 //                    res.year,
 //                    res.season,
@@ -607,7 +609,7 @@ open class SoraStream : TmdbProvider() {
             {
                 if (!res.isAnime) invokeBlackmovies(
                     blackMoviesAPI,
-                    "Blackmovies",
+                    "BlackMovies",
                     res.title,
                     res.year,
                     res.season,
@@ -629,7 +631,7 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeRinzrymovies(
                     rinzryMoviesAPI,
-                    "Rinzrymovies",
+                    "RinzryMovies",
                     res.title,
                     res.year,
                     res.season,
@@ -652,7 +654,7 @@ open class SoraStream : TmdbProvider() {
             {
                 if (!res.isAnime) invokeEdithxmovies(
                     edithxMoviesAPI,
-                    "Edithxmovies",
+                    "EdithxMovies",
                     res.title,
                     res.year,
                     res.season,
@@ -660,7 +662,18 @@ open class SoraStream : TmdbProvider() {
                     callback,
                     "Basic ZWRpdGg6amFydmlz"
                 )
-            }
+            },
+            {
+                if (!res.isAnime) invokeXtrememovies(
+                    xtremeMoviesAPI,
+                    "XtremeMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
         )
 
         return true
