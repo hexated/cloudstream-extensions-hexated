@@ -2141,6 +2141,26 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokeXtrememovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
     suspend fun invokeRinzrymovies(
         apiUrl: String,
         api: String,
@@ -2216,21 +2236,22 @@ object SoraExtractor : SoraStream() {
         password: String? = null,
     ) {
         val encodedIndex = arrayOf(
-            "Gammovies",
+            "GamMovies",
             "JSMovies",
-            "Blackmovies",
+            "BlackMovies",
             "CodexMovies",
-            "Rinzrymovies",
-            "Edithxmovies",
+            "RinzryMovies",
+            "EdithxMovies",
+            "XtremeMovies",
         )
 
         val lockedIndex = arrayOf(
             "CodexMovies",
-            "Edithxmovies",
+            "EdithxMovies",
         )
 
         val premiumIndex = arrayOf(
-            "Edithxmovies"
+            "EdithxMovies"
         )
 
         val passHeaders = mapOf(
@@ -2290,7 +2311,7 @@ object SoraExtractor : SoraStream() {
             } else {
                 app.post("${apiUrl}id2path", requestBody = pathBody)
             }).text.let { path ->
-                if (api == "Rinzrymovies") {
+                if (api == "RinzryMovies") {
                     val worker = app.get(
                         "${fixUrl(path, apiUrl)}?a=view"
                     ).document.selectFirst("script:containsData(downloaddomain)")?.data()
