@@ -55,6 +55,7 @@ open class Kickassanime : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
+        "$mainUrl/api/get_anime_list/all/" to "All",
         "$mainUrl/api/get_anime_list/sub/" to "Sub",
         "$mainUrl/api/get_anime_list/dub/" to "Dub",
     )
