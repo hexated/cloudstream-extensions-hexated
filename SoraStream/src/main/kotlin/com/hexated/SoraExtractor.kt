@@ -2350,22 +2350,63 @@ object SoraExtractor : SoraStream() {
 
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
-            val quality =
-                Regex("(\\d{3,4})[pP]").find(
-                    file.name ?: return@apmap null
-                )?.groupValues?.getOrNull(1)?.toIntOrNull()
-                    ?: Qualities.P1080.value
-
-            val tags = Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(
-                file.name
-            )?.groupValues?.getOrNull(1)?.replace(".", " ")?.trim()
-                ?: ""
+            val quality = getIndexQuality(file.name)
+            val tags = getIndexQualityTags(file.name)
 
             callback.invoke(
                 ExtractorLink(
                     "$api $tags [$sizeFile]",
                     "$api $tags [$sizeFile]",
                     path,
+                    "",
+                    quality,
+                )
+            )
+
+        }
+
+    }
+
+    suspend fun invokeDahmerMovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val url = if(season == null) {
+            "$dahmerMoviesAPI/movies/${title?.replace(":", "")} ($year)/"
+        } else {
+            "$dahmerMoviesAPI/tvs/${title?.replace(":", " -")}/Season $season/"
+        }
+
+        val request = app.get(url)
+        if(!request.isSuccessful) return
+
+        val paths = request.document.select("tr.file").map {
+            Triple(
+                it.select("a").text(),
+                it.select("a").attr("href"),
+                it.select("size").text(),
+            )
+        }.filter {
+            if(season == null) {
+                it.first.contains(Regex("(?i)(1080p|2160p)"))
+            } else {
+                val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+                it.first.contains(Regex("(?i)S${seasonSlug}E${episodeSlug}"))
+            }
+        }.ifEmpty { return }
+
+        paths.map {
+            val quality = getIndexQuality(it.first)
+            val tags = getIndexQualityTags(it.first)
+            val size = "%.2f GB".format(bytesToGigaBytes(it.third.toDouble()))
+            callback.invoke(
+                ExtractorLink(
+                    "DahmerMovies $tags [$size]",
+                    "DahmerMovies $tags [$size]",
+                    url + it.second,
                     "",
                     quality,
                 )

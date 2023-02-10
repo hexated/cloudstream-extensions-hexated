@@ -654,6 +654,14 @@ fun getKisskhTitle(str: String?): String? {
     return str?.replace(Regex("[^a-zA-Z\\d]"), "-")
 }
 
+fun getIndexQualityTags(str: String?): String {
+    return Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(str ?: "")?.groupValues?.getOrNull(1)?.replace(".", " ")?.trim() ?: ""
+}
+
+fun getIndexQuality(str: String?): Int {
+    return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull() ?: Qualities.Unknown.value
+}
+
 fun getQuality(str: String): Int {
     return when (str) {
         "360p" -> Qualities.P240.value
