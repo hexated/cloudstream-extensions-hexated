@@ -35,6 +35,8 @@ import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
+import com.hexated.SoraExtractor.invokePapaonMovies1
+import com.hexated.SoraExtractor.invokePapaonMovies2
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRinzrymovies
 import com.hexated.SoraExtractor.invokeSmashyStream
@@ -68,7 +70,6 @@ open class SoraStream : TmdbProvider() {
         const val jikanAPI = "https://api.jikan.moe/v4"
         const val gdbot = "https://gdbot.xyz"
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
-        const val baymovies = "https://opengatewayindex.pages.dev"
 
         private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
@@ -108,7 +109,7 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww7.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        const val baymoviesAPI = "https://thebayindexpublicgroupapi.zindex.eu.org" // dead
+        const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
         const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:" // dead
@@ -118,6 +119,8 @@ open class SoraStream : TmdbProvider() {
         const val codexMoviesAPI = "https://packs.codexcloudx.tech/0:"
         const val edithxMoviesAPI = "https://index.edithx.ga/0:"
         const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:"
+        const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
+        const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -667,6 +670,28 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeXtrememovies(
                     xtremeMoviesAPI,
                     "XtremeMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokePapaonMovies1(
+                    papaonMovies1API,
+                    "PapaonMovies[1]",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokePapaonMovies2(
+                    papaonMovies2API,
+                    "PapaonMovies[2]",
                     res.title,
                     res.year,
                     res.season,
