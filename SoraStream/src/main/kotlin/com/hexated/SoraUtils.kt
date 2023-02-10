@@ -1,7 +1,7 @@
 package com.hexated
 
 import android.util.Base64
-import com.hexated.SoraStream.Companion.baymovies
+import com.hexated.SoraStream.Companion.baymoviesAPI
 import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
@@ -31,6 +31,33 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.math.min
+
+val encodedIndex = arrayOf(
+    "GamMovies",
+    "JSMovies",
+    "BlackMovies",
+    "CodexMovies",
+    "RinzryMovies",
+    "EdithxMovies",
+    "XtremeMovies",
+    "PapaonMovies[1]",
+    "PapaonMovies[2]",
+)
+
+val lockedIndex = arrayOf(
+    "CodexMovies",
+    "EdithxMovies",
+)
+
+val mkvIndex = arrayOf(
+    "EdithxMovies"
+)
+
+val untrimmedIndex = arrayOf(
+    "PapaonMovies[1]",
+    "PapaonMovies[2]",
+    "EdithxMovies",
+)
 
 data class FilmxyCookies(
     val phpsessid: String? = null,
@@ -596,7 +623,7 @@ const downloadtime = "(.*?)";
 var arrayofworkers = (.*)""".toRegex()
     val js = app.get(
         "https://geolocation.zindex.eu.org/api.js",
-        referer = "$baymovies/",
+        referer = "$baymoviesAPI/",
     ).text
     val match = regex.find(js) ?: throw ErrorLoadingException()
     val country = match.groupValues[1]

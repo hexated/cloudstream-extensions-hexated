@@ -1912,7 +1912,7 @@ object SoraExtractor : SoraStream() {
         val secret =
             script.substringAfter("secret = \"").substringBefore("\";").let { base64Decode(it) }
         val key = script.substringAfter("token = \"").substringBefore("\";")
-        delay(2000)
+        delay(3000)
         val source = app.get(
             "$secret$key",
             headers = mapOf(
@@ -1991,15 +1991,16 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
+        val api = "https://thebayindexpublicgroupapi.zindex.eu.org"
         val key = base64DecodeAPI("ZW0=c3Q=c3k=b28=YWQ=Ymg=")
         val headers = mapOf(
-            "Referer" to "$baymovies/",
-            "Origin" to baymovies,
+            "Referer" to "$baymoviesAPI/",
+            "Origin" to baymoviesAPI,
             "cf_cache_token" to "UKsVpQqBMxB56gBfhYKbfCVkRIXMh42pk6G4DdkXXoVh7j4BjV"
         )
         val query = getIndexQuery(title, year, season, episode)
         val search = app.get(
-            "$baymoviesAPI/0:search?q=$query&page_token=&page_index=0",
+            "$api/0:search?q=$query&page_token=&page_index=0",
             headers = headers
         ).text
         val media = searchIndex(title, season, episode, year, search) ?: return
@@ -2015,7 +2016,7 @@ object SoraExtractor : SoraStream() {
 
             val link =
                 "https://api.$worker.workers.dev/download.aspx?file=$encryptedId&expiry=$encryptedExpiry&mac=$hmacSign"
-            if (!app.get(link, referer = "$baymovies/").isSuccessful) return@apmap null
+//            if (!app.get(link, referer = "$baymoviesAPI/").isSuccessful) return@apmap null
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val tags = Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4)").find(
@@ -2031,7 +2032,7 @@ object SoraExtractor : SoraStream() {
                     "Baymovies $tags [$sizeFile]",
                     "Baymovies $tags [$sizeFile]",
                     link,
-                    "$baymovies/",
+                    "$baymoviesAPI/",
                     quality,
                 )
             )
@@ -2189,7 +2190,7 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
-        password: String? = null,
+        password: String = "",
     ) {
         invokeIndex(
             apiUrl,
@@ -2211,7 +2212,7 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
-        password: String? = null,
+        password: String = "",
     ) {
         invokeIndex(
             apiUrl,
@@ -2225,6 +2226,46 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokePapaonMovies1(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
+    suspend fun invokePapaonMovies2(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
     private suspend fun invokeIndex(
         apiUrl: String,
         api: String,
@@ -2233,33 +2274,13 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
-        password: String? = null,
+        password: String = "",
     ) {
-        val encodedIndex = arrayOf(
-            "GamMovies",
-            "JSMovies",
-            "BlackMovies",
-            "CodexMovies",
-            "RinzryMovies",
-            "EdithxMovies",
-            "XtremeMovies",
-        )
-
-        val lockedIndex = arrayOf(
-            "CodexMovies",
-            "EdithxMovies",
-        )
-
-        val premiumIndex = arrayOf(
-            "EdithxMovies"
-        )
-
         val passHeaders = mapOf(
             "Authorization" to password
         )
-
         val query = getIndexQuery(title, year, season, episode).let {
-            if (api in premiumIndex) "$it mkv" else it
+            if (api in mkvIndex) "$it mkv" else it
         }
         val body =
             """{"q":"$query","password":null,"page_token":null,"page_index":0}""".toRequestBody(
@@ -2271,17 +2292,17 @@ object SoraExtractor : SoraStream() {
             "page_index" to "0"
         )
         val search = if (api in encodedIndex) {
-            if (api in lockedIndex) decodeIndexJson(
-                app.post(
+            decodeIndexJson(
+                if (api in lockedIndex) app.post(
                     "${apiUrl}search",
                     data = data,
-                    headers = passHeaders.mapValues { it.value as String }
-                ).text
-            ) else decodeIndexJson(app.post("${apiUrl}search", data = data).text)
+                    headers = passHeaders
+                ).text else app.post("${apiUrl}search", data = data).text
+            )
         } else {
             app.post("${apiUrl}search", requestBody = body).text
         }
-        val media = if (api in premiumIndex) searchIndex(
+        val media = if (api in untrimmedIndex) searchIndex(
             title,
             season,
             episode,
@@ -2301,7 +2322,7 @@ object SoraExtractor : SoraStream() {
                     app.post(
                         "${apiUrl}id2path",
                         data = pathData,
-                        headers = passHeaders.mapValues { it.value as String }
+                        headers = passHeaders
                     )
                 } else {
                     app.post(
