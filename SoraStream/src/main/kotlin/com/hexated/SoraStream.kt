@@ -23,6 +23,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invokeCrunchyroll
+import com.hexated.SoraExtractor.invokeDahmerMovies
 import com.hexated.SoraExtractor.invokeEdithxmovies
 import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
@@ -121,6 +122,7 @@ open class SoraStream : TmdbProvider() {
         const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:"
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
+        const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -692,6 +694,15 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokePapaonMovies2(
                     papaonMovies2API,
                     "PapaonMovies[2]",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                invokeDahmerMovies(
                     res.title,
                     res.year,
                     res.season,
