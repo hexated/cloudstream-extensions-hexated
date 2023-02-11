@@ -85,7 +85,7 @@ open class SoraStream : TmdbProvider() {
         const val series9API = "https://series9.la"
         const val idlixAPI = "https://idlixian.com"
         const val noverseAPI = "https://www.nollyverse.com"
-        const val olgplyAPI = "https://olgply.xyz"
+        const val olgplyAPI = "https://olgply.xyz" // dead
         const val uniqueStreamAPI = "https://uniquestreaming.net"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
