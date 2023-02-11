@@ -82,7 +82,10 @@ fun String.filterIframe(seasonNum: Int?, lastSeason: Int?, year: Int?, title: St
             )
         }
     } else {
-        this.contains(Regex("(?i)($year)|($dotSlug)|($spaceSlug)")) && !this.contains("Download", true)
+        this.contains(Regex("(?i)($year)|($dotSlug)|($spaceSlug)")) && !this.contains(
+            "Download",
+            true
+        )
     }
 }
 
@@ -116,13 +119,13 @@ suspend fun extractMirrorUHD(url: String, ref: String): String? {
     var downLink = baseDoc.getMirrorLink()
     run lit@{
         (1..2).forEach {
-            if(downLink != null) return@lit
+            if (downLink != null) return@lit
             val server = baseDoc.getMirrorServer(it.plus(1))
             baseDoc = app.get(fixUrl(server, ref)).document
             downLink = baseDoc.getMirrorLink()
         }
     }
-    if(downLink?.contains(".mkv") == true || downLink?.contains(".mp4") == true) return downLink
+    if (downLink?.contains(".mkv") == true || downLink?.contains(".mp4") == true) return downLink
     val downPage = app.get(downLink ?: return null).document
     return downPage.selectFirst("form[method=post] a.btn.btn-success")
         ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')") ?: run {
@@ -270,7 +273,12 @@ suspend fun getDrivebotLink(url: String?): String? {
         referer = url
     ).parsedSafe<DriveBotLink>()?.url ?: return null
 
-    return app.get(fixUrl(file, baseUrl)).document.selectFirst("script:containsData(window.open)")
+    return if (file.startsWith("http")) file else app.get(
+        fixUrl(
+            file,
+            baseUrl
+        )
+    ).document.selectFirst("script:containsData(window.open)")
         ?.data()?.substringAfter("window.open('")?.substringBefore("')")
 }
 
@@ -641,6 +649,7 @@ fun decodeIndexJson(json: String): String {
     val slug = json.reversed().substring(24)
     return base64Decode(slug.substring(0, slug.length - 20))
 }
+
 fun String?.createSlug(): String? {
     return this?.replace(Regex("[!%:'?,]|( &)"), "")?.replace(" ", "-")?.lowercase()
         ?.replace("-–-", "-")
@@ -650,18 +659,20 @@ fun getLanguage(str: String): String {
     return if (str.contains("(in_ID)")) "Indonesian" else str
 }
 
-fun bytesToGigaBytes( number: Double ): Double = number / 1024000000
+fun bytesToGigaBytes(number: Double): Double = number / 1024000000
 
 fun getKisskhTitle(str: String?): String? {
     return str?.replace(Regex("[^a-zA-Z\\d]"), "-")
 }
 
 fun getIndexQualityTags(str: String?): String {
-    return Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(str ?: "")?.groupValues?.getOrNull(1)?.replace(".", " ")?.trim() ?: ""
+    return Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(str ?: "")?.groupValues?.getOrNull(1)
+        ?.replace(".", " ")?.trim() ?: ""
 }
 
 fun getIndexQuality(str: String?): Int {
-    return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull() ?: Qualities.Unknown.value
+    return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
+        ?: Qualities.Unknown.value
 }
 
 fun getQuality(str: String): Int {
@@ -711,7 +722,7 @@ fun getDbgoLanguage(str: String): String {
     }
 }
 
-fun String.encodeUrl() : String {
+fun String.encodeUrl(): String {
     val url = URL(this)
     val uri = URI(url.protocol, url.userInfo, url.host, url.port, url.path, url.query, url.ref)
     return uri.toURL().toString()

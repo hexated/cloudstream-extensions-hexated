@@ -1838,7 +1838,7 @@ object SoraExtractor : SoraStream() {
                     it.t?.equals(
                         "$title - Season $season",
                         true
-                    ) == true || it.s?.contains("$fixTitle-season-$season", true) == true
+                    ) == true || it.s?.contains("$fixTitle-season-$season-", true) == true
                 }
             }?.s?.substringAfterLast("-") ?: return
 
@@ -2348,15 +2348,14 @@ object SoraExtractor : SoraStream() {
 //            removed due to rate limit
 //            if (!app.get(path).isSuccessful) return@apmap null
 
-            val size = file.size?.toDouble() ?: return@apmap null
-            val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
+            val size = "%.2f GB".format(bytesToGigaBytes(file.size?.toDouble() ?: return@apmap null))
             val quality = getIndexQuality(file.name)
             val tags = getIndexQualityTags(file.name)
 
             callback.invoke(
                 ExtractorLink(
-                    "$api $tags [$sizeFile]",
-                    "$api $tags [$sizeFile]",
+                    "$api $tags [$size]",
+                    "$api $tags [$size]",
                     path,
                     "",
                     quality,
