@@ -258,7 +258,7 @@ suspend fun getDrivebotLink(url: String?): String? {
         .build()
     val cookies = mapOf("PHPSESSID" to "$ssid")
 
-    val result = app.post(
+    val file = app.post(
         link,
         requestBody = body,
         headers = mapOf(
@@ -268,8 +268,10 @@ suspend fun getDrivebotLink(url: String?): String? {
         ),
         cookies = cookies,
         referer = url
-    ).text
-    return tryParseJson<DriveBotLink>(result)?.url
+    ).parsedSafe<DriveBotLink>()?.url ?: return null
+
+    return app.get(fixUrl(file, baseUrl)).document.selectFirst("script:containsData(window.open)")
+        ?.data()?.substringAfter("window.open('")?.substringBefore("')")
 }
 
 suspend fun extractOiya(url: String, quality: String): String? {
