@@ -131,7 +131,7 @@ class Loklok : MainAPI() {
             headers = headers
         ).parsedSafe<Load>()?.data ?: throw ErrorLoadingException("Invalid Json Reponse")
 
-        headers["deviceid"] = getDevideId(16)
+        headers["deviceid"] = getDevideId()
 
         val episodes = res.episodeVo?.map { eps ->
             val definition = eps.definitionList?.map {
@@ -219,10 +219,13 @@ class Loklok : MainAPI() {
         val res = parseJson<UrlEpisode>(data)
 
         res.definitionList?.apmap { video ->
-            val json = app.get(
-                "$apiUrl/media/previewInfo?category=${res.category}&contentId=${res.id}&episodeId=${res.epId}&definition=${video.code}",
-                headers = headers,
-            ).parsedSafe<PreviewResponse>()?.data
+            val body =
+                """[{"category":${res.category},"contentId":"${res.id}","episodeId":${res.epId},"definition":"${video.code}"}]""".toRequestBody(
+                    RequestBodyTypes.JSON.toMediaTypeOrNull()
+                )
+            val json =
+                app.post("$apiUrl/media/bathGetplayInfo", requestBody = body, headers = headers)
+                    .parsedSafe<PreviewResponse>()?.data?.firstOrNull()
             callback.invoke(
                 ExtractorLink(
                     this.name,
@@ -257,7 +260,7 @@ class Loklok : MainAPI() {
         }
     }
 
-    private fun getDevideId(length: Int): String {
+    private fun getDevideId(length: Int = 16): String {
         val allowedChars = ('a'..'f') + ('0'..'9')
         return (1..length)
             .map { allowedChars.random() }
@@ -334,7 +337,7 @@ class Loklok : MainAPI() {
     )
 
     data class PreviewResponse(
-        @JsonProperty("data") val data: PreviewVideos? = null,
+        @JsonProperty("data") val data: ArrayList<PreviewVideos>? = arrayListOf(),
     )
 
     data class PreviewVideos(
