@@ -2415,6 +2415,88 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeGomovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val query = if (season == null) {
+            title
+        } else {
+            "$title Season $season"
+        }
+
+        val doc = app.get("$gomoviesAPI/search/$query").document
+
+        val media = doc.select("div._gory div.g_yFsxmKnYLvpKDTrdbizeYMWy").map {
+            Triple(
+                it.attr("data-filmName"),
+                it.attr("data-year"),
+                it.select("a").attr("href")
+            )
+        }.find {
+            if (season == null) {
+                (it.first.equals(title, true) || it.first.equals(
+                    "$title ($year)",
+                    true
+                )) && it.second.equals("$year")
+            } else {
+                it.first.equals("$title - Season $season", true) && it.second.equals("$year")
+            }
+        } ?: return
+
+        val iframe = if (season == null) {
+            media.third
+        } else {
+            app.get(
+                fixUrl(
+                    media.third,
+                    gomoviesAPI
+                )
+            ).document.selectFirst("div#g_MXOzFGouZrOAUioXjpddqkZK a:nth-child($episode)")
+                ?.attr("href")
+        } ?: return
+
+        val res = app.get(fixUrl(iframe, gomoviesAPI), verify = false)
+        val match = "var url = '(/user/servers/.*?\\?ep=.*?)';".toRegex().find(res.text)
+        val serverUrl = match?.groupValues?.get(1) ?: return
+        val cookies = res.okhttpResponse.headers.getPutlockerCookies()
+        val url = res.document.select("meta[property=og:url]").attr("content")
+        val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)
+        app.get(
+            "$gomoviesAPI$serverUrl",
+            cookies = cookies, referer = url, headers = headers
+        ).document.select("ul li").amap { el ->
+            val server = el.attr("data-value")
+            val encryptedData = app.get(
+                "$url?server=$server&_=${System.currentTimeMillis()}",
+                cookies = cookies,
+                referer = url,
+                headers = headers
+            ).text
+            val json = base64Decode(encryptedData).putlockerDecrypt()
+            val links = tryParseJson<List<GomoviesSources>>(json) ?: return@amap
+            links.forEach { video ->
+                qualities.filter { it <= video.max.toInt() }.forEach {
+                    callback(
+                        ExtractorLink(
+                            "Gomovies",
+                            "Gomovies",
+                            video.src.split("360", limit = 3).joinToString(it.toString()),
+                            "$gomoviesAPI/",
+                            it
+                        )
+                    )
+                }
+            }
+        }
+
+    }
+
+
 }
 
 class StreamM4u : XStreamCdn() {
@@ -2451,6 +2533,14 @@ data class Movie123Data(
 
 data class Movie123Search(
     @JsonProperty("data") val data: ArrayList<Movie123Data>? = arrayListOf(),
+)
+
+data class GomoviesSources(
+    @JsonProperty("src") val src: String,
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("label") val label: Int? = null,
+    @JsonProperty("max") val max: String,
+    @JsonProperty("size") val size: String,
 )
 
 data class UHDBackupUrl(
