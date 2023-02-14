@@ -110,6 +110,7 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww7.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
+        const val gomoviesAPI = "https://gomovies-online.com"
         const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
@@ -709,7 +710,7 @@ open class SoraStream : TmdbProvider() {
                     res.episode,
                     callback
                 )
-            },
+            }
         )
 
         return true

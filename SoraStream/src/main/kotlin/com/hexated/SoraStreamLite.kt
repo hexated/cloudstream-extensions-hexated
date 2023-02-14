@@ -8,6 +8,7 @@ import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixhq
 import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
+import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
@@ -206,6 +207,9 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
+            },
+            {
+                invokeGomovies(res.title, res.year, res.season, res.episode, callback)
             },
         )
 

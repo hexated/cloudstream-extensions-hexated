@@ -16,6 +16,7 @@ import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
+import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -644,10 +645,40 @@ var arrayofworkers = (.*)""".toRegex()
     return BaymoviesConfig(country, downloadTime, workers)
 }
 
-// taken from https://github.com/821938089/cloudstream-extensions/blob/6e41697cbf816d2f57d9922d813c538e3192f708/PiousIndexProvider/src/main/kotlin/com/horis/cloudstreamplugins/PiousIndexProvider.kt#L175-L179
+/** taken from https://github.com/821938089/cloudstream-extensions/blob/6e41697cbf816d2f57d9922d813c538e3192f708/PiousIndexProvider/src/main/kotlin/com/horis/cloudstreamplugins/PiousIndexProvider.kt#L175-L179
+- Credits to Horis
+**/
 fun decodeIndexJson(json: String): String {
     val slug = json.reversed().substring(24)
     return base64Decode(slug.substring(0, slug.length - 20))
+}
+
+/** taken from https://github.com/821938089/cloudstream-extensions/blob/23dae833a48fb329d4c67dd77ac1e8bb592ac5a9/Movie123Provider/src/main/kotlin/com/horis/cloudstreamplugins/Movie123Provider.kt#L138-L150
+- Credits to Horis
+**/
+fun String.putlockerDecrypt(key: String = "123"): String {
+    val sb = StringBuilder()
+    var i = 0
+    while (i < this.length) {
+        var j = 0
+        while (j < key.length && i < this.length) {
+            sb.append((this[i].code xor key[j].code).toChar())
+            j++
+            i++
+        }
+    }
+    return sb.toString()
+}
+
+fun Headers.getPutlockerCookies(cookieKey: String = "set-cookie"): Map<String, String> {
+    val cookieList =
+        this.filter { it.first.equals(cookieKey, ignoreCase = true) }.mapNotNull {
+            it.second.split(";").firstOrNull()
+        }
+    return cookieList.associate {
+        val split = it.split("=", limit = 2)
+        (split.getOrNull(0)?.trim() ?: "") to (split.getOrNull(1)?.trim() ?: "")
+    }.filter { it.key.isNotBlank() && it.value.isNotBlank() }
 }
 
 fun String?.createSlug(): String? {
