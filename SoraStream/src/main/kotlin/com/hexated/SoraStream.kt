@@ -29,6 +29,7 @@ import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
+import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeJsmovies
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
@@ -104,7 +105,7 @@ open class SoraStream : TmdbProvider() {
         const val moviezAddAPI = "https://45.143.223.244"
         const val bollyMazaAPI = "https://b.bloginguru.info"
         const val moviesbayAPI = "https://moviesbay.live"
-        const val rStreamAPI = "https://fsa.remotestre.am"
+        const val rStreamAPI = "https://remotestre.am"
         const val flixonAPI = "https://flixon.ru"
         const val animeKaizokuAPI = "https://animekaizoku.com"
         const val movie123NetAPI = "https://ww7.0123movie.net"
@@ -115,12 +116,12 @@ open class SoraStream : TmdbProvider() {
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
         const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:" // dead
-        const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:"
+        const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:" // dead
+        const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:" // dead
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
         const val rinzryMoviesAPI = "https://rinzry.stream/0:"
         const val codexMoviesAPI = "https://packs.codexcloudx.tech/0:"
         const val edithxMoviesAPI = "https://index.edithx.ga/0:"
-        const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:"
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -439,7 +440,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
@@ -623,17 +624,17 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                if (!res.isAnime) invokeJsmovies(
-                    jsMoviesAPI,
-                    "JSMovies",
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
+//            {
+//                if (!res.isAnime) invokeJsmovies(
+//                    jsMoviesAPI,
+//                    "JSMovies",
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    callback
+//                )
+//            },
             {
                 invokeRinzrymovies(
                     rinzryMoviesAPI,
@@ -669,17 +670,17 @@ open class SoraStream : TmdbProvider() {
                     "Basic ZWRpdGg6amFydmlz"
                 )
             },
-            {
-                if (!res.isAnime) invokeXtrememovies(
-                    xtremeMoviesAPI,
-                    "XtremeMovies",
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
+//            {
+//                if (!res.isAnime) invokeXtrememovies(
+//                    xtremeMoviesAPI,
+//                    "XtremeMovies",
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokePapaonMovies1(
                     papaonMovies1API,
@@ -710,7 +711,10 @@ open class SoraStream : TmdbProvider() {
                     res.episode,
                     callback
                 )
-            }
+            },
+            {
+                invokeGomovies(res.title, res.year, res.season, res.episode, callback)
+            },
         )
 
         return true

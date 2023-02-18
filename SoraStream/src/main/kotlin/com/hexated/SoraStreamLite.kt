@@ -148,7 +148,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
