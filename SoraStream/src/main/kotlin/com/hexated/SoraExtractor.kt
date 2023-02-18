@@ -1611,21 +1611,16 @@ object SoraExtractor : SoraStream() {
 
         val media = json?.find { it.first() == "${title.createSlug()}-$year" }
 
-        media?.filter { it.startsWith("https://drive.google.com") }?.apmap {
+        media?.filter { it.startsWith("https://drive.google.com") || it.startsWith("https://cdn.moviesbay.live") }?.apmap {
             val index = media.indexOf(it)
             val size = media[index.minus(1)]
             val quality = media[index.minus(2)]
             val qualityName = media[index.minus(3)]
-            val gdriveLink = getDirectGdrive(it)
-
-            val doc = app.get(gdriveLink).document
-            val form = doc.select("form#download-form").attr("action")
-            val uc = doc.select("input#uc-download-link").attr("value")
-            val link = app.post(
-                form, data = mapOf(
-                    "uc-download-link" to uc
-                )
-            ).url
+            val link = if(it.startsWith("https://drive.google.com")) {
+                getDirectGdrive(it)
+            } else {
+                it.removeSuffix("?a=view")
+            }
 
             callback.invoke(
                 ExtractorLink(
@@ -1745,22 +1740,25 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val url = if (season == null) {
-            "$rStreamAPI/Movies/$id/$id.mp4"
+            "$rStreamAPI/e/?tmdb=$id"
         } else {
-            "$rStreamAPI/Shows/$id/$season/$episode.mp4"
+            "$rStreamAPI/e/?tmdb=$id&s=$season&e=$episode"
         }
-        val referer = "https://remotestre.am/"
 
-        if (!app.get(url, referer = referer).isSuccessful) return
+        val res = app.get(url).text
+        val link = Regex("\"file\":\"(http.*?)\"").find(res)?.groupValues?.getOrNull(1) ?: return
 
-        delay(4000)
+        delay(1000)
+        if(!app.get(link, referer = mainUrl).isSuccessful) return
+
         callback.invoke(
             ExtractorLink(
                 "RStream",
                 "RStream",
-                url,
-                referer,
-                Qualities.P720.value
+                link,
+                mainUrl,
+                Qualities.P720.value,
+                link.contains(".m3u8")
             )
         )
     }
@@ -1902,38 +1900,24 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
     ) {
         val url = if (season == null) {
-            "$smashyStreamAPI/gtop/tv.php?imdb=$imdbId"
+            "$smashyStreamAPI/playere.php?imdb=$imdbId"
         } else {
-            "$smashyStreamAPI/gtop/tv.php?imdb=$imdbId&s=$season&e=$episode"
+            "$smashyStreamAPI/playere.php?imdb=$imdbId&season=$season&episode=$episode"
         }
 
-        val doc = app.get(url).document
-        val script = doc.selectFirst("script:containsData(var secret)")?.data() ?: return
-        val secret =
-            script.substringAfter("secret = \"").substringBefore("\";").let { base64Decode(it) }
-        val key = script.substringAfter("token = \"").substringBefore("\";")
-        delay(3000)
-        val source = app.get(
-            "$secret$key",
-            headers = mapOf(
-                "X-Requested-With" to "XMLHttpRequest"
-            )
-        ).parsedSafe<Smashy1Source>() ?: return
-
-        val videoUrl = base64Decode(source.file ?: return)
-        val quality =
-            Regex("(\\d{3,4})[Pp]").find(videoUrl)?.groupValues?.getOrNull(1)?.toIntOrNull()
-                ?: Qualities.P720.value
-        callback.invoke(
-            ExtractorLink(
-                "SmashyStream",
-                "SmashyStream",
-                videoUrl,
-                "",
-                quality,
-                videoUrl.contains(".m3u8")
-            )
-        )
+        app.get(url).document.select("div#_default-servers a.server").map {
+            it.attr("data-id") to it.text()
+        }.apmap {
+            when {
+                it.first.contains("/flix") -> {
+                    invokeSmashyOne(it.second, it.first, callback)
+                }
+                it.first.contains("/gtop") -> {
+                    invokeSmashyTwo(it.second, it.first, callback)
+                }
+                else -> return@apmap
+            }
+        }
 
     }
 

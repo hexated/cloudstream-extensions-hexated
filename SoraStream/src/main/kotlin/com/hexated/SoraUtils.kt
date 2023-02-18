@@ -5,6 +5,7 @@ import com.hexated.SoraStream.Companion.baymoviesAPI
 import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
+import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
@@ -324,14 +325,86 @@ suspend fun extractCovyn(url: String?): Pair<String?, String?>? {
     return Pair(videoLink, size)
 }
 
-fun getDirectGdrive(url: String): String {
-    return if (url.contains("&export=download")) {
+suspend fun getDirectGdrive(url: String): String {
+    val fixUrl = if (url.contains("&export=download")) {
         url
     } else {
         "https://drive.google.com/uc?id=${
             url.substringAfter("/d/").substringBefore("/")
         }&export=download"
     }
+
+    val doc = app.get(fixUrl).document
+    val form = doc.select("form#download-form").attr("action")
+    val uc = doc.select("input#uc-download-link").attr("value")
+    return app.post(
+        form, data = mapOf(
+            "uc-download-link" to uc
+        )
+    ).url
+
+}
+
+suspend fun invokeSmashyOne(
+    name: String,
+    url: String,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val script = app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+
+    val source =
+        Regex("file:\\s['\"](\\S+?)['|\"]").find(script)?.groupValues?.get(
+            1
+        ) ?: return
+
+    source.split(",").map { links ->
+        val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
+        val link = links.removePrefix("[$quality]").trim()
+        callback.invoke(
+            ExtractorLink(
+                "Smashy [$name]",
+                "Smashy [$name]",
+                link,
+                smashyStreamAPI,
+                quality?.toIntOrNull() ?: return@map,
+                isM3u8 = link.contains(".m3u8"),
+            )
+        )
+    }
+
+}
+
+suspend fun invokeSmashyTwo(
+    name: String,
+    url: String,
+    callback: (ExtractorLink) -> Unit
+) {
+    val doc = app.get(url).document
+    val script = doc.selectFirst("script:containsData(var secret)")?.data() ?: return
+    val secret =
+        script.substringAfter("secret = \"").substringBefore("\";").let { base64Decode(it) }
+    val key = script.substringAfter("token = \"").substringBefore("\";")
+    val source = app.get(
+        "$secret$key",
+        headers = mapOf(
+            "X-Requested-With" to "XMLHttpRequest"
+        )
+    ).parsedSafe<Smashy1Source>() ?: return
+
+    val videoUrl = base64Decode(source.file ?: return)
+    val quality =
+        Regex("(\\d{3,4})[Pp]").find(videoUrl)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            ?: Qualities.P720.value
+    callback.invoke(
+        ExtractorLink(
+            "Smashy [$name]",
+            "Smashy [$name]",
+            videoUrl,
+            "",
+            quality,
+            videoUrl.contains(".m3u8")
+        )
+    )
 }
 
 suspend fun bypassOuo(url: String?): String? {
