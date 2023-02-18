@@ -1749,14 +1749,14 @@ object SoraExtractor : SoraStream() {
         val link = Regex("\"file\":\"(http.*?)\"").find(res)?.groupValues?.getOrNull(1) ?: return
 
         delay(1000)
-        if(!app.get(link, referer = mainUrl).isSuccessful) return
+        if(!app.get(link, referer = rStreamAPI).isSuccessful) return
 
         callback.invoke(
             ExtractorLink(
                 "RStream",
                 "RStream",
                 link,
-                mainUrl,
+                rStreamAPI,
                 Qualities.P720.value,
                 link.contains(".m3u8")
             )
