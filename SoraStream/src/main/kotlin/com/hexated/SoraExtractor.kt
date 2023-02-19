@@ -1946,21 +1946,21 @@ object SoraExtractor : SoraStream() {
             }
         } ?: return
 
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+
         val subUrl = if (season == null) {
             "$watchSomuchAPI/Watch/ajMovieSubtitles.aspx?mid=$id&tid=$epsId&part="
         } else {
-            "$watchSomuchAPI/Watch/ajMovieSubtitles.aspx?mid=$id&tid=$epsId&part=S0${season}E0${episode}"
+            "$watchSomuchAPI/Watch/ajMovieSubtitles.aspx?mid=$id&tid=$epsId&part=S${seasonSlug}E${episodeSlug}"
         }
 
         app.get(subUrl)
             .parsedSafe<WatchsomuchSubResponses>()?.subtitles
-            ?.filter { it.url?.startsWith("https") == true }
             ?.map { sub ->
-                Log.i("hexated", "${sub.label} => ${sub.url}")
                 subtitleCallback.invoke(
                     SubtitleFile(
                         sub.label ?: "",
-                        sub.url ?: return@map null
+                        fixUrl(sub.url ?: return@map null, watchSomuchAPI)
                     )
                 )
             }
