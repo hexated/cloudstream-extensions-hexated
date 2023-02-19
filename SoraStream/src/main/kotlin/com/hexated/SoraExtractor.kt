@@ -1904,7 +1904,7 @@ object SoraExtractor : SoraStream() {
             "$smashyStreamAPI/playere.php?imdb=$imdbId&season=$season&episode=$episode"
         }
 
-        app.get(url).document.select("div#_default-servers a.server").map {
+        app.get(url, referer = "https://smashystream.com/").document.select("div#_default-servers a.server").map {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
