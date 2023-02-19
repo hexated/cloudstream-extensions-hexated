@@ -729,7 +729,7 @@ fun decodeIndexJson(json: String): String {
 /** taken from https://github.com/821938089/cloudstream-extensions/blob/23dae833a48fb329d4c67dd77ac1e8bb592ac5a9/Movie123Provider/src/main/kotlin/com/horis/cloudstreamplugins/Movie123Provider.kt#L138-L150
 - Credits to Horis
 **/
-fun String.putlockerDecrypt(key: String = "123"): String {
+fun String.decryptGomoviesJson(key: String = "123"): String {
     val sb = StringBuilder()
     var i = 0
     while (i < this.length) {
@@ -743,7 +743,7 @@ fun String.putlockerDecrypt(key: String = "123"): String {
     return sb.toString()
 }
 
-fun Headers.getPutlockerCookies(cookieKey: String = "set-cookie"): Map<String, String> {
+fun Headers.getGomoviesCookies(cookieKey: String = "set-cookie"): Map<String, String> {
     val cookieList =
         this.filter { it.first.equals(cookieKey, ignoreCase = true) }.mapNotNull {
             it.second.split(";").firstOrNull()
