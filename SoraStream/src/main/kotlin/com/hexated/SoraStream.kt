@@ -126,7 +126,7 @@ open class SoraStream : TmdbProvider() {
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
-        const val tgarMovieAPI = "https://api.telegram.d1.zindex.eu.org"
+        const val tgarMovieAPI = "https://tgarchive.eu.org"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -185,7 +185,7 @@ open class SoraStream : TmdbProvider() {
         request: MainPageRequest
     ): HomePageResponse {
         val adultQuery =
-            if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669|190370"
+            if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669"
         val type = if (request.data.contains("/movie")) "movie" else "tv"
         val home = app.get("${request.data}$adultQuery&page=$page")
             .parsedSafe<Results>()?.results
@@ -718,7 +718,7 @@ open class SoraStream : TmdbProvider() {
                 invokeGomovies(res.title, res.year, res.season, res.episode, callback)
             },
             {
-                invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
+                if (!res.isAnime) invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
             },
         )
 

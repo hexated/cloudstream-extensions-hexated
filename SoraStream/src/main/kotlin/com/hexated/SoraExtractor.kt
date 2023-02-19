@@ -2360,7 +2360,11 @@ object SoraExtractor : SoraStream() {
         val (dotSlug, spaceSlug, slashSlug) = getTitleSlug(title)
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
-        val files = app.get("$tgarMovieAPI/search?name=$query&page=1").parsedSafe<TgarData>()?.results?.filter { media ->
+        val files = app.get(
+            "https://api.telegram.d1.zindex.eu.org/search?name=$query&page=1",
+            referer = tgarMovieAPI,
+            timeout = 120L
+        ).parsedSafe<TgarData>()?.results?.filter { media ->
             (if (season == null) {
                 media.name?.contains("$year") == true
             } else {
@@ -2391,7 +2395,7 @@ object SoraExtractor : SoraStream() {
                     "TgarMovies $tags [$size]",
                     "TgarMovies $tags [$size]",
                     "https://api.southkoreacdn.workers.dev/telegram/${file._id}",
-                    "https://tgarchive.eu.org/",
+                    "$tgarMovieAPI/",
                     quality,
                 )
             )
