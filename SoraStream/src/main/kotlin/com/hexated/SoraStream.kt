@@ -30,6 +30,7 @@ import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGomovies
+import com.hexated.SoraExtractor.invokeJmdkhMovies
 import com.hexated.SoraExtractor.invokeJsmovies
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
@@ -43,6 +44,7 @@ import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRinzrymovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
+import com.hexated.SoraExtractor.invokeTgarMovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -125,6 +127,8 @@ open class SoraStream : TmdbProvider() {
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
+        const val tgarMovieAPI = "https://tgarchive.eu.org"
+        const val jmdkhMovieAPI = "https://tg.jmdkh.eu.org/0:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -149,8 +153,8 @@ open class SoraStream : TmdbProvider() {
     override val mainPage = mainPageOf(
         "$tmdbAPI/trending/all/day?api_key=$apiKey&region=US" to "Trending",
         "$tmdbAPI/movie/popular?api_key=$apiKey&region=US" to "Popular Movies",
-        "$tmdbAPI/tv/popular?api_key=$apiKey&region=US" to "Popular TV Shows",
-        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=US" to "Airing Today TV Shows",
+        "$tmdbAPI/tv/popular?api_key=$apiKey&region=US&with_original_language=en" to "Popular TV Shows",
+        "$tmdbAPI/tv/airing_today?api_key=$apiKey&region=US&with_original_language=en" to "Airing Today TV Shows",
 //        "$tmdbAPI/tv/on_the_air?api_key=$apiKey&region=US" to "On The Air TV Shows",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=213" to "Netflix",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=1024" to "Amazon",
@@ -714,6 +718,20 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeGomovies(res.title, res.year, res.season, res.episode, callback)
+            },
+            {
+                if (!res.isAnime) invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
+            },
+            {
+                if (!res.isAnime) invokeJmdkhMovies(
+                    jmdkhMovieAPI,
+                    "JmdkhMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
             },
         )
 

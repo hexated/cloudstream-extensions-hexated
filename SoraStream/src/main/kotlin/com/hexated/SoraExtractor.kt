@@ -1904,7 +1904,7 @@ object SoraExtractor : SoraStream() {
             "$smashyStreamAPI/playere.php?imdb=$imdbId&season=$season&episode=$episode"
         }
 
-        app.get(url).document.select("div#_default-servers a.server").map {
+        app.get(url, referer = "https://smashystream.com/").document.select("div#_default-servers a.server").map {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
@@ -2249,6 +2249,26 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokeJmdkhMovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
     private suspend fun invokeIndex(
         apiUrl: String,
         api: String,
@@ -2345,6 +2365,59 @@ object SoraExtractor : SoraStream() {
                 )
             )
 
+        }
+
+    }
+
+    suspend fun invokeTgarMovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val query = getIndexQuery(title, year, season, episode)
+        val (dotSlug, spaceSlug, slashSlug) = getTitleSlug(title)
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+
+        val files = app.get(
+            "https://api.telegram.d1.zindex.eu.org/search?name=${encode(query)}&page=1",
+            referer = tgarMovieAPI,
+        ).parsedSafe<TgarData>()?.results?.filter { media ->
+            (if (season == null) {
+                media.name?.contains("$year") == true
+            } else {
+                media.name?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
+            }) && media.name?.contains(
+                Regex("(?i)(2160p|1080p)")
+            ) == true && (media.mime_type in mimeType) && (media.name.replace(
+                "-",
+                "."
+            ).contains(
+                "$dotSlug",
+                true
+            ) || media.name.replace(
+                "-",
+                " "
+            ).contains("$spaceSlug", true) || media.name.replace(
+                "-",
+                "_"
+            ).contains("$slashSlug", true))
+        }
+
+        files?.map { file ->
+            val size = "%.2f GB".format(bytesToGigaBytes(file.size?.toDouble() ?: return@map null))
+            val quality = getIndexQuality(file.name)
+            val tags = getIndexQualityTags(file.name)
+            callback.invoke(
+                ExtractorLink(
+                    "TgarMovies $tags [$size]",
+                    "TgarMovies $tags [$size]",
+                    "https://api.southkoreacdn.workers.dev/telegram/${file._id}",
+                    "$tgarMovieAPI/",
+                    quality,
+                )
+            )
         }
 
     }
@@ -2491,6 +2564,12 @@ class Sblongvu : StreamSB() {
     override var name = "Sblongvu"
     override var mainUrl = "https://sblongvu.com"
 }
+
+data class TitleSlug(
+    val dotSlug: String? = null,
+    val spaceSlug: String? = null,
+    val slashSlug: String? = null,
+)
 
 data class FDMovieIFrame(
     val link: String,
@@ -2763,4 +2842,16 @@ data class IndexData(
 
 data class IndexSearch(
     @JsonProperty("data") val data: IndexData? = null,
+)
+
+data class TgarMedia(
+    @JsonProperty("_id") val _id: Int? = null,
+    @JsonProperty("name") val name: String? = null,
+    @JsonProperty("size") val size: String? = null,
+    @JsonProperty("file_unique_id") val file_unique_id: String? = null,
+    @JsonProperty("mime_type") val mime_type: String? = null,
+)
+
+data class TgarData(
+    @JsonProperty("results") val results: ArrayList<TgarMedia>? = arrayListOf(),
 )
