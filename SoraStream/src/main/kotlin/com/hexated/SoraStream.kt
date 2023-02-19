@@ -43,6 +43,7 @@ import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRinzrymovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
+import com.hexated.SoraExtractor.invokeTgarMovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -125,6 +126,7 @@ open class SoraStream : TmdbProvider() {
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
+        const val tgarMovieAPI = "https://api.telegram.d1.zindex.eu.org"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -714,6 +716,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeGomovies(res.title, res.year, res.season, res.episode, callback)
+            },
+            {
+                invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
             },
         )
 

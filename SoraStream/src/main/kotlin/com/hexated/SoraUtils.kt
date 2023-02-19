@@ -61,6 +61,12 @@ val untrimmedIndex = arrayOf(
     "EdithxMovies",
 )
 
+val mimeType = arrayOf(
+    "video/x-matroska",
+    "video/mp4",
+    "video/x-msvideo"
+)
+
 data class FilmxyCookies(
     val phpsessid: String? = null,
     val wLog: String? = null,
@@ -637,8 +643,13 @@ fun getEpisodeSlug(
     }
 }
 
-fun getTitleSlug(title: String? = null): Pair<String?, String?> {
-    return title.createSlug()?.replace("-", ".") to title.createSlug()?.replace("-", " ")
+fun getTitleSlug(title: String? = null): TitleSlug {
+    val slug = title.createSlug()
+    return TitleSlug(
+        slug?.replace("-", "."),
+        slug?.replace("-", " "),
+        slug?.replace("-", "_"),
+    )
 }
 
 fun getIndexQuery(
@@ -665,11 +676,6 @@ fun searchIndex(
 ): List<IndexMedia>? {
     val (dotSlug, spaceSlug) = getTitleSlug(title)
     val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-    val mimeType = arrayOf(
-        "video/x-matroska",
-        "video/mp4",
-        "video/x-msvideo"
-    )
     val files = tryParseJson<IndexSearch>(response)?.data?.files?.filter { media ->
         (if (season == null) {
             media.name?.contains("$year") == true
