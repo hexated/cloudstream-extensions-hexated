@@ -2249,6 +2249,26 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokeJmdkhMovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
     private suspend fun invokeIndex(
         apiUrl: String,
         api: String,
@@ -2361,9 +2381,8 @@ object SoraExtractor : SoraStream() {
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
         val files = app.get(
-            "https://api.telegram.d1.zindex.eu.org/search?name=$query&page=1",
+            "https://api.telegram.d1.zindex.eu.org/search?name=${encode(query)}&page=1",
             referer = tgarMovieAPI,
-            timeout = 120L
         ).parsedSafe<TgarData>()?.results?.filter { media ->
             (if (season == null) {
                 media.name?.contains("$year") == true

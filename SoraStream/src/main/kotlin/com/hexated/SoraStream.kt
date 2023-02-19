@@ -30,6 +30,7 @@ import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGomovies
+import com.hexated.SoraExtractor.invokeJmdkhMovies
 import com.hexated.SoraExtractor.invokeJsmovies
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
@@ -127,6 +128,7 @@ open class SoraStream : TmdbProvider() {
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
         const val tgarMovieAPI = "https://tgarchive.eu.org"
+        const val jmdkhMovieAPI = "https://tg.jmdkh.eu.org/0:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -719,6 +721,17 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
+            },
+            {
+                if (!res.isAnime) invokeJmdkhMovies(
+                    jmdkhMovieAPI,
+                    "JmdkhMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
             },
         )
 

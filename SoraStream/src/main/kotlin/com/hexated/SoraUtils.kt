@@ -24,6 +24,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.nodes.Document
 import java.net.URI
 import java.net.URL
+import java.net.URLEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
@@ -44,6 +45,7 @@ val encodedIndex = arrayOf(
     "XtremeMovies",
     "PapaonMovies[1]",
     "PapaonMovies[2]",
+    "JmdkhMovies",
 )
 
 val lockedIndex = arrayOf(
@@ -52,7 +54,8 @@ val lockedIndex = arrayOf(
 )
 
 val mkvIndex = arrayOf(
-    "EdithxMovies"
+    "EdithxMovies",
+    "JmdkhMovies",
 )
 
 val untrimmedIndex = arrayOf(
@@ -674,7 +677,7 @@ fun searchIndex(
     response: String,
     isTrimmed: Boolean = true,
 ): List<IndexMedia>? {
-    val (dotSlug, spaceSlug) = getTitleSlug(title)
+    val (dotSlug, spaceSlug, slashSlug) = getTitleSlug(title)
     val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
     val files = tryParseJson<IndexSearch>(response)?.data?.files?.filter { media ->
         (if (season == null) {
@@ -692,7 +695,10 @@ fun searchIndex(
         ) || media.name.replace(
             "-",
             " "
-        ).contains("$spaceSlug", true))
+        ).contains("$spaceSlug", true) || media.name.replace(
+            "-",
+            "_"
+        ).contains("$slashSlug", true))
     }?.distinctBy { it.name }?.sortedByDescending { it.size?.toLongOrNull() ?: 0 } ?: return null
 
     return if (isTrimmed) {
@@ -843,6 +849,8 @@ fun getBaseUrl(url: String): String {
         "${it.scheme}://${it.host}"
     }
 }
+
+fun encode(input: String): String? = URLEncoder.encode(input, "utf-8")
 
 fun decryptStreamUrl(data: String): String {
 
