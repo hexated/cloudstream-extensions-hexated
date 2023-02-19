@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class DramaSerial : MainAPI() {
-    override var mainUrl = "https://149.3.170.35"
+    override var mainUrl = "https://dramaserial.world"
     override var name = "DramaSerial"
     override val hasMainPage = true
     override var lang = "id"
