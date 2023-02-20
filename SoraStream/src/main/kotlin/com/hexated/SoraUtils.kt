@@ -730,17 +730,11 @@ var arrayofworkers = (.*)""".toRegex()
     return BaymoviesConfig(country, downloadTime, workers)
 }
 
-/** taken from https://github.com/821938089/cloudstream-extensions/blob/6e41697cbf816d2f57d9922d813c538e3192f708/PiousIndexProvider/src/main/kotlin/com/horis/cloudstreamplugins/PiousIndexProvider.kt#L175-L179
-- Credits to Horis
-**/
 fun decodeIndexJson(json: String): String {
     val slug = json.reversed().substring(24)
     return base64Decode(slug.substring(0, slug.length - 20))
 }
 
-/** taken from https://github.com/821938089/cloudstream-extensions/blob/23dae833a48fb329d4c67dd77ac1e8bb592ac5a9/Movie123Provider/src/main/kotlin/com/horis/cloudstreamplugins/Movie123Provider.kt#L138-L150
-- Credits to Horis
-**/
 fun String.decryptGomoviesJson(key: String = "123"): String {
     val sb = StringBuilder()
     var i = 0

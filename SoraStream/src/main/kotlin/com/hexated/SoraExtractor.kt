@@ -327,7 +327,6 @@ object SoraExtractor : SoraStream() {
             ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsedSafe<HdMovieBoxIframe>()?.apiIframe ?: return
 
-        delay(1000)
         val iframe = app.get(iframeUrl, referer = "$hdMovieBoxAPI/").document.selectFirst("iframe")
             ?.attr("src")
         val base = getBaseUrl(iframe ?: return)
@@ -947,19 +946,23 @@ object SoraExtractor : SoraStream() {
             resDetail.episodes?.find { it.number == episode }?.id
         }
 
-        delay(2000)
         app.get(
             "$kissKhAPI/api/DramaList/Episode/$epsId.png?err=false&ts=&time=",
             referer = "$kissKhAPI/Drama/${getKisskhTitle(contentTitle)}/Episode-${episode ?: 0}?id=$id&ep=$epsId&page=0&pageSize=100"
         ).parsedSafe<KisskhSources>()?.let { source ->
             listOf(source.video, source.thirdParty).apmap { link ->
                 if (link?.contains(".m3u8") == true) {
-                    M3u8Helper.generateM3u8(
-                        "Kisskh",
-                        link,
-                        referer = "$kissKhAPI/",
-                        headers = mapOf("Origin" to kissKhAPI)
-                    ).forEach(callback)
+                    callback.invoke(
+                        ExtractorLink(
+                            "Kisskh",
+                            "Kisskh",
+                            link,
+                            referer = "$kissKhAPI/",
+                            Qualities.P720.value,
+                            true,
+                            headers = mapOf("Origin" to kissKhAPI)
+                        )
+                    )
                 } else {
                     loadExtractor(
                         link?.substringBefore("=http") ?: return@apmap null,
@@ -1246,7 +1249,6 @@ object SoraExtractor : SoraStream() {
         }
 
         sources.apmap { (quality, link) ->
-            delay(2000)
             val driveLink = bypassHrefli(link ?: return@apmap null)
             val base = getBaseUrl(driveLink ?: return@apmap null)
             val resDoc = app.get(driveLink).text.substringAfter("replace(\"")
@@ -2383,6 +2385,7 @@ object SoraExtractor : SoraStream() {
         val files = app.get(
             "https://api.telegram.d1.zindex.eu.org/search?name=${encode(query)}&page=1",
             referer = tgarMovieAPI,
+            verify = false
         ).parsedSafe<TgarData>()?.results?.filter { media ->
             (if (season == null) {
                 media.name?.contains("$year") == true
