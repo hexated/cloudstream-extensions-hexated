@@ -2492,14 +2492,20 @@ object SoraExtractor : SoraStream() {
                 it.attr("data-year"),
                 it.select("a").attr("href")
             )
-        }.find {
-            if (season == null) {
-                (it.first.equals(title, true) || it.first.equals(
-                    "$title ($year)",
-                    true
-                )) && it.second.equals("$year")
+        }.let { el ->
+            if(el.size == 1) {
+                el.firstOrNull()
             } else {
-                it.first.equals("$title - Season $season", true) && it.second.equals("$year")
+                el.find {
+                    if (season == null) {
+                        (it.first.equals(title, true) || it.first.equals(
+                            "$title ($year)",
+                            true
+                        )) && it.second.equals("$year")
+                    } else {
+                        it.first.equals("$title - Season $season", true)
+                    }
+                }
             }
         } ?: return
 
