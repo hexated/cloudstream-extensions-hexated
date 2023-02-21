@@ -223,9 +223,10 @@ class Loklok : MainAPI() {
                 """[{"category":${res.category},"contentId":"${res.id}","episodeId":${res.epId},"definition":"${video.code}"}]""".toRequestBody(
                     RequestBodyTypes.JSON.toMediaTypeOrNull()
                 )
-            val json =
-                app.post("$apiUrl/media/bathGetplayInfo", requestBody = body, headers = headers)
-                    .parsedSafe<PreviewResponse>()?.data?.firstOrNull()
+            val json = app.get(
+                "$apiUrl/media/previewInfo?category=${res.category}&contentId=${res.id}&episodeId=${res.epId}&definition=${video.code}",
+                headers = headers,
+            ).parsedSafe<PreviewResponse>()?.data
             callback.invoke(
                 ExtractorLink(
                     this.name,
@@ -337,7 +338,7 @@ class Loklok : MainAPI() {
     )
 
     data class PreviewResponse(
-        @JsonProperty("data") val data: ArrayList<PreviewVideos>? = arrayListOf(),
+        @JsonProperty("data") val data: PreviewVideos? = null,
     )
 
     data class PreviewVideos(
