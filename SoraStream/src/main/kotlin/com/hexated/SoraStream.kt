@@ -262,7 +262,7 @@ open class SoraStream : TmdbProvider() {
             ?.randomOrNull()
 
         return if (type == TvType.TvSeries) {
-            val lastSeason = res.seasons?.lastOrNull()?.seasonNumber
+            val lastSeason = res.last_episode_to_air?.season_number
             val episodes = res.seasons?.mapNotNull { season ->
                 app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey")
                     .parsedSafe<MediaDetailEpisodes>()?.episodes?.map { eps ->
@@ -882,6 +882,11 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("results") val results: ArrayList<Media>? = arrayListOf(),
     )
 
+    data class LastEpisodeToAir(
+        @JsonProperty("episode_number") val episode_number: Int? = null,
+        @JsonProperty("season_number") val season_number: Int? = null,
+    )
+
     data class MediaDetail(
         @JsonProperty("id") val id: Int? = null,
         @JsonProperty("imdb_id") val imdbId: String? = null,
@@ -900,6 +905,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("status") val status: String? = null,
         @JsonProperty("genres") val genres: ArrayList<Genres>? = arrayListOf(),
         @JsonProperty("keywords") val keywords: KeywordResults? = null,
+        @JsonProperty("last_episode_to_air") val last_episode_to_air: LastEpisodeToAir? = null,
         @JsonProperty("seasons") val seasons: ArrayList<Seasons>? = arrayListOf(),
         @JsonProperty("videos") val videos: ResultsTrailer? = null,
         @JsonProperty("external_ids") val external_ids: ExternalIds? = null,

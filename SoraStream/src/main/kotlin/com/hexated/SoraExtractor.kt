@@ -2362,11 +2362,16 @@ object SoraExtractor : SoraStream() {
                 if (api in lockedIndex) app.post(
                     "${apiUrl}search",
                     data = data,
-                    headers = passHeaders
-                ).text else app.post("${apiUrl}search", data = data).text
+                    headers = passHeaders,
+                    referer = apiUrl
+                ).text else app.post(
+                    "${apiUrl}search",
+                    data = data,
+                    referer = apiUrl
+                ).text
             )
         } else {
-            app.post("${apiUrl}search", requestBody = body).text
+            app.post("${apiUrl}search", requestBody = body,referer = apiUrl).text
         }
         val media = if (api in untrimmedIndex) searchIndex(
             title,
@@ -2388,15 +2393,16 @@ object SoraExtractor : SoraStream() {
                     app.post(
                         "${apiUrl}id2path",
                         data = pathData,
-                        headers = passHeaders
+                        headers = passHeaders,
+                        referer = apiUrl
                     )
                 } else {
                     app.post(
-                        "${apiUrl}id2path", data = pathData
+                        "${apiUrl}id2path", data = pathData, referer = apiUrl
                     )
                 }
             } else {
-                app.post("${apiUrl}id2path", requestBody = pathBody)
+                app.post("${apiUrl}id2path", requestBody = pathBody, referer = apiUrl)
             }).text.let { path ->
                 if (api == "RinzryMovies") {
                     val worker = app.get(
