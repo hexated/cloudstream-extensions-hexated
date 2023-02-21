@@ -2446,15 +2446,14 @@ object SoraExtractor : SoraStream() {
         val files = app.get(
             "https://api.telegram.d1.zindex.eu.org/search?name=${encode(query)}&page=1",
             referer = tgarMovieAPI,
-            headers = mapOf("Origin" to tgarMovieAPI),
-            verify = false
+            timeout = 600L
         ).parsedSafe<TgarData>()?.results?.filter { media ->
             (if (season == null) {
                 media.name?.contains("$year") == true
             } else {
                 media.name?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
             }) && media.name?.contains(
-                Regex("(?i)(2160p|1080p)")
+                Regex("(?i)(2160p|1080p|720p)")
             ) == true && (media.mime_type in mimeType) && (media.name.replace(
                 "-",
                 "."
@@ -2467,7 +2466,7 @@ object SoraExtractor : SoraStream() {
             ).contains("$spaceSlug", true) || media.name.replace(
                 "-",
                 "_"
-            ).contains("$slashSlug", true))
+            ).contains("$slashSlug", true) || media.name.contains("${title?.replace(" ", "_")}"))
         }
 
         files?.map { file ->
