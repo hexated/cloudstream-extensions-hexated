@@ -42,11 +42,14 @@ import com.hexated.SoraExtractor.invokePapaonMovies1
 import com.hexated.SoraExtractor.invokePapaonMovies2
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRinzrymovies
+import com.hexated.SoraExtractor.invokeRubyMovies
+import com.hexated.SoraExtractor.invokeShinobiMovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTgarMovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
+import com.hexated.SoraExtractor.invokeVitoenMovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeXtrememovies
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -129,6 +132,9 @@ open class SoraStream : TmdbProvider() {
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
         const val tgarMovieAPI = "https://tgarchive.eu.org"
         const val jmdkhMovieAPI = "https://tg.jmdkh.eu.org/0:"
+        const val rubyMovieAPI = "https://upload.rubyshare111.workers.dev/0:"
+        const val shinobiMovieAPI = "https://index.shinobicloud.cf/0:"
+        const val vitoenMovieAPI = "https://openmatte.vitoencodes.workers.dev/0:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -726,6 +732,39 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeJmdkhMovies(
                     jmdkhMovieAPI,
                     "JmdkhMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeShinobiMovies(
+                    shinobiMovieAPI,
+                    "ShinobiMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeRubyMovies(
+                    rubyMovieAPI,
+                    "RubyMovies",
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeVitoenMovies(
+                    vitoenMovieAPI,
+                    "VitoenMovies",
                     res.title,
                     res.year,
                     res.season,

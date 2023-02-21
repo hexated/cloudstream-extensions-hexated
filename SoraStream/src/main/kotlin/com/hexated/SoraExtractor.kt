@@ -2271,6 +2271,66 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokeRubyMovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
+    suspend fun invokeShinobiMovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
+    suspend fun invokeVitoenMovies(
+        apiUrl: String,
+        api: String,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeIndex(
+            apiUrl,
+            api,
+            title,
+            year,
+            season,
+            episode,
+            callback,
+        )
+    }
+
     private suspend fun invokeIndex(
         apiUrl: String,
         api: String,
@@ -2385,6 +2445,7 @@ object SoraExtractor : SoraStream() {
         val files = app.get(
             "https://api.telegram.d1.zindex.eu.org/search?name=${encode(query)}&page=1",
             referer = tgarMovieAPI,
+            headers = mapOf("Origin" to tgarMovieAPI),
             verify = false
         ).parsedSafe<TgarData>()?.results?.filter { media ->
             (if (season == null) {
