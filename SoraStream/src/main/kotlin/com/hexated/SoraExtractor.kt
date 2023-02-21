@@ -859,7 +859,7 @@ object SoraExtractor : SoraStream() {
                         "$fixTitle", true
                     ) == true && it.releaseDate?.equals("$year") == true && it.type == "Movie"
                 } else {
-                    it.title?.equals("$fixTitle", true) == true && it.type == "TV Series" && it.season == lastSeason
+                    it.title?.equals("$fixTitle", true) == true && it.type == "TV Series" && it.seasons == lastSeason
                 }
             }?.id ?: return
 
@@ -2781,7 +2781,7 @@ data class CrunchyrollDetails(
 data class ConsumetResults(
     @JsonProperty("id") val id: String? = null,
     @JsonProperty("title") val title: String? = null,
-    @JsonProperty("season") val season: Int? = null,
+    @JsonProperty("seasons") val seasons: Int? = null,
     @JsonProperty("releaseDate") val releaseDate: String? = null,
     @JsonProperty("type") val type: String? = null,
 )
