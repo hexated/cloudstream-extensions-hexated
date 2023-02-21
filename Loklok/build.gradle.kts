@@ -1,12 +1,13 @@
 // use an integer for version numbers
-version = 16
+version = 17
 
 
 cloudstream {
     language = "en"
     // All of these properties are optional, you can safely remove them
 
-    description = "#2 best extension based on Loklok API"
+//    description = "#2 best extension based on Loklok API"
+    description = "Use External Player"
     authors = listOf("Hexated")
 
     /**
