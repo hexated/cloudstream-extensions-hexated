@@ -46,6 +46,9 @@ val encodedIndex = arrayOf(
     "PapaonMovies[1]",
     "PapaonMovies[2]",
     "JmdkhMovies",
+    "RubyMovies",
+    "ShinobiMovies",
+    "VitoenMovies",
 )
 
 val lockedIndex = arrayOf(
