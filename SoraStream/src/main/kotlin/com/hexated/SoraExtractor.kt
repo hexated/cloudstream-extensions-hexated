@@ -700,20 +700,7 @@ object SoraExtractor : SoraStream() {
                 fixUrl(iframe, kimcartoonAPI)
             ).document.selectFirst("div#divContentVideo iframe")
                 ?.attr("src") ?: return
-        loadExtractor(source, "$kimcartoonAPI/", subtitleCallback) { link ->
-            callback.invoke(
-                ExtractorLink(
-                    "Kimcartoon",
-                    "Kimcartoon",
-                    link.url,
-                    link.referer,
-                    link.quality,
-                    link.isM3u8,
-                    link.headers,
-                    link.extractorData
-                )
-            )
-        }
+        loadExtractor(source, "$kimcartoonAPI/", subtitleCallback, callback)
     }
 
     suspend fun invokeSoraStream(
@@ -953,17 +940,12 @@ object SoraExtractor : SoraStream() {
         ).parsedSafe<KisskhSources>()?.let { source ->
             listOf(source.video, source.thirdParty).apmap { link ->
                 if (link?.contains(".m3u8") == true) {
-                    callback.invoke(
-                        ExtractorLink(
-                            "Kisskh",
-                            "Kisskh",
-                            link,
-                            referer = "$kissKhAPI/",
-                            Qualities.P720.value,
-                            true,
-                            headers = mapOf("Origin" to kissKhAPI)
-                        )
-                    )
+                    M3u8Helper.generateM3u8(
+                        "Kisskh",
+                        link,
+                        "$kissKhAPI/",
+                        headers = mapOf("Origin" to kissKhAPI)
+                    ).forEach(callback)
                 } else {
                     loadExtractor(
                         link?.substringBefore("=http") ?: return@apmap null,
@@ -2639,6 +2621,11 @@ class StreamM4u : XStreamCdn() {
 class Sblongvu : StreamSB() {
     override var name = "Sblongvu"
     override var mainUrl = "https://sblongvu.com"
+}
+
+class Keephealth : StreamSB() {
+    override var name = "Kimcartoon"
+    override var mainUrl = "https://keephealth.info"
 }
 
 data class TitleSlug(

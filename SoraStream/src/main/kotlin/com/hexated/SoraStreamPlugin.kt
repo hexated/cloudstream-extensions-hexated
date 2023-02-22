@@ -13,5 +13,6 @@ class SoraStreamPlugin: Plugin() {
         registerMainAPI(SoraStreamLite())
         registerExtractorAPI(StreamM4u())
         registerExtractorAPI(Sblongvu())
+        registerExtractorAPI(Keephealth())
     }
 }
