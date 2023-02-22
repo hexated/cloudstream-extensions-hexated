@@ -2919,3 +2919,7 @@ data class TgarMedia(
 data class TgarData(
     @JsonProperty("results") val results: ArrayList<TgarMedia>? = arrayListOf(),
 )
+
+data class Gdflix(
+    @JsonProperty("url") val url: String
+)

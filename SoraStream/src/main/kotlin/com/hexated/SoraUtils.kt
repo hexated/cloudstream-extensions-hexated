@@ -249,14 +249,37 @@ suspend fun extractGdflix(url: String): String? {
             ?.attr("href") ?: return null
     val base = getBaseUrl(iframeGdflix)
 
-    val gdfDoc = app.get(iframeGdflix).document.selectFirst("script:containsData(replace)")?.data()
+    val req = app.get(iframeGdflix).document.selectFirst("script:containsData(replace)")?.data()
         ?.substringAfter("replace(\"")
         ?.substringBefore("\")")?.let {
-            app.get(fixUrl(it, base)).document
-        }
-    val iframeDrivebot2 = gdfDoc?.selectFirst("a.btn.btn-outline-warning")?.attr("href")
+            app.get(fixUrl(it, base))
+        } ?: return null
 
-    return getDrivebotLink(iframeDrivebot2)
+//    Drivebot dead
+//    val iframeDrivebot2 = gdfDoc?.selectFirst("a.btn.btn-outline-warning")?.attr("href")
+//    return getDrivebotLink(iframeDrivebot2)
+
+    val reqUrl = req.url
+    val ssid = req.cookies["PHPSESSID"]
+    val script = req.document.selectFirst("script:containsData(formData =)")?.data()
+    val key = Regex("append\\(\"key\", \"(\\S+?)\"\\);").find(script ?: return null)?.groupValues?.get(1)
+
+    val body = FormBody.Builder()
+        .addEncoded("action", "direct")
+        .addEncoded("key", "$key")
+        .addEncoded("action_token", "cf_token")
+        .build()
+
+    val gdriveUrl = app.post(
+        reqUrl, requestBody = body,
+        cookies = mapOf("PHPSESSID" to "$ssid"),
+        headers = mapOf(
+            "x-token" to URI(reqUrl).host
+        )
+    ).parsedSafe<Gdflix>()?.url
+
+    return getDirectGdrive(gdriveUrl ?: return null)
+
 }
 
 suspend fun getDrivebotLink(url: String?): String? {
@@ -342,7 +365,7 @@ suspend fun getDirectGdrive(url: String): String {
         url
     } else {
         "https://drive.google.com/uc?id=${
-            url.substringAfter("/d/").substringBefore("/")
+            Regex("(?:\\?id=|/d/)(\\S+)/").find("$url/")?.groupValues?.get(1)
         }&export=download"
     }
 
