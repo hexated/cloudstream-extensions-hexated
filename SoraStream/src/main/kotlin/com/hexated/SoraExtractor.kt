@@ -863,7 +863,11 @@ object SoraExtractor : SoraStream() {
             "vidcloud", "upcloud"
         ).apmap { server ->
             val sources = app.get(
-                "$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server",
+                if(server == "vidcloud") {
+                    "$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id"
+                } else {
+                    "$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server"
+                },
             ).parsedSafe<ConsumetSourcesResponse>()
             val name = fixTitle(server)
             sources?.sources?.map {
