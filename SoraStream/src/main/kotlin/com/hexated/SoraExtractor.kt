@@ -2628,7 +2628,7 @@ class Sblongvu : StreamSB() {
 }
 
 class Keephealth : StreamSB() {
-    override var name = "Kimcartoon"
+    override var name = "Keephealth"
     override var mainUrl = "https://keephealth.info"
 }
 
