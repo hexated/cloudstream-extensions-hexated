@@ -25,7 +25,7 @@ class OploverzProvider : MainAPI() {
 
     companion object {
         const val acefile = "https://acefile.co"
-        const val linkbox = "https://www.linkbox.to"
+        const val linkbox = "https://lbx.to"
 
         fun getType(t: String): TvType {
             return when {
@@ -185,27 +185,6 @@ class OploverzProvider : MainAPI() {
 
     }
 
-    private suspend fun invokeLinkbox(
-        url: String,
-        referer: String,
-        quality: String? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val id = Regex("""(/file/|id=)(\S+)""").find(url)?.groupValues?.get(2)
-        app.get("$linkbox/api/open/get_url?itemId=$id", referer = url)
-            .parsedSafe<Responses>()?.data?.rList?.map { link ->
-                callback.invoke(
-                    ExtractorLink(
-                        "Linkbox",
-                        "Linkbox",
-                        link.url,
-                        referer,
-                        getQualityFromName(quality),
-                    )
-                )
-            }
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -228,23 +207,19 @@ class OploverzProvider : MainAPI() {
         if (downloadSources?.isNotEmpty() == true) sources.addAll(downloadSources)
 
         sources.apmap { (quality, source) ->
-            if(source.startsWith(linkbox)) {
-                invokeLinkbox(source, data, quality, callback)
-            } else {
-                loadExtractor(fixedIframe(source), data, subtitleCallback) { link ->
-                    callback.invoke(
-                        ExtractorLink(
-                            link.name,
-                            link.name,
-                            link.url,
-                            link.referer,
-                            if (source.startsWith(acefile)) getQualityFromName(quality) else link.quality,
-                            link.isM3u8,
-                            link.headers,
-                            link.extractorData
-                        )
+            loadExtractor(fixedIframe(source), data, subtitleCallback) { link ->
+                callback.invoke(
+                    ExtractorLink(
+                        link.name,
+                        link.name,
+                        link.url,
+                        link.referer,
+                        if (source.startsWith(acefile)) getQualityFromName(quality) else link.quality,
+                        link.isM3u8,
+                        link.headers,
+                        link.extractorData
                     )
-                }
+                )
             }
         }
 
@@ -252,12 +227,11 @@ class OploverzProvider : MainAPI() {
     }
 
     private fun fixedIframe(url: String): String {
-        return if (url.startsWith(acefile)) {
-            Regex("""/f/(\S+)/|/file/(\S+)/""").find(url)?.groupValues?.getOrNull(1).let { id ->
-                "$acefile/player/$id"
-            }
-        } else {
-            url
+        val id = Regex("""/f/(\S+)/|/file/(\S+)/""").find(url)?.groupValues?.getOrNull(1)
+        return when {
+            url.startsWith(acefile) -> "$acefile/player/$id"
+            url.startsWith(linkbox) -> "https://www.linkbox.to/a/f/$id"
+            else -> url
         }
     }
 
