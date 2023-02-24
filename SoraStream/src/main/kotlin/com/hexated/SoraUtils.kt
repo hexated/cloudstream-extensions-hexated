@@ -1,6 +1,7 @@
 package com.hexated
 
 import android.util.Base64
+import com.hexated.SoraStream.Companion.base64DecodeAPI
 import com.hexated.SoraStream.Companion.baymoviesAPI
 import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
@@ -35,6 +36,15 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.math.min
 
+val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
+
+val soraHeaders = mapOf(
+    "lang" to "en",
+    "versioncode" to "32",
+    "clienttype" to "android_tem3",
+    "deviceid" to getDeviceId(),
+)
+
 val encodedIndex = arrayOf(
     "GamMovies",
     "JSMovies",
@@ -65,6 +75,10 @@ val untrimmedIndex = arrayOf(
     "PapaonMovies[1]",
     "PapaonMovies[2]",
     "EdithxMovies",
+)
+
+val needRefererIndex = arrayOf(
+    "ShinobiMovies",
 )
 
 val mimeType = arrayOf(
@@ -440,6 +454,56 @@ suspend fun invokeSmashyTwo(
             videoUrl.contains(".m3u8")
         )
     )
+}
+
+suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?) : Pair<String, String>? {
+    val doc = app.get("${base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")}/search?keyword=$title").document
+    val scriptData = doc.select("div.search-list div.search-video-card").map {
+        Triple(
+            it.selectFirst("h2.title")?.text().toString(),
+            it.selectFirst("div.desc")?.text()
+                ?.substringBefore(".")?.toIntOrNull(),
+            it.selectFirst("a")?.attr("href")?.split("/")
+        )
+    }
+
+    val script = if (scriptData.size == 1) {
+        scriptData.firstOrNull()
+    } else {
+        scriptData.find {
+            when (season) {
+                null -> {
+                    it.first.equals(
+                        title,
+                        true
+                    ) && it.second == year
+                }
+                1 -> {
+                    it.first.contains(
+                        "$title",
+                        true
+                    ) && (it.second == year || it.first.contains("Season $season", true))
+                }
+                else -> {
+                    it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) && it.second == year
+                }
+            }
+        }
+    }
+
+    val id = script?.third?.last() ?: return null
+    val type = script.third?.get(2) ?: return null
+
+    return id to type
+}
+
+suspend fun fetchSoraEpisodes(id: String, type: String, episode: Int?) : EpisodeVo? {
+    return app.get(
+        "$soraAPI/movieDrama/get?id=${id}&category=${type}",
+        headers = soraHeaders
+    ).parsedSafe<Load>()?.data?.episodeVo?.find {
+        it.seriesNo == (episode ?: 0)
+    }
 }
 
 suspend fun bypassOuo(url: String?): String? {
@@ -832,6 +896,16 @@ fun getGMoviesQuality(str: String): Int {
     }
 }
 
+fun getSoraQuality(quality: String): Int {
+    return when (quality) {
+        "GROOT_FD" -> Qualities.P360.value
+        "GROOT_LD" -> Qualities.P480.value
+        "GROOT_SD" -> Qualities.P720.value
+        "GROOT_HD" -> Qualities.P1080.value
+        else -> Qualities.Unknown.value
+    }
+}
+
 fun getFDoviesQuality(str: String): String {
     return when {
         str.contains("1080P", true) -> "1080P"
@@ -856,6 +930,13 @@ fun getDbgoLanguage(str: String): String {
         "Українська" -> "Ukrainian"
         else -> str
     }
+}
+
+fun getDeviceId(length: Int = 16): String {
+    val allowedChars = ('a'..'f') + ('0'..'9')
+    return (1..length)
+        .map { allowedChars.random() }
+        .joinToString("")
 }
 
 fun String.encodeUrl(): String {
