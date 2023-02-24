@@ -709,61 +709,30 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
     ) {
-        val headers = mapOf(
-            "lang" to "en",
-            "versioncode" to "32",
-            "clienttype" to "android_tem3",
-        )
-        val vipAPI =
-            base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
-        val searchUrl = base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
+        val (id, type) = getSoraIdAndType(title, year, season) ?: return
+        val json = fetchSoraEpisodes(id, type, episode) ?: return
 
-        val doc = app.get("$searchUrl/search?keyword=$title").document
-
-        val scriptData = doc.select("div.search-list div.search-video-card").map {
-            Triple(
-                it.selectFirst("h2.title")?.text().toString(),
-                it.selectFirst("div.desc")?.text()
-                    ?.substringBefore(".")?.toIntOrNull(),
-                it.selectFirst("a")?.attr("href")?.split("/")
+        json.subtitlingList?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    getVipLanguage(sub.languageAbbr ?: return@map),
+                    sub.subtitlingUrl ?: return@map
+                )
             )
         }
+    }
 
-        val script = if (scriptData.size == 1) {
-            scriptData.firstOrNull()
-        } else {
-            scriptData.find {
-                when (season) {
-                    null -> {
-                        it.first.equals(
-                            title,
-                            true
-                        ) && it.second == year
-                    }
-                    1 -> {
-                        it.first.contains(
-                            "$title",
-                            true
-                        ) && (it.second == year || it.first.contains("Season $season", true))
-                    }
-                    else -> {
-                        it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) && it.second == year
-                    }
-                }
-            }
-        }
-
-        val id = script?.third?.last() ?: return
-        val type = script.third?.get(2) ?: return
-
-        val json = app.get(
-            "$vipAPI/movieDrama/get?id=${id}&category=${type}",
-            headers = headers
-        ).parsedSafe<Load>()?.data?.episodeVo?.find {
-            it.seriesNo == (episode ?: 0)
-        } ?: return
+    suspend fun invokeSoraStreamLite(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val (id, type) = getSoraIdAndType(title, year, season) ?: return
+        val json = fetchSoraEpisodes(id, type, episode) ?: return
 
         json.subtitlingList?.map { sub ->
             subtitleCallback.invoke(
@@ -774,6 +743,23 @@ object SoraExtractor : SoraStream() {
             )
         }
 
+        json.definitionList?.map { video ->
+            val media = app.get(
+                "${soraAPI}/media/previewInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
+                headers = soraHeaders,
+            ).parsedSafe<SorastreamResponse>()?.data
+
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    media?.mediaUrl ?: return@map null,
+                    "",
+                    getSoraQuality(media.currentDefinition ?: ""),
+                    true,
+                )
+            )
+        }
     }
 
     suspend fun invokeXmovies(
@@ -2415,7 +2401,7 @@ object SoraExtractor : SoraStream() {
                     "$api $tags [$size]",
                     "$api $tags [$size]",
                     path,
-                    "",
+                    if(api in needRefererIndex) apiUrl else "",
                     quality,
                 )
             )
@@ -2926,4 +2912,13 @@ data class TgarData(
 
 data class Gdflix(
     @JsonProperty("url") val url: String
+)
+
+data class SorastreamResponse(
+    @JsonProperty("data") val data: SorastreamVideos? = null,
+)
+
+data class SorastreamVideos(
+    @JsonProperty("mediaUrl") val mediaUrl: String? = null,
+    @JsonProperty("currentDefinition") val currentDefinition: String? = null,
 )
