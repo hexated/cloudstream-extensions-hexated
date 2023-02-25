@@ -11,6 +11,7 @@ import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
+import com.hexated.SoraExtractor.invokeKickassanime
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
@@ -107,7 +108,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                if (res.season != null && res.isAnime) invokeCrunchyroll(
+                if (res.season != null && res.isAnime) invokeKickassanime(
                     res.title,
                     res.epsTitle,
                     res.season,
