@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.utils.*
@@ -133,6 +134,12 @@ class Loklok : MainAPI() {
 
         headers["deviceid"] = getDevideId()
 
+        val actors = res.starList?.mapNotNull {
+            Actor(
+                it.localName ?: return@mapNotNull null, it.image
+            )
+        }
+
         val episodes = res.episodeVo?.map { eps ->
             val definition = eps.definitionList?.map {
                 Definition(
@@ -193,6 +200,7 @@ class Loklok : MainAPI() {
             this.plot = res.introduction
             this.tags = res.tagNameList
             this.rating = res.score.toRatingInt()
+            addActors(actors)
             addMalId(malId)
             addAniListId(anilistId?.toIntOrNull())
             this.recommendations = recommendations
@@ -369,6 +377,11 @@ class Loklok : MainAPI() {
         @JsonProperty("name") val name: String? = null,
     )
 
+    data class StarList(
+        @JsonProperty("image") val image: String? = null,
+        @JsonProperty("localName") val localName: String? = null,
+    )
+
     data class MediaDetail(
         @JsonProperty("name") val name: String? = null,
         @JsonProperty("introduction") val introduction: String? = null,
@@ -377,6 +390,7 @@ class Loklok : MainAPI() {
         @JsonProperty("coverVerticalUrl") val coverVerticalUrl: String? = null,
         @JsonProperty("coverHorizontalUrl") val coverHorizontalUrl: String? = null,
         @JsonProperty("score") val score: String? = null,
+        @JsonProperty("starList") val starList: ArrayList<StarList>? = arrayListOf(),
         @JsonProperty("areaList") val areaList: ArrayList<Region>? = arrayListOf(),
         @JsonProperty("episodeVo") val episodeVo: ArrayList<EpisodeVo>? = arrayListOf(),
         @JsonProperty("likeList") val likeList: ArrayList<Media>? = arrayListOf(),
