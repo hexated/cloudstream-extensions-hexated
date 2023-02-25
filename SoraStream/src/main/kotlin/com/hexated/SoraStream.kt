@@ -53,6 +53,7 @@ import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVitoenMovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeXtrememovies
+import com.lagradost.cloudstream3.extractors.VidSrcExtractor
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -339,6 +340,11 @@ open class SoraStream : TmdbProvider() {
                 addTrailer(trailer)
             }
         }
+    }
+
+    override suspend fun extractorVerifierJob(extractorData: String?) {
+        if (extractorData == null) return
+        VidSrcExtractor.validatePass(extractorData)
     }
 
     override suspend fun loadLinks(
