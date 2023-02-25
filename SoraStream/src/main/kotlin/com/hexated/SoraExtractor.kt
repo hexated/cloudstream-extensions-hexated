@@ -1573,6 +1573,65 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    suspend fun invokeKickassanime(
+        title: String? = null,
+        epsTitle: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val body = """{"query":"$title"}""".toRequestBody(
+            RequestBodyTypes.JSON.toMediaTypeOrNull()
+        )
+        val animeId = app.post(
+            "$kickassanimeAPI/api/search", requestBody = body
+        ).text.let { tryParseJson<List<KaaSearchResponse>>(it) }.let { res ->
+            (if (res?.size == 1) {
+                res.firstOrNull()
+            } else {
+                res?.find {
+                    it.title?.equals(
+                        title,
+                        true
+                    ) == true || it.title.createSlug()
+                        ?.equals("${title.createSlug()}", true) == true
+                }
+            })?._id
+        } ?: return
+
+        val seasonData =
+            app.get("$kickassanimeAPI/api/season/$animeId").text.let { tryParseJson<List<KaaSeason>>(it) }?.find {
+                val seasonNumber = when (title) {
+                    "One Piece" -> 13
+                    "Hunter x Hunter" -> 5
+                    else -> season
+                }
+                it.number == seasonNumber
+            }
+
+        val language = seasonData?.languages?.filter {
+            it == "ja-JP" || it == "en-US"
+        }
+
+        language?.apmap { lang ->
+            val episodeSlug =
+                app.get("$kickassanimeAPI/api/episodes/${seasonData.id}?lh=$lang&page=1")
+                    .parsedSafe<KaaEpisodeResults>()?.result?.find { eps ->
+                        eps.episodeNumber == episode || eps.slug?.contains("${epsTitle.createSlug()}", true) == true
+                    }?.slug ?: return@apmap
+
+            val server = app.get("$kickassanimeAPI/api/watch/$episodeSlug").parsedSafe<KaaServers>()?.servers?.find {
+                it.contains("/sapphire-duck/")
+            } ?: return@apmap
+
+            invokeSapphire(server, lang == "en-US", subtitleCallback, callback)
+
+        }
+
+
+    }
+
     suspend fun invokeMoviesbay(
         title: String? = null,
         year: Int? = null,
@@ -2921,4 +2980,45 @@ data class SorastreamResponse(
 data class SorastreamVideos(
     @JsonProperty("mediaUrl") val mediaUrl: String? = null,
     @JsonProperty("currentDefinition") val currentDefinition: String? = null,
+)
+
+data class KaaServers(
+    @JsonProperty("servers") val servers: ArrayList<String>? = arrayListOf(),
+)
+
+data class KaaEpisode(
+    @JsonProperty("episodeNumber") val episodeNumber: Int? = null,
+    @JsonProperty("slug") val slug: String? = null,
+)
+
+data class KaaEpisodeResults(
+    @JsonProperty("result") val result: ArrayList<KaaEpisode>? = arrayListOf(),
+)
+
+data class KaaSeason(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("number") val number: Int? = null,
+    @JsonProperty("languages") val languages: ArrayList<String>? = arrayListOf(),
+)
+
+data class KaaSearchResponse(
+    @JsonProperty("_id") val _id: String? = null,
+    @JsonProperty("title") val title: String? = null,
+)
+
+data class SapphireSubtitles(
+    @JsonProperty("language") val language: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class SapphireStreams(
+    @JsonProperty("format") val format: String? = null,
+    @JsonProperty("audio_lang") val audio_lang: String? = null,
+    @JsonProperty("hardsub_lang") val hardsub_lang: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class SapphireSources(
+    @JsonProperty("streams") val streams: ArrayList<SapphireStreams>? = arrayListOf(),
+    @JsonProperty("subtitles") val subtitles: ArrayList<SapphireSubtitles>? = arrayListOf(),
 )

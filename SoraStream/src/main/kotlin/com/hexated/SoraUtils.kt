@@ -506,6 +506,42 @@ suspend fun fetchSoraEpisodes(id: String, type: String, episode: Int?) : Episode
     }
 }
 
+suspend fun invokeSapphire(
+    url: String? = null,
+    isDub: Boolean = false,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    var data = app.get("${url?.replace("player.php", "config.php")}&action=config", referer = url).text
+    while (true) {
+        if (data.startsWith("{")) break
+        if (data == "null") {
+            data = app.get("$url&action=config", referer = url).text
+            delay(1000)
+        }
+        data = data.decodeBase64()
+    }
+
+    tryParseJson<SapphireSources>(data).let { res ->
+        res?.streams?.filter { it.format == "adaptive_hls" && it.hardsub_lang.isNullOrEmpty() }?.reversed()?.map { source ->
+            val name = if (isDub) "English Dub" else "Raw"
+            M3u8Helper.generateM3u8(
+                "Crunchyroll [$name]",
+                source.url ?: return@map null,
+                "https://static.crunchyroll.com/",
+            ).forEach(callback)
+        }
+        res?.subtitles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    getLanguage(sub.language ?: return@map null),
+                    sub.url ?: return@map null
+                )
+            )
+        }
+    }
+}
+
 suspend fun bypassOuo(url: String?): String? {
     var res = session.get(url ?: return null)
     run lit@{
@@ -949,6 +985,10 @@ fun getBaseUrl(url: String): String {
     return URI(url).let {
         "${it.scheme}://${it.host}"
     }
+}
+
+fun String.decodeBase64(): String {
+    return Base64.decode(this, Base64.DEFAULT).toString(Charsets.UTF_8)
 }
 
 fun encode(input: String): String? = URLEncoder.encode(input, "utf-8")
