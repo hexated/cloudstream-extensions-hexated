@@ -2579,6 +2579,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
         val query = if (season == null) {
             title
         } else {
@@ -2618,7 +2619,7 @@ object SoraExtractor : SoraStream() {
                     media.third,
                     gomoviesAPI
                 )
-            ).document.selectFirst("div#g_MXOzFGouZrOAUioXjpddqkZK a:nth-child($episode)")
+            ).document.selectFirst("div#g_MXOzFGouZrOAUioXjpddqkZK a:contains(Episode $episodeSlug:)")
                 ?.attr("href")
         } ?: return
 
