@@ -194,7 +194,7 @@ class KuronimeProvider : MainAPI() {
             safeApiCall {
                 when {
                     it.startsWith("https://animeku.org") -> invokeKuroSource(it, callback)
-                    else -> loadExtractor("$it/", mainUrl, subtitleCallback, callback)
+                    else -> loadExtractor(it, mainUrl, subtitleCallback, callback)
                 }
             }
         }
