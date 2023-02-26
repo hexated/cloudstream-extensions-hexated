@@ -485,7 +485,7 @@ suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?) : Pair<St
                     ) && (it.second == year || it.first.contains("Season $season", true))
                 }
                 else -> {
-                    (it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) || it.first.equals(title, true)) && it.second == year
+                    it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) && it.second == year
                 }
             }
         }
@@ -534,7 +534,7 @@ suspend fun invokeSapphire(
         res?.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    getLanguage(sub.language ?: return@map null),
+                    getKaaLanguage(sub.language ?: return@map null) ?: sub.language,
                     sub.url ?: return@map null
                 )
             )
@@ -966,6 +966,11 @@ fun getDbgoLanguage(str: String): String {
         "Українська" -> "Ukrainian"
         else -> str
     }
+}
+
+fun getKaaLanguage(language: String?): String? {
+    return SubtitleHelper.fromTwoLettersToLanguage(language ?: return null)
+        ?: SubtitleHelper.fromTwoLettersToLanguage(language.substringBefore("-"))
 }
 
 fun getDeviceId(length: Int = 16): String {
