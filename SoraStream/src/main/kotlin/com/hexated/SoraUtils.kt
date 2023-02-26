@@ -485,7 +485,7 @@ suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?) : Pair<St
                     ) && (it.second == year || it.first.contains("Season $season", true))
                 }
                 else -> {
-                    it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) && it.second == year
+                    (it.first.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) || it.first.equals(title, true)) && it.second == year
                 }
             }
         }
