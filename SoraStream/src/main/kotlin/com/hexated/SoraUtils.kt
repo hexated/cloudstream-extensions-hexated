@@ -441,6 +441,7 @@ suspend fun invokeSmashyTwo(
     ).parsedSafe<Smashy1Source>() ?: return
 
     val videoUrl = base64Decode(source.file ?: return)
+    if(videoUrl.contains("/bug")) return
     val quality =
         Regex("(\\d{3,4})[Pp]").find(videoUrl)?.groupValues?.getOrNull(1)?.toIntOrNull()
             ?: Qualities.P720.value
