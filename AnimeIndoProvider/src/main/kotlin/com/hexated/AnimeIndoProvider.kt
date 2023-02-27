@@ -12,7 +12,6 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.nicehttp.NiceResponse
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-
 class AnimeIndoProvider : MainAPI() {
     override var mainUrl = "https://animeindo.cfd"
     override var name = "AnimeIndo"
@@ -184,7 +183,7 @@ class AnimeIndoProvider : MainAPI() {
         document.select("div.itemleft > .mirror > option").mapNotNull {
             fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
         }.apmap {
-            if (it.startsWith("https://uservideo.xyz") || it.startsWith(mainUrl)) {
+            if (it.startsWith(mainUrl)) {
                 app.get(it, referer = "$mainUrl/").document.select("iframe").attr("src")
             } else {
                 it
