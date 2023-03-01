@@ -2477,37 +2477,25 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
     ) {
         val query = getIndexQuery(title, year, season, episode)
-        val (dotSlug, spaceSlug, slashSlug) = getTitleSlug(title)
-        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
         val files = app.get(
             "https://api.tgarchive.superfastsearch.zindex.eu.org/search?name=${encode(query)}&page=1",
             referer = tgarMovieAPI,
             timeout = 600L
         ).parsedSafe<TgarData>()?.documents?.filter { media ->
-            (if (season == null) {
-                media.name?.contains("$year") == true
-            } else {
-                media.name?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
-            }) && media.name?.contains(
-                Regex("(?i)(2160p|1080p|720p)")
-            ) == true && (media.mime_type in mimeType) && (media.name.replace(
-                "-",
-                "."
-            ).contains(
-                "$dotSlug",
+            matchingIndex(
+                media.name,
+                media.mime_type,
+                title,
+                year,
+                season,
+                episode,
                 true
-            ) || media.name.replace(
-                "-",
-                " "
-            ).contains("$spaceSlug", true) || media.name.replace(
-                "-",
-                "_"
-            ).contains("$slashSlug", true) || media.name.contains("${title?.replace(" ", "_")}"))
+            )
         }
 
         files?.map { file ->
-            val size = "%.2f GB".format(bytesToGigaBytes(file.size?.toDouble() ?: return@map null))
+            val size = "%.2f GB".format(bytesToGigaBytes(file.size ?: return@map null))
             val quality = getIndexQuality(file.name)
             val tags = getIndexQualityTags(file.name)
             callback.invoke(
@@ -2519,6 +2507,58 @@ object SoraExtractor : SoraStream() {
                     quality,
                 )
             )
+        }
+
+    }
+
+    suspend fun invokeGdbotMovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val query = getIndexQuery(title, year, season, episode)
+        val files = app.get("$gdbot/search?q=$query").document.select("ul.divide-y li").map {
+            Triple(
+                it.select("a").attr("href"),
+                it.select("a").text(),
+                it.select("span").text()
+            )
+        }.filter {
+            matchingIndex(
+                it.second,
+                null,
+                title,
+                year,
+                season,
+                episode,
+            )
+        }.sortedByDescending {
+            it.third.getFileSize()
+        }
+
+        files.let { file ->
+            listOfNotNull(
+                file.find { it.second.contains("2160p", true) },
+                file.find { it.second.contains("1080p", true) }
+            )
+        }.apmap { file ->
+            val videoUrl = extractDrivebot(file.first)
+            val quality = getIndexQuality(file.second)
+            val tags = getIndexQualityTags(file.second)
+            val size = Regex("(\\d+\\.?\\d+\\sGB|MB)").find(file.third)?.groupValues?.get(0)?.trim()
+
+            callback.invoke(
+                ExtractorLink(
+                    "GdbotMovies $tags [$size]",
+                    "GdbotMovies $tags [$size]",
+                    videoUrl ?: return@apmap null,
+                    "",
+                    quality,
+                )
+            )
+
         }
 
     }
@@ -2961,7 +3001,7 @@ data class IndexSearch(
 data class TgarMedia(
     @JsonProperty("_id") val _id: Int? = null,
     @JsonProperty("name") val name: String? = null,
-    @JsonProperty("size") val size: Int? = null,
+    @JsonProperty("size") val size: Double? = null,
     @JsonProperty("file_unique_id") val file_unique_id: String? = null,
     @JsonProperty("mime_type") val mime_type: String? = null,
 )

@@ -269,30 +269,29 @@ suspend fun extractGdflix(url: String): String? {
             app.get(fixUrl(it, base))
         } ?: return null
 
-//    Drivebot dead
-//    val iframeDrivebot2 = gdfDoc?.selectFirst("a.btn.btn-outline-warning")?.attr("href")
-//    return getDrivebotLink(iframeDrivebot2)
+    val iframeDrivebot2 = req.document.selectFirst("a.btn.btn-outline-warning")?.attr("href")
+    return getDrivebotLink(iframeDrivebot2)
 
-    val reqUrl = req.url
-    val ssid = req.cookies["PHPSESSID"]
-    val script = req.document.selectFirst("script:containsData(formData =)")?.data()
-    val key = Regex("append\\(\"key\", \"(\\S+?)\"\\);").find(script ?: return null)?.groupValues?.get(1)
-
-    val body = FormBody.Builder()
-        .addEncoded("action", "direct")
-        .addEncoded("key", "$key")
-        .addEncoded("action_token", "cf_token")
-        .build()
-
-    val gdriveUrl = app.post(
-        reqUrl, requestBody = body,
-        cookies = mapOf("PHPSESSID" to "$ssid"),
-        headers = mapOf(
-            "x-token" to URI(reqUrl).host
-        )
-    ).parsedSafe<Gdflix>()?.url
-
-    return getDirectGdrive(gdriveUrl ?: return null)
+//    val reqUrl = req.url
+//    val ssid = req.cookies["PHPSESSID"]
+//    val script = req.document.selectFirst("script:containsData(formData =)")?.data()
+//    val key = Regex("append\\(\"key\", \"(\\S+?)\"\\);").find(script ?: return null)?.groupValues?.get(1)
+//
+//    val body = FormBody.Builder()
+//        .addEncoded("action", "direct")
+//        .addEncoded("key", "$key")
+//        .addEncoded("action_token", "cf_token")
+//        .build()
+//
+//    val gdriveUrl = app.post(
+//        reqUrl, requestBody = body,
+//        cookies = mapOf("PHPSESSID" to "$ssid"),
+//        headers = mapOf(
+//            "x-token" to URI(reqUrl).host
+//        )
+//    ).parsedSafe<Gdflix>()?.url
+//
+//    return getDirectGdrive(gdriveUrl ?: return null)
 
 }
 
@@ -804,28 +803,15 @@ fun searchIndex(
     response: String,
     isTrimmed: Boolean = true,
 ): List<IndexMedia>? {
-    val (dotSlug, spaceSlug, slashSlug) = getTitleSlug(title)
-    val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
     val files = tryParseJson<IndexSearch>(response)?.data?.files?.filter { media ->
-        (if (season == null) {
-            media.name?.contains("$year") == true
-        } else {
-            media.name?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
-        }) && media.name?.contains(
-            Regex("(?i)(2160p|1080p)")
-        ) == true && (media.mimeType in mimeType) && (media.name.replace(
-            "-",
-            "."
-        ).contains(
-            "$dotSlug",
-            true
-        ) || media.name.replace(
-            "-",
-            " "
-        ).contains("$spaceSlug", true) || media.name.replace(
-            "-",
-            "_"
-        ).contains("$slashSlug", true))
+        matchingIndex(
+            media.name ?: return null,
+            media.mimeType ?: return null,
+            title ?: return null,
+            year,
+            season,
+            episode
+        )
     }?.distinctBy { it.name }?.sortedByDescending { it.size?.toLongOrNull() ?: 0 } ?: return null
 
     return if (isTrimmed) {
@@ -838,6 +824,28 @@ fun searchIndex(
     } else {
         files
     }
+}
+
+fun matchingIndex(
+    mediaName: String?,
+    mediaMimeType: String?,
+    title: String?,
+    year: Int?,
+    season: Int?,
+    episode: Int?,
+    include720: Boolean = false
+): Boolean {
+    val (dotSlug, spaceSlug, slashSlug) = getTitleSlug(title)
+    val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+    return (if (season == null) {
+        mediaName?.contains("$year") == true
+    } else {
+        mediaName?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
+    }) && mediaName?.contains(
+        if (include720) Regex("(?i)(2160p|1080p|720p)") else Regex("(?i)(2160p|1080p)")
+    ) == true && ((mediaMimeType in mimeType) || mediaName.contains(Regex("\\.mkv|\\.mp4|\\.avi"))) && (mediaName.contains(
+        title?.replace(" ", "_").toString()
+    ) || mediaName.contains(Regex("(?i)($dotSlug|$spaceSlug|$slashSlug)")))
 }
 
 suspend fun getConfig(): BaymoviesConfig {
@@ -900,6 +908,15 @@ fun bytesToGigaBytes(number: Double): Double = number / 1024000000
 
 fun getKisskhTitle(str: String?): String? {
     return str?.replace(Regex("[^a-zA-Z\\d]"), "-")
+}
+
+fun String.getFileSize() : Float? {
+    val size = Regex("(\\d+\\.?\\d+\\sGB|MB)").find(this)?.groupValues?.get(0)?.trim()
+    val num = Regex("(\\d+\\.?\\d+)").find(size ?: return null)?.groupValues?.get(0)?.toFloat() ?: return null
+    return when {
+        size.contains("GB") -> num * 1000000
+        else -> num * 1000
+    }
 }
 
 fun getIndexQualityTags(str: String?): String {

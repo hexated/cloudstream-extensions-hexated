@@ -29,6 +29,7 @@ import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
+import com.hexated.SoraExtractor.invokeGdbotMovies
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeJmdkhMovies
 import com.hexated.SoraExtractor.invokeJsmovies
@@ -736,6 +737,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
+            },
+            {
+                if (!res.isAnime) invokeGdbotMovies(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeJmdkhMovies(
