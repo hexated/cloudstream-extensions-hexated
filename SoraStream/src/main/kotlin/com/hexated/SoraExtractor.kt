@@ -2608,7 +2608,7 @@ object SoraExtractor : SoraStream() {
                         it.first.equals("$title - Season $season", true)
                     }
                 }
-            }
+            } ?: el.find { it.first.contains("$title", true) && it.second.equals("$year") }
         } ?: return
 
         val iframe = if (season == null) {
