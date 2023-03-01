@@ -27,7 +27,7 @@ class Loklok : MainAPI() {
 
     private val headers = mutableMapOf(
         "lang" to "en",
-        "versioncode" to "32",
+        "versioncode" to "33",
         "clienttype" to "android_tem3",
     )
 

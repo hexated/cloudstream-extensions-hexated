@@ -40,7 +40,7 @@ val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=a
 
 val soraHeaders = mapOf(
     "lang" to "en",
-    "versioncode" to "32",
+    "versioncode" to "33",
     "clienttype" to "android_tem3",
     "deviceid" to getDeviceId(),
 )
