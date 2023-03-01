@@ -2481,10 +2481,10 @@ object SoraExtractor : SoraStream() {
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
         val files = app.get(
-            "https://api.telegram.d1.zindex.eu.org/search?name=${encode(query)}&page=1",
+            "https://api.tgarchive.superfastsearch.zindex.eu.org/search?name=${encode(query)}&page=1",
             referer = tgarMovieAPI,
             timeout = 600L
-        ).parsedSafe<TgarData>()?.results?.filter { media ->
+        ).parsedSafe<TgarData>()?.documents?.filter { media ->
             (if (season == null) {
                 media.name?.contains("$year") == true
             } else {
@@ -2961,13 +2961,13 @@ data class IndexSearch(
 data class TgarMedia(
     @JsonProperty("_id") val _id: Int? = null,
     @JsonProperty("name") val name: String? = null,
-    @JsonProperty("size") val size: String? = null,
+    @JsonProperty("size") val size: Int? = null,
     @JsonProperty("file_unique_id") val file_unique_id: String? = null,
     @JsonProperty("mime_type") val mime_type: String? = null,
 )
 
 data class TgarData(
-    @JsonProperty("results") val results: ArrayList<TgarMedia>? = arrayListOf(),
+    @JsonProperty("documents") val documents: ArrayList<TgarMedia>? = arrayListOf(),
 )
 
 data class Gdflix(
