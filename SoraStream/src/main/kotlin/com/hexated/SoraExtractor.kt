@@ -825,7 +825,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title?.replace("–", "-")
-        val id = app.get("$consumetFlixhqAPI/$title")
+        val id = app.get("$haikeiFlixhqAPI/$title")
             .parsedSafe<ConsumetSearchResponse>()?.results?.find {
                 if (season == null) {
                     it.title?.equals(
@@ -837,7 +837,7 @@ object SoraExtractor : SoraStream() {
             }?.id ?: return
 
         val episodeId =
-            app.get("$consumetFlixhqAPI/info?id=$id").parsedSafe<ConsumetDetails>()?.let {
+            app.get("$haikeiFlixhqAPI/info?id=$id").parsedSafe<ConsumetDetails>()?.let {
                 if (season == null) {
                     it.episodes?.first()?.id
                 } else {
@@ -850,9 +850,9 @@ object SoraExtractor : SoraStream() {
         ).apmap { server ->
             val sources = app.get(
                 if(server == "upcloud") {
-                    "$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id"
+                    "$haikeiFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id"
                 } else {
-                    "$consumetFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server"
+                    "$haikeiFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server"
                 },
             ).parsedSafe<ConsumetSourcesResponse>()
             val name = fixTitle(server)
@@ -1329,9 +1329,7 @@ object SoraExtractor : SoraStream() {
                 it.select("a").attr("href") to it.text()
             }
         })?.filter {
-            it.first.contains("gdtot") && (it.second.contains(
-                "1080p", true
-            ) || it.second.contains("4k", true))
+            it.first.contains("gdtot") && it.second.contains(Regex("(?i)(4k|1080p)"))
         } ?: return
 
         iframe.apmap { (iframeLink, title) ->
@@ -1383,10 +1381,11 @@ object SoraExtractor : SoraStream() {
             val qualities = getFDoviesQuality(quality)
             val fdLink = bypassFdAds(link)
             val videoLink = when {
-                type.contains("gdtot") -> {
-                    val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
-                    extractGdflix(gdBotLink ?: return@apmap null)
-                }
+                // pass due too many gdtot links
+//                type.contains("gdtot") -> {
+//                    val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
+//                    extractGdflix(gdBotLink ?: return@apmap null)
+//                }
                 type.contains("oiya") -> {
                     extractOiya(fdLink ?: return@apmap null, qualities)
                 }
