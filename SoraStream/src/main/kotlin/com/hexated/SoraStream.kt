@@ -22,7 +22,6 @@ import com.hexated.SoraExtractor.invokeXmovies
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
-import com.hexated.SoraExtractor.invokeCrunchyroll
 import com.hexated.SoraExtractor.invokeDahmerMovies
 import com.hexated.SoraExtractor.invokeEdithxmovies
 import com.hexated.SoraExtractor.invokeFDMovies
@@ -32,7 +31,6 @@ import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGdbotMovies
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeJmdkhMovies
-import com.hexated.SoraExtractor.invokeJsmovies
 import com.hexated.SoraExtractor.invokeKickassanime
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
@@ -53,7 +51,6 @@ import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVitoenMovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
-import com.hexated.SoraExtractor.invokeXtrememovies
 import com.lagradost.cloudstream3.extractors.VidSrcExtractor
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -99,7 +96,7 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
-        const val consumetFlixhqAPI = "https://api.consumet.org/movies/flixhq"
+        const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq"
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val consumetCrunchyrollAPI = "https://api.consumet.org/anime/crunchyroll" // dead
         const val kickassanimeAPI = "https://www2.kickassanime.ro"
