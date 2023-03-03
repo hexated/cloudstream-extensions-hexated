@@ -788,11 +788,11 @@ fun getIndexQuery(
     episode: Int? = null
 ): String {
     val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-    return if (season == null) {
-        "$title $year"
+    return (if (season == null) {
+        "$title ${year ?: ""}"
     } else {
         "$title S${seasonSlug}E${episodeSlug}"
-    }
+    }).trim()
 }
 
 fun searchIndex(

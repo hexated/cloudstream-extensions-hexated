@@ -81,6 +81,7 @@ class Hdfilmcehennemi : MainAPI() {
         val document = app.get(url).document
 
         val title = document.selectFirst("div.card-header > h1, div.card-header > h2")?.text()
+            ?.removeSuffix("Filminin Bilgileri")?.trim()
             ?: return null
         val poster = fixUrlNull(document.selectFirst("img.img-fluid")?.attr("src"))
         val tags = document.select("div.mb-0.lh-lg div:nth-child(5) a").map { it.text() }
