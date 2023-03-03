@@ -25,12 +25,6 @@ class Loklok : MainAPI() {
         TvType.AsianDrama,
     )
 
-    private val headers = mutableMapOf(
-        "lang" to "en",
-        "versioncode" to "33",
-        "clienttype" to "android_tem3",
-    )
-
     // no license found
     // thanks to https://github.com/napthedev/filmhot for providing API
     companion object {
@@ -38,6 +32,12 @@ class Loklok : MainAPI() {
         private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
         private val searchApi = base64Decode("aHR0cHM6Ly9sb2tsb2suY29t")
         private const val mainImageUrl = "https://images.weserv.nl"
+        private val headers = mutableMapOf(
+            "lang" to "en",
+            "versioncode" to "33",
+            "clienttype" to "android_tem3",
+            "deviceid" to getDeviceId()
+        )
 
         private fun base64DecodeAPI(api: String): String {
             return api.chunked(4).map { base64Decode(it) }.reversed().joinToString("")
@@ -131,8 +131,6 @@ class Loklok : MainAPI() {
             "$apiUrl/movieDrama/get?id=${data.id}&category=${data.category}",
             headers = headers
         ).parsedSafe<Load>()?.data ?: throw ErrorLoadingException("Invalid Json Reponse")
-
-        headers["deviceid"] = getDevideId()
 
         val actors = res.starList?.mapNotNull {
             Actor(
@@ -267,13 +265,6 @@ class Loklok : MainAPI() {
             "GROOT_HD" -> Qualities.P1080.value
             else -> Qualities.Unknown.value
         }
-    }
-
-    private fun getDevideId(length: Int = 16): String {
-        val allowedChars = ('a'..'f') + ('0'..'9')
-        return (1..length)
-            .map { allowedChars.random() }
-            .joinToString("")
     }
 
     private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
@@ -426,5 +417,12 @@ class Loklok : MainAPI() {
         @JsonProperty("data") val data: Data? = null,
     )
 
+}
+
+fun getDeviceId(length: Int = 16): String {
+    val allowedChars = ('a'..'f') + ('0'..'9')
+    return (1..length)
+        .map { allowedChars.random() }
+        .joinToString("")
 }
 

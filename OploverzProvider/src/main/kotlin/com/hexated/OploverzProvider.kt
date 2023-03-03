@@ -5,13 +5,14 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.util.ArrayList
 
 class OploverzProvider : MainAPI() {
-    override var mainUrl = "https://15.235.11.45"
+    override var mainUrl = "https://oploverz.tv"
     override var name = "Oploverz"
     override val hasMainPage = true
     override var lang = "id"
@@ -25,7 +26,8 @@ class OploverzProvider : MainAPI() {
 
     companion object {
         const val acefile = "https://acefile.co"
-        const val linkbox = "https://lbx.to"
+        const val lbx = "https://lbx.to"
+        const val linkbox = "https://www.linkbox.to"
 
         fun getType(t: String): TvType {
             return when {
@@ -200,13 +202,13 @@ class OploverzProvider : MainAPI() {
         if (streamingSources.isNotEmpty()) sources.addAll(streamingSources)
 
         val downloadSources =
-            document.select("div.bixbox div.soraddlx.soradlg").lastOrNull()?.select("div.soraurlx")
-                ?.map { item ->
-                    item.select("a").map { item.select("strong").text() to it.attr("href") }
-                }?.flatten()
-        if (downloadSources?.isNotEmpty() == true) sources.addAll(downloadSources)
+            document.select("div.mctnx div:contains(mp4) div.soraurlx").mapNotNull { item ->
+                item.select("a").map { item.select("strong").text() to it.attr("href") }
+            }.flatten()
+        if (downloadSources.isNotEmpty()) sources.addAll(downloadSources)
 
-        sources.apmap { (quality, source) ->
+        sources.filter { it.second.startsWith("https") }.
+        apmap { (quality, source) ->
             loadExtractor(fixedIframe(source), data, subtitleCallback) { link ->
                 callback.invoke(
                     ExtractorLink(
@@ -226,11 +228,14 @@ class OploverzProvider : MainAPI() {
         return true
     }
 
-    private fun fixedIframe(url: String): String {
-        val id = Regex("""/f/(\S+)/|/file/(\S+)/""").find(url)?.groupValues?.getOrNull(1)
+    private suspend fun fixedIframe(url: String): String {
+        val id = Regex("""(?:/f/|/file/)(\w+)""").find(url)?.groupValues?.getOrNull(1)
         return when {
             url.startsWith(acefile) -> "$acefile/player/$id"
-            url.startsWith(linkbox) -> "https://www.linkbox.to/a/f/$id"
+            url.startsWith(lbx) -> {
+                val itemId = app.get("$linkbox/api/file/share_out_list/?sortField=utime&sortAsc=0&pageNo=1&pageSize=50&shareToken=$id&scene=singleItem&needTpInfo=1&lan=en").parsedSafe<Responses>()?.data?.itemId
+                "$linkbox/a/f/$itemId"
+            }
             else -> url
         }
     }
@@ -278,11 +283,17 @@ class OploverzProvider : MainAPI() {
     )
 
     data class Data(
-        @JsonProperty("rList") val rList: List<RList>?,
+        @JsonProperty("rList") val rList: List<RList>? = arrayListOf(),
+        @JsonProperty("itemId") val itemId: String? = null,
     )
 
     data class Responses(
         @JsonProperty("data") val data: Data?,
     )
 
+}
+
+class Streamhide : Filesim() {
+    override val mainUrl = "https://streamhide.to"
+    override val name = "Streamhide"
 }

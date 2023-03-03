@@ -1373,9 +1373,7 @@ object SoraExtractor : SoraStream() {
                 it.select("img").attr("src")
             )
         }.filter {
-            (it.quality.contains("1080p", true) || it.quality.contains(
-                "4k", true
-            )) && (it.type.contains("gdtot") || it.type.contains("oiya"))
+            it.quality.contains(Regex("(?i)(1080p|4k)")) && it.type.contains(Regex("(gdtot|oiya)"))
         }
         iframe.apmap { (link, quality, size, type) ->
             val qualities = getFDoviesQuality(quality)
@@ -2517,7 +2515,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val query = getIndexQuery(title, year, season, episode)
+        val query = getIndexQuery(title, null, season, episode)
         val files = app.get("$gdbot/search?q=$query").document.select("ul.divide-y li").map {
             Triple(
                 it.select("a").attr("href"),
