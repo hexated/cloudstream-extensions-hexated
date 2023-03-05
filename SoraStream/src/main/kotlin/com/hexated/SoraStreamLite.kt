@@ -168,17 +168,17 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-            {
-                invokeFlixhq(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    res.lastSeason,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeFlixhq(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    res.lastSeason,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
             },

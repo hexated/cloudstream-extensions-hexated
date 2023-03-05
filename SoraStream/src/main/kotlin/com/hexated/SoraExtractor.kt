@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.google.gson.JsonParser
+import com.hexated.RabbitStream.extractRabbitStream
 import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.CloudflareKiller
@@ -45,17 +46,7 @@ object SoraExtractor : SoraStream() {
             ).parsedSafe<EmbedJson>()?.let { source ->
                 val link = source.link ?: return@let
                 if (link.contains("rabbitstream")) {
-                    val rabbitId = link.substringAfterLast("/").substringBefore("?")
-                    app.get(
-                        "https://rabbitstream.net/ajax/embed-5/getSources?id=$rabbitId",
-                        headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-                    ).parsedSafe<RabbitSources>()?.tracks?.map { sub ->
-                        subtitleCallback.invoke(
-                            SubtitleFile(
-                                sub.label.toString(), sub.file ?: return@map null
-                            )
-                        )
-                    }
+                    extractRabbitStream(link, subtitleCallback, callback, false, decryptKey = RabbitStream.getKey()) { it }
                 } else {
                     loadExtractor(
                         link, twoEmbedAPI, subtitleCallback, callback
@@ -542,7 +533,7 @@ object SoraExtractor : SoraStream() {
                 quality?.replace(Regex("\\d{3,4}p"), "Noverse")?.replace(".", " ") ?: "Noverse"
             callback.invoke(
                 ExtractorLink(
-                    name,
+                    "Noverse",
                     name,
                     link,
                     "",
@@ -648,7 +639,7 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "Filmxy $size ($server)",
+                    "Filmxy",
                     "Filmxy $size ($server)",
                     link,
                     "$filmxyAPI/",
@@ -1088,7 +1079,7 @@ object SoraExtractor : SoraStream() {
             if (!ouo.startsWith("https://ouo")) return@apmap null
             callback.invoke(
                 ExtractorLink(
-                    "AnimeKaizoku [${episodeData.third}]",
+                    "AnimeKaizoku",
                     "AnimeKaizoku [${episodeData.third}]",
                     bypassOuo(ouo) ?: return@apmap null,
                     "$animeKaizokuAPI/",
@@ -1248,7 +1239,7 @@ object SoraExtractor : SoraStream() {
                     ?.let { "[$it]" } ?: quality
             callback.invoke(
                 ExtractorLink(
-                    "UHDMovies $tags $size",
+                    "UHDMovies",
                     "UHDMovies $tags $size",
                     downloadLink ?: return@apmap null,
                     "",
@@ -1339,7 +1330,7 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "GMovies [$size]",
+                    "GMovies",
                     "GMovies [$size]",
                     videoLink ?: return@apmap null,
                     "",
@@ -1394,7 +1385,7 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "FDMovies [$size]",
+                    "FDMovies",
                     "FDMovies [$size]",
                     videoLink ?: return@apmap null,
                     "",
@@ -1513,7 +1504,7 @@ object SoraExtractor : SoraStream() {
 
         callback.invoke(
             ExtractorLink(
-                "TVMovies [${videoData?.second}]",
+                "TVMovies",
                 "TVMovies [${videoData?.second}]",
                 videoData?.first ?: return,
                 "",
@@ -1654,7 +1645,7 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "Moviesbay $qualityName [$size]",
+                    "Moviesbay",
                     "Moviesbay $qualityName [$size]",
                     link,
                     "",
@@ -1752,7 +1743,7 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "$api $qualityName",
+                    "$api",
                     "$api $qualityName",
                     shortLink ?: return@apmap null,
                     "",
@@ -2043,7 +2034,7 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "Baymovies $tags [$sizeFile]",
+                    "Baymovies",
                     "Baymovies $tags [$sizeFile]",
                     link,
                     "$baymoviesAPI/",
@@ -2454,7 +2445,7 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "$api $tags [$size]",
+                    api,
                     "$api $tags [$size]",
                     path,
                     if(api in needRefererIndex) apiUrl else "",
@@ -2497,7 +2488,7 @@ object SoraExtractor : SoraStream() {
             val tags = getIndexQualityTags(file.name)
             callback.invoke(
                 ExtractorLink(
-                    "TgarMovies $tags [$size]",
+                    "TgarMovies",
                     "TgarMovies $tags [$size]",
                     "https://api.southkoreacdn.workers.dev/telegram/${file._id}",
                     "$tgarMovieAPI/",
@@ -2548,7 +2539,7 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "GdbotMovies $tags [$size]",
+                    "GdbotMovies",
                     "GdbotMovies $tags [$size]",
                     videoUrl ?: return@apmap null,
                     "",
@@ -2597,7 +2588,7 @@ object SoraExtractor : SoraStream() {
             val size = "%.2f GB".format(bytesToGigaBytes(it.third.toDouble()))
             callback.invoke(
                 ExtractorLink(
-                    "DahmerMovies $tags [$size]",
+                    "DahmerMovies",
                     "DahmerMovies $tags [$size]",
                     url + it.second,
                     "",
