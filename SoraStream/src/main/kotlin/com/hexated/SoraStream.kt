@@ -96,7 +96,7 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
-        const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq"
+        const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq" // disabled
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val consumetCrunchyrollAPI = "https://api.consumet.org/anime/crunchyroll" // dead
         const val kickassanimeAPI = "https://www2.kickassanime.ro"
@@ -471,17 +471,17 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                invokeFlixhq(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    res.lastSeason,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeFlixhq(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    res.lastSeason,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
             },
