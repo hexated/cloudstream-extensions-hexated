@@ -729,7 +729,7 @@ fun Document.findTvMoviesIframe(): String? {
 }
 
 suspend fun searchCrunchyrollAnimeId(title: String): String? {
-    val res = app.get("${consumetCrunchyrollAPI}/search/$title")
+    val res = app.get("${consumetCrunchyrollAPI}/search/$title",timeout = 600L)
         .parsedSafe<ConsumetSearchResponse>()?.results
     return (if (res?.size == 1) {
         res.firstOrNull()
@@ -901,8 +901,8 @@ fun Headers.getGomoviesCookies(cookieKey: String = "set-cookie"): Map<String, St
 }
 
 fun String?.createSlug(): String? {
-    return this?.replace(Regex("[!%:'?,]|( &)"), "")?.replace(" ", "-")?.lowercase()
-        ?.replace("-–-", "-")
+    return this?.replace(Regex("[!%:'?,]|( &)"), "")?.replace(Regex("( – )|( -)|(- )"), "-")
+        ?.replace(" ", "-")?.lowercase()
 }
 
 fun getLanguage(str: String): String {
