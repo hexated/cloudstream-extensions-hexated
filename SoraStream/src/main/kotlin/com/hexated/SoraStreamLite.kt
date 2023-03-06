@@ -108,7 +108,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                if (res.season != null && res.isAnime) invokeKickassanime(
+                if (res.season != null && res.isAnime) invokeCrunchyroll(
                     res.title,
                     res.epsTitle,
                     res.season,

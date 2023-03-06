@@ -6,6 +6,7 @@ import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeBlackmovies
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeCodexmovies
+import com.hexated.SoraExtractor.invokeCrunchyroll
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixhq
@@ -98,8 +99,8 @@ open class SoraStream : TmdbProvider() {
         const val xMovieAPI = "https://xemovies.to"
         const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq" // disabled
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
-        const val consumetCrunchyrollAPI = "https://api.consumet.org/anime/crunchyroll" // dead
-        const val kickassanimeAPI = "https://www2.kickassanime.ro"
+        const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream"
+        const val kickassanimeAPI = "https://www2.kickassanime.ro" // disabled due to consumet
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
         const val uhdmoviesAPI = "https://uhdmovies.world"
@@ -411,7 +412,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (res.season != null && res.isAnime) invokeKickassanime(
+                if (res.season != null && res.isAnime) invokeCrunchyroll(
                     res.title,
                     res.epsTitle,
                     res.season,

@@ -539,7 +539,7 @@ suspend fun invokeSapphire(
         res?.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    getKaaLanguage(sub.language ?: return@map null) ?: sub.language,
+                    fixCrunchyrollLang(sub.language ?: return@map null) ?: sub.language,
                     sub.url ?: return@map null
                 )
             )
@@ -729,7 +729,7 @@ fun Document.findTvMoviesIframe(): String? {
 }
 
 suspend fun searchCrunchyrollAnimeId(title: String): String? {
-    val res = app.get("${consumetCrunchyrollAPI}/$title")
+    val res = app.get("${consumetCrunchyrollAPI}/search/$title")
         .parsedSafe<ConsumetSearchResponse>()?.results
     return (if (res?.size == 1) {
         res.firstOrNull()
@@ -991,7 +991,7 @@ fun getDbgoLanguage(str: String): String {
     }
 }
 
-fun getKaaLanguage(language: String?): String? {
+fun fixCrunchyrollLang(language: String?): String? {
     return SubtitleHelper.fromTwoLettersToLanguage(language ?: return null)
         ?: SubtitleHelper.fromTwoLettersToLanguage(language.substringBefore("-"))
 }
