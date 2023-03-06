@@ -202,7 +202,7 @@ class OploverzProvider : MainAPI() {
         if (streamingSources.isNotEmpty()) sources.addAll(streamingSources)
 
         val downloadSources =
-            document.select("div.mctnx div:contains(mp4) div.soraurlx").mapNotNull { item ->
+            document.select("div.mctnx div.soraurlx").mapNotNull { item ->
                 item.select("a").map { item.select("strong").text() to it.attr("href") }
             }.flatten()
         if (downloadSources.isNotEmpty()) sources.addAll(downloadSources)
