@@ -1524,7 +1524,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val id = searchCrunchyrollAnimeId(title ?: return) ?: return
-        val detail = app.get("$consumetCrunchyrollAPI/info/$id?fetchAllSeasons=true").text
+        val detail = app.get("$consumetCrunchyrollAPI/info/$id?fetchAllSeasons=true",timeout = 600L).text
         val epsId = tryParseJson<CrunchyrollDetails>(detail)?.findCrunchyrollId(
             title,
             season,
@@ -1534,7 +1534,7 @@ object SoraExtractor : SoraStream() {
 
         epsId.apmap {
             val json =
-                app.get("$consumetCrunchyrollAPI/watch/${it?.first ?: return@apmap null}")
+                app.get("$consumetCrunchyrollAPI/watch/${it?.first ?: return@apmap null}",timeout = 600L)
                     .parsedSafe<ConsumetSourcesResponse>()
 
             json?.sources?.map source@{ source ->
