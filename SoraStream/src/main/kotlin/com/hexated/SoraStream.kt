@@ -97,7 +97,7 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
-        const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq" // disabled
+        const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq" // disabled due to rate limit
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream"
         const val kickassanimeAPI = "https://www2.kickassanime.ro" // disabled due to consumet
@@ -503,7 +503,6 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.lastSeason,
                     res.episode,
-                    res.epsTitle,
                     callback
                 )
             },

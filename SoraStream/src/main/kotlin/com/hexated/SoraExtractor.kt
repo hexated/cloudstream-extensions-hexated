@@ -1157,7 +1157,6 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         lastSeason: Int? = null,
         episode: Int? = null,
-        epsTitle: String? = null,
         callback: (ExtractorLink) -> Unit
     ) {
         val slug = title.createSlug()?.replace("-", " ")
@@ -1184,7 +1183,7 @@ object SoraExtractor : SoraStream() {
                     it.text() to it.nextElementSibling()?.select("a")?.attr("href")
                 } else {
                     it.text() to it.nextElementSibling()
-                        ?.select("a:matches((Episode $episode)|($epsTitle))")
+                        ?.select("a")?.find { child -> child.select("span").text().equals("Episode $episode", true) }
                         ?.attr("href")
                 }
             }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
@@ -1215,10 +1214,7 @@ object SoraExtractor : SoraStream() {
         sources.apmap { (quality, link) ->
             val driveLink = bypassHrefli(link ?: return@apmap null)
             val base = getBaseUrl(driveLink ?: return@apmap null)
-            val resDoc = app.get(driveLink).text.substringAfter("replace(\"")
-                .substringBefore("\")").let {
-                    app.get(fixUrl(it, base)).document
-                }
+            val resDoc = app.get(driveLink).document
             val bitLink = resDoc.selectFirst("a.btn.btn-outline-success")?.attr("href")
             val downloadLink = if (bitLink.isNullOrEmpty()) {
                 val backupIframe = resDoc.select("a.btn.btn-outline-warning").attr("href")
