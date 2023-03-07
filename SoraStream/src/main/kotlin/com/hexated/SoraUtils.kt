@@ -158,17 +158,11 @@ suspend fun extractMirrorUHD(url: String, ref: String): String? {
             downLink = baseDoc.getMirrorLink()
         }
     }
-    if (downLink?.contains(".mkv") == true || downLink?.contains(".mp4") == true) return downLink
-    val downPage = app.get(downLink ?: return null).document
-    return downPage.selectFirst("form[method=post] a.btn.btn-success")
-        ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')") ?: run {
-        val mirror = downPage.selectFirst("form[method=post] a.btn.btn-primary")
-            ?.attr("onclick")?.substringAfter("Openblank('")?.substringBefore("')")
-        app.get(
-            mirror ?: return null
-        ).document.selectFirst("script:containsData(input.value =)")
-            ?.data()?.substringAfter("input.value = '")?.substringBefore("';")
-    }
+    return if (downLink?.contains("workers.dev") == true) downLink else base64Decode(
+        downLink?.substringAfter(
+            "download?url="
+        ) ?: return null
+    )
 }
 
 suspend fun extractBackupUHD(url: String): String? {
@@ -619,31 +613,34 @@ suspend fun bypassFdAds(url: String?): String? {
 }
 
 suspend fun bypassHrefli(url: String): String? {
-    var res = app.get(url.removePrefix("https://href.li/?"))
-    (1..2).forEach { _ ->
-        val document = res.document
-        val nextUrl = document.select("form").attr("action")
-        val data = document.select("form input").mapNotNull {
-            it.attr("name") to it.attr("value")
-        }.toMap()
-        res = app.post(
-            nextUrl,
-            data = data,
+    val postUrl = url.substringBefore("?id=").substringAfter("/?")
+    val res = app.post(
+        postUrl, data = mapOf(
+            "_wp_http" to url.substringAfter("?id=")
         )
-    }
-    val script = res.document.selectFirst("script:containsData(verify_button)")?.data()
-    val goUrl = script?.substringAfter("\"href\",\"")?.substringBefore("\")")
-    val cookies =
-        Regex("sumitbot_\\('(\\S+?)',\n|.?'(\\S+?)',").findAll(script ?: return null).map {
-            it.groupValues[2]
-        }.toList().let {
-            mapOf(it.first() to it.last())
-        }.ifEmpty { return null }
+    ).document
 
-    return app.get(
-        goUrl ?: return null,
-        cookies = cookies
+    val link = res.select("form#landing").attr("action")
+    val wpHttp = res.select("input[name=_wp_http2]").attr("value")
+    val token = res.select("input[name=token]").attr("value")
+
+    val blogRes = app.post(
+        link, data = mapOf(
+            "_wp_http2" to wpHttp,
+            "token" to token
+        )
+    ).text
+
+    val skToken = blogRes.substringAfter("?go=").substringBefore("\"")
+    val driveUrl = app.get(
+        "$postUrl?go=$skToken", cookies = mapOf(
+            skToken to wpHttp
+        )
     ).document.selectFirst("meta[http-equiv=refresh]")?.attr("content")?.substringAfter("url=")
+    val path = app.get(driveUrl ?: return null).text.substringAfter("replace(\"")
+        .substringBefore("\")")
+    if (path == "/404") return null
+    return fixUrl(path, getBaseUrl(driveUrl))
 }
 
 suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<String, String?>? {
