@@ -8,6 +8,7 @@ import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.google.gson.JsonParser
 import com.hexated.RabbitStream.extractRabbitStream
+import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.CloudflareKiller
@@ -978,8 +979,53 @@ object SoraExtractor : SoraStream() {
             },
             {
                 invokeAnimeKaizoku(malId, epsTitle, season, episode, callback)
-            }
+            },
+            {
+                invokeBiliBili(aniId, episode, subtitleCallback, callback)
+            },
         )
+    }
+
+    private suspend fun invokeBiliBili(
+        aniId: String? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get("$biliBiliAPI/anime/episodes?id=$aniId&source_id=bilibili")
+            .parsedSafe<BiliBiliDetails>()?.episodes?.find {
+                it.episodeNumber == episode
+            } ?: return
+
+        val sources =
+            app.get("$biliBiliAPI/source?episode_id=${res.sourceEpisodeId}&source_media_id=${res.sourceMediaId}&source_id=${res.sourceId}")
+                .parsedSafe<BiliBiliSourcesResponse>()
+
+        sources?.sources?.apmap { source ->
+            val quality = app.get(source.file ?: return@apmap null).document.selectFirst("Representation")?.attr("height")
+            callback.invoke(
+                ExtractorLink(
+                    "BiliBili",
+                    "BiliBili",
+                    source.file,
+                    "",
+                    quality?.toIntOrNull() ?: Qualities.Unknown.value,
+                    isDash = true
+                )
+            )
+        }
+
+        sources?.subtitles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    SubtitleHelper.fromTwoLettersToLanguage(sub.lang ?: "") ?: sub.language
+                    ?: return@map null,
+                    sub.file ?: return@map null
+                )
+            )
+        }
+
+
     }
 
     private suspend fun invokeZoro(
@@ -2675,12 +2721,39 @@ object SoraExtractor : SoraStream() {
                             "Gomovies",
                             video.src.split("360", limit = 3).joinToString(it.toString()),
                             "$gomoviesAPI/",
-                            it
+                            it,
                         )
                     )
                 }
             }
         }
+
+    }
+
+    suspend fun invokeAsk4Movies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val slug = title.createSlug()
+        val url = if (season == null) {
+            "$ask4MoviesAPI/$slug-$year"
+        } else {
+            "$ask4MoviesAPI/$slug-season-$season"
+        }
+
+        val doc = app.get(url).document
+
+        val iframe = if(season == null) {
+            doc.select("div#player-embed iframe").attr("data-src")
+        } else {
+            doc.select("ul.group-links-list li:nth-child($episode) a").attr("data-embed-src")
+        }
+
+        loadExtractor(iframe, ask4MoviesAPI, subtitleCallback, callback)
 
     }
 
@@ -2700,6 +2773,11 @@ class Sblongvu : StreamSB() {
 class Keephealth : StreamSB() {
     override var name = "Keephealth"
     override var mainUrl = "https://keephealth.info"
+}
+
+class FileMoonIn : Filesim() {
+    override val mainUrl = "https://filemoon.in"
+    override val name = "FileMoon"
 }
 
 data class TitleSlug(
@@ -3046,4 +3124,32 @@ data class SapphireStreams(
 data class SapphireSources(
     @JsonProperty("streams") val streams: ArrayList<SapphireStreams>? = arrayListOf(),
     @JsonProperty("subtitles") val subtitles: ArrayList<SapphireSubtitles>? = arrayListOf(),
+)
+
+data class BiliBiliEpisodes(
+    @JsonProperty("id") val id: Int? = null,
+    @JsonProperty("sourceId") val sourceId: String? = null,
+    @JsonProperty("sourceEpisodeId") val sourceEpisodeId: String? = null,
+    @JsonProperty("sourceMediaId") val sourceMediaId: String? = null,
+    @JsonProperty("episodeNumber") val episodeNumber: Int? = null,
+)
+
+data class BiliBiliDetails(
+    @JsonProperty("episodes") val episodes: ArrayList<BiliBiliEpisodes>? = arrayListOf(),
+)
+
+data class BiliBiliSubtitles(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("lang") val lang: String? = null,
+    @JsonProperty("language") val language: String? = null,
+)
+
+data class BiliBiliSources(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("type") val type: String? = null,
+)
+
+data class BiliBiliSourcesResponse(
+    @JsonProperty("sources") val sources: ArrayList<BiliBiliSources>? = arrayListOf(),
+    @JsonProperty("subtitles") val subtitles: ArrayList<BiliBiliSubtitles>? = arrayListOf(),
 )

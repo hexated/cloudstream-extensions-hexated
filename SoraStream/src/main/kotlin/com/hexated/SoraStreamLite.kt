@@ -2,16 +2,15 @@ package com.hexated
 
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
+import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeCrunchyroll
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
-import com.hexated.SoraExtractor.invokeFlixhq
 import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
-import com.hexated.SoraExtractor.invokeKickassanime
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
@@ -21,7 +20,6 @@ import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
-import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeSoraStreamLite
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeUniqueStream
@@ -213,6 +211,16 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 invokeGomovies(res.title, res.year, res.season, res.episode, callback)
+            },
+            {
+                invokeAsk4Movies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
         )
 

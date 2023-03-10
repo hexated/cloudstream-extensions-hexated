@@ -14,5 +14,6 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(StreamM4u())
         registerExtractorAPI(Sblongvu())
         registerExtractorAPI(Keephealth())
+        registerExtractorAPI(FileMoonIn())
     }
 }

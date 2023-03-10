@@ -3,13 +3,13 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
+import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeBlackmovies
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeCodexmovies
 import com.hexated.SoraExtractor.invokeCrunchyroll
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
-import com.hexated.SoraExtractor.invokeFlixhq
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
@@ -32,7 +32,6 @@ import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGdbotMovies
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeJmdkhMovies
-import com.hexated.SoraExtractor.invokeKickassanime
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
@@ -72,7 +71,7 @@ open class SoraStream : TmdbProvider() {
 
     /** AUTHOR : Hexated & Sora */
     companion object {
-        // TOOLS
+        /** TOOLS */
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
         const val jikanAPI = "https://api.jikan.moe/v4"
@@ -81,7 +80,7 @@ open class SoraStream : TmdbProvider() {
 
         private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
-        // ALL SOURCES
+        /** ALL SOURCES */
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
@@ -93,7 +92,7 @@ open class SoraStream : TmdbProvider() {
         const val idlixAPI = "https://idlixian.com"
         const val noverseAPI = "https://www.nollyverse.com"
         const val olgplyAPI = "https://olgply.xyz" // dead
-        const val uniqueStreamAPI = "https://uniquestreaming.net"
+        const val uniqueStreamAPI = "https://uniquestream.net"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
@@ -119,6 +118,9 @@ open class SoraStream : TmdbProvider() {
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
+        const val ask4MoviesAPI = "https://ask4movie.mx"
+        const val biliBiliAPI = "https://api-vn.kaguya.app/server"
+        // INDEX SITE
         const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
@@ -781,6 +783,9 @@ open class SoraStream : TmdbProvider() {
                     res.episode,
                     callback
                 )
+            },
+            {
+                invokeAsk4Movies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
         )
 
