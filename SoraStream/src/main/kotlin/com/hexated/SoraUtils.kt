@@ -899,9 +899,9 @@ fun Headers.getGomoviesCookies(cookieKey: String = "set-cookie"): Map<String, St
 
 fun String?.createSlug(): String? {
     return this?.replace(Regex("[^\\w\\s]"), "")
-        ?.replace(Regex("( – )|( -)|(- )"), "-")
-        ?.replace("--", "-")
-        ?.replace(" ", "-")?.lowercase()
+        ?.replace(" ", "-")
+        ?.replace(Regex("( – )|( -)|(- )|(--)"), "-")
+        ?.lowercase()
 }
 
 fun getLanguage(str: String): String {

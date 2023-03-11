@@ -3,11 +3,10 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
-import java.net.URI
 import java.net.URLDecoder
+import java.net.URI
 
 class LayarKacaProvider : MainAPI() {
     override var mainUrl = "https://tv.lk21official.live"
@@ -21,6 +20,11 @@ class LayarKacaProvider : MainAPI() {
         TvType.TvSeries,
         TvType.AsianDrama
     )
+
+    companion object {
+        const val filemoon = "https://filemoon.sx"
+        const val streamhide = "https://streamhide.to"
+    }
 
     override val mainPage = mainPageOf(
         "$mainUrl/populer/page/" to "Film Terplopuler",
@@ -217,10 +221,35 @@ class LayarKacaProvider : MainAPI() {
                     it
                 }
             }
-            loadExtractor(link, data, subtitleCallback, callback)
+            if(link.startsWith(filemoon) || link.startsWith(streamhide)) {
+                invokeBackup(link, callback)
+            } else {
+                loadExtractor(link, data, subtitleCallback, callback)
+            }
         }
 
         return true
+    }
+
+    private suspend fun invokeBackup(
+        url: String,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url).document
+        response.select("script[type=text/javascript]").map { script ->
+            if (script.data().contains(Regex("eval\\(function\\(p,a,c,k,e,[rd]"))) {
+                val unpackedscript = getAndUnpack(script.data())
+                val m3u8Regex = Regex("file.\"(.*?m3u8.*?)\"")
+                val m3u8 = m3u8Regex.find(unpackedscript)?.destructured?.component1() ?: ""
+                if (m3u8.isNotEmpty()) {
+                    M3u8Helper.generateM3u8(
+                        fixTitle(URI(url).host).substringBefore("."),
+                        m3u8,
+                        mainUrl
+                    ).forEach(callback)
+                }
+            }
+        }
     }
 
     private fun getBaseUrl(url: String): String {
