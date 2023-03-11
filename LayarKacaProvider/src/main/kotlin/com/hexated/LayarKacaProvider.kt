@@ -10,7 +10,7 @@ import java.net.URI
 import java.net.URLDecoder
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://tv.lk21official.lol"
+    override var mainUrl = "https://tv.lk21official.live"
     private var seriesUrl = "https://drama2.nontondrama.lol"
     override var name = "LayarKaca"
     override val hasMainPage = true
@@ -96,7 +96,9 @@ class LayarKacaProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/?s=$query").document
+        val req = app.get("$mainUrl/?s=$query")
+        mainUrl = getBaseUrl(req.url)
+        val document = req.document
         return document.select("div.search-item").map {
             val title = it.selectFirst("h2 > a")!!.text().trim()
             val type = it.selectFirst("p.cat-links a")?.attr("href").toString()
