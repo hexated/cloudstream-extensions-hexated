@@ -2738,19 +2738,34 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val slug = title.createSlug()
-        val url = if (season == null) {
-            "$ask4MoviesAPI/$slug-$year"
+        val query = if (season == null) {
+            title
         } else {
-            "$ask4MoviesAPI/$slug-season-$season"
+            "$title season $season"
+        }
+        val mediaData =
+            app.get("$ask4MoviesAPI/?s=$query").document.select("div#search-content div.item").map {
+                it.selectFirst("div.main-item a")
+            }
+
+        val media = if (mediaData.size == 1) {
+            mediaData.firstOrNull()
+        } else {
+            mediaData.find {
+                if (season == null) {
+                    it?.text().equals("$title ($year)", true)
+                } else {
+                    it?.text().equals("$title (Season $season)", true)
+                }
+            }
         }
 
-        val doc = app.get(url).document
+        val epsDoc = app.get(media?.attr("href") ?: return).document
 
-        val iframe = if(season == null) {
-            doc.select("div#player-embed iframe").attr("data-src")
+        val iframe = if (season == null) {
+            epsDoc.select("div#player-embed iframe").attr("data-src")
         } else {
-            doc.select("ul.group-links-list li:nth-child($episode) a").attr("data-embed-src")
+            epsDoc.select("ul.group-links-list li:nth-child($episode) a").attr("data-embed-src")
         }
 
         loadExtractor(iframe, ask4MoviesAPI, subtitleCallback, callback)
