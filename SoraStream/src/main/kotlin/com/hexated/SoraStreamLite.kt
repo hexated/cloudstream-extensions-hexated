@@ -213,7 +213,7 @@ class SoraStreamLite : SoraStream() {
                 invokeGomovies(res.title, res.year, res.season, res.episode, callback)
             },
             {
-                invokeAsk4Movies(
+                if (!res.isAnime) invokeAsk4Movies(
                     res.title,
                     res.year,
                     res.season,
