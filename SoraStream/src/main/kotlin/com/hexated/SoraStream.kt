@@ -785,7 +785,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeAsk4Movies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeAsk4Movies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
         )
 
