@@ -774,13 +774,9 @@ fun getEpisodeSlug(
     }
 }
 
-fun getTitleSlug(title: String? = null): TitleSlug {
+fun getTitleSlug(title: String? = null): Pair<String?, String?> {
     val slug = title.createSlug()
-    return TitleSlug(
-        slug?.replace("-", "."),
-        slug?.replace("-", " "),
-        slug?.replace("-", "_"),
-    )
+    return slug?.replace("-", "\\W") to title?.replace(" ", "_")
 }
 
 fun getIndexQuery(
@@ -837,17 +833,15 @@ fun matchingIndex(
     episode: Int?,
     include720: Boolean = false
 ): Boolean {
-    val (dotSlug, spaceSlug, slashSlug) = getTitleSlug(title)
+    val (wSlug, dwSlug) = getTitleSlug(title)
     val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
     return (if (season == null) {
-        mediaName?.contains("$year") == true
+        mediaName?.contains(Regex("(?i)(?:$wSlug|$dwSlug).*$year")) == true
     } else {
-        mediaName?.contains(Regex("(?i)S${seasonSlug}.?E${episodeSlug}")) == true
+        mediaName?.contains(Regex("(?i)(?:$wSlug|$dwSlug).*S${seasonSlug}.?E${episodeSlug}")) == true
     }) && mediaName?.contains(
         if (include720) Regex("(?i)(2160p|1080p|720p)") else Regex("(?i)(2160p|1080p)")
-    ) == true && ((mediaMimeType in mimeType) || mediaName.contains(Regex("\\.mkv|\\.mp4|\\.avi"))) && (mediaName.contains(
-        title?.replace(" ", "_").toString()
-    ) || mediaName.contains(Regex("(?i)($dotSlug|$spaceSlug|$slashSlug)")))
+    ) == true && ((mediaMimeType in mimeType) || mediaName.contains(Regex("\\.mkv|\\.mp4|\\.avi")))
 }
 
 suspend fun getConfig(): BaymoviesConfig {
