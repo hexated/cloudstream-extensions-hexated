@@ -2521,7 +2521,7 @@ object SoraExtractor : SoraStream() {
                 season,
                 episode,
                 true
-            )
+            ) && media.name?.contains("XXX") == false
         }
 
         files?.map { file ->
@@ -2794,12 +2794,6 @@ class FileMoonIn : Filesim() {
     override val mainUrl = "https://filemoon.in"
     override val name = "FileMoon"
 }
-
-data class TitleSlug(
-    val dotSlug: String? = null,
-    val spaceSlug: String? = null,
-    val slashSlug: String? = null,
-)
 
 data class FDMovieIFrame(
     val link: String,
