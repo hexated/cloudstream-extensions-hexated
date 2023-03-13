@@ -90,7 +90,6 @@ subprojects {
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4") // html parser
         //run JS
         implementation("org.mozilla:rhino:1.7.14")
-        implementation("com.google.code.gson:gson:2.8.9")
 
     }
 }
