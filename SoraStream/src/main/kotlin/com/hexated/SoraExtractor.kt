@@ -2574,7 +2574,7 @@ object SoraExtractor : SoraStream() {
                 file.find { it.second.contains("1080p", true) }
             )
         }.apmap { file ->
-            val videoUrl = extractDrivebot(file.first)
+            val videoUrl = extractGdflix(file.first)
             val quality = getIndexQuality(file.second)
             val tags = getIndexQualityTags(file.second)
             val size = Regex("(\\d+\\.?\\d+\\sGB|MB)").find(file.third)?.groupValues?.get(0)?.trim()
