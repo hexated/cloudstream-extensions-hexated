@@ -6,7 +6,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
-import com.google.gson.JsonParser
 import com.hexated.RabbitStream.extractRabbitStream
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.StreamSB
@@ -241,56 +240,6 @@ object SoraExtractor : SoraStream() {
         }
         loadExtractor(url, databaseGdriveAPI, subtitleCallback, callback)
     }
-
-    /*    suspend fun invokeSoraVIP(
-            title: String? = null,
-            orgTitle: String? = null,
-            year: Int? = null,
-            season: Int? = null,
-            episode: Int? = null,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
-        ) {
-            val apiUrl = base64DecodeAPI("aQ==YXA=cC8=YXA=bC4=Y2U=ZXI=LnY=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
-            val url = if(season == null) {
-                "$apiUrl/search/one?title=$title&orgTitle=$orgTitle&year=$year"
-            } else {
-                "$apiUrl/search/one?title=$title&orgTitle=$orgTitle&year=$year&season=$season"
-            }
-
-            val id = app.get(url).parsedSafe<DetailVipResult>()?.data?.id
-
-            val sourcesUrl = if(season == null) {
-                "$apiUrl/movie/detail?id=$id"
-            } else {
-                "$apiUrl/tv/detail?id=$id&episodeId=${episode?.minus(1)}"
-            }
-
-            val json = app.get(sourcesUrl).parsedSafe<LoadVIPLinks>()
-
-            json?.sources?.map { source ->
-                callback.invoke(
-                    ExtractorLink(
-                        "${this.name} (VIP)",
-                        "${this.name} (VIP)",
-                        source.url ?: return@map null,
-                        "$apiUrl/",
-                        source.quality ?: Qualities.Unknown.value,
-                        isM3u8 = source.url.contains(".m3u8"),
-                    )
-                )
-            }
-
-            json?.subtitles?.map { sub ->
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        getLanguage(sub.language.toString()),
-                        sub.url ?: return@map null
-                    )
-                )
-            }
-        }
-     */
 
     suspend fun invokeHDMovieBox(
         title: String? = null,
@@ -566,47 +515,43 @@ object SoraExtractor : SoraStream() {
             "PHPSESSID" to "${filmxyCookies.phpsessid}"
         )
 
-        val request = session.get(url, cookies = cookiesDoc)
-        if (!request.isSuccessful) return
+        val doc = session.get(url, cookies = cookiesDoc).document
+        val script = doc.selectFirst("script:containsData(var isSingle)")?.data() ?: return
 
-        val doc = request.document
-        val script = doc.selectFirst("script:containsData(var isSingle)")?.data().toString()
-        val sourcesData = Regex("listSE\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
+        val sourcesData = Regex("listSE\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1).let {
+            tryParseJson<HashMap<String, HashMap<String, List<String>>>>(it)
+        }
         val sourcesDetail =
-            Regex("linkDetails\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
-        val subSources =
-            Regex("dSubtitles\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1)
+            Regex("linkDetails\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1).let {
+                tryParseJson<HashMap<String, HashMap<String, String>>>(it)
+            }
+        val subSourcesData =
+            Regex("dSubtitles\\s*=\\s?(.*?),[\\n|\\s]").find(script)?.groupValues?.get(1).let {
+                tryParseJson<HashMap<String, HashMap<String, HashMap<String, String>>>>(it)
+            }
 
-        //Gson is shit, but i don't care
-        val sourcesJson = JsonParser().parse(sourcesData).asJsonObject
-        val sourcesDetailJson = JsonParser().parse(sourcesDetail).asJsonObject
-        val subJson = JsonParser().parse(subSources).asJsonObject
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
-        val sources = if (season == null && episode == null) {
-            sourcesJson.getAsJsonObject("movie").getAsJsonArray("movie")
+        val sources = if(season == null) {
+            sourcesData?.get("movie")?.get("movie")
         } else {
-            val eps = if (episode!! < 10) "0$episode" else episode
-            val sson = if (season!! < 10) "0$season" else season
-            sourcesJson.getAsJsonObject("s$sson").getAsJsonArray("e$eps")
-        }.asJsonArray
-
-        val subSource = if (season == null && episode == null) {
-            subJson.getAsJsonObject("movie").getAsJsonObject("movie")
+            sourcesData?.get("s$seasonSlug")?.get("e$episodeSlug")
+        }
+        val subSources = if(season == null) {
+            subSourcesData?.get("movie")?.get("movie")
         } else {
-            val eps = if (episode!! < 10) "0$episode" else episode
-            val sson = if (season!! < 10) "0$season" else season
-            subJson.getAsJsonObject("s$sson").getAsJsonObject("e$eps")
-        }.asJsonObject
+            subSourcesData?.get("s$seasonSlug")?.get("e$episodeSlug")
+        }
 
         val scriptUser =
-            doc.select("script").find { it.data().contains("var userNonce") }?.data().toString()
+            doc.select("script").find { it.data().contains("var userNonce") }?.data() ?: return
         val userNonce =
             Regex("var\\suserNonce.*?[\"|'](\\S+?)[\"|'];").find(scriptUser)?.groupValues?.get(1)
         val userId =
             Regex("var\\suser_id.*?[\"|'](\\S+?)[\"|'];").find(scriptUser)?.groupValues?.get(1)
-        val linkIDs = sources.joinToString("") {
+        val linkIDs = sources?.joinToString("") {
             "&linkIDs%5B%5D=$it"
-        }.replace("\"", "")
+        }?.replace("\"", "")
 
         val body = "action=get_vid_links$linkIDs&user_id=$userId&nonce=$userNonce".toRequestBody()
         val cookiesJson = mapOf(
@@ -627,40 +572,33 @@ object SoraExtractor : SoraStream() {
                 "X-Requested-With" to "XMLHttpRequest",
             ),
             cookies = cookiesJson
-        ).text.let { JsonParser().parse(it).asJsonObject }
+        ).text.let { tryParseJson<HashMap<String, String>>(it) }
 
-        sources.map { source ->
-            val src = source.asString
-            val link = json.getAsJsonPrimitive(src).asString
-            val quality =
-                sourcesDetailJson.getAsJsonObject(src).getAsJsonPrimitive("resolution").asString
-            val server =
-                sourcesDetailJson.getAsJsonObject(src).getAsJsonPrimitive("server").asString
-            val size = sourcesDetailJson.getAsJsonObject(src).getAsJsonPrimitive("size").asString
+        sources?.map { source ->
+            val link = json?.get(source)
+            val quality = sourcesDetail?.get(source)?.get("resolution")
+            val server = sourcesDetail?.get(source)?.get("server")
+            val size = sourcesDetail?.get(source)?.get("size")
 
             callback.invoke(
                 ExtractorLink(
-                    "Filmxy",
                     "Filmxy $size ($server)",
-                    link,
+                    "Filmxy $size ($server)",
+                    link ?: return@map,
                     "$filmxyAPI/",
                     getQualityFromName(quality)
                 )
             )
         }
 
-        subSource.toString().removeSurrounding("{", "}").split(",").map {
-            val slug = Regex("\"(\\w+)\":\"(\\d+)\"").find(it)?.groupValues
-            slug?.getOrNull(1) to slug?.getOrNull(2)
-        }.map { (lang, id) ->
+        subSources?.mapKeys { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
-                    SubtitleHelper.fromTwoLettersToLanguage(lang ?: "") ?: "$lang",
-                    "https://www.mysubs.org/get-subtitle/$id"
+                    SubtitleHelper.fromTwoLettersToLanguage(sub.key) ?: return@mapKeys,
+                    "https://www.mysubs.org/get-subtitle/${sub.value}"
                 )
             )
         }
-
 
     }
 
@@ -2904,16 +2842,6 @@ data class HdMovieBoxIframe(
 data class ResponseHash(
     @JsonProperty("embed_url") val embed_url: String,
     @JsonProperty("type") val type: String?,
-)
-
-data class Track(
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("label") val label: String? = null,
-)
-
-data class RabbitSources(
-    @JsonProperty("sources") val sources: String? = null,
-    @JsonProperty("tracks") val tracks: ArrayList<Track>? = arrayListOf(),
 )
 
 data class SubtitlingList(
