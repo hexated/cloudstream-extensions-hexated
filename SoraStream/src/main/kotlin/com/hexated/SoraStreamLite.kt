@@ -226,8 +226,8 @@ class SoraStreamLite : SoraStream() {
             {
                 invokeWatchOnline(
                     res.imdbId,
+                    res.id,
                     res.title,
-                    res.airedYear ?: res.year,
                     res.season,
                     res.episode,
                     subtitleCallback,

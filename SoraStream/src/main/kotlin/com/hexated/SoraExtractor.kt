@@ -2713,28 +2713,37 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeWatchOnline(
         imdbId: String? = null,
+        tmdbId: Int? = null,
         title: String? = null,
-        year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val slug = title.createSlug()
-        val id = imdbId?.removePrefix("tt")
         val url = if (season == null) {
-            "$watchOnlineAPI/movies/view/$id-$slug-$year"
+            "$watchOnlineAPI/api/v1/movies?filters[q]=$title"
         } else {
-            "$watchOnlineAPI/shows/view/$id-$slug-$year"
+            "$watchOnlineAPI/api/v1/shows?filters[q]=$title"
         }
 
-        val res = app.get(url).document
+        val baseUrl = if(season == null) {
+            "$watchOnlineAPI/movies/view"
+        } else {
+            "$watchOnlineAPI/shows/view"
+        }
+
+        val mediaId = app.get(url).parsedSafe<WatchOnlineSearch>()?.items?.find {
+            it.imdb_id == imdbId || it.tmdb_id == tmdbId || it.imdb_id == imdbId?.removePrefix("tt")
+        }?.slug
+
+        val detailRes = app.get(fixUrl(mediaId ?: return, baseUrl)).document
 
         val episodeId = if (season == null) {
-            res.selectFirst("div.movie__buttons-items a")?.attr("data-watch-list-media-id")
+            detailRes.selectFirst("div.movie__buttons-items a")?.attr("data-watch-list-media-id")
         } else {
-            res.selectFirst("ul[data-season-episodes=$season] li[data-episode=$episode]")
-                ?.attr("data-id-episode")
+            detailRes.select("ul[data-season-episodes=$season] li").find {
+                it.select("div.episodes__number").text().equals("Episode $episode", true)
+            }?.attr("data-id-episode")
         } ?: return
 
         val videoUrl = if (season == null) {
@@ -3154,6 +3163,15 @@ data class BiliBiliSourcesResponse(
     @JsonProperty("subtitles") val subtitles: ArrayList<BiliBiliSubtitles>? = arrayListOf(),
 )
 
+data class WatchOnlineItems(
+    @JsonProperty("slug") val slug: String? = null,
+    @JsonProperty("tmdb_id") val tmdb_id: Int? = null,
+    @JsonProperty("imdb_id") val imdb_id: String? = null,
+)
+
+data class WatchOnlineSearch(
+    @JsonProperty("items") val items: ArrayList<WatchOnlineItems>? = arrayListOf(),
+)
 data class WatchOnlineResponse(
     @JsonProperty("streams") val streams: HashMap<String, String>? = null,
     @JsonProperty("subtitles") val subtitles: Any? = null,
