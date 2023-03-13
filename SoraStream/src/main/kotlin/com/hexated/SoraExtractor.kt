@@ -582,8 +582,8 @@ object SoraExtractor : SoraStream() {
 
             callback.invoke(
                 ExtractorLink(
-                    "Filmxy $size ($server)",
-                    "Filmxy $size ($server)",
+                    "Filmxy",
+                    "Filmxy $server [$size]",
                     link ?: return@map,
                     "$filmxyAPI/",
                     getQualityFromName(quality)
@@ -1791,6 +1791,7 @@ object SoraExtractor : SoraStream() {
             ?.attr("onclick")
             ?.substringAfter("('")?.substringBefore("')")
 
+        delay(1000)
         val unPacker =
             app.get(
                 iframe ?: return,
@@ -2710,13 +2711,13 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    //TODO add subtitle
     suspend fun invokeWatchOnline(
         imdbId: String? = null,
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
         val slug = title.createSlug()
@@ -2742,19 +2743,33 @@ object SoraExtractor : SoraStream() {
             "$watchOnlineAPI/api/v1/security/episode-access?id=$episodeId"
         }
 
-        app.get(videoUrl, referer = url)
-            .parsedSafe<WatchOnlineResponse>()?.streams?.mapKeys { source ->
-                callback.invoke(
-                    ExtractorLink(
-                        "WatchOnline",
-                        "WatchOnline",
-                        source.value,
-                        "$watchOnlineAPI/",
-                        getQualityFromName(source.key),
-                        true
-                    )
+        val json = app.get(videoUrl, referer = url)
+            .parsedSafe<WatchOnlineResponse>()
+
+        json?.streams?.mapKeys { source ->
+            callback.invoke(
+                ExtractorLink(
+                    "WatchOnline",
+                    "WatchOnline",
+                    source.value,
+                    "$watchOnlineAPI/",
+                    getQualityFromName(source.key),
+                    true
                 )
-            }
+            )
+        }
+
+        //TODO find better way
+        val subtitles = json?.subtitles as ArrayList<HashMap<String, String>>
+
+        subtitles.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub["language"] ?: return@map,
+                    fixUrl(sub["url"] ?: return@map, watchOnlineAPI)
+                )
+            )
+        }
 
     }
 
@@ -3141,4 +3156,5 @@ data class BiliBiliSourcesResponse(
 
 data class WatchOnlineResponse(
     @JsonProperty("streams") val streams: HashMap<String, String>? = null,
+    @JsonProperty("subtitles") val subtitles: Any? = null,
 )
