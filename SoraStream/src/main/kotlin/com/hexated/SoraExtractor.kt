@@ -2772,6 +2772,54 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    //TODO add subtitle
+    suspend fun invokeWatchOnline(
+        imdbId: String? = null,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val slug = title.createSlug()
+        val id = imdbId?.removePrefix("tt")
+        val url = if (season == null) {
+            "$watchOnlineAPI/movies/view/$id-$slug-$year"
+        } else {
+            "$watchOnlineAPI/shows/view/$id-$slug-$year"
+        }
+
+        val res = app.get(url).document
+
+        val episodeId = if (season == null) {
+            res.selectFirst("div.movie__buttons-items a")?.attr("data-watch-list-media-id")
+        } else {
+            res.selectFirst("ul[data-season-episodes=$season] li[data-episode=$episode]")
+                ?.attr("data-id-episode")
+        } ?: return
+
+        val videoUrl = if (season == null) {
+            "$watchOnlineAPI/api/v1/security/movie-access?id_movie=$episodeId"
+        } else {
+            "$watchOnlineAPI/api/v1/security/episode-access?id=$episodeId"
+        }
+
+        app.get(videoUrl, referer = url)
+            .parsedSafe<WatchOnlineResponse>()?.streams?.mapKeys { source ->
+                callback.invoke(
+                    ExtractorLink(
+                        "WatchOnline",
+                        "WatchOnline",
+                        source.value,
+                        "$watchOnlineAPI/",
+                        getQualityFromName(source.key),
+                        true
+                    )
+                )
+            }
+
+    }
+
 
 }
 
@@ -3161,4 +3209,8 @@ data class BiliBiliSources(
 data class BiliBiliSourcesResponse(
     @JsonProperty("sources") val sources: ArrayList<BiliBiliSources>? = arrayListOf(),
     @JsonProperty("subtitles") val subtitles: ArrayList<BiliBiliSubtitles>? = arrayListOf(),
+)
+
+data class WatchOnlineResponse(
+    @JsonProperty("streams") val streams: HashMap<String, String>? = null,
 )

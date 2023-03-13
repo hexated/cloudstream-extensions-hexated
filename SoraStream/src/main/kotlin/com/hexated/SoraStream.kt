@@ -50,6 +50,7 @@ import com.hexated.SoraExtractor.invokeTgarMovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVitoenMovies
+import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.lagradost.cloudstream3.extractors.VidSrcExtractor
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -120,6 +121,7 @@ open class SoraStream : TmdbProvider() {
         val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
         const val ask4MoviesAPI = "https://ask4movie.mx"
         const val biliBiliAPI = "https://api-vn.kaguya.app/server"
+        const val watchOnlineAPI = "https://watchonline.ag"
         // INDEX SITE
         const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
@@ -786,6 +788,16 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeAsk4Movies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                invokeWatchOnline(
+                    res.imdbId,
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
             },
         )
 
