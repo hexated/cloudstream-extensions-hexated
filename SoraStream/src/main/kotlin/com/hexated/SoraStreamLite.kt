@@ -24,6 +24,7 @@ import com.hexated.SoraExtractor.invokeSoraStreamLite
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeUniqueStream
 import com.hexated.SoraExtractor.invokeVidSrc
+import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeXmovies
 import com.lagradost.cloudstream3.SubtitleFile
@@ -219,6 +220,16 @@ class SoraStreamLite : SoraStream() {
                     res.season,
                     res.episode,
                     subtitleCallback,
+                    callback
+                )
+            },
+            {
+                invokeWatchOnline(
+                    res.imdbId,
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
                     callback
                 )
             },
