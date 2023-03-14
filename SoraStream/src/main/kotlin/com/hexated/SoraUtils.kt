@@ -10,6 +10,7 @@ import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.hexated.SoraStream.Companion.twoEmbedAPI
+import com.hexated.SoraStream.Companion.watchOnlineAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
@@ -724,6 +725,33 @@ fun Document.findTvMoviesIframe(): String? {
         ?.substringBefore("'>")
 }
 
+suspend fun searchWatchOnline(
+    title: String? = null,
+    season: Int? = null,
+    imdbId: String? = null,
+    tmdbId: Int? = null,
+): NiceResponse? {
+    val mediaId = app.get(
+        if (season == null) {
+            "${watchOnlineAPI}/api/v1/movies?filters[q]=$title"
+        } else {
+            "${watchOnlineAPI}/api/v1/shows?filters[q]=$title"
+        }
+    ).parsedSafe<WatchOnlineSearch>()?.items?.find {
+        it.imdb_id == imdbId || it.tmdb_id == tmdbId || it.imdb_id == imdbId?.removePrefix("tt")
+    }?.slug
+
+    return app.get(
+        fixUrl(
+            mediaId ?: return null, if (season == null) {
+                "${watchOnlineAPI}/movies/view"
+            } else {
+                "${watchOnlineAPI}/shows/view"
+            }
+        )
+    )
+}
+
 suspend fun searchCrunchyrollAnimeId(title: String): String? {
     val res = app.get("${consumetCrunchyrollAPI}/search/$title",timeout = 600L)
         .parsedSafe<ConsumetSearchResponse>()?.results
@@ -894,7 +922,7 @@ fun Headers.getGomoviesCookies(cookieKey: String = "set-cookie"): Map<String, St
 }
 
 fun String?.createSlug(): String? {
-    return this?.replace(Regex("[^\\w\\s]"), "")
+    return this?.replace(Regex("[^\\w\\s-]"), "")
         ?.replace(" ", "-")
         ?.replace(Regex("( – )|( -)|(- )|(--)"), "-")
         ?.lowercase()

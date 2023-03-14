@@ -228,6 +228,7 @@ class SoraStreamLite : SoraStream() {
                     res.imdbId,
                     res.id,
                     res.title,
+                    res.airedYear ?: res.year,
                     res.season,
                     res.episode,
                     subtitleCallback,
