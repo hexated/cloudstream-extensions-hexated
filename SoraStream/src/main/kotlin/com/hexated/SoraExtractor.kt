@@ -2715,33 +2715,28 @@ object SoraExtractor : SoraStream() {
         imdbId: String? = null,
         tmdbId: Int? = null,
         title: String? = null,
+        year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val url = if (season == null) {
-            "$watchOnlineAPI/api/v1/movies?filters[q]=$title"
+        val id = imdbId?.removePrefix("tt")
+        val slug = title.createSlug()
+        val url = if(season == null) {
+            "$watchOnlineAPI/movies/view/$id-$slug-$year"
         } else {
-            "$watchOnlineAPI/api/v1/shows?filters[q]=$title"
+            "$watchOnlineAPI/shows/view/$id-$slug-$year"
         }
 
-        val baseUrl = if(season == null) {
-            "$watchOnlineAPI/movies/view"
-        } else {
-            "$watchOnlineAPI/shows/view"
-        }
+        var res = app.get(url)
+        if(!res.isSuccessful) res = searchWatchOnline(title, season, imdbId, tmdbId) ?: return
 
-        val mediaId = app.get(url).parsedSafe<WatchOnlineSearch>()?.items?.find {
-            it.imdb_id == imdbId || it.tmdb_id == tmdbId || it.imdb_id == imdbId?.removePrefix("tt")
-        }?.slug
-
-        val detailRes = app.get(fixUrl(mediaId ?: return, baseUrl)).document
-
+        val doc = res.document
         val episodeId = if (season == null) {
-            detailRes.selectFirst("div.movie__buttons-items a")?.attr("data-watch-list-media-id")
+            doc.selectFirst("div.movie__buttons-items a")?.attr("data-watch-list-media-id")
         } else {
-            detailRes.select("ul[data-season-episodes=$season] li").find {
+            doc.select("ul[data-season-episodes=$season] li").find {
                 it.select("div.episodes__number").text().equals("Episode $episode", true)
             }?.attr("data-id-episode")
         } ?: return
@@ -2768,7 +2763,6 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        //TODO find better way
         val subtitles = json?.subtitles as ArrayList<HashMap<String, String>>
 
         subtitles.map { sub ->

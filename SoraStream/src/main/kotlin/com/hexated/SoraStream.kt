@@ -139,7 +139,7 @@ open class SoraStream : TmdbProvider() {
         const val tgarMovieAPI = "https://tgarchive.eu.org"
         const val jmdkhMovieAPI = "https://tg.jmdkh.eu.org/0:"
         const val rubyMovieAPI = "https://upload.rubyshare111.workers.dev/0:"
-        const val shinobiMovieAPI = "https://index.shinobicloud.cf/0:"
+        const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
         const val vitoenMovieAPI = "https://openmatte.vitoencodes.workers.dev/0:"
 
         fun getType(t: String?): TvType {
@@ -794,6 +794,7 @@ open class SoraStream : TmdbProvider() {
                     res.imdbId,
                     res.id,
                     res.title,
+                    res.airedYear ?: res.year,
                     res.season,
                     res.episode,
                     subtitleCallback,
