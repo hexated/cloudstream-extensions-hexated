@@ -38,7 +38,6 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.math.min
 
 val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
@@ -742,25 +741,28 @@ suspend fun searchCrunchyrollAnimeId(title: String): String? {
 }
 
 fun CrunchyrollDetails.findCrunchyrollId(
-    title: String?,
     season: Int?,
     episode: Int?,
     epsTitle: String?
-): List<Pair<String?, String?>?> {
-    val sub = when (title) {
-        "One Piece" -> this.episodes?.get("subbed13")?.matchingEpisode(episode) to "Raw"
-        "Hunter x Hunter" -> this.episodes?.get("subbed5")?.matchingEpisode(episode) to "Raw"
-        else -> this.episodes?.get("subbed$season")?.matchingEpisode(episode) to "Raw"
-    }
-    val dub = this.episodes?.get("English Dub$season")?.matchingEpisode(episode) to "English Dub"
-
+): List<Pair<CrunchyrollEpisodes?, String?>?> {
+    val sub = this.episodes?.filterKeys { it.contains("subbed") }.matchingEpisode(epsTitle, season, episode) to "Raw"
+    val dub = this.episodes?.filterKeys { it.contains("English Dub") }.matchingEpisode(epsTitle, season, episode) to "English Dub"
     return listOf(sub, dub)
 }
 
-fun List<HashMap<String, String>>?.matchingEpisode(episode: Int?): String? {
-    return this?.find {
-        it["episode_number"] == "$episode" || indexOf(it).plus(1) == episode
-    }?.get("id")
+fun Map<String, List<CrunchyrollEpisodes>>?.matchingEpisode(
+    epsTitle: String?,
+    season: Int?,
+    episode: Int?
+): CrunchyrollEpisodes? {
+    return this?.mapNotNull { eps ->
+        eps.value.find {
+            (it.episode_number == episode && it.season_number == season) || it.title.equals(
+                epsTitle,
+                true
+            )
+        } ?: eps.value.find { it.episode_number == episode }
+    }?.firstOrNull()
 }
 
 fun getEpisodeSlug(
