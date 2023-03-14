@@ -1504,17 +1504,17 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val id = searchCrunchyrollAnimeId(title ?: return) ?: return
-        val detail = app.get("$consumetCrunchyrollAPI/info/$id?fetchAllSeasons=true",timeout = 600L).text
+        val detail = app.get("$consumetCrunchyrollAPI/info/$id?fetchAllSeasons=true", timeout = 600L).text
         val epsId = tryParseJson<CrunchyrollDetails>(detail)?.findCrunchyrollId(
-            title,
             season,
             episode,
             epsTitle
-        ) ?: return
+        )
 
-        epsId.apmap {
+        epsId?.apmap {
+            delay(2000)
             val json =
-                app.get("$consumetCrunchyrollAPI/watch/${it?.first ?: return@apmap null}",timeout = 600L)
+                app.get("$consumetCrunchyrollAPI/watch/${it?.first?.id ?: return@apmap null}", timeout = 600L)
                     .parsedSafe<ConsumetSourcesResponse>()
 
             json?.sources?.map source@{ source ->
@@ -1533,7 +1533,7 @@ object SoraExtractor : SoraStream() {
             json?.subtitles?.map subtitle@{ sub ->
                 subtitleCallback.invoke(
                     SubtitleFile(
-                        fixCrunchyrollLang(sub.lang ?: return@subtitle null) ?: sub.lang,
+                        "${fixCrunchyrollLang(sub.lang ?: return@subtitle null) ?: sub.lang} [ass]",
                         sub.url ?: return@subtitle null
                     )
                 )
@@ -2927,8 +2927,15 @@ data class ConsumetDetails(
     @JsonProperty("episodes") val episodes: ArrayList<ConsumetEpisodes>? = arrayListOf(),
 )
 
+data class CrunchyrollEpisodes(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("episode_number") val episode_number: Int? = null,
+    @JsonProperty("season_number") val season_number: Int? = null,
+)
+
 data class CrunchyrollDetails(
-    @JsonProperty("episodes") val episodes: HashMap<String, List<HashMap<String, String>>>? = hashMapOf(),
+    @JsonProperty("episodes") val episodes: HashMap<String, List<CrunchyrollEpisodes>>? = hashMapOf(),
 )
 
 data class ConsumetResults(
