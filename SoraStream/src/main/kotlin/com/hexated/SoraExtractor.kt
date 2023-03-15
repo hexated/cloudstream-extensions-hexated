@@ -1238,20 +1238,29 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val request = app.get("$fwatayakoAPI/IAF0wWTdNYZm?imdb_id=$imdbId")
-        if (!request.isSuccessful) return
-        val files = request.document.selectFirst("input#files")?.attr("value").let {
+        val ref = "https://videoapi.tv/"
+        val files = app.get(
+            "$fwatayakoAPI/IAF0wWTdNYZm?imdb_id=$imdbId",
+            referer = ref
+        ).document.selectFirst("input#files")?.attr("value") ?: return
+        val data = files.let {
             if (season == null) {
-                it?.replace("\"381\"", "\"movie\"")
+                it.replace("\"381\"", "\"movie\"").replace("\"30\"", "\"movie_dl\"")
             } else {
-                it?.replace("\"381\"", "\"tv\"")
+                it.replace("\"381\"", "\"tv\"").replace("\"30\"", "\"tv_dl\"")
             }
         }.let { tryParseJson<SourcesFwatayako>(it) } ?: return
 
         val sourcesLink = if (season == null) {
-            files.sourcesMovie
+            data.sourcesMovie
         } else {
-            files.sourcesTv?.find { it.id == season }?.folder?.find { it.id == "${season}_${episode}" }?.file
+            data.sourcesTv?.find { it.id == season }?.folder?.find { it.id == "${season}_${episode}" }?.file
+        }
+
+        val downoadLink = if(season == null) {
+            data.movie_dl
+        } else {
+            data.tv_dl?.find { it.id == season }?.folder?.find { it.id == "${season}_${episode}" }?.download
         }
 
         sourcesLink?.split(",")?.map {
@@ -1264,12 +1273,25 @@ object SoraExtractor : SoraStream() {
                     "Fwatayako",
                     "Fwatayako",
                     link,
-                    "$fwatayakoAPI/",
+                    ref,
                     quality ?: Qualities.Unknown.value,
                     isM3u8 = true
                 )
             )
         }
+
+        downoadLink?.mapKeys {
+            callback.invoke(
+                ExtractorLink(
+                    "Fwatayako",
+                    "Fwatayako",
+                    httpsify(it.value),
+                    ref,
+                    getQualityFromName(it.key),
+                )
+            )
+        }
+
     }
 
     suspend fun invokeGMovies(
@@ -2971,6 +2993,7 @@ data class KisskhResults(
 data class EpisodesFwatayako(
     @JsonProperty("id") val id: String? = null,
     @JsonProperty("file") val file: String? = null,
+    @JsonProperty("download") val download: HashMap<String, String>? = hashMapOf(),
 )
 
 data class SeasonFwatayako(
@@ -2981,6 +3004,8 @@ data class SeasonFwatayako(
 data class SourcesFwatayako(
     @JsonProperty("movie") val sourcesMovie: String? = null,
     @JsonProperty("tv") val sourcesTv: ArrayList<SeasonFwatayako>? = arrayListOf(),
+    @JsonProperty("movie_dl") val movie_dl: HashMap<String, String>? = hashMapOf(),
+    @JsonProperty("tv_dl") val tv_dl: ArrayList<SeasonFwatayako>? = arrayListOf(),
 )
 
 data class DriveBotLink(
