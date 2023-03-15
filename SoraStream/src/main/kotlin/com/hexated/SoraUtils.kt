@@ -731,11 +731,12 @@ suspend fun searchWatchOnline(
     imdbId: String? = null,
     tmdbId: Int? = null,
 ): NiceResponse? {
+    val wTitle = title?.dropLast(1) // weird but this will make search working
     val mediaId = app.get(
         if (season == null) {
-            "${watchOnlineAPI}/api/v1/movies?filters[q]=$title"
+            "${watchOnlineAPI}/api/v1/movies?filters[q]=$wTitle"
         } else {
-            "${watchOnlineAPI}/api/v1/shows?filters[q]=$title"
+            "${watchOnlineAPI}/api/v1/shows?filters[q]=$wTitle"
         }
     ).parsedSafe<WatchOnlineSearch>()?.items?.find {
         it.imdb_id == imdbId || it.tmdb_id == tmdbId || it.imdb_id == imdbId?.removePrefix("tt")
