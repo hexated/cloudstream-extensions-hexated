@@ -1372,11 +1372,10 @@ object SoraExtractor : SoraStream() {
             val qualities = getFDoviesQuality(quality)
             val fdLink = bypassFdAds(link)
             val videoLink = when {
-                // pass due too many gdtot links
-//                type.contains("gdtot") -> {
-//                    val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
-//                    extractGdflix(gdBotLink ?: return@apmap null)
-//                }
+                type.contains("gdtot") -> {
+                    val gdBotLink = extractGdbot(fdLink ?: return@apmap null)
+                    extractGdflix(gdBotLink ?: return@apmap null)
+                }
                 type.contains("oiya") -> {
                     extractOiya(fdLink ?: return@apmap null, qualities)
                 }
@@ -2752,6 +2751,7 @@ object SoraExtractor : SoraStream() {
         }
 
         var res = app.get(url)
+        if(res.code == 403) return
         if(!res.isSuccessful) res = searchWatchOnline(title, season, imdbId, tmdbId) ?: return
 
         val doc = res.document
