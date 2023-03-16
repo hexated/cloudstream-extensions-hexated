@@ -2023,7 +2023,6 @@ object SoraExtractor : SoraStream() {
 
             val link =
                 "https://api.$worker.workers.dev/download.aspx?file=$encryptedId&expiry=$encryptedExpiry&mac=$hmacSign"
-//            if (!app.get(link, referer = "$baymoviesAPI/").isSuccessful) return@apmap null
             val size = file.size?.toDouble() ?: return@apmap null
             val sizeFile = "%.2f GB".format(bytesToGigaBytes(size))
             val tags = Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4)").find(
@@ -2049,107 +2048,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeJsmovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
     suspend fun invokeBlackmovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
-    suspend fun invokeGammovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
-    suspend fun invokeChillmovies0(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
-    suspend fun invokeChillmovies1(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
-    suspend fun invokeXtrememovies(
         apiUrl: String,
         api: String,
         title: String? = null,
@@ -3105,10 +3004,6 @@ data class TgarMedia(
 
 data class TgarData(
     @JsonProperty("documents") val documents: ArrayList<TgarMedia>? = arrayListOf(),
-)
-
-data class Gdflix(
-    @JsonProperty("url") val url: String
 )
 
 data class SorastreamResponse(
