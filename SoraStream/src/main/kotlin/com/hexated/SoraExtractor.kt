@@ -2522,7 +2522,7 @@ object SoraExtractor : SoraStream() {
                 ExtractorLink(
                     "DahmerMovies",
                     "DahmerMovies $tags [$size]",
-                    url + it.second,
+                    (url + it.second).encodeUrl(),
                     "",
                     quality,
                 )
