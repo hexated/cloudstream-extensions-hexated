@@ -490,8 +490,10 @@ suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?) : Pair<St
         }
     }
 
-    val id = script?.third?.last() ?: return null
-    val type = script.third?.get(2) ?: return null
+    val id = script?.third?.last()?.substringBefore("-") ?: return null
+    val type = script.third?.get(2)?.let {
+        if (it == "drama") "1" else "0"
+    } ?: return null
 
     return id to type
 }

@@ -96,34 +96,36 @@ class Loklok : MainAPI() {
         }
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val res = app.get(
-            "$searchApi/search?keyword=$query",
-        ).document
+    override suspend fun search(query: String): List<SearchResponse>? = quickSearch(query)
 
-        val script = res.select("script").find { it.data().contains("function(a,b,c,d,e") }?.data()
-            ?.substringAfter("searchResults:[")?.substringBefore("]}],fetch")
-
-        return res.select("div.search-list div.search-video-card").mapIndexed { num, block ->
-            val name = block.selectFirst("h2.title")?.text()
-            val data = block.selectFirst("a")?.attr("href")?.split("/")
-            val id = data?.last()
-            val type = data?.get(2)?.toInt()
-            val image = Regex("coverVerticalUrl:\"(.*?)\",").findAll(script.toString())
-                .map { it.groupValues[1] }.toList().getOrNull(num)?.replace("\\u002F", "/")
-
-
-            newMovieSearchResponse(
-                "$name",
-                UrlData(id, type).toJson(),
-                TvType.Movie,
-            ) {
-                this.posterUrl = image
-            }
-
-        }
-
-    }
+//    override suspend fun search(query: String): List<SearchResponse> {
+//        val res = app.get(
+//            "$searchApi/search?keyword=$query",
+//        ).document
+//
+//        val script = res.select("script").find { it.data().contains("function(a,b,c,d,e") }?.data()
+//            ?.substringAfter("searchResults:[")?.substringBefore("]}],fetch")
+//
+//        return res.select("div.search-list div.search-video-card").mapIndexed { num, block ->
+//            val name = block.selectFirst("h2.title")?.text()
+//            val data = block.selectFirst("a")?.attr("href")?.split("/")
+//            val id = data?.last()
+//            val type = data?.get(2)?.toInt()
+//            val image = Regex("coverVerticalUrl:\"(.*?)\",").findAll(script.toString())
+//                .map { it.groupValues[1] }.toList().getOrNull(num)?.replace("\\u002F", "/")
+//
+//
+//            newMovieSearchResponse(
+//                "$name",
+//                UrlData(id, type).toJson(),
+//                TvType.Movie,
+//            ) {
+//                this.posterUrl = image
+//            }
+//
+//        }
+//
+//    }
 
     override suspend fun load(url: String): LoadResponse? {
         val data = parseJson<UrlData>(url)
