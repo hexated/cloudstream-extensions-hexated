@@ -28,6 +28,7 @@ class Loklok : MainAPI() {
     // no license found
     // thanks to https://github.com/napthedev/filmhot for providing API
     companion object {
+        private const val geoblockError = "Loklok is Geoblock Mfs, use vpn near from Indonesia or give up"
         private val api = base64DecodeAPI("dg==LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
         private val searchApi = base64Decode("aHR0cHM6Ly9sb2tsb2suY29t")
@@ -59,7 +60,7 @@ class Loklok : MainAPI() {
                 ?.mapNotNull { res ->
                     val header = res.homeSectionName ?: return@mapNotNull null
                     val media = res.media?.mapNotNull { media -> media.toSearchResponse() }
-                        ?: throw ErrorLoadingException("Invalid Json Reponse")
+                        .orEmpty().ifEmpty { throw ErrorLoadingException(geoblockError) }
                     home.add(HomePageList(header, media))
                 }
         }
@@ -132,7 +133,7 @@ class Loklok : MainAPI() {
         val res = app.get(
             "$apiUrl/movieDrama/get?id=${data.id}&category=${data.category}",
             headers = headers
-        ).parsedSafe<Load>()?.data ?: throw ErrorLoadingException("Invalid Json Reponse")
+        ).parsedSafe<Load>()?.data ?: throw ErrorLoadingException(geoblockError)
 
         val actors = res.starList?.mapNotNull {
             Actor(
