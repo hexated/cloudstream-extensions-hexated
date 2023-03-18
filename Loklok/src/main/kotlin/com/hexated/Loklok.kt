@@ -28,7 +28,7 @@ class Loklok : MainAPI() {
     // no license found
     // thanks to https://github.com/napthedev/filmhot for providing API
     companion object {
-        private const val geoblockError = "Loklok is Geoblock Mfs, use vpn or give up"
+        private const val geoblockError = "Loklok is Geoblock, use vpn or give up"
         private val api = base64DecodeAPI("dg==LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
         private val searchApi = base64Decode("aHR0cHM6Ly9sb2tsb2suY29t")
