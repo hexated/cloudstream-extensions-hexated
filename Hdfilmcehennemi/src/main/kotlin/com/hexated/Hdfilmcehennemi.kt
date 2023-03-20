@@ -27,6 +27,7 @@ class Hdfilmcehennemi : MainAPI() {
         "$mainUrl/imdb-7-puan-uzeri-filmler/page/" to "Imdb 7+ Filmler",
         "$mainUrl/en-cok-yorumlananlar/page/" to "En Çok Yorumlananlar",
         "$mainUrl/en-cok-begenilen-filmleri-izle/page/" to "En Çok Beğenilenler",
+        "$mainUrl/tur/aksiyon-filmleri-izleyin-2/" to "Aksiyon",
     )
 
     override suspend fun getMainPage(
