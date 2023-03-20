@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
+import okhttp3.FormBody
 import org.jsoup.nodes.Element
 
 class Hentaiheaven : MainAPI() {
@@ -100,19 +101,28 @@ class Hentaiheaven : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        app.get(data).document.select("div.player_logic_item iframe").attr("src").let { iframe ->
+        val doc = app.get(data).document
+        val meta = doc.selectFirst("meta[itemprop=thumbnailUrl]")?.attr("content")?.substringAfter("/hh/")?.substringBefore("/") ?: return false
+        doc.select("div.player_logic_item iframe").attr("src").let { iframe ->
             val document = app.get(iframe, referer = data).text
             val en = Regex("var\\sen\\s=\\s'(\\S+)';").find(document)?.groupValues?.getOrNull(1)
             val iv = Regex("var\\siv\\s=\\s'(\\S+)';").find(document)?.groupValues?.getOrNull(1)
 
+            val body = FormBody.Builder()
+                .addEncoded("action", "zarat_get_data_player_ajax")
+                .addEncoded("a", "$en")
+                .addEncoded("b", "$iv")
+                .build()
+
             app.post(
                 "$mainUrl/wp-content/plugins/player-logic/api.php",
-                data = mapOf(
-                    "action" to "zarat_get_data_player_ajax",
-                    "a" to "$en",
-                    "b" to "$iv"
-                ),
-                headers = mapOf("Sec-Fetch-Mode" to "cors")
+//                data = mapOf(
+//                    "action" to "zarat_get_data_player_ajax",
+//                    "a" to "$en",
+//                    "b" to "$iv"
+//                ),
+                requestBody = body,
+//                headers = mapOf("Sec-Fetch-Mode" to "cors")
             ).parsedSafe<Response>()?.data?.sources?.map { res ->
 //                M3u8Helper.generateM3u8(
 //                    this.name,
@@ -126,8 +136,8 @@ class Hentaiheaven : MainAPI() {
                     ExtractorLink(
                         this.name,
                         this.name,
-                        res.src ?: return@map null,
-                        referer = "$mainUrl/",
+                        res.src?.replace("/hh//", "/hh/$meta/") ?: return@map null,
+                        referer = "",
                         quality = Qualities.Unknown.value,
                         isM3u8 = true
                     )
