@@ -13,7 +13,7 @@ import org.jsoup.nodes.Element
 import java.util.ArrayList
 
 class OtakudesuProvider : MainAPI() {
-    override var mainUrl = "https://otakudesu.ltd"
+    override var mainUrl = "https://otakudesu.lol"
     override var name = "Otakudesu"
     override val hasMainPage = true
     override var lang = "id"
