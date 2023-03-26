@@ -632,12 +632,16 @@ object SoraExtractor : SoraStream() {
                 it.attr("href").contains(Regex("(?i)Episode-0*$episode"))
             }?.attr("href")
         } ?: return
-        val source =
-            app.get(
-                fixUrl(iframe, kimcartoonAPI)
-            ).document.selectFirst("div#divContentVideo iframe")
-                ?.attr("src") ?: return
-        loadExtractor(source, "$kimcartoonAPI/", subtitleCallback, callback)
+        val servers = app.get(fixUrl(iframe, kimcartoonAPI)).document.select("#selectServer > option").map { fixUrl(it.attr("value"), kimcartoonAPI) }
+
+        servers.apmap {
+            app.get(it).document.select("#my_video_1").attr("src").let { iframe ->
+                if (iframe.isNotEmpty()) {
+                    loadExtractor(iframe, "$kimcartoonAPI/", subtitleCallback, callback)
+                }
+                //There are other servers, but they require some work to do
+            }
+        }
     }
 
     suspend fun invokeSoraStream(
