@@ -1962,7 +1962,7 @@ object SoraExtractor : SoraStream() {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
-                it.first.contains("/flix") -> {
+                it.first.contains("/ffix") -> {
                     invokeSmashyOne(it.second, it.first, callback)
                 }
                 it.first.contains("/gtop") -> {
