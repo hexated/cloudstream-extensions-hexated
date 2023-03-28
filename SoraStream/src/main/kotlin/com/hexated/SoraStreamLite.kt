@@ -20,7 +20,7 @@ import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
-import com.hexated.SoraExtractor.invokeSoraStreamLite
+import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeUniqueStream
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -54,7 +54,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeSoraStreamLite(
+                invokeSoraStream(
                     res.title,
                     res.year,
                     res.season,

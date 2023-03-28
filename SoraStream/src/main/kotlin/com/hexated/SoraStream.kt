@@ -367,6 +367,7 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback,
+                    callback
                 )
             },
             {
