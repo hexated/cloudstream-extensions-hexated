@@ -255,9 +255,8 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.createSlug()
-        val request = app.get("$hdMovieBoxAPI/watch/$fixTitle")
-        if (!request.isSuccessful) return
-        val doc = request.document
+        val url = "$hdMovieBoxAPI/watch/$fixTitle"
+        val doc = app.get(url).document
         val id = if (season == null) {
             doc.selectFirst("div.player div#not-loaded")?.attr("data-whatwehave")
         } else {
@@ -274,44 +273,64 @@ object SoraExtractor : SoraStream() {
             ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsedSafe<HdMovieBoxIframe>()?.apiIframe ?: return
 
-        val iframe = app.get(iframeUrl, referer = "$hdMovieBoxAPI/").document.selectFirst("iframe")
-            ?.attr("src")
-        val base = getBaseUrl(iframe ?: return)
+        delay(1000)
+        val iframe = app.get(iframeUrl, referer = url).document.selectFirst("iframe")
+            ?.attr("src").let { httpsify(it ?: return) }
 
-        val script = app.get(
-            iframe, referer = "$hdMovieBoxAPI/"
-        ).document.selectFirst("script:containsData(var vhash =)")?.data()
-            ?.substringAfter("vhash, {")?.substringBefore("}, false")
-
-        tryParseJson<HdMovieBoxSource>("{$script}").let { source ->
-            val disk = if (source?.videoDisk == null) {
-                ""
-            } else {
-                base64Encode(source.videoDisk.toString().toByteArray())
-            }
-            val link = getBaseUrl(iframe) + source?.videoUrl?.replace(
-                "\\", ""
-            ) + "?s=${source?.videoServer}&d=$disk"
-            callback.invoke(
-                ExtractorLink(
-                    "HDMovieBox",
-                    "HDMovieBox",
-                    link,
-                    iframe,
-                    Qualities.P1080.value,
-                    isM3u8 = true,
-                )
-            )
-
-            source?.tracks?.map { sub ->
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        sub.label ?: "",
-                        fixUrl(sub.file ?: return@map null, base),
+        if(iframe.startsWith("https://vidmoly.to")) {
+            loadExtractor(iframe, "$hdMovieBoxAPI/", subtitleCallback) { video ->
+                callback.invoke(
+                    ExtractorLink(
+                        video.name,
+                        video.name,
+                        video.url,
+                        video.referer,
+                        Qualities.P1080.value,
+                        video.isM3u8,
+                        video.headers,
+                        video.extractorData
                     )
                 )
             }
+        } else {
+            val base = getBaseUrl(iframe)
+            val script = app.get(
+                httpsify(iframe), referer = "$hdMovieBoxAPI/"
+            ).document.selectFirst("script:containsData(var vhash =)")?.data()
+                ?.substringAfter("vhash, {")?.substringBefore("}, false")
+
+            tryParseJson<HdMovieBoxSource>("{$script}").let { source ->
+                val disk = if (source?.videoDisk == null) {
+                    ""
+                } else {
+                    base64Encode(source.videoDisk.toString().toByteArray())
+                }
+                val link = getBaseUrl(iframe) + source?.videoUrl?.replace(
+                    "\\", ""
+                ) + "?s=${source?.videoServer}&d=$disk"
+                callback.invoke(
+                    ExtractorLink(
+                        "HDMovieBox",
+                        "HDMovieBox",
+                        link,
+                        iframe,
+                        Qualities.P1080.value,
+                        isM3u8 = true,
+                    )
+                )
+
+                source?.tracks?.map { sub ->
+                    subtitleCallback.invoke(
+                        SubtitleFile(
+                            sub.label ?: "",
+                            fixUrl(sub.file ?: return@map null, base),
+                        )
+                    )
+                }
+            }
         }
+
+
     }
 
     suspend fun invokeSeries9(
@@ -639,7 +658,6 @@ object SoraExtractor : SoraStream() {
                 if (iframe.isNotEmpty()) {
                     loadExtractor(iframe, "$kimcartoonAPI/", subtitleCallback, callback)
                 }
-                //There are other servers, but they require some work to do
             }
         }
     }
