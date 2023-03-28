@@ -10,7 +10,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class IdlixProvider : MainAPI() {
-    override var mainUrl = "https://91.201.113.103"
+    override var mainUrl = "https://idlixian.com"
     private var directUrl = mainUrl
     override var name = "Idlix"
     override val hasMainPage = true
@@ -46,11 +46,13 @@ class IdlixProvider : MainAPI() {
     ): HomePageResponse {
         val url = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1
-        val document = if (nonPaged) {
-            app.get(request.data).document
+        val req = if (nonPaged) {
+            app.get(request.data)
         } else {
-            app.get("${url.first()}$page/?${url.lastOrNull()}").document
+            app.get("${url.first()}$page/?${url.lastOrNull()}")
         }
+        mainUrl = getBaseUrl(req.url)
+        val document = req.document
         val home = (if (nonPaged) {
             document.select("div.items.featured article")
         } else {
@@ -92,9 +94,9 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/search/$query"
-        val document = app.get(link).document
-
+        val req = app.get("$mainUrl/search/$query")
+        mainUrl = getBaseUrl(req.url)
+        val document = req.document
         return document.select("div.result-item").map {
             val title =
                 it.selectFirst("div.title > a")!!.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
