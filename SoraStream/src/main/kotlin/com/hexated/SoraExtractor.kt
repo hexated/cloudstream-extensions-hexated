@@ -1282,13 +1282,13 @@ object SoraExtractor : SoraStream() {
         }
 
         sources.apmap { (quality, link) ->
-            val driveLink = bypassTechmny(link ?: return@apmap null)
-            val base = getBaseUrl(driveLink ?: return@apmap null)
+            val driveLink = if(link?.contains("driveleech") == true) bypassDriveleech(link) else bypassTechmny(link ?: return@apmap)
+            val base = getBaseUrl(driveLink ?: return@apmap)
             val resDoc = app.get(driveLink).document
             val bitLink = resDoc.selectFirst("a.btn.btn-outline-success")?.attr("href")
             val downloadLink = if (bitLink.isNullOrEmpty()) {
                 val backupIframe = resDoc.select("a.btn.btn-outline-warning").attr("href")
-                extractBackupUHD(backupIframe ?: return@apmap null)
+                extractBackupUHD(backupIframe ?: return@apmap)
             } else {
                 extractMirrorUHD(bitLink, base)
             }
@@ -1307,7 +1307,7 @@ object SoraExtractor : SoraStream() {
                 ExtractorLink(
                     "UHDMovies",
                     "UHDMovies $tags $size",
-                    downloadLink ?: return@apmap null,
+                    downloadLink ?: return@apmap,
                     "",
                     qualities
                 )

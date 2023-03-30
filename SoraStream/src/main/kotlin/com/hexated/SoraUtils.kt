@@ -675,6 +675,13 @@ suspend fun bypassTechmny(url: String) : String? {
     return fixUrl(path, getBaseUrl(driveUrl))
 }
 
+suspend fun bypassDriveleech(url: String) : String? {
+    val path = app.get(url).text.substringAfter("replace(\"")
+        .substringBefore("\")")
+    if (path == "/404") return null
+    return fixUrl(path, getBaseUrl(url))
+}
+
 private fun getTechmnyCookies(page: String): Triple<String, String, String> {
     val cat = "rdst_cat"
     val post = "rdst_post"
