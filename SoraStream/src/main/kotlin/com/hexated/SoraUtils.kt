@@ -646,6 +646,59 @@ suspend fun bypassHrefli(url: String): String? {
     return fixUrl(path, getBaseUrl(driveUrl))
 }
 
+suspend fun bypassTechmny(url: String) : String? {
+    val postUrl = url.substringBefore("?id=").substringAfter("/?")
+    var res = app.post(
+        postUrl, data = mapOf(
+            "_wp_http_c" to url.substringAfter("?id=")
+        )
+    )
+    val (longC, catC, _) = getTechmnyCookies(res.text)
+    var headers = mapOf("Cookie" to "$longC; $catC")
+    var formLink = res.document.selectFirst("center a")?.attr("href")
+
+    res = app.get(formLink ?: return null, headers = headers)
+    val (longC2, _, postC) = getTechmnyCookies(res.text)
+    headers = mapOf("Cookie" to "$catC; $longC2; $postC")
+    formLink = res.document.selectFirst("center a")?.attr("href")
+
+    res = app.get(formLink ?: return null, headers = headers)
+    val goToken = res.text.substringAfter("?go=").substringBefore("\"")
+    val tokenUrl = "$postUrl?go=$goToken"
+    val newLongC = "$goToken=" + longC2.substringAfter("=")
+    headers = mapOf("Cookie" to "$catC; rdst_post=; $newLongC")
+
+    val driveUrl = app.get(tokenUrl, headers = headers).document.selectFirst("meta[http-equiv=refresh]")?.attr("content")?.substringAfter("url=")
+    val path = app.get(driveUrl ?: return null).text.substringAfter("replace(\"")
+        .substringBefore("\")")
+    if (path == "/404") return null
+    return fixUrl(path, getBaseUrl(driveUrl))
+}
+
+private fun getTechmnyCookies(page: String): Triple<String, String, String> {
+    val cat = "rdst_cat"
+    val post = "rdst_post"
+    val longC = page.substringAfter(".setTime")
+        .substringAfter("document.cookie = \"")
+        .substringBefore("\"")
+        .substringBefore(";")
+    val catC = if (page.contains("$cat=")) {
+        page.substringAfterLast("$cat=")
+            .substringBefore(";").let {
+                "$cat=$it"
+            }
+    } else { "" }
+
+    val postC = if (page.contains("$post=")) {
+        page.substringAfterLast("$post=")
+            .substringBefore(";").let {
+                "$post=$it"
+            }
+    } else { "" }
+
+    return Triple(longC, catC, postC)
+}
+
 suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<String, String?>? {
 
     val req = app.get(url)

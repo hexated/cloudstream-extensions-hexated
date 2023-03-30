@@ -1282,7 +1282,7 @@ object SoraExtractor : SoraStream() {
         }
 
         sources.apmap { (quality, link) ->
-            val driveLink = bypassHrefli(link ?: return@apmap null)
+            val driveLink = bypassTechmny(link ?: return@apmap null)
             val base = getBaseUrl(driveLink ?: return@apmap null)
             val resDoc = app.get(driveLink).document
             val bitLink = resDoc.selectFirst("a.btn.btn-outline-success")?.attr("href")

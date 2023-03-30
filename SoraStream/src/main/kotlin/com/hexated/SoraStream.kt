@@ -103,7 +103,7 @@ open class SoraStream : TmdbProvider() {
         const val kickassanimeAPI = "https://www2.kickassanime.ro" // disabled due to consumet
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.world"
+        const val uhdmoviesAPI = "https://uhdmovies.vip"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
