@@ -2426,7 +2426,7 @@ object SoraExtractor : SoraStream() {
             } else {
                 app.post("${apiUrl}id2path", requestBody = pathBody, referer = apiUrl)
             }).text.let { path ->
-                if (api == "RinzryMovies") {
+                if (api in ddomainIndex) {
                     val worker = app.get(
                         "${fixUrl(path, apiUrl)}?a=view"
                     ).document.selectFirst("script:containsData(downloaddomain)")?.data()

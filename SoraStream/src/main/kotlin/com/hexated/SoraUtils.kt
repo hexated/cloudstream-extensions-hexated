@@ -87,6 +87,11 @@ val needRefererIndex = arrayOf(
     "ShinobiMovies",
 )
 
+val ddomainIndex = arrayOf(
+    "RinzryMovies",
+    "ShinobiMovies"
+)
+
 val mimeType = arrayOf(
     "video/x-matroska",
     "video/mp4",
