@@ -140,7 +140,7 @@ class Stremio : MainAPI() {
                 return provider.newMovieLoadResponse(
                     name,
                     "${provider.fixedUrl}/meta/${type}/${id}.json",
-                    TvType.Others,
+                    TvType.Movie,
                     "${provider.fixedUrl}/stream/${type}/${id}.json"
                 ) {
                     posterUrl = poster
@@ -150,7 +150,7 @@ class Stremio : MainAPI() {
                 return provider.newTvSeriesLoadResponse(
                     name,
                     "${provider.fixedUrl}/meta/${type}/${id}.json",
-                    TvType.Others,
+                    TvType.TvSeries,
                     videos.map {
                         it.toEpisode(provider, type)
                     }
