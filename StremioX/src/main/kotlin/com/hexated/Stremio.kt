@@ -17,9 +17,10 @@ class Stremio : MainAPI() {
     override var name = "Stremio"
     override val supportedTypes = setOf(TvType.Others)
     override val hasMainPage = true
+    private val fixedUrl = mainUrl.fixSourceUrl()
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
-        val res = tryParseJson<Manifest>(app.get("${mainUrl}/manifest.json").text) ?: return null
+        val res = tryParseJson<Manifest>(app.get("${fixedUrl}/manifest.json").text) ?: return null
         val lists = mutableListOf<HomePageList>()
         res.catalogs.forEach { catalog ->
             catalog.toHomePageList(this)?.let {
@@ -33,7 +34,7 @@ class Stremio : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse>? {
-        val res = tryParseJson<Manifest>(app.get("${mainUrl}/manifest.json").text) ?: return null
+        val res = tryParseJson<Manifest>(app.get("${fixedUrl}/manifest.json").text) ?: return null
         val list = mutableListOf<SearchResponse>()
         res.catalogs.forEach { catalog ->
             list.addAll(catalog.search(query, this))
@@ -43,7 +44,7 @@ class Stremio : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         val res = parseJson<CatalogEntry>(url)
-        val json = app.get("${mainUrl}/meta/${res.type}/${res.id}.json")
+        val json = app.get("${fixedUrl}/meta/${res.type}/${res.id}.json")
             .parsedSafe<CatalogResponse>()?.meta ?: throw RuntimeException(url)
         return json.toLoadResponse(this)
     }
@@ -77,7 +78,7 @@ class Stremio : MainAPI() {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
                 val json =
-                    app.get("${provider.mainUrl}/catalog/${type}/${id}/search=${query}.json").text
+                    app.get("${provider.fixedUrl}/catalog/${type}/${id}/search=${query}.json").text
                 val res =
                     tryParseJson<CatalogResponse>(json)
                         ?: return@forEach
@@ -91,7 +92,7 @@ class Stremio : MainAPI() {
         suspend fun toHomePageList(provider: Stremio): HomePageList? {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
-                val json = app.get("${provider.mainUrl}/catalog/${type}/${id}.json").text
+                val json = app.get("${provider.fixedUrl}/catalog/${type}/${id}.json").text
                 val res =
                     tryParseJson<CatalogResponse>(json)
                         ?: return@forEach
@@ -129,9 +130,9 @@ class Stremio : MainAPI() {
             if (videos == null || videos.isEmpty()) {
                 return provider.newMovieLoadResponse(
                     name,
-                    "${provider.mainUrl}/meta/${type}/${id}.json",
+                    "${provider.fixedUrl}/meta/${type}/${id}.json",
                     TvType.Others,
-                    "${provider.mainUrl}/stream/${type}/${id}.json"
+                    "${provider.fixedUrl}/stream/${type}/${id}.json"
                 ) {
                     posterUrl = poster
                     plot = description
@@ -139,7 +140,7 @@ class Stremio : MainAPI() {
             } else {
                 return provider.newTvSeriesLoadResponse(
                     name,
-                    "${provider.mainUrl}/meta/${type}/${id}.json",
+                    "${provider.fixedUrl}/meta/${type}/${id}.json",
                     TvType.Others,
                     videos.map {
                         it.toEpisode(provider, type)
@@ -161,7 +162,7 @@ class Stremio : MainAPI() {
     ) {
         fun toEpisode(provider: Stremio, type: String?): Episode {
             return provider.newEpisode(
-                "${provider.mainUrl}/stream/${type}/${id}.json"
+                "${provider.fixedUrl}/stream/${type}/${id}.json"
             ) {
                 this.name = title
                 this.posterUrl = thumbnail
@@ -209,7 +210,7 @@ class Stremio : MainAPI() {
                         name ?: "",
                         title ?: name ?: "",
                         url,
-                        if (provider.mainUrl.contains("kisskh")) "https://kisskh.me/" else referer
+                        if (provider.fixedUrl.contains("kisskh")) "https://kisskh.me/" else referer
                             ?: "",
                         getQualityFromName(description),
                         isM3u8 = URI(url).path.endsWith(".m3u8")
