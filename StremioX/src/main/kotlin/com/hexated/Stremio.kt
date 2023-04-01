@@ -17,9 +17,10 @@ class Stremio : MainAPI() {
     override var name = "Stremio"
     override val supportedTypes = setOf(TvType.Others)
     override val hasMainPage = true
-    private val fixedUrl = mainUrl.fixSourceUrl()
+    private var fixedUrl = mainUrl
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
+        fixedUrl = mainUrl.fixSourceUrl()
         val res = tryParseJson<Manifest>(app.get("${fixedUrl}/manifest.json").text) ?: return null
         val lists = mutableListOf<HomePageList>()
         res.catalogs.forEach { catalog ->
@@ -34,6 +35,7 @@ class Stremio : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse>? {
+        fixedUrl = mainUrl.fixSourceUrl()
         val res = tryParseJson<Manifest>(app.get("${fixedUrl}/manifest.json").text) ?: return null
         val list = mutableListOf<SearchResponse>()
         res.catalogs.forEach { catalog ->
