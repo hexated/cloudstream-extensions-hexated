@@ -6,7 +6,7 @@ cloudstream {
     language = "en"
     // All of these properties are optional, you can safely remove them
 
-     description = "Allow you to use Stremio addons as sources such as torrentio. (!) Requires setup"
+     description = "- Stremiox allows you to use stream addons \n- Stremio allows you to use catalog addons \n<!> Requires Setup"
      authors = listOf("Hexated")
 
     /**
