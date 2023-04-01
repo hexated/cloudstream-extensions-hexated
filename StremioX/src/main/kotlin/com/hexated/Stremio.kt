@@ -18,6 +18,7 @@ class Stremio : MainAPI() {
     override val supportedTypes = setOf(TvType.Others)
     override val hasMainPage = true
     private var fixedUrl = mainUrl
+    private val cinemataUrl = "https://v3-cinemeta.strem.io"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         fixedUrl = mainUrl.fixSourceUrl()
@@ -46,6 +47,7 @@ class Stremio : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         val res = parseJson<CatalogEntry>(url)
+        fixedUrl = if((res.type == "movie" || res.type == "series") && isImdborTmdb(res.id)) cinemataUrl else mainUrl.fixSourceUrl()
         val json = app.get("${fixedUrl}/meta/${res.type}/${res.id}.json")
             .parsedSafe<CatalogResponse>()?.meta ?: throw RuntimeException(url)
         return json.toLoadResponse(this)
@@ -63,6 +65,11 @@ class Stremio : MainAPI() {
         }
 
         return true
+    }
+
+    // check if id is imdb/tmdb cause stremio addons like torrentio works base on imdbId
+    private fun isImdborTmdb(url: String?): Boolean {
+        return imdbUrlToIdNullable(url) != null || url?.startsWith("tmdb:") == true
     }
 
     private data class Manifest(val catalogs: List<Catalog>)
