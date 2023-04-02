@@ -4,6 +4,10 @@ fun String.fixSourceUrl() : String {
     return this.replace("/manifest.json", "").replace("stremio://", "https://")
 }
 
+fun fixRDSourceName(name: String?, title: String?) : String {
+    return if(name?.contains("[RD+]") == true) "[RD+] $title" else name ?: title ?: ""
+}
+
 fun getEpisodeSlug(
     season: Int? = null,
     episode: Int? = null,

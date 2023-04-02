@@ -347,7 +347,7 @@ open class StremioX : MainAPI() {
                 callback.invoke(
                     ExtractorLink(
                         name ?: "",
-                        title ?: name ?: "",
+                        fixRDSourceName(name, title),
                         url,
                         referer ?: "",
                         getQualityFromName(description),
