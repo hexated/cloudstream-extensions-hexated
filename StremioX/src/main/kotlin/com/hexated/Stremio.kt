@@ -1,6 +1,7 @@
 package com.hexated
 
 import android.util.Log
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -17,12 +18,11 @@ class Stremio : MainAPI() {
     override var name = "Stremio"
     override val supportedTypes = setOf(TvType.Others)
     override val hasMainPage = true
-    private var fixedUrl = mainUrl
     private val cinemataUrl = "https://v3-cinemeta.strem.io"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
-        fixedUrl = mainUrl.fixSourceUrl()
-        val res = tryParseJson<Manifest>(app.get("${fixedUrl}/manifest.json").text) ?: return null
+        mainUrl = mainUrl.fixSourceUrl()
+        val res = tryParseJson<Manifest>(app.get("${mainUrl}/manifest.json").text) ?: return null
         val lists = mutableListOf<HomePageList>()
         res.catalogs.forEach { catalog ->
             catalog.toHomePageList(this)?.let {
@@ -36,8 +36,8 @@ class Stremio : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse>? {
-        fixedUrl = mainUrl.fixSourceUrl()
-        val res = tryParseJson<Manifest>(app.get("${fixedUrl}/manifest.json").text) ?: return null
+        mainUrl = mainUrl.fixSourceUrl()
+        val res = tryParseJson<Manifest>(app.get("${mainUrl}/manifest.json").text) ?: return null
         val list = mutableListOf<SearchResponse>()
         res.catalogs.forEach { catalog ->
             list.addAll(catalog.search(query, this))
@@ -47,8 +47,8 @@ class Stremio : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         val res = parseJson<CatalogEntry>(url)
-        fixedUrl = if((res.type == "movie" || res.type == "series") && isImdborTmdb(res.id)) cinemataUrl else mainUrl.fixSourceUrl()
-        val json = app.get("${fixedUrl}/meta/${res.type}/${res.id}.json")
+        mainUrl = if((res.type == "movie" || res.type == "series") && isImdborTmdb(res.id)) cinemataUrl else mainUrl
+        val json = app.get("${mainUrl}/meta/${res.type}/${res.id}.json")
             .parsedSafe<CatalogResponse>()?.meta ?: throw RuntimeException(url)
         return json.toLoadResponse(this)
     }
@@ -87,7 +87,7 @@ class Stremio : MainAPI() {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
                 val json =
-                    app.get("${provider.fixedUrl}/catalog/${type}/${id}/search=${query}.json").text
+                    app.get("${provider.mainUrl}/catalog/${type}/${id}/search=${query}.json").text
                 val res =
                     tryParseJson<CatalogResponse>(json)
                         ?: return@forEach
@@ -101,7 +101,7 @@ class Stremio : MainAPI() {
         suspend fun toHomePageList(provider: Stremio): HomePageList? {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
-                val json = app.get("${provider.fixedUrl}/catalog/${type}/${id}.json").text
+                val json = app.get("${provider.mainUrl}/catalog/${type}/${id}.json").text
                 val res =
                     tryParseJson<CatalogResponse>(json)
                         ?: return@forEach
@@ -139,9 +139,9 @@ class Stremio : MainAPI() {
             if (videos == null || videos.isEmpty()) {
                 return provider.newMovieLoadResponse(
                     name,
-                    "${provider.fixedUrl}/meta/${type}/${id}.json",
+                    "${provider.mainUrl}/meta/${type}/${id}.json",
                     TvType.Movie,
-                    "${provider.fixedUrl}/stream/${type}/${id}.json"
+                    "${provider.mainUrl}/stream/${type}/${id}.json"
                 ) {
                     posterUrl = poster
                     plot = description
@@ -149,7 +149,7 @@ class Stremio : MainAPI() {
             } else {
                 return provider.newTvSeriesLoadResponse(
                     name,
-                    "${provider.fixedUrl}/meta/${type}/${id}.json",
+                    "${provider.mainUrl}/meta/${type}/${id}.json",
                     TvType.TvSeries,
                     videos.map {
                         it.toEpisode(provider, type)
@@ -164,18 +164,24 @@ class Stremio : MainAPI() {
     }
 
     private data class Video(
-        val id: String,
-        val title: String?,
-        val thumbnail: String?,
-        val overview: String?
+        @JsonProperty("id") val id: String? = null,
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("season") val seasonNumber: Int? = null,
+        @JsonProperty("number") val number: Int? = null,
+        @JsonProperty("episode") val episode: Int? = null,
+        @JsonProperty("thumbnail") val thumbnail: String? = null,
+        @JsonProperty("overview") val overview: String? = null,
     ) {
         fun toEpisode(provider: Stremio, type: String?): Episode {
             return provider.newEpisode(
-                "${provider.fixedUrl}/stream/${type}/${id}.json"
+                "${provider.mainUrl}/stream/${type}/${id}.json"
             ) {
-                this.name = title
+                this.name = title ?: name
                 this.posterUrl = thumbnail
                 this.description = overview
+                this.season = seasonNumber
+                this.episode = episode ?: number
             }
         }
     }
@@ -219,7 +225,7 @@ class Stremio : MainAPI() {
                         name ?: "",
                         title ?: name ?: "",
                         url,
-                        if (provider.fixedUrl.contains("kisskh")) "https://kisskh.me/" else referer
+                        if (provider.mainUrl.contains("kisskh")) "https://kisskh.me/" else referer
                             ?: "",
                         getQualityFromName(description),
                         isM3u8 = URI(url).path.endsWith(".m3u8")
