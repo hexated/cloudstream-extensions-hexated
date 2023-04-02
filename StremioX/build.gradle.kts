@@ -1,12 +1,12 @@
 // use an integer for version numbers
-version = 2
+version = 3
 
 
 cloudstream {
     language = "en"
     // All of these properties are optional, you can safely remove them
 
-     description = "- Stremiox allows you to use stream addons \n- Stremio allows you to use catalog addons \n<!> Requires Setup"
+     description = "- StremioX allows you to use stream addons \n- StremioC allows you to use catalog addons \n<!> Requires Setup"
      authors = listOf("Hexated")
 
     /**

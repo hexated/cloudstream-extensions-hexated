@@ -13,9 +13,9 @@ import java.net.URI
 private const val TRACKER_LIST_URL =
     "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best.txt"
 
-class Stremio : MainAPI() {
+class StremioC : MainAPI() {
     override var mainUrl = "https://stremio.github.io/stremio-static-addon-example"
-    override var name = "Stremio"
+    override var name = "StremioC"
     override val supportedTypes = setOf(TvType.Others)
     override val hasMainPage = true
     private val cinemataUrl = "https://v3-cinemeta.strem.io"
@@ -83,7 +83,7 @@ class Stremio : MainAPI() {
             if (type != null) types.add(type)
         }
 
-        suspend fun search(query: String, provider: Stremio): List<SearchResponse> {
+        suspend fun search(query: String, provider: StremioC): List<SearchResponse> {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
                 val json =
@@ -98,7 +98,7 @@ class Stremio : MainAPI() {
             return entries
         }
 
-        suspend fun toHomePageList(provider: Stremio): HomePageList? {
+        suspend fun toHomePageList(provider: StremioC): HomePageList? {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
                 val json = app.get("${provider.mainUrl}/catalog/${type}/${id}.json").text
@@ -127,7 +127,7 @@ class Stremio : MainAPI() {
         val type: String?,
         val videos: List<Video>?
     ) {
-        fun toSearchResponse(provider: Stremio): SearchResponse {
+        fun toSearchResponse(provider: StremioC): SearchResponse {
             return provider.newMovieSearchResponse(
                 fixTitle(name),
                 this.toJson(),
@@ -137,7 +137,7 @@ class Stremio : MainAPI() {
             }
         }
 
-        suspend fun toLoadResponse(provider: Stremio): LoadResponse {
+        suspend fun toLoadResponse(provider: StremioC): LoadResponse {
             if (videos == null || videos.isEmpty()) {
                 return provider.newMovieLoadResponse(
                     name,
@@ -180,7 +180,7 @@ class Stremio : MainAPI() {
         @JsonProperty("overview") val overview: String? = null,
         @JsonProperty("description") val description: String? = null,
     ) {
-        fun toEpisode(provider: Stremio, type: String?): Episode {
+        fun toEpisode(provider: StremioC, type: String?): Episode {
             return provider.newEpisode(
                 "${provider.mainUrl}/stream/${type}/${id}.json"
             ) {
@@ -213,7 +213,7 @@ class Stremio : MainAPI() {
         val subtitles: List<Subtitle> = emptyList()
     ) {
         suspend fun runCallback(
-            provider: Stremio,
+            provider: StremioC,
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
         ) {
