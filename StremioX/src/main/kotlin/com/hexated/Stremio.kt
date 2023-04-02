@@ -26,7 +26,7 @@ class Stremio : MainAPI() {
         val lists = mutableListOf<HomePageList>()
         res.catalogs.forEach { catalog ->
             catalog.toHomePageList(this)?.let {
-                lists.add(it)
+                if(it.list.isNotEmpty()) lists.add(it)
             }
         }
         return HomePageResponse(
@@ -110,7 +110,7 @@ class Stremio : MainAPI() {
                 }
             }
             return HomePageList(
-                name ?: id,
+                "$type - ${name ?: id}",
                 entries
             )
         }
@@ -121,7 +121,9 @@ class Stremio : MainAPI() {
         val name: String,
         val id: String,
         val poster: String?,
+        val background: String?,
         val description: String?,
+        val imdbRating: String?,
         val type: String?,
         val videos: List<Video>?
     ) {
@@ -144,6 +146,8 @@ class Stremio : MainAPI() {
                     "${provider.mainUrl}/stream/${type}/${id}.json"
                 ) {
                     posterUrl = poster
+                    backgroundPosterUrl = background
+                    rating = imdbRating.toRatingInt()
                     plot = description
                 }
             } else {
@@ -156,6 +160,8 @@ class Stremio : MainAPI() {
                     }
                 ) {
                     posterUrl = poster
+                    backgroundPosterUrl = background
+                    rating = imdbRating.toRatingInt()
                     plot = description
                 }
             }
@@ -172,14 +178,15 @@ class Stremio : MainAPI() {
         @JsonProperty("episode") val episode: Int? = null,
         @JsonProperty("thumbnail") val thumbnail: String? = null,
         @JsonProperty("overview") val overview: String? = null,
+        @JsonProperty("description") val description: String? = null,
     ) {
         fun toEpisode(provider: Stremio, type: String?): Episode {
             return provider.newEpisode(
                 "${provider.mainUrl}/stream/${type}/${id}.json"
             ) {
-                this.name = title ?: name
+                this.name = name ?: title
                 this.posterUrl = thumbnail
-                this.description = overview
+                this.description = overview ?: description
                 this.season = seasonNumber
                 this.episode = episode ?: number
             }
