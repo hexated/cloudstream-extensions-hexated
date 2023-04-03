@@ -5,7 +5,12 @@ fun String.fixSourceUrl() : String {
 }
 
 fun fixRDSourceName(name: String?, title: String?) : String {
-    return if(name?.contains("[RD+]") == true) "[RD+] $title" else name ?: title ?: ""
+    return when {
+        name?.contains("[RD+]", true) == true -> "[RD+] $title"
+        name?.contains("[RD download]", true) == true -> "[RD] $title"
+        !name.isNullOrEmpty() && !title.isNullOrEmpty() -> "$name $title"
+        else -> title ?: name ?: ""
+    }
 }
 
 fun getEpisodeSlug(
