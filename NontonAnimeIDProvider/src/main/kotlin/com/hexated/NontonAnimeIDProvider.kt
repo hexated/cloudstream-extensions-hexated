@@ -11,7 +11,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class NontonAnimeIDProvider : MainAPI() {
-    override var mainUrl = "https://nontonanimeid.asia"
+    override var mainUrl = "https://nontonanimeid.cfd"
     override var name = "NontonAnimeID"
     override val hasQuickSearch = false
     override val hasMainPage = true
