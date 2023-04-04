@@ -26,7 +26,7 @@ class StremioC : MainAPI() {
         val lists = mutableListOf<HomePageList>()
         res.catalogs.forEach { catalog ->
             catalog.toHomePageList(this)?.let {
-                if(it.list.isNotEmpty()) lists.add(it)
+                if (it.list.isNotEmpty()) lists.add(it)
             }
         }
         return HomePageResponse(
@@ -47,10 +47,11 @@ class StremioC : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         val res = parseJson<CatalogEntry>(url)
-        mainUrl = if((res.type == "movie" || res.type == "series") && isImdborTmdb(res.id)) cinemataUrl else mainUrl
+        mainUrl =
+            if ((res.type == "movie" || res.type == "series") && isImdborTmdb(res.id)) cinemataUrl else mainUrl
         val json = app.get("${mainUrl}/meta/${res.type}/${res.id}.json")
             .parsedSafe<CatalogResponse>()?.meta ?: throw RuntimeException(url)
-        return json.toLoadResponse(this)
+        return json.toLoadResponse(this, res.id)
     }
 
     override suspend fun loadLinks(
@@ -59,13 +60,73 @@ class StremioC : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val res = tryParseJson<StreamsResponse>(app.get(data).text) ?: return false
-        res.streams.forEach { stream ->
-            stream.runCallback(this, subtitleCallback, callback)
+        val loadData = parseJson<LoadData>(data)
+        val request = app.get("${mainUrl}/stream/${loadData.type}/${loadData.id}.json")
+        if (request.isSuccessful) {
+            val res = tryParseJson<StreamsResponse>(request.text) ?: return false
+            res.streams.forEach { stream ->
+                stream.runCallback(this, subtitleCallback, callback)
+            }
+        } else {
+            argamap(
+                {
+                    invokeStremioX(loadData.type, loadData.id, subtitleCallback, callback)
+                },
+                {
+                    SubsExtractors.invokeWatchsomuch(
+                        loadData.imdbId,
+                        loadData.season,
+                        loadData.episode,
+                        subtitleCallback
+                    )
+                },
+                {
+                    SubsExtractors.invokeOpenSubs(
+                        loadData.imdbId,
+                        loadData.season,
+                        loadData.episode,
+                        subtitleCallback
+                    )
+                },
+            )
         }
 
         return true
     }
+
+    private suspend fun invokeStremioX(
+        type: String?,
+        id: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val sites =
+            AcraApplication.getKey<Array<CustomSite>>(USER_PROVIDER_API)?.toMutableList()
+                ?: mutableListOf()
+        sites.filter { it.parentJavaClass == "StremioX" }.apmap { site ->
+            val res =
+                tryParseJson<StreamsResponse>(app.get("${site.url.fixSourceUrl()}/stream/${type}/${id}.json").text)
+                    ?: return@apmap
+            res.streams.forEach { stream ->
+                stream.runCallback(this, subtitleCallback, callback)
+            }
+        }
+    }
+
+    data class LoadData(
+        val type: String? = null,
+        val id: String? = null,
+        val season: Int? = null,
+        val episode: Int? = null,
+        val imdbId: String? = null,
+    )
+
+    data class CustomSite(
+        @JsonProperty("parentJavaClass") val parentJavaClass: String,
+        @JsonProperty("name") val name: String,
+        @JsonProperty("url") val url: String,
+        @JsonProperty("lang") val lang: String,
+    )
 
     // check if id is imdb/tmdb cause stremio addons like torrentio works base on imdbId
     private fun isImdborTmdb(url: String?): Boolean {
@@ -137,13 +198,13 @@ class StremioC : MainAPI() {
             }
         }
 
-        suspend fun toLoadResponse(provider: StremioC): LoadResponse {
+        suspend fun toLoadResponse(provider: StremioC, imdbId: String?): LoadResponse {
             if (videos == null || videos.isEmpty()) {
                 return provider.newMovieLoadResponse(
                     name,
                     "${provider.mainUrl}/meta/${type}/${id}.json",
                     TvType.Movie,
-                    "${provider.mainUrl}/stream/${type}/${id}.json"
+                    LoadData(type, id, imdbId = imdbId)
                 ) {
                     posterUrl = poster
                     backgroundPosterUrl = background
@@ -156,7 +217,7 @@ class StremioC : MainAPI() {
                     "${provider.mainUrl}/meta/${type}/${id}.json",
                     TvType.TvSeries,
                     videos.map {
-                        it.toEpisode(provider, type)
+                        it.toEpisode(provider, type, imdbId)
                     }
                 ) {
                     posterUrl = poster
@@ -180,9 +241,9 @@ class StremioC : MainAPI() {
         @JsonProperty("overview") val overview: String? = null,
         @JsonProperty("description") val description: String? = null,
     ) {
-        fun toEpisode(provider: StremioC, type: String?): Episode {
+        fun toEpisode(provider: StremioC, type: String?, imdbId: String?): Episode {
             return provider.newEpisode(
-                "${provider.mainUrl}/stream/${type}/${id}.json"
+                LoadData(type, id, seasonNumber, episode ?: number, imdbId)
             ) {
                 this.name = name ?: title
                 this.posterUrl = thumbnail
