@@ -27,9 +27,9 @@ class KuramanimeProvider : MainAPI() {
     )
 
     companion object {
-        fun getType(t: String): TvType {
+        fun getType(t: String, s: Int): TvType {
             return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie", true)) TvType.AnimeMovie
+            else if (t.contains("Movie", true) && s == 1) TvType.AnimeMovie
             else TvType.Anime
         }
 
@@ -140,7 +140,7 @@ class KuramanimeProvider : MainAPI() {
             }
         }
 
-        return newAnimeLoadResponse(title, url, getType(type)) {
+        return newAnimeLoadResponse(title, url, getType(type, episodes.size)) {
             engName = title
             posterUrl = image ?: poster
             backgroundPosterUrl = cover ?: image ?: poster
