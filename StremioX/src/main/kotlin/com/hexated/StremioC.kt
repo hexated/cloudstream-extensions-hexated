@@ -43,10 +43,10 @@ class StremioC : MainAPI() {
         mainUrl = mainUrl.fixSourceUrl()
         val res = tryParseJson<Manifest>(app.get("${mainUrl}/manifest.json").text) ?: return null
         val list = mutableListOf<SearchResponse>()
-        res.catalogs.forEach { catalog ->
+        res.catalogs.apmap { catalog ->
             list.addAll(catalog.search(query, this))
         }
-        return list
+        return list.distinct()
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -160,7 +160,7 @@ class StremioC : MainAPI() {
                     entries.add(entry.toSearchResponse(provider))
                 }
             }
-            return entries.distinctBy { it.id }
+            return entries
         }
 
         suspend fun toHomePageList(provider: StremioC): HomePageList? {
