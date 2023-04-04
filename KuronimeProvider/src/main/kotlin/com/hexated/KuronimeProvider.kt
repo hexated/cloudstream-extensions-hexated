@@ -20,6 +20,7 @@ class KuronimeProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
+    override var sequentialMainPage = true
 
     override val supportedTypes = setOf(
         TvType.Anime,
@@ -55,7 +56,7 @@ class KuronimeProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page).document
+        val document = app.get(request.data + page, verify = false).document
         val home = document.select("article").map {
             it.toSearchResult()
         }
@@ -99,7 +100,7 @@ class KuronimeProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/?s=$query"
-        val document = app.get(link).document
+        val document = app.get(link, verify = false).document
 
         return document.select("article.bs").map {
             it.toSearchResult()
