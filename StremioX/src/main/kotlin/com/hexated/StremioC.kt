@@ -3,6 +3,8 @@ package com.hexated
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -178,15 +180,25 @@ class StremioC : MainAPI() {
     }
 
     private data class CatalogResponse(val metas: List<CatalogEntry>?, val meta: CatalogEntry?)
+
+    private data class Trailer(
+        val source: String?,
+        val type: String?
+    )
     private data class CatalogEntry(
-        val name: String,
-        val id: String,
-        val poster: String?,
-        val background: String?,
-        val description: String?,
-        val imdbRating: String?,
-        val type: String?,
-        val videos: List<Video>?
+        @JsonProperty("name") val name: String,
+        @JsonProperty("id") val id: String,
+        @JsonProperty("poster") val poster: String?,
+        @JsonProperty("background") val background: String?,
+        @JsonProperty("description") val description: String?,
+        @JsonProperty("imdbRating") val imdbRating: String?,
+        @JsonProperty("type") val type: String?,
+        @JsonProperty("videos") val videos: List<Video>?,
+        @JsonProperty("genre") val genre: List<String>?,
+        @JsonProperty("genres") val genres: List<String>?,
+        @JsonProperty("cast") val cast: List<String>?,
+        @JsonProperty("year") val yearNum: String? = null,
+        @JsonProperty("trailers") val trailersSources: ArrayList<Trailer>? = arrayListOf()
     ) {
         fun toSearchResponse(provider: StremioC): SearchResponse {
             return provider.newMovieSearchResponse(
@@ -210,6 +222,10 @@ class StremioC : MainAPI() {
                     backgroundPosterUrl = background
                     rating = imdbRating.toRatingInt()
                     plot = description
+                    year = yearNum?.toIntOrNull()
+                    tags = genre ?: genres
+                    addActors(cast)
+                    addTrailer(trailersSources?.map { "https://www.youtube.com/watch?v=${it.source}" }?.randomOrNull())
                 }
             } else {
                 return provider.newTvSeriesLoadResponse(
@@ -224,6 +240,10 @@ class StremioC : MainAPI() {
                     backgroundPosterUrl = background
                     rating = imdbRating.toRatingInt()
                     plot = description
+                    year = yearNum?.toIntOrNull()
+                    tags = genre ?: genres
+                    addActors(cast)
+                    addTrailer(trailersSources?.map { "https://www.youtube.com/watch?v=${it.source}" }?.randomOrNull())
                 }
             }
 
