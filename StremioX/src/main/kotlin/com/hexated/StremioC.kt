@@ -2,6 +2,8 @@ package com.hexated
 
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.SubsExtractors.invokeOpenSubs
+import com.hexated.SubsExtractors.invokeWatchsomuch
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
@@ -75,7 +77,7 @@ class StremioC : MainAPI() {
                     invokeStremioX(loadData.type, loadData.id, subtitleCallback, callback)
                 },
                 {
-                    SubsExtractors.invokeWatchsomuch(
+                    invokeWatchsomuch(
                         loadData.imdbId,
                         loadData.season,
                         loadData.episode,
@@ -83,7 +85,7 @@ class StremioC : MainAPI() {
                     )
                 },
                 {
-                    SubsExtractors.invokeOpenSubs(
+                    invokeOpenSubs(
                         loadData.imdbId,
                         loadData.season,
                         loadData.episode,
@@ -158,7 +160,7 @@ class StremioC : MainAPI() {
                     entries.add(entry.toSearchResponse(provider))
                 }
             }
-            return entries
+            return entries.distinctBy { it.id }
         }
 
         suspend fun toHomePageList(provider: StremioC): HomePageList? {
