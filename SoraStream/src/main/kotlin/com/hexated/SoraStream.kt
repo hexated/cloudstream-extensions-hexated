@@ -136,7 +136,7 @@ open class SoraStream : TmdbProvider() {
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
-        const val tgarMovieAPI = "https://tgarchive.eu.org"
+        const val tgarMovieAPI = "https://tgarchive.eu.org" // dead
         const val jmdkhMovieAPI = "https://tg.jmdkh.eu.org/0:"
         const val rubyMovieAPI = "https://upload.rubyshare111.workers.dev/0:"
         const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
@@ -737,9 +737,9 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeGomovies(res.title, res.year, res.season, res.episode, callback)
             },
-            {
-                if (!res.isAnime) invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
-            },
+//            {
+//                if (!res.isAnime) invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
+//            },
             {
                 if (!res.isAnime) invokeGdbotMovies(res.title, res.year, res.season, res.episode, callback)
             },
