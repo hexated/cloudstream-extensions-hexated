@@ -28,7 +28,7 @@ class StremioC : MainAPI() {
         mainUrl = mainUrl.fixSourceUrl()
         val res = tryParseJson<Manifest>(app.get("${mainUrl}/manifest.json").text) ?: return null
         val lists = mutableListOf<HomePageList>()
-        res.catalogs.forEach { catalog ->
+        res.catalogs.apmap { catalog ->
             catalog.toHomePageList(this)?.let {
                 if (it.list.isNotEmpty()) lists.add(it)
             }
