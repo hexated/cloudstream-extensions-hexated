@@ -16,5 +16,7 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Keephealth())
         registerExtractorAPI(FileMoonIn())
         registerExtractorAPI(Sbnet())
+        registerExtractorAPI(Chillx())
+        registerExtractorAPI(Watchx())
     }
 }

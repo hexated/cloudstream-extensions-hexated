@@ -38,6 +38,7 @@ import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
+import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokePapaonMovies1
 import com.hexated.SoraExtractor.invokePapaonMovies2
 import com.hexated.SoraExtractor.invokeRStream
@@ -120,6 +121,7 @@ open class SoraStream : TmdbProvider() {
         const val ask4MoviesAPI = "https://ask4movie.mx"
         const val biliBiliAPI = "https://api-vn.kaguya.app/server"
         const val watchOnlineAPI = "https://watchonline.ag"
+        const val nineTvAPI = "https://api.9animetv.live"
         // INDEX SITE
         const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
@@ -629,6 +631,9 @@ open class SoraStream : TmdbProvider() {
                     res.episode,
                     subtitleCallback
                 )
+            },
+            {
+                if (!res.isAnime) invokeNinetv(res.id, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 if (!res.isAnime) invokeBlackmovies(

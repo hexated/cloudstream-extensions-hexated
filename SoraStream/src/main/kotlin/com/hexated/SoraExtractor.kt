@@ -2767,6 +2767,24 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    suspend fun invokeNinetv(
+        tmdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if (season == null) {
+            "$nineTvAPI/movie/$tmdbId"
+        } else {
+            "$nineTvAPI/tv/$tmdbId-$season-$episode"
+        }
+
+        val iframe  = app.get(url).document.selectFirst("iframe")?.attr("src") ?: return
+        loadExtractor(iframe, "$nineTvAPI/", subtitleCallback, callback)
+
+    }
+
 
 }
 
