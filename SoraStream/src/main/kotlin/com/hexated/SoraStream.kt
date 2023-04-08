@@ -89,7 +89,7 @@ open class SoraStream : TmdbProvider() {
         const val movieHabAPI = "https://moviehab.com"
         const val databaseGdriveAPI = "https://databasegdriveplayer.co"
         const val hdMovieBoxAPI = "https://hdmoviebox.net"
-        const val series9API = "https://series9.la"
+        const val series9API = "https://series9.sh"
         const val idlixAPI = "https://idlixian.com"
         const val noverseAPI = "https://www.nollyverse.com"
         const val uniqueStreamAPI = "https://uniquestream.net"

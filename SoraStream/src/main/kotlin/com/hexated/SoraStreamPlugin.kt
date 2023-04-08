@@ -15,5 +15,6 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Sblongvu())
         registerExtractorAPI(Keephealth())
         registerExtractorAPI(FileMoonIn())
+        registerExtractorAPI(Sbnet())
     }
 }
