@@ -2575,7 +2575,7 @@ object SoraExtractor : SoraStream() {
                     media.third,
                     gomoviesAPI
                 )
-            ).document.selectFirst("div#g_MXOzFGouZrOAUioXjpddqkZK a:contains(Episode $episodeSlug:)")
+            ).document.selectFirst("div#g_MXOzFGouZrOAUioXjpddqkZK a:contains(Episode $episodeSlug)")
                 ?.attr("href")
         } ?: return
 
