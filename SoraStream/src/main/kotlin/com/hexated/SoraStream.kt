@@ -92,7 +92,6 @@ open class SoraStream : TmdbProvider() {
         const val series9API = "https://series9.la"
         const val idlixAPI = "https://idlixian.com"
         const val noverseAPI = "https://www.nollyverse.com"
-        const val olgplyAPI = "https://olgply.xyz" // dead
         const val uniqueStreamAPI = "https://uniquestream.net"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
@@ -100,7 +99,6 @@ open class SoraStream : TmdbProvider() {
         const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq" // disabled due to rate limit
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream"
-        const val kickassanimeAPI = "https://www2.kickassanime.ro" // disabled due to consumet
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
         const val uhdmoviesAPI = "https://uhdmovies.vip"
@@ -115,7 +113,7 @@ open class SoraStream : TmdbProvider() {
         const val rStreamAPI = "https://remotestre.am"
         const val flixonAPI = "https://flixon.ru"
         const val animeKaizokuAPI = "https://animekaizoku.com"
-        const val movie123NetAPI = "https://ww7.0123movie.net"
+        const val movie123NetAPI = "https://ww8.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
@@ -376,9 +374,6 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeVidSrc(res.id, res.season, res.episode, subtitleCallback, callback)
             },
-//            {
-//                invokeOlgply(res.id, res.season, res.episode, callback)
-//            },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },

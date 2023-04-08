@@ -91,16 +91,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeOlgply(
-        id: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val url = "$olgplyAPI/${id}${season?.let { "/$it" } ?: ""}${episode?.let { "/$it" } ?: ""}"
-        loadLinksWithWebView(url, callback)
-    }
-
     suspend fun invokeDbgo(
         id: String? = null,
         season: Int? = null,
@@ -1652,73 +1642,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeKickassanime(
-        title: String? = null,
-        epsTitle: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val body = """{"query":"$title"}""".toRequestBody(
-            RequestBodyTypes.JSON.toMediaTypeOrNull()
-        )
-        val animeId = app.post(
-            "$kickassanimeAPI/api/search", requestBody = body
-        ).text.let { tryParseJson<List<KaaSearchResponse>>(it) }.let { res ->
-            (if (res?.size == 1) {
-                res.firstOrNull()
-            } else {
-                res?.find {
-                    it.title?.equals(
-                        title,
-                        true
-                    ) == true || it.title.createSlug()
-                        ?.equals("${title.createSlug()}", true) == true
-                }
-            })?._id
-        } ?: return
-
-        val seasonData =
-            app.get("$kickassanimeAPI/api/season/$animeId").text.let {
-                tryParseJson<List<KaaSeason>>(
-                    it
-                )
-            }?.find {
-                val seasonNumber = when (title) {
-                    "One Piece" -> 13
-                    "Hunter x Hunter" -> 5
-                    else -> season
-                }
-                it.number == seasonNumber
-            }
-
-        val language = seasonData?.languages?.filter {
-            it == "ja-JP" || it == "en-US"
-        }
-
-        language?.apmap { lang ->
-            val episodeSlug =
-                app.get("$kickassanimeAPI/api/episodes/${seasonData.id}?lh=$lang&page=1")
-                    .parsedSafe<KaaEpisodeResults>()?.result?.find { eps ->
-                        eps.episodeNumber == episode || eps.slug?.contains(
-                            "${epsTitle.createSlug()}",
-                            true
-                        ) == true
-                    }?.slug ?: return@apmap
-
-            val server = app.get("$kickassanimeAPI/api/watch/$episodeSlug")
-                .parsedSafe<KaaServers>()?.servers?.find {
-                it.contains("/sapphire-duck/")
-            } ?: return@apmap
-
-            invokeSapphire(server, lang == "en-US", subtitleCallback, callback)
-
-        }
-
-
-    }
-
     suspend fun invokeMoviesbay(
         title: String? = null,
         year: Int? = null,
@@ -2428,7 +2351,8 @@ object SoraExtractor : SoraStream() {
             }).text.let { path ->
                 if (api in ddomainIndex) {
                     val worker = app.get(
-                        "${fixUrl(path, apiUrl)}?a=view"
+                        "${fixUrl(path, apiUrl).encodeUrl()}?a=view",
+                        referer = if(api in needRefererIndex) apiUrl else ""
                     ).document.selectFirst("script:containsData(downloaddomain)")?.data()
                         ?.substringAfter("\"downloaddomain\":\"")?.substringBefore("\",")?.let {
                             "$it/0:"
@@ -2796,19 +2720,19 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        invokeCoatomotate(
+        invokeMonster(
             res.url.substringAfterLast("/"), episodeId, season, callback
         )
 
     }
 
-    suspend fun invokeCoatomotate(
+    private suspend fun invokeMonster(
         urlSlug: String? = null,
         episodeId: String? = null,
         season: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val coaMainUrl = "https://coatomotate.monster"
+        val monsterMainUrl = "https://dignes.monster"
         val playSlug = if (season == null) {
             "movies/play/$urlSlug"
         } else {
@@ -2816,16 +2740,16 @@ object SoraExtractor : SoraStream() {
         }
         val sid = "9k9iupt5sebbnfajrc6ti3ht7l"
         val sec = "1974bc4a902c4d69fcbab261dcec69094a9b8164"
-        val url = "$coaMainUrl/$playSlug?mid=1&sid=$sid&sec=$sec&t=${System.currentTimeMillis()}"
+        val url = "$monsterMainUrl/$playSlug?mid=1&sid=$sid&sec=$sec&t=${System.currentTimeMillis()}"
         val res = app.get(url).document
         val script = res.selectFirst("script:containsData(window['show_storage'])")?.data()
         val hash = Regex("hash:\\s*['\"](\\S+)['\"],").find(script ?: return)?.groupValues?.get(1)
         val expires = Regex("expires:\\s*(\\d+),").find(script ?: return)?.groupValues?.get(1)
 
         val videoUrl = if (season == null) {
-            "$coaMainUrl/api/v1/security/movie-access?id_movie=$episodeId&hash=$hash&expires=$expires"
+            "$monsterMainUrl/api/v1/security/movie-access?id_movie=$episodeId&hash=$hash&expires=$expires"
         } else {
-            "$coaMainUrl/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
+            "$monsterMainUrl/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
         }
 
         app.get(videoUrl, referer = url)
@@ -2835,7 +2759,7 @@ object SoraExtractor : SoraStream() {
                     "WatchOnline",
                     "WatchOnline",
                     source.value,
-                    "$coaMainUrl/",
+                    "$monsterMainUrl/",
                     getQualityFromName(source.key),
                     true
                 )
@@ -3159,30 +3083,6 @@ data class SorastreamResponse(
 data class SorastreamVideos(
     @JsonProperty("mediaUrl") val mediaUrl: String? = null,
     @JsonProperty("currentDefinition") val currentDefinition: String? = null,
-)
-
-data class KaaServers(
-    @JsonProperty("servers") val servers: ArrayList<String>? = arrayListOf(),
-)
-
-data class KaaEpisode(
-    @JsonProperty("episodeNumber") val episodeNumber: Int? = null,
-    @JsonProperty("slug") val slug: String? = null,
-)
-
-data class KaaEpisodeResults(
-    @JsonProperty("result") val result: ArrayList<KaaEpisode>? = arrayListOf(),
-)
-
-data class KaaSeason(
-    @JsonProperty("id") val id: String? = null,
-    @JsonProperty("number") val number: Int? = null,
-    @JsonProperty("languages") val languages: ArrayList<String>? = arrayListOf(),
-)
-
-data class KaaSearchResponse(
-    @JsonProperty("_id") val _id: String? = null,
-    @JsonProperty("title") val title: String? = null,
 )
 
 data class SapphireSubtitles(

@@ -513,42 +513,6 @@ suspend fun fetchSoraEpisodes(id: String, type: String, episode: Int?) : Episode
     }
 }
 
-suspend fun invokeSapphire(
-    url: String? = null,
-    isDub: Boolean = false,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    var data = app.get("${url?.replace("player.php", "config.php")}&action=config", referer = url).text
-    while (true) {
-        if (data.startsWith("{")) break
-        if (data == "null") {
-            data = app.get("$url&action=config", referer = url).text
-            delay(1000)
-        }
-        data = data.decodeBase64()
-    }
-
-    tryParseJson<SapphireSources>(data).let { res ->
-        res?.streams?.filter { it.format == "adaptive_hls" && it.hardsub_lang.isNullOrEmpty() }?.reversed()?.map { source ->
-            val name = if (isDub) "English Dub" else "Raw"
-            M3u8Helper.generateM3u8(
-                "Crunchyroll [$name]",
-                source.url ?: return@map null,
-                "https://static.crunchyroll.com/",
-            ).forEach(callback)
-        }
-        res?.subtitles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    fixCrunchyrollLang(sub.language ?: return@map null) ?: sub.language,
-                    sub.url ?: return@map null
-                )
-            )
-        }
-    }
-}
-
 suspend fun bypassOuo(url: String?): String? {
     var res = session.get(url ?: return null)
     run lit@{
@@ -1161,30 +1125,6 @@ fun fixUrl(url: String, domain: String): String {
         }
         return "$domain/$url"
     }
-}
-
-suspend fun loadLinksWithWebView(
-    url: String,
-    callback: (ExtractorLink) -> Unit
-) {
-    val foundVideo = WebViewResolver(
-        Regex("""\.m3u8|i7njdjvszykaieynzsogaysdgb0hm8u1mzubmush4maopa4wde\.com""")
-    ).resolveUsingWebView(
-        requestCreator(
-            "GET", url, referer = "https://olgply.com/"
-        )
-    ).first ?: return
-
-    callback.invoke(
-        ExtractorLink(
-            "Olgply",
-            "Olgply",
-            foundVideo.url.toString(),
-            "",
-            Qualities.P1080.value,
-            true
-        )
-    )
 }
 
 fun Int.toRomanNumeral(): String = Symbol.closestBelow(this)
