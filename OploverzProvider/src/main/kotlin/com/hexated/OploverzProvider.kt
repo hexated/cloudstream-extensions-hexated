@@ -12,7 +12,7 @@ import org.jsoup.nodes.Element
 import java.util.ArrayList
 
 class OploverzProvider : MainAPI() {
-    override var mainUrl = "https://oploverz.tv"
+    override var mainUrl = "https://oploverz.top"
     override var name = "Oploverz"
     override val hasMainPage = true
     override var lang = "id"
