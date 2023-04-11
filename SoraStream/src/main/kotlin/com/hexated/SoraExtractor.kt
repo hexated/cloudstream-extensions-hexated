@@ -7,9 +7,6 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.hexated.RabbitStream.extractRabbitStream
-import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.extractors.StreamSB
-import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
@@ -660,7 +657,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val (id, type) = getSoraIdAndType(title, year, season) ?: return invokeJustchill(
+        val (id, type) = getSoraIdAndType(title, year, season) ?: return invokeSoraBackup(
             title,
             year,
             season,
@@ -698,7 +695,7 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeJustchill(
+    private suspend fun invokeSoraBackup(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -707,7 +704,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
     ) {
         val results =
-            app.get("$chillAPI/api/search?keyword=$title").parsedSafe<ChillSearch>()?.data?.results
+            app.get("$soraBackupAPI/api/search?keyword=$title").parsedSafe<ChillSearch>()?.data?.results
         val media = if (results?.size == 1) {
             results.firstOrNull()
         } else {
@@ -732,17 +729,17 @@ object SoraExtractor : SoraStream() {
             }
         } ?: return
 
-        val episodeId = app.get("$chillAPI/api/detail?id=${media.id}&category=${media.domainType}").parsedSafe<Load>()?.data?.episodeVo?.find {
+        val episodeId = app.get("$soraBackupAPI/api/detail?id=${media.id}&category=${media.domainType}").parsedSafe<Load>()?.data?.episodeVo?.find {
             it.seriesNo == (episode ?: 0)
         }?.id ?: return
 
-        val sources = app.get("$chillAPI/api/episode?id=${media.id}&category=${media.domainType}&episode=$episodeId").parsedSafe<ChillSources>()?.data
+        val sources = app.get("$soraBackupAPI/api/episode?id=${media.id}&category=${media.domainType}&episode=$episodeId").parsedSafe<ChillSources>()?.data
 
         sources?.qualities?.map { source ->
             callback.invoke(
                 ExtractorLink(
-                    "ChillMovie",
-                    "ChillMovie",
+                    this.name,
+                    this.name,
                     source.url ?: return@map null,
                     "",
                     source.quality ?: Qualities.Unknown.value,
@@ -2785,6 +2782,80 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokePutlocker(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val query = if (season == null) {
+            title
+        } else {
+            "$title - season $season"
+        }
+
+        val res = app.get("$putlockerAPI/movie/search/$query").document
+        val scripData = res.select("div.movies-list div.ml-item").map {
+            it.selectFirst("h2")?.text() to it.selectFirst("a")?.attr("href")
+        }
+        val script = if (scripData.size == 1) {
+            scripData.first()
+        } else {
+            scripData.find {
+                if (season == null) {
+                    it.first.equals(title, true) || (it.first?.contains(
+                        "$title", true
+                    ) == true && it.first?.contains("$year") == true)
+                } else {
+                    it.first?.contains("$title", true) == true && it.first?.contains(
+                        "Season $season", true
+                    ) == true
+                }
+            }
+        }
+
+        val id = fixUrl(script?.second ?: return).split("-").lastOrNull()?.removeSuffix("/")
+        val iframe = app.get("$putlockerAPI/ajax/movie_episodes/$id")
+            .parsedSafe<PutlockerEpisodes>()?.html?.let { Jsoup.parse(it) }?.let { server ->
+                if (season == null) {
+                    server.select("div.les-content a").map {
+                        it.attr("data-id") to it.attr("data-server")
+                    }
+                } else {
+                    server.select("div.les-content a").map { it }
+                        .filter { it.text().contains("Episode $episode", true) }.map {
+                            it.attr("data-id") to it.attr("data-server")
+                        }
+                }
+            }
+
+        iframe?.apmap {
+            delay(3000)
+            val embedUrl = app.get("$putlockerAPI/ajax/movie_embed/${it.first}")
+                .parsedSafe<PutlockerEmbed>()?.src ?: return@apmap null
+            val sources = extractPutlockerSources(embedUrl)?.parsedSafe<PutlockerResponses>()
+
+            argamap(
+                {
+                    sources?.callback(embedUrl, "Server ${it.second}", callback)
+                },
+                {
+                    if (!sources?.backupLink.isNullOrBlank()) {
+                        extractPutlockerSources(sources?.backupLink)?.parsedSafe<PutlockerResponses>()
+                            ?.callback(
+                                embedUrl, "Backup ${it.second}", callback
+                            )
+                    } else {
+                        return@argamap
+                    }
+                },
+            )
+
+        }
+
+    }
+
 
 }
 
@@ -3176,4 +3247,23 @@ data class ChillData(
 
 data class ChillSearch(
     @JsonProperty("data") val data: ChillData? = null,
+)
+
+data class PutlockerEpisodes(
+    @JsonProperty("html") val html: String? = null,
+)
+
+data class PutlockerEmbed(
+    @JsonProperty("src") val src: String? = null,
+)
+
+data class PutlockerSources(
+    @JsonProperty("file") val file: String,
+    @JsonProperty("label") val label: String? = null,
+    @JsonProperty("type") val type: String? = null,
+)
+
+data class PutlockerResponses(
+    @JsonProperty("sources") val sources: ArrayList<PutlockerSources>? = arrayListOf(),
+    @JsonProperty("backupLink") val backupLink: String? = null,
 )

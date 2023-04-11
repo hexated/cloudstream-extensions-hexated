@@ -41,6 +41,7 @@ import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokePapaonMovies1
 import com.hexated.SoraExtractor.invokePapaonMovies2
+import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRinzrymovies
 import com.hexated.SoraExtractor.invokeRubyMovies
@@ -122,6 +123,7 @@ open class SoraStream : TmdbProvider() {
         const val biliBiliAPI = "https://api-vn.kaguya.app/server"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://api.9animetv.live"
+        const val putlockerAPI = "https://ww7.putlocker.vip"
         // INDEX SITE
         const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
@@ -537,6 +539,9 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
+            },
+            {
+                invokePutlocker(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 invokeTvMovies(res.title, res.season, res.episode, callback)

@@ -7,6 +7,7 @@ import com.hexated.SoraStream.Companion.baymoviesAPI
 import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
+import com.hexated.SoraStream.Companion.putlockerAPI
 import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.hexated.SoraStream.Companion.twoEmbedAPI
@@ -14,13 +15,11 @@ import com.hexated.SoraStream.Companion.watchOnlineAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
-import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.nicehttp.RequestBodyTypes
-import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
 import okhttp3.Headers
@@ -42,7 +41,7 @@ import kotlin.collections.ArrayList
 import kotlin.math.min
 
 val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
-val chillAPI = base64DecodeAPI("dg==LnQ=bGw=aGk=dGM=dXM=Lmo=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
+val soraBackupAPI = base64DecodeAPI("dg==LnQ=bGw=aGk=dGM=dXM=Lmo=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
 
 val soraHeaders = mapOf(
     "lang" to "en",
@@ -826,6 +825,61 @@ fun Map<String, List<CrunchyrollEpisodes>>?.matchingEpisode(
     }?.firstOrNull()
 }
 
+suspend fun extractPutlockerSources(url: String?): NiceResponse? {
+    val embedHost = url?.substringBefore("/embed-player")
+    val player = app.get(
+        url ?: return null,
+        referer = "${putlockerAPI}/"
+    ).document.select("div#player")
+
+    val text = "\"${player.attr("data-id")}\""
+    val password = player.attr("data-hash")
+    val cipher = CryptoAES.plEncrypt(password, text)
+
+    return app.get(
+        "$embedHost/ajax/getSources/", params = mapOf(
+            "id" to cipher.cipherText,
+            "h" to cipher.password,
+            "a" to cipher.iv,
+            "t" to cipher.salt,
+        ), referer = url
+    )
+}
+
+suspend fun PutlockerResponses?.callback(
+    referer: String,
+    server: String,
+    callback: (ExtractorLink) -> Unit
+) {
+    val ref = getBaseUrl(referer)
+    this?.sources?.map { source ->
+        val request = app.get(source.file, referer = ref)
+        callback.invoke(
+            ExtractorLink(
+                "Putlocker [$server]",
+                "Putlocker [$server]",
+                if (!request.isSuccessful) return@map null else source.file,
+                ref,
+                if (source.file.contains("m3u8")) getPutlockerQuality(request.text) else source.label?.replace(
+                    Regex("[Pp]"),
+                    ""
+                )?.trim()?.toIntOrNull()
+                    ?: Qualities.P720.value,
+                source.file.contains("m3u8")
+            )
+        )
+    }
+}
+
+fun getPutlockerQuality(quality: String): Int {
+    return when {
+        quality.contains("NAME=\"1080p\"") || quality.contains("RESOLUTION=1920x1080") -> Qualities.P1080.value
+        quality.contains("NAME=\"720p\"") || quality.contains("RESOLUTION=1280x720")-> Qualities.P720.value
+        else -> Qualities.P480.value
+    }
+}
+
+
 fun getEpisodeSlug(
     season: Int? = null,
     episode: Int? = null,
@@ -1195,6 +1249,25 @@ object CryptoAES {
         return String(bEncode)
     }
 
+    fun plEncrypt(password: String, plainText: String): EncryptResult {
+        val saltBytes = generateSalt(8)
+        val key = ByteArray(KEY_SIZE / 8)
+        val iv = ByteArray(IV_SIZE / 8)
+        EvpKDF(password.toByteArray(), KEY_SIZE, IV_SIZE, saltBytes, key, iv)
+        val keyS = SecretKeySpec(key, AES)
+        val cipher = Cipher.getInstance(HASH_CIPHER)
+        val ivSpec = IvParameterSpec(iv)
+        cipher.init(Cipher.ENCRYPT_MODE, keyS, ivSpec)
+        val cipherText = cipher.doFinal(plainText.toByteArray())
+        val bEncode = Base64.encode(cipherText, Base64.NO_WRAP)
+        return EncryptResult(
+            String(bEncode).toHex(),
+            password.toHex(),
+            saltBytes.toHex(),
+            iv.toHex()
+        )
+    }
+
     /**
      * Decrypt
      * Thanks Artjom B. for this: http://stackoverflow.com/a/29152379/4405051
@@ -1272,6 +1345,18 @@ object CryptoAES {
             SecureRandom().nextBytes(this)
         }
     }
+
+    private fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
+
+    private fun String.toHex(): String = toByteArray().toHex()
+
+    data class EncryptResult(
+        val cipherText: String,
+        val password: String,
+        val salt: String,
+        val iv: String
+    )
+
 }
 
 object RabbitStream {
