@@ -2738,7 +2738,9 @@ object SoraExtractor : SoraStream() {
         } else {
             "shows/play/$urlSlug"
         }
-        val url = "$monsterMainUrl/$playSlug"
+        val sid = "9k9iupt5sebbnfajrc6ti3ht7l"
+        val sec = "1974bc4a902c4d69fcbab261dcec69094a9b8164"
+        val url = "$monsterMainUrl/$playSlug?mid=1&sid=$sid&sec=$sec&t=${System.currentTimeMillis()}"
         val res = app.get(url).document
         val script = res.selectFirst("script:containsData(window['show_storage'])")?.data()
         val hash = Regex("hash:\\s*['\"](\\S+)['\"],").find(script ?: return)?.groupValues?.get(1)
