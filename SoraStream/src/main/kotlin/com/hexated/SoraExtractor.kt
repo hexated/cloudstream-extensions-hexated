@@ -991,7 +991,7 @@ object SoraExtractor : SoraStream() {
                 invokeBiliBili(aniId, episode, subtitleCallback, callback)
             },
             {
-                if(season != null) invokeAllanime(aniId, title, episode, callback)
+                if(season != null) invokeAllanime(aniId, title, year, episode, callback)
             }
         )
     }
@@ -999,11 +999,11 @@ object SoraExtractor : SoraStream() {
     private suspend fun invokeAllanime(
         aniId: String? = null,
         title: String? = null,
+        year: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
         val searchHash = "b645a686b1988327795e1203867ed24f27c6338b41e5e3412fc1478a8ab6774e"
-        val detailHash = "d6069285a58a25defe4a217b82140c6da891605c20e510d4683ae73190831ab0"
         val serverHash = "0ac09728ee9d556967c1a60bbcf55a9f58b4112006d09a258356aeafe1c33889"
 
         val aniDetail = app.get("$consumetAnilistAPI/info/$aniId").parsedSafe<ConsumetDetails>()
@@ -1013,23 +1013,26 @@ object SoraExtractor : SoraStream() {
         val id = app.get(searchQuaery)
             .parsedSafe<AllanimeResponses>()?.data?.shows?.edges?.let { media ->
                 media.find { it.thumbnail == aniDetail?.cover || it.thumbnail == aniDetail?.image }
-                    ?: media.find { it.name.equals(title, true) || it.englishName.equals(title,true) }
+                    ?: media.find {
+                        (it.name?.contains(
+                            "$title",
+                            true
+                        ) == true || it.englishName?.contains("$title", true) == true) && it.airedStart?.year == year
+                    }
             }?._id
 
-        val detailQuery =
-            """$allanimeAPI/allanimeapi?variables={"_id":"${id ?: return}"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$detailHash"}}"""
-        val episodes = app.get(detailQuery)
-            .parsedSafe<AllanimeResponses>()?.data?.show?.availableEpisodesDetail
-
-        listOfNotNull(
-            episodes?.sub?.find { it.toInt() == episode } to "sub",
-            episodes?.dub?.find { it.toInt() == episode } to "dub"
-        ).apmap { (eps, tl) ->
+        listOf(
+            "sub",
+            "dub"
+        ).apmap { tl ->
             val serverQuery =
-                """$allanimeAPI/allanimeapi?variables={"showId":"$id","translationType":"$tl","episodeString":"$eps"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$serverHash"}}"""
+                """$allanimeAPI/allanimeapi?variables={"showId":"${id ?: return@apmap}","translationType":"$tl","episodeString":"$episode"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$serverHash"}}"""
             val server = app.get(serverQuery)
                 .parsedSafe<AllanimeResponses>()?.data?.episode?.sourceUrls?.find { it.sourceName == "Ac" }
-            val serverUrl = fixUrl(server?.sourceUrl?.replace("/clock", "/clock.json") ?: return@apmap, "https://allanimenews.com")
+            val serverUrl = fixUrl(
+                server?.sourceUrl?.replace("/clock", "/clock.json") ?: return@apmap,
+                "https://allanimenews.com"
+            )
             app.get(serverUrl)
                 .parsedSafe<AllanimeLinks>()?.links?.forEach { link ->
                     link.portData?.streams?.filter {
@@ -3418,12 +3421,17 @@ data class AllanimeDetailShow(
     @JsonProperty("availableEpisodesDetail") val availableEpisodesDetail: AllanimeAvailableEpisodesDetail? = null,
 )
 
+data class AllanimeAiredStart(
+    @JsonProperty("year") val year: Int? = null,
+)
+
 data class AllanimeEdges(
     @JsonProperty("_id") val _id: String? = null,
     @JsonProperty("name") val name: String? = null,
     @JsonProperty("englishName") val englishName: String? = null,
     @JsonProperty("thumbnail") val thumbnail: String? = null,
     @JsonProperty("type") val type: String? = null,
+    @JsonProperty("airedStart") val airedStart: AllanimeAiredStart? = null,
 )
 
 data class AllanimeShows(
