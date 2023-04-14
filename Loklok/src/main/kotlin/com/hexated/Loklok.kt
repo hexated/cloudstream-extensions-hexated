@@ -24,13 +24,11 @@ class Loklok : MainAPI() {
         TvType.Anime,
         TvType.AsianDrama,
     )
-
-    // no license found
-    // thanks to https://github.com/napthedev/filmhot for providing API
     companion object {
         private const val geoblockError = "Loklok is Geoblock, use vpn or give up"
         private val api = base64DecodeAPI("dg==LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         private val apiUrl = "$api/${base64Decode("Y21zL2FwcA==")}"
+        private val pcApiUrl = base64DecodeAPI("cGM=Yi8=d2U=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
         private val searchApi = base64Decode("aHR0cHM6Ly9sb2tsb2suY29t")
         private const val mainImageUrl = "https://images.weserv.nl"
         private val headers = mutableMapOf(
@@ -233,7 +231,7 @@ class Loklok : MainAPI() {
                     RequestBodyTypes.JSON.toMediaTypeOrNull()
                 )
             val json = app.get(
-                "$apiUrl/media/previewInfo?category=${res.category}&contentId=${res.id}&episodeId=${res.epId}&definition=${video.code}",
+                "$pcApiUrl/movieDrama/getPlayInfo?category=${res.category}&contentId=${res.id}&episodeId=${res.epId}&definition=${video.code}",
                 headers = headers,
             ).parsedSafe<PreviewResponse>()?.data
             callback.invoke(
@@ -241,7 +239,7 @@ class Loklok : MainAPI() {
                     this.name,
                     this.name,
                     json?.mediaUrl ?: return@apmap null,
-                    "",
+                    "https://loklok.com/",
                     getQuality(json.currentDefinition ?: ""),
                     isM3u8 = true,
                 )
