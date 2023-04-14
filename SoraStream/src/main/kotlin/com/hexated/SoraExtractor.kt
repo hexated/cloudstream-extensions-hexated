@@ -2940,7 +2940,7 @@ object SoraExtractor : SoraStream() {
                     ExtractorLink(
                         "Shivamhw",
                         "Shivamhw $tags [${size}]",
-                        videoUrl?.removePrefix("vlc://") ?: return@map,
+                        videoUrl?.removePrefix("vlc://")?.encodeUrl() ?: return@map,
                         "",
                         quality,
                     )
@@ -2955,7 +2955,7 @@ object SoraExtractor : SoraStream() {
                     ExtractorLink(
                         "Shivamhw",
                         "Shivamhw $tags [${source.size}]",
-                        source.stream_link ?: return@map,
+                        source.stream_link?.encodeUrl() ?: return@map,
                         "",
                         quality,
                     )
