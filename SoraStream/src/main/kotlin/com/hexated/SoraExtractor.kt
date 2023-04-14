@@ -678,7 +678,7 @@ object SoraExtractor : SoraStream() {
 
         json.definitionList?.map { video ->
             val media = app.get(
-                "$soraSecondAPI/movieDrama/getPlayInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
+                "$soraAPI/media/previewInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
                 headers = soraHeaders,
             ).parsedSafe<SorastreamResponse>()?.data
 
@@ -687,7 +687,7 @@ object SoraExtractor : SoraStream() {
                     this.name,
                     this.name,
                     media?.mediaUrl ?: return@map null,
-                    "https://loklok.com/",
+                    "",
                     getSoraQuality(media.currentDefinition ?: ""),
                     true,
                 )

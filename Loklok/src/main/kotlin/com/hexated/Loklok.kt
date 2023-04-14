@@ -34,7 +34,7 @@ class Loklok : MainAPI() {
         private val headers = mutableMapOf(
             "lang" to "en",
             "versioncode" to "33",
-            "clienttype" to "android_tem3",
+            "clienttype" to "android_Official",
             "deviceid" to getDeviceId()
         )
 
@@ -231,7 +231,7 @@ class Loklok : MainAPI() {
                     RequestBodyTypes.JSON.toMediaTypeOrNull()
                 )
             val json = app.get(
-                "$pcApiUrl/movieDrama/getPlayInfo?category=${res.category}&contentId=${res.id}&episodeId=${res.epId}&definition=${video.code}",
+                "$apiUrl/media/previewInfo?category=${res.category}&contentId=${res.id}&episodeId=${res.epId}&definition=${video.code}",
                 headers = headers,
             ).parsedSafe<PreviewResponse>()?.data
             callback.invoke(
@@ -239,7 +239,7 @@ class Loklok : MainAPI() {
                     this.name,
                     this.name,
                     json?.mediaUrl ?: return@apmap null,
-                    "https://loklok.com/",
+                    "",
                     getQuality(json.currentDefinition ?: ""),
                     isM3u8 = true,
                 )
