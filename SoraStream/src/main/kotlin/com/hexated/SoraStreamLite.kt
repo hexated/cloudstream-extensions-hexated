@@ -126,16 +126,16 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-            {
-                if (res.season != null && res.isAnime) invokeCrunchyroll(
-                    res.title,
-                    res.epsTitle,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                if (res.season != null && res.isAnime) invokeCrunchyroll(
+//                    res.title,
+//                    res.epsTitle,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokeHDMovieBox(
                     res.title,

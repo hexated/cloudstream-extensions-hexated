@@ -1036,7 +1036,7 @@ fun String.getFileSize() : Float? {
 
 fun getIndexQualityTags(str: String?): String {
     return Regex("\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(str ?: "")?.groupValues?.getOrNull(1)
-        ?.replace(".", " ")?.trim() ?: ""
+        ?.replace(".", " ")?.trim() ?: str ?: ""
 }
 
 fun getIndexQuality(str: String?): Int {

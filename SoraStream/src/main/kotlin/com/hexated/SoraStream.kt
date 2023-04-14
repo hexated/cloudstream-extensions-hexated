@@ -46,6 +46,7 @@ import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRinzrymovies
 import com.hexated.SoraExtractor.invokeRubyMovies
 import com.hexated.SoraExtractor.invokeShinobiMovies
+import com.hexated.SoraExtractor.invokeShivamhw
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTgarMovies
@@ -100,7 +101,8 @@ open class SoraStream : TmdbProvider() {
         const val xMovieAPI = "https://xemovies.to"
         const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq" // disabled due to rate limit
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
-        const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream"
+        const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream" // dead
+        const val allanimeAPI = "https://api.allanime.to"
         const val kissKhAPI = "https://kisskh.me"
         const val lingAPI = "https://ling-online.net"
         const val uhdmoviesAPI = "https://uhdmovies.vip"
@@ -143,6 +145,7 @@ open class SoraStream : TmdbProvider() {
         const val rubyMovieAPI = "https://upload.rubyshare111.workers.dev/0:"
         const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
         const val vitoenMovieAPI = "https://openmatte.vitoencodes.workers.dev/0:"
+        const val shivamhwAPI = "https://foogle.shivamhw.me"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -415,16 +418,16 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                if (res.season != null && res.isAnime) invokeCrunchyroll(
-                    res.title,
-                    res.epsTitle,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                if (res.season != null && res.isAnime) invokeCrunchyroll(
+//                    res.title,
+//                    res.epsTitle,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokeHDMovieBox(
                     res.title,
@@ -807,6 +810,15 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
+            {
+                if(!res.isAnime) invokeShivamhw(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            }
         )
 
         return true

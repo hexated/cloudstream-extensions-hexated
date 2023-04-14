@@ -990,7 +990,63 @@ object SoraExtractor : SoraStream() {
             {
                 invokeBiliBili(aniId, episode, subtitleCallback, callback)
             },
+            {
+                if(season != null) invokeAllanime(aniId, title, episode, callback)
+            }
         )
+    }
+
+    private suspend fun invokeAllanime(
+        aniId: String? = null,
+        title: String? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val searchHash = "b645a686b1988327795e1203867ed24f27c6338b41e5e3412fc1478a8ab6774e"
+        val detailHash = "d6069285a58a25defe4a217b82140c6da891605c20e510d4683ae73190831ab0"
+        val serverHash = "0ac09728ee9d556967c1a60bbcf55a9f58b4112006d09a258356aeafe1c33889"
+
+        val aniDetail = app.get("$consumetAnilistAPI/info/$aniId").parsedSafe<ConsumetDetails>()
+
+        val searchQuaery =
+            """$allanimeAPI/allanimeapi?variables={"search":{"query":"$title","allowAdult":false,"allowUnknown":false},"limit":26,"page":1,"translationType":"sub","countryOrigin":"ALL"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$searchHash"}}"""
+        val id = app.get(searchQuaery)
+            .parsedSafe<AllanimeResponses>()?.data?.shows?.edges?.let { media ->
+                media.find { it.thumbnail == aniDetail?.cover || it.thumbnail == aniDetail?.image }
+                    ?: media.find { it.name.equals(title, true) || it.englishName.equals(title,true) }
+            }?._id
+
+        val detailQuery =
+            """$allanimeAPI/allanimeapi?variables={"_id":"${id ?: return}"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$detailHash"}}"""
+        val episodes = app.get(detailQuery)
+            .parsedSafe<AllanimeResponses>()?.data?.show?.availableEpisodesDetail
+
+        listOfNotNull(
+            episodes?.sub?.find { it.toInt() == episode } to "sub",
+            episodes?.dub?.find { it.toInt() == episode } to "dub"
+        ).apmap { (eps, tl) ->
+            val serverQuery =
+                """$allanimeAPI/allanimeapi?variables={"showId":"$id","translationType":"$tl","episodeString":"$eps"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$serverHash"}}"""
+            val server = app.get(serverQuery)
+                .parsedSafe<AllanimeResponses>()?.data?.episode?.sourceUrls?.find { it.sourceName == "Ac" }
+            val serverUrl = fixUrl(server?.sourceUrl?.replace("/clock", "/clock.json") ?: return@apmap, "https://allanimenews.com")
+            app.get(serverUrl)
+                .parsedSafe<AllanimeLinks>()?.links?.forEach { link ->
+                    link.portData?.streams?.filter {
+                        (it.format == "adaptive_hls" || it.format == "vo_adaptive_hls") && it.hardsub_lang.isNullOrEmpty()
+                    }?.forEach { source ->
+                        val name = if (source.format == "vo_adaptive_hls") "Vrv" else "Crunchyroll"
+                        val translation = if(tl == "sub") "Raw" else "English Dub"
+                        M3u8Helper.generateM3u8(
+                            "$name [$translation]",
+                            source.url ?: return@apmap,
+                            "https://static.crunchyroll.com/",
+                        ).forEach(callback)
+                    }
+                }
+
+        }
+
     }
 
     private suspend fun invokeBiliBili(
@@ -2856,6 +2912,61 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeShivamhw(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+        val url = if(season == null) {
+            "$shivamhwAPI/search?search_box=$title&release_year=$year"
+        } else {
+            "$shivamhwAPI/api/series_search?search_box=$title&sess_nm=$seasonSlug&epi_nm=$episodeSlug"
+        }
+
+        val res = app.get(url)
+
+        if(season == null) {
+            res.document.select("table.rwd-table tr").map { el ->
+                val name = el.select("td[data-th=File Name]").text()
+                val quality = getIndexQuality(name)
+                val tags = getIndexQualityTags(name)
+                val size = el.select("td[data-th=Size]").text()
+                val videoUrl = el.select("div.play_with_vlc_button > a").lastOrNull()?.attr("href")
+
+                callback.invoke(
+                    ExtractorLink(
+                        "Shivamhw",
+                        "Shivamhw $tags [${size}]",
+                        videoUrl?.removePrefix("vlc://") ?: return@map,
+                        "",
+                        quality,
+                    )
+                )
+            }
+
+        } else {
+            tryParseJson<ArrayList<ShivamhwSources>>(res.text)?.map { source ->
+                val quality = getIndexQuality(source.name)
+                val tags = getIndexQualityTags(source.name)
+                callback.invoke(
+                    ExtractorLink(
+                        "Shivamhw",
+                        "Shivamhw $tags [${source.size}]",
+                        source.stream_link ?: return@map,
+                        "",
+                        quality,
+                    )
+                )
+            }
+        }
+
+
+
+    }
+
 
 }
 
@@ -2979,6 +3090,8 @@ data class ConsumetEpisodes(
 
 data class ConsumetDetails(
     @JsonProperty("episodes") val episodes: ArrayList<ConsumetEpisodes>? = arrayListOf(),
+    @JsonProperty("image") val image: String? = null,
+    @JsonProperty("cover") val cover: String? = null
 )
 
 data class CrunchyrollEpisodes(
@@ -3266,4 +3379,70 @@ data class PutlockerSources(
 data class PutlockerResponses(
     @JsonProperty("sources") val sources: ArrayList<PutlockerSources>? = arrayListOf(),
     @JsonProperty("backupLink") val backupLink: String? = null,
+)
+
+data class AllanimeStreams(
+    @JsonProperty("format") val format: String? = null,
+    @JsonProperty("url") val url: String? = null,
+    @JsonProperty("audio_lang") val audio_lang: String? = null,
+    @JsonProperty("hardsub_lang") val hardsub_lang: String? = null,
+)
+
+data class AllanimePortData(
+    @JsonProperty("streams") val streams: ArrayList<AllanimeStreams>? = arrayListOf(),
+)
+
+data class AllanimeLink(
+    @JsonProperty("portData") val portData: AllanimePortData? = null
+)
+
+data class AllanimeLinks(
+    @JsonProperty("links") val links: ArrayList<AllanimeLink>? = arrayListOf(),
+)
+
+data class AllanimeSourceUrls(
+    @JsonProperty("sourceUrl") val sourceUrl: String? = null,
+    @JsonProperty("sourceName") val sourceName: String? = null,
+)
+
+data class AllanimeEpisode(
+    @JsonProperty("sourceUrls") val sourceUrls: ArrayList<AllanimeSourceUrls>? = arrayListOf(),
+)
+
+data class AllanimeAvailableEpisodesDetail(
+    @JsonProperty("sub") val sub: ArrayList<String>? = arrayListOf(),
+    @JsonProperty("dub") val dub: ArrayList<String>? = arrayListOf(),
+)
+
+data class AllanimeDetailShow(
+    @JsonProperty("availableEpisodesDetail") val availableEpisodesDetail: AllanimeAvailableEpisodesDetail? = null,
+)
+
+data class AllanimeEdges(
+    @JsonProperty("_id") val _id: String? = null,
+    @JsonProperty("name") val name: String? = null,
+    @JsonProperty("englishName") val englishName: String? = null,
+    @JsonProperty("thumbnail") val thumbnail: String? = null,
+    @JsonProperty("type") val type: String? = null,
+)
+
+data class AllanimeShows(
+    @JsonProperty("edges") val edges: ArrayList<AllanimeEdges>? = arrayListOf(),
+)
+
+data class AllanimeData(
+    @JsonProperty("shows") val shows: AllanimeShows? = null,
+    @JsonProperty("show") val show: AllanimeDetailShow? = null,
+    @JsonProperty("episode") val episode: AllanimeEpisode? = null,
+)
+
+data class AllanimeResponses(
+    @JsonProperty("data") val data: AllanimeData? = null,
+)
+
+data class ShivamhwSources(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("stream_link") val stream_link: String? = null,
+    @JsonProperty("name") val name: String? = null,
+    @JsonProperty("size") val size: String? = null,
 )
