@@ -2965,8 +2965,29 @@ object SoraExtractor : SoraStream() {
                 )
             }
         }
+    }
 
+    suspend fun invokeCryMovies(
+        imdbId: String? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        app.get("$cryMoviesAPI/stream/movie/$imdbId.json").parsedSafe<CryMoviesResponse>()?.streams?.map { stream ->
+            val quality = getIndexQuality(stream.title)
+            val tags = getIndexQualityTags(stream.title)
+            val size = stream.title?.substringAfter("\uD83D\uDCBE")?.trim()
+            val headers = stream.behaviorHints?.proxyHeaders?.request ?: mapOf()
 
+            callback.invoke(
+                ExtractorLink(
+                    "CryMovies",
+                    "CryMovies $tags [${size}]",
+                    stream.url ?: return@map,
+                    "",
+                    quality,
+                    headers = headers
+                )
+            )
+        }
 
     }
 
@@ -3453,4 +3474,22 @@ data class ShivamhwSources(
     @JsonProperty("stream_link") val stream_link: String? = null,
     @JsonProperty("name") val name: String? = null,
     @JsonProperty("size") val size: String? = null,
+)
+
+data class CryMoviesProxyHeaders(
+    @JsonProperty("request") val request: Map<String,String>?,
+)
+
+data class CryMoviesBehaviorHints(
+    @JsonProperty("proxyHeaders") val proxyHeaders: CryMoviesProxyHeaders?,
+)
+
+data class CryMoviesStream(
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("url") val url: String? = null,
+    @JsonProperty("behaviorHints") val behaviorHints: CryMoviesBehaviorHints? = null,
+)
+
+data class CryMoviesResponse(
+    @JsonProperty("streams") val streams: List<CryMoviesStream>? = null,
 )
