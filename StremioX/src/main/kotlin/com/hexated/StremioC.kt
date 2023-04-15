@@ -69,7 +69,7 @@ class StremioC : MainAPI() {
         if (request.isSuccessful) {
             val res = tryParseJson<StreamsResponse>(request.text) ?: return false
             res.streams.forEach { stream ->
-                stream.runCallback(this, subtitleCallback, callback)
+                stream.runCallback(subtitleCallback, callback)
             }
         } else {
             argamap(
@@ -112,7 +112,7 @@ class StremioC : MainAPI() {
                 tryParseJson<StreamsResponse>(app.get("${site.url.fixSourceUrl()}/stream/${type}/${id}.json").text)
                     ?: return@apmap
             res.streams.forEach { stream ->
-                stream.runCallback(this, subtitleCallback, callback)
+                stream.runCallback(subtitleCallback, callback)
             }
         }
     }
@@ -283,6 +283,13 @@ class StremioC : MainAPI() {
         val id: String?,
     )
 
+    private data class ProxyHeaders(
+        val request: Map<String,String>?,
+    )
+
+    private data class BehaviorHints(
+        val proxyHeaders: ProxyHeaders?,
+    )
     private data class Stream(
         val name: String?,
         val title: String?,
@@ -290,34 +297,24 @@ class StremioC : MainAPI() {
         val description: String?,
         val ytId: String?,
         val externalUrl: String?,
-        val behaviorHints: JSONObject?,
+        val behaviorHints: BehaviorHints?,
         val infoHash: String?,
         val sources: List<String> = emptyList(),
         val subtitles: List<Subtitle> = emptyList()
     ) {
         suspend fun runCallback(
-            provider: StremioC,
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
         ) {
             if (url != null) {
-                var referer: String? = null
-                try {
-                    val headers = ((behaviorHints?.get("proxyHeaders") as? JSONObject)
-                        ?.get("request") as? JSONObject)
-                    referer =
-                        headers?.get("referer") as? String ?: headers?.get("origin") as? String
-                } catch (ex: Throwable) {
-                    Log.e("Stremio", Log.getStackTraceString(ex))
-                }
                 callback.invoke(
                     ExtractorLink(
                         name ?: "",
-                        title ?: name ?: "",
+                        fixRDSourceName(name, title),
                         url,
-                        if (provider.mainUrl.contains("kisskh")) "https://kisskh.me/" else referer
-                            ?: "",
+                        "",
                         getQualityFromName(description),
+                        headers = behaviorHints?.proxyHeaders?.request ?: mapOf(),
                         isM3u8 = URI(url).path.endsWith(".m3u8")
                     )
                 )

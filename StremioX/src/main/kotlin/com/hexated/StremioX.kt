@@ -254,6 +254,14 @@ open class StremioX : MainAPI() {
         val id: String?,
     )
 
+    private data class ProxyHeaders(
+        val request: Map<String,String>?,
+    )
+
+    private data class BehaviorHints(
+        val proxyHeaders: ProxyHeaders?,
+    )
+
     private data class Stream(
         val name: String?,
         val title: String?,
@@ -261,7 +269,7 @@ open class StremioX : MainAPI() {
         val description: String?,
         val ytId: String?,
         val externalUrl: String?,
-        val behaviorHints: JSONObject?,
+        val behaviorHints: BehaviorHints?,
         val infoHash: String?,
         val sources: List<String> = emptyList(),
         val subtitles: List<Subtitle> = emptyList()
@@ -271,22 +279,14 @@ open class StremioX : MainAPI() {
             callback: (ExtractorLink) -> Unit
         ) {
             if (url != null) {
-                var referer: String? = null
-                try {
-                    val headers = ((behaviorHints?.get("proxyHeaders") as? JSONObject)
-                        ?.get("request") as? JSONObject)
-                    referer =
-                        headers?.get("referer") as? String ?: headers?.get("origin") as? String
-                } catch (ex: Throwable) {
-                    Log.e("Stremio", Log.getStackTraceString(ex))
-                }
                 callback.invoke(
                     ExtractorLink(
                         name ?: "",
                         fixRDSourceName(name, title),
                         url,
-                        referer ?: "",
+                        "",
                         getQualityFromName(description),
+                        headers = behaviorHints?.proxyHeaders?.request ?: mapOf(),
                         isM3u8 = URI(url).path.endsWith(".m3u8")
                     )
                 )
