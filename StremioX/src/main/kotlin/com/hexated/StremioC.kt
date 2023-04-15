@@ -1,6 +1,5 @@
 package com.hexated
 
-import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SubsExtractors.invokeOpenSubs
 import com.hexated.SubsExtractors.invokeWatchsomuch
@@ -11,7 +10,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import org.json.JSONObject
 import java.net.URI
 
 private const val TRACKER_LIST_URL =
@@ -65,9 +63,9 @@ class StremioC : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val loadData = parseJson<LoadData>(data)
-        val request = app.get("${mainUrl}/stream/${loadData.type}/${loadData.id}.json")
-        if (request.isSuccessful) {
-            val res = tryParseJson<StreamsResponse>(request.text) ?: return false
+        val request = request("${mainUrl}/stream/${loadData.type}/${loadData.id}.json")
+        if (request.code.isSuccessful()) {
+            val res = tryParseJson<StreamsResponse>(request.body.string()) ?: return false
             res.streams.forEach { stream ->
                 stream.runCallback(subtitleCallback, callback)
             }
@@ -108,8 +106,9 @@ class StremioC : MainAPI() {
             AcraApplication.getKey<Array<CustomSite>>(USER_PROVIDER_API)?.toMutableList()
                 ?: mutableListOf()
         sites.filter { it.parentJavaClass == "StremioX" }.apmap { site ->
+            val request = request("${site.url.fixSourceUrl()}/stream/${type}/${id}.json").body.string()
             val res =
-                tryParseJson<StreamsResponse>(app.get("${site.url.fixSourceUrl()}/stream/${type}/${id}.json").text)
+                tryParseJson<StreamsResponse>(request)
                     ?: return@apmap
             res.streams.forEach { stream ->
                 stream.runCallback(subtitleCallback, callback)

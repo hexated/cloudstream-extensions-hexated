@@ -1,6 +1,5 @@
 package com.hexated
 
-import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SubsExtractors.invokeOpenSubs
 import com.hexated.SubsExtractors.invokeWatchsomuch
@@ -9,7 +8,6 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import org.json.JSONObject
 import java.net.URI
 import java.util.ArrayList
 import kotlin.math.roundToInt
@@ -26,8 +24,6 @@ open class StremioX : MainAPI() {
     companion object {
         const val TRACKER_LIST_URL =
             "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best.txt"
-        const val openSubAPI = "https://opensubtitles.strem.io/stremio/v1"
-        const val watchSomuchAPI = "https://watchsomuch.tv"
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
@@ -241,7 +237,7 @@ open class StremioX : MainAPI() {
         } else {
             "$fixMainUrl/stream/series/$imdbId:$season:$episode.json"
         }
-        val res = AppUtils.tryParseJson<StreamsResponse>(app.get(url).text) ?: return
+        val res = AppUtils.tryParseJson<StreamsResponse>(request(url).body.string()) ?: return
         res.streams.forEach { stream ->
             stream.runCallback(subtitleCallback, callback)
         }

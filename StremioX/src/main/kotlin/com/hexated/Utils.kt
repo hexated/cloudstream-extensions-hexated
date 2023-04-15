@@ -1,10 +1,40 @@
 package com.hexated
 
-fun String.fixSourceUrl() : String {
+import com.lagradost.nicehttp.Requests.Companion.await
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.util.concurrent.TimeUnit
+
+const val defaultTimeOut = 30L
+suspend fun request(
+    url: String,
+    allowRedirects: Boolean = true,
+    timeout: Long = defaultTimeOut
+): Response {
+    val client = OkHttpClient().newBuilder()
+        .connectTimeout(timeout, TimeUnit.SECONDS)
+        .readTimeout(timeout, TimeUnit.SECONDS)
+        .writeTimeout(timeout, TimeUnit.SECONDS)
+        .followRedirects(allowRedirects)
+        .followSslRedirects(allowRedirects)
+        .build()
+
+    val request: Request = Request.Builder()
+        .url(url)
+        .build()
+    return client.newCall(request).await()
+}
+
+fun Int.isSuccessful() : Boolean {
+    return this in 200..299
+}
+
+fun String.fixSourceUrl(): String {
     return this.replace("/manifest.json", "").replace("stremio://", "https://")
 }
 
-fun fixRDSourceName(name: String?, title: String?) : String {
+fun fixRDSourceName(name: String?, title: String?): String {
     return when {
         name?.contains("[RD+]", true) == true -> "[RD+] $title"
         name?.contains("[RD download]", true) == true -> "[RD] $title"
