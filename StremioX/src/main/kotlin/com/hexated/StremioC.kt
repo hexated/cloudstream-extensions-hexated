@@ -24,7 +24,7 @@ class StremioC : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         mainUrl = mainUrl.fixSourceUrl()
-        val res = tryParseJson<Manifest>(app.get("${mainUrl}/manifest.json").text) ?: return null
+        val res = tryParseJson<Manifest>(request("${mainUrl}/manifest.json").body.string()) ?: return null
         val lists = mutableListOf<HomePageList>()
         res.catalogs.apmap { catalog ->
             catalog.toHomePageList(this)?.let {
@@ -39,7 +39,7 @@ class StremioC : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse>? {
         mainUrl = mainUrl.fixSourceUrl()
-        val res = tryParseJson<Manifest>(app.get("${mainUrl}/manifest.json").text) ?: return null
+        val res = tryParseJson<Manifest>(request("${mainUrl}/manifest.json").body.string()) ?: return null
         val list = mutableListOf<SearchResponse>()
         res.catalogs.apmap { catalog ->
             list.addAll(catalog.search(query, this))
@@ -150,8 +150,7 @@ class StremioC : MainAPI() {
         suspend fun search(query: String, provider: StremioC): List<SearchResponse> {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
-                val json =
-                    app.get("${provider.mainUrl}/catalog/${type}/${id}/search=${query}.json").text
+                val json = request("${provider.mainUrl}/catalog/${type}/${id}/search=${query}.json").body.string()
                 val res =
                     tryParseJson<CatalogResponse>(json)
                         ?: return@forEach
@@ -165,7 +164,7 @@ class StremioC : MainAPI() {
         suspend fun toHomePageList(provider: StremioC): HomePageList? {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
-                val json = app.get("${provider.mainUrl}/catalog/${type}/${id}.json").text
+                val json = request("${provider.mainUrl}/catalog/${type}/${id}.json").body.string()
                 val res =
                     tryParseJson<CatalogResponse>(json)
                         ?: return@forEach
