@@ -256,6 +256,7 @@ open class StremioX : MainAPI() {
 
     private data class BehaviorHints(
         val proxyHeaders: ProxyHeaders?,
+        val headers: Map<String,String>?,
     )
 
     private data class Stream(
@@ -282,7 +283,7 @@ open class StremioX : MainAPI() {
                         url,
                         "",
                         getQualityFromName(description),
-                        headers = behaviorHints?.proxyHeaders?.request ?: mapOf(),
+                        headers = behaviorHints?.proxyHeaders?.request ?: behaviorHints?.headers ?: mapOf(),
                         isM3u8 = URI(url).path.endsWith(".m3u8")
                     )
                 )
