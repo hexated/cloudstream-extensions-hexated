@@ -12,7 +12,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import java.util.ArrayList
 
 class KisskhProvider : MainAPI() {
-    override var mainUrl = "https://kisskh.me"
+    override var mainUrl = "https://kisskh.co"
     override var name = "Kisskh"
     override val hasMainPage = true
     override val hasDownloadSupport = true
