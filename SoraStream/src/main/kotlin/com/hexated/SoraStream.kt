@@ -28,6 +28,7 @@ import com.hexated.SoraExtractor.invokeDahmerMovies
 import com.hexated.SoraExtractor.invokeEdithxmovies
 import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
+import com.hexated.SoraExtractor.invokeFmovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGdbotMovies
@@ -100,11 +101,11 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
-        const val haikeiFlixhqAPI = "https://api.haikei.xyz/movies/flixhq" // disabled due to rate limit
+        const val consumetFmoviesAPI = "https://api.consumet.org/movies/fmovies"
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
         const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream" // dead
         const val allanimeAPI = "https://api.allanime.to"
-        const val kissKhAPI = "https://kisskh.me"
+        const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
         const val uhdmoviesAPI = "https://uhdmovies.vip"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
@@ -481,17 +482,9 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-//            {
-//                invokeFlixhq(
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    res.lastSeason,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
+            {
+                invokeFmovies(res.title, res.airedYear ?: res.year, res.season, res.episode, subtitleCallback, callback)
+            },
             {
                 invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
             },

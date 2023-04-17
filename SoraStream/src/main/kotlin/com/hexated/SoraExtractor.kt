@@ -811,71 +811,62 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeFlixhq(
+    suspend fun invokeFmovies(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
-        lastSeason: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val fixTitle = title?.replace("–", "-")
-        val id = app.get("$haikeiFlixhqAPI/$title")
-            .parsedSafe<ConsumetSearchResponse>()?.results?.find {
-                if (season == null) {
-                    it.title?.equals(
-                        "$fixTitle", true
-                    ) == true && it.releaseDate?.equals("$year") == true && it.type == "Movie"
-                } else {
-                    it.title?.equals(
-                        "$fixTitle",
-                        true
-                    ) == true && it.type == "TV Series" && it.seasons == lastSeason
-                }
-            }?.id ?: return
+        val html =
+            app.get("https://fmovies.to/ajax/film/search?vrf=${encodeVrf("$title")}&keyword=$title")
+                .parsedSafe<FmoviesSearch>()?.html
 
-        val episodeId =
-            app.get("$haikeiFlixhqAPI/info?id=$id").parsedSafe<ConsumetDetails>()?.let {
-                if (season == null) {
-                    it.episodes?.first()?.id
-                } else {
-                    it.episodes?.find { ep -> ep.number == episode && ep.season == season }?.id
-                }
-            } ?: return
+        val mediaId = Jsoup.parse(html ?: return).select("a.item").map {
+            Triple(
+                it.attr("href"),
+                it.select("div.title").text(),
+                it.selectFirst("i.dot")?.nextSibling().toString().trim(),
+            )
+        }.find {
+            if (season == null) {
+                it.first.contains("/movie/")
+            } else {
+                it.first.contains("/series/")
+            } && (it.second.equals(title, true) || it.second.createSlug()
+                .equals(title.createSlug())) && it.third.toInt() == year
+        }?.first ?: return
 
-        listOf(
-            "vidcloud", "upcloud"
-        ).apmap { server ->
-            val sources = app.get(
-                if (server == "upcloud") {
-                    "$haikeiFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id"
-                } else {
-                    "$haikeiFlixhqAPI/watch?episodeId=$episodeId&mediaId=$id&server=$server"
-                },
-            ).parsedSafe<ConsumetSourcesResponse>()
-            val name = fixTitle(server)
-            sources?.sources?.map {
-                callback.invoke(
-                    ExtractorLink(
-                        name,
-                        name,
-                        it.url ?: return@map null,
-                        sources.headers?.referer ?: "",
-                        it.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                        it.isM3U8 ?: true
-                    )
+        val episodeId = if (season == null) {
+            "1-full"
+        } else {
+            "$season-$episode"
+        }
+
+        val sources = app.get(
+            "$consumetFmoviesAPI/watch?mediaId=${mediaId.removePrefix("/")}&episodeId=$episodeId"
+        ).parsedSafe<ConsumetSourcesResponse>()
+
+        sources?.sources?.map {
+            callback.invoke(
+                ExtractorLink(
+                    "Vizcloud",
+                    "Vizcloud",
+                    it.url ?: return@map null,
+                    sources.headers?.referer ?: "",
+                    getQualityFromName(it.quality),
+                    it.isM3U8 ?: true
                 )
-            }
+            )
+        }
 
-            sources?.subtitles?.map {
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        it.lang ?: "", it.url ?: return@map null
-                    )
+        sources?.subtitles?.map {
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    it.lang ?: "", it.url ?: return@map null
                 )
-            }
-
+            )
         }
 
 
@@ -2018,6 +2009,9 @@ object SoraExtractor : SoraStream() {
                 }
                 it.first.contains("/gtop") -> {
                     invokeSmashyTwo(it.second, it.first, callback)
+                }
+                it.first.contains("/dude_tv") -> {
+                    invokeSmashyThree(it.second, it.first, callback)
                 }
                 else -> return@apmap
             }
@@ -3492,4 +3486,13 @@ data class CryMoviesStream(
 
 data class CryMoviesResponse(
     @JsonProperty("streams") val streams: List<CryMoviesStream>? = null,
+)
+
+data class DudetvSources(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("title") val title: String? = null,
+)
+
+data class FmoviesSearch(
+    @JsonProperty("html") val html: String? = null,
 )

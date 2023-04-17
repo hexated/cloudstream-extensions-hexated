@@ -7,6 +7,7 @@ import com.hexated.SoraExtractor.invokeCrunchyroll
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixon
+import com.hexated.SoraExtractor.invokeFmovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeHDMovieBox
@@ -187,17 +188,16 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-//            {
-//                invokeFlixhq(
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    res.lastSeason,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
+            {
+                invokeFmovies(
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
             {
                 invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
             },

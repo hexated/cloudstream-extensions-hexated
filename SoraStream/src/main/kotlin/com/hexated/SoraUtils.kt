@@ -460,6 +460,26 @@ suspend fun invokeSmashyTwo(
     )
 }
 
+suspend fun invokeSmashyThree(
+    name: String,
+    url: String,
+    callback: (ExtractorLink) -> Unit
+) {
+    val script =
+        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+
+    val source = Regex("file:\\s*(\\[.*]),").find(script)?.groupValues?.get(1) ?: return
+
+    tryParseJson<ArrayList<DudetvSources>>(source)?.filter { it.title == "English" }?.map {
+        M3u8Helper.generateM3u8(
+            "Smashy [Player 2]",
+            it.file ?: return@map ,
+            ""
+        ).forEach(callback)
+    }
+
+}
+
 suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?) : Pair<String, String>? {
     val doc = app.get("${base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")}/search?keyword=$title").document
     val scriptData = doc.select("div.search-list div.search-video-card").map {
@@ -1113,6 +1133,64 @@ fun getDeviceId(length: Int = 16): String {
         .joinToString("")
 }
 
+fun encodeVrf(query: String): String {
+    return encode(
+        encryptVrf(
+            cipherVrf("DZmuZuXqa9O0z3b7", encode(query)),
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        )
+    )
+}
+
+fun encryptVrf(input: String, key: String): String {
+    if (input.any { it.code > 255 }) throw Exception("illegal characters!")
+    var output = ""
+    for (i in input.indices step 3) {
+        val a = intArrayOf(-1, -1, -1, -1)
+        a[0] = input[i].code shr 2
+        a[1] = (3 and input[i].code) shl 4
+        if (input.length > i + 1) {
+            a[1] = a[1] or (input[i + 1].code shr 4)
+            a[2] = (15 and input[i + 1].code) shl 2
+        }
+        if (input.length > i + 2) {
+            a[2] = a[2] or (input[i + 2].code shr 6)
+            a[3] = 63 and input[i + 2].code
+        }
+        for (n in a) {
+            if (n == -1) output += "="
+            else {
+                if (n in 0..63) output += key[n]
+            }
+        }
+    }
+    return output
+}
+
+fun cipherVrf(key: String, text: String): String {
+    val arr = IntArray(256) { it }
+
+    var u = 0
+    var r: Int
+    arr.indices.forEach {
+        u = (u + arr[it] + key[it % key.length].code) % 256
+        r = arr[it]
+        arr[it] = arr[u]
+        arr[u] = r
+    }
+    u = 0
+    var c = 0
+
+    return text.indices.map { j ->
+        c = (c + 1) % 256
+        u = (u + arr[c]) % 256
+        r = arr[c]
+        arr[c] = arr[u]
+        arr[u] = r
+        (text[j].code xor arr[(arr[c] + arr[u]) % 256]).toChar()
+    }.joinToString("")
+}
+
 fun String.encodeUrl(): String {
     val url = URL(this)
     val uri = URI(url.protocol, url.userInfo, url.host, url.port, url.path, url.query, url.ref)
@@ -1129,7 +1207,7 @@ fun String.decodeBase64(): String {
     return Base64.decode(this, Base64.DEFAULT).toString(Charsets.UTF_8)
 }
 
-fun encode(input: String): String? = URLEncoder.encode(input, "utf-8")
+fun encode(input: String): String = URLEncoder.encode(input, "utf-8").replace("+", "%20")
 
 fun decryptStreamUrl(data: String): String {
 
