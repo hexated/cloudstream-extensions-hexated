@@ -982,15 +982,13 @@ object SoraExtractor : SoraStream() {
                 invokeBiliBili(aniId, episode, subtitleCallback, callback)
             },
             {
-                if(season != null) invokeAllanime(aniId, title, year, episode, callback)
+                if(season != null) invokeAllanime(aniId, episode, callback)
             }
         )
     }
 
     private suspend fun invokeAllanime(
         aniId: String? = null,
-        title: String? = null,
-        year: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
@@ -1000,15 +998,18 @@ object SoraExtractor : SoraStream() {
         val aniDetail = app.get("$consumetAnilistAPI/info/$aniId").parsedSafe<ConsumetDetails>()
 
         val searchQuaery =
-            """$allanimeAPI/allanimeapi?variables={"search":{"query":"$title","allowAdult":false,"allowUnknown":false},"limit":26,"page":1,"translationType":"sub","countryOrigin":"ALL"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$searchHash"}}"""
+            """$allanimeAPI/allanimeapi?variables={"search":{"query":"${aniDetail?.title?.romaji ?: return}","allowAdult":false,"allowUnknown":false},"limit":26,"page":1,"translationType":"sub","countryOrigin":"ALL"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$searchHash"}}"""
         val id = app.get(searchQuaery)
             .parsedSafe<AllanimeResponses>()?.data?.shows?.edges?.let { media ->
-                media.find { it.thumbnail == aniDetail?.cover || it.thumbnail == aniDetail?.image }
+                media.find { it.thumbnail == aniDetail.cover || it.thumbnail == aniDetail.image }
                     ?: media.find {
-                        (it.name?.contains(
-                            "$title",
+                        (it.name?.equals(
+                            aniDetail.title.romaji,
                             true
-                        ) == true || it.englishName?.contains("$title", true) == true) && it.airedStart?.year == year
+                        ) == true || it.englishName?.equals(
+                            aniDetail.title.romaji,
+                            true
+                        ) == true) && it.airedStart?.year == aniDetail.releaseDate
                     }
             }?._id
 
@@ -3106,10 +3107,17 @@ data class ConsumetEpisodes(
     @JsonProperty("season") val season: Int? = null,
 )
 
+data class ConsumetTitle(
+    @JsonProperty("romaji") val romaji: String? = null,
+    @JsonProperty("english") val english: String? = null
+)
+
 data class ConsumetDetails(
     @JsonProperty("episodes") val episodes: ArrayList<ConsumetEpisodes>? = arrayListOf(),
     @JsonProperty("image") val image: String? = null,
-    @JsonProperty("cover") val cover: String? = null
+    @JsonProperty("cover") val cover: String? = null,
+    @JsonProperty("title") val title: ConsumetTitle? = null,
+    @JsonProperty("releaseDate") val releaseDate: Int? = null
 )
 
 data class CrunchyrollEpisodes(
