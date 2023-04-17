@@ -16,11 +16,10 @@ import java.util.ArrayList
 class KuronimeProvider : MainAPI() {
     override var mainUrl = "https://45.12.2.2"
     override var name = "Kuronime"
-    override val hasQuickSearch = false
+    override val hasQuickSearch = true
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-    override var sequentialMainPage = true
 
     override val supportedTypes = setOf(
         TvType.Anime,
@@ -48,15 +47,15 @@ class KuronimeProvider : MainAPI() {
         "$mainUrl/page/" to "New Episodes",
         "$mainUrl/popular-anime/page/" to "Popular Anime",
         "$mainUrl/movies/page/" to "Movies",
-        "$mainUrl/genres/donghua/page/" to "Donghua",
-        "$mainUrl/live-action/page/" to "Live Action",
+//        "$mainUrl/genres/donghua/page/" to "Donghua",
+//        "$mainUrl/live-action/page/" to "Live Action",
     )
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page, verify = false).document
+        val document = app.get(request.data + page).document
         val home = document.select("article").map {
             it.toSearchResult()
         }
@@ -98,12 +97,20 @@ class KuronimeProvider : MainAPI() {
 
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/?s=$query"
-        val document = app.get(link, verify = false).document
+    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
-        return document.select("article.bs").map {
-            it.toSearchResult()
+    override suspend fun search(query: String): List<SearchResponse>? {
+        return app.post(
+            "$mainUrl/wp-admin/admin-ajax.php", data = mapOf(
+                "action" to "ajaxy_sf",
+                "sf_value" to query,
+                "search" to "false"
+            ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsedSafe<Search>()?.anime?.firstOrNull()?.all?.mapNotNull {
+            newAnimeSearchResponse(it.postTitle ?: "", it.postLink ?: return@mapNotNull null, TvType.Anime) {
+                this.posterUrl = it.postImage
+                addSub(it.postLatest?.toIntOrNull())
+            }
         }
     }
 
@@ -113,8 +120,9 @@ class KuronimeProvider : MainAPI() {
         val title = document.selectFirst(".entry-title")?.text().toString().trim()
         val poster = document.selectFirst("div.l[itemprop=image] > img")?.attr("data-src")
         val tags = document.select(".infodetail > ul > li:nth-child(2) > a").map { it.text() }
-        val type = document.selectFirst(".infodetail > ul > li:nth-child(7)")?.ownText()?.removePrefix(":")
-            ?.lowercase()?.trim() ?: "tv"
+        val type =
+            document.selectFirst(".infodetail > ul > li:nth-child(7)")?.ownText()?.removePrefix(":")
+                ?.lowercase()?.trim() ?: "tv"
 
         val trailer = document.selectFirst("div.tply iframe")?.attr("data-src")
         val year = Regex("\\d, (\\d*)").find(
@@ -130,7 +138,8 @@ class KuronimeProvider : MainAPI() {
         val episodes = document.select("div.bixbox.bxcl > ul > li").mapNotNull {
             val link = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
             val name = it.selectFirst("a")?.text() ?: return@mapNotNull null
-            val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
+            val episode =
+                Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
             Episode(link, name, episode = episode)
         }.reversed()
 
@@ -237,6 +246,26 @@ class KuronimeProvider : MainAPI() {
 
     data class AniSearch(
         @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
+    )
+
+    data class All(
+        @JsonProperty("post_image") var postImage: String? = null,
+        @JsonProperty("post_image_html") var postImageHtml: String? = null,
+        @JsonProperty("ID") var ID: Int? = null,
+        @JsonProperty("post_title") var postTitle: String? = null,
+        @JsonProperty("post_genres") var postGenres: String? = null,
+        @JsonProperty("post_type") var postType: String? = null,
+        @JsonProperty("post_latest") var postLatest: String? = null,
+        @JsonProperty("post_sub") var postSub: String? = null,
+        @JsonProperty("post_link") var postLink: String? = null
+    )
+
+    data class Anime(
+        @JsonProperty("all") var all: ArrayList<All> = arrayListOf(),
+    )
+
+    data class Search(
+        @JsonProperty("anime") var anime: ArrayList<Anime> = arrayListOf()
     )
 
 }
