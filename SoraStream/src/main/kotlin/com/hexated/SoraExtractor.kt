@@ -322,46 +322,72 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeSeries9(
         title: String? = null,
+        year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.createSlug()
-        val url = if (season == null) {
-            "$series9API/film/$fixTitle/watching.html"
+        val doc = if (season == null) {
+            val res = app.get("$series9API/film/$fixTitle/watching.html")
+            if (!res.isSuccessful) app.get("$series9API/film/$fixTitle-$year/watching.html").document else res.document
         } else {
-            "$series9API/film/$fixTitle-season-$season/watching.html"
+            app.get("$series9API/film/$fixTitle-season-$season/watching.html").document
         }
 
-        val request = app.get(url)
-        if (!request.isSuccessful) return
-        val res = request.document
-        val sources: ArrayList<String?> = arrayListOf()
+        doc.select("div#list-eps div.le-server").apmap { ele ->
+            val server = if (season == null) {
+                ele.select("a").attr("player-data")
+            } else {
+                ele.select("a[episode-data=$episode]").attr("player-data")
+            }.let { httpsify(it) }
 
-        if (season == null) {
-            val xstreamcdn =
-                res.selectFirst("div#list-eps div#server-29 a")?.attr("player-data")?.let {
-                    Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
-                }
-            val streamsb = res.selectFirst("div#list-eps div#server-13 a")?.attr("player-data")
-            val doodstream = res.selectFirst("div#list-eps div#server-14 a")?.attr("player-data")
-            sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
-        } else {
-            val xstreamcdn = res.selectFirst("div#list-eps div#server-29 a[episode-data=$episode]")
-                ?.attr("player-data")?.let {
-                    Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
-                }
-            val streamsb = res.selectFirst("div#list-eps div#server-13 a[episode-data=$episode]")
-                ?.attr("player-data")
-            val doodstream = res.selectFirst("div#list-eps div#server-14 a[episode-data=$episode]")
-                ?.attr("player-data")
-            sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
+            if (server.startsWith("https://movembed.cc")) {
+                val iv = "9225679083961858"
+                val secretKey = "25742532592138496744665879883281"
+                val secretDecryptKey = secretKey
+                GogoExtractor.extractVidstream(
+                    server,
+                    "Vidstream",
+                    callback,
+                    iv,
+                    secretKey,
+                    secretDecryptKey,
+                    isUsingAdaptiveKeys = false,
+                    isUsingAdaptiveData = true,
+                    iframeDocument = app.get(server).document
+                )
+            } else {
+                loadExtractor(server, series9API, subtitleCallback, callback)
+            }
         }
 
-        sources.apmap { link ->
-            loadExtractor(link ?: return@apmap null, url, subtitleCallback, callback)
-        }
+//        val sources: ArrayList<String?> = arrayListOf()
+//
+//        if (season == null) {
+//            val xstreamcdn =
+//                res.selectFirst("div#list-eps div#server-29 a")?.attr("player-data")?.let {
+//                    Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
+//                }
+//            val streamsb = res.selectFirst("div#list-eps div#server-13 a")?.attr("player-data")
+//            val doodstream = res.selectFirst("div#list-eps div#server-14 a")?.attr("player-data")
+//            sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
+//        } else {
+//            val xstreamcdn = res.selectFirst("div#list-eps div#server-29 a[episode-data=$episode]")
+//                ?.attr("player-data")?.let {
+//                    Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
+//                }
+//            val streamsb = res.selectFirst("div#list-eps div#server-13 a[episode-data=$episode]")
+//                ?.attr("player-data")
+//            val doodstream = res.selectFirst("div#list-eps div#server-14 a[episode-data=$episode]")
+//                ?.attr("player-data")
+//            sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
+//        }
+//
+//        sources.apmap { link ->
+//            loadExtractor(link ?: return@apmap null, null, subtitleCallback, callback)
+//        }
     }
 
     suspend fun invokeIdlix(

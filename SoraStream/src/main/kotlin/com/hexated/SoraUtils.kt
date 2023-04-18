@@ -41,7 +41,7 @@ import kotlin.collections.ArrayList
 import kotlin.math.min
 
 val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
-val soraBackupAPI = base64DecodeAPI("dg==LnQ=bGw=aGk=dGM=dXM=Lmo=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
+val soraBackupAPI = base64DecodeAPI("dHY=bC4=aWw=Y2g=c3Q=anU=MS4=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
 
 val soraHeaders = mapOf(
     "lang" to "en",
