@@ -147,7 +147,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeSeries9(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeSeries9(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeIdlix(
