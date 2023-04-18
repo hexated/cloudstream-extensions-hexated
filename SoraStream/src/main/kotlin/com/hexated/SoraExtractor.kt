@@ -362,32 +362,6 @@ object SoraExtractor : SoraStream() {
                 loadExtractor(server, series9API, subtitleCallback, callback)
             }
         }
-
-//        val sources: ArrayList<String?> = arrayListOf()
-//
-//        if (season == null) {
-//            val xstreamcdn =
-//                res.selectFirst("div#list-eps div#server-29 a")?.attr("player-data")?.let {
-//                    Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
-//                }
-//            val streamsb = res.selectFirst("div#list-eps div#server-13 a")?.attr("player-data")
-//            val doodstream = res.selectFirst("div#list-eps div#server-14 a")?.attr("player-data")
-//            sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
-//        } else {
-//            val xstreamcdn = res.selectFirst("div#list-eps div#server-29 a[episode-data=$episode]")
-//                ?.attr("player-data")?.let {
-//                    Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
-//                }
-//            val streamsb = res.selectFirst("div#list-eps div#server-13 a[episode-data=$episode]")
-//                ?.attr("player-data")
-//            val doodstream = res.selectFirst("div#list-eps div#server-14 a[episode-data=$episode]")
-//                ?.attr("player-data")
-//            sources.addAll(listOf(xstreamcdn, streamsb, doodstream))
-//        }
-//
-//        sources.apmap { link ->
-//            loadExtractor(link ?: return@apmap null, null, subtitleCallback, callback)
-//        }
     }
 
     suspend fun invokeIdlix(
