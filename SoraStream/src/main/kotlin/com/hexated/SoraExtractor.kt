@@ -827,8 +827,9 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        val query = title?.replace(Regex("[^\\w-\\s]"), "")
         val html =
-            app.get("https://fmovies.to/ajax/film/search?vrf=${encodeVrf("$title")}&keyword=$title")
+            app.get("https://fmovies.to/ajax/film/search?vrf=${encodeVrf("$query")}&keyword=$query")
                 .parsedSafe<FmoviesSearch>()?.html
 
         val mediaId = Jsoup.parse(html ?: return).select("a.item").map {
@@ -2935,39 +2936,48 @@ object SoraExtractor : SoraStream() {
 
         val res = app.get(url)
 
-        if (season == null) {
-            res.document.select("table.rwd-table tr").map { el ->
-                val name = el.select("td[data-th=File Name]").text()
-                val quality = getIndexQuality(name)
-                val tags = getIndexQualityTags(name)
-                val size = el.select("td[data-th=Size]").text()
-                val videoUrl = el.select("div.play_with_vlc_button > a").lastOrNull()?.attr("href")
-
-                callback.invoke(
-                    ExtractorLink(
-                        "Shivamhw",
-                        "Shivamhw $tags [${size}]",
-                        videoUrl?.removePrefix("vlc://")?.encodeUrl() ?: return@map,
-                        "",
-                        quality,
-                    )
+        val media = if(season == null) {
+            res.document.select("table.rwd-table tr").map {
+                Triple(
+                    it.select("td[data-th=File Name]").text(),
+                    it.select("td[data-th=Size]").text(),
+                    it.select("div.play_with_vlc_button > a").lastOrNull()?.attr("href")
                 )
             }
-
         } else {
-            tryParseJson<ArrayList<ShivamhwSources>>(res.text)?.map { source ->
-                val quality = getIndexQuality(source.name)
-                val tags = getIndexQualityTags(source.name)
-                callback.invoke(
-                    ExtractorLink(
-                        "Shivamhw",
-                        "Shivamhw $tags [${source.size}]",
-                        source.stream_link?.encodeUrl() ?: return@map,
-                        "",
-                        quality,
-                    )
+            tryParseJson<ArrayList<ShivamhwSources>>(res.text)?.map {
+                Triple(
+                    it.name,
+                    it.size,
+                    it.stream_link,
                 )
             }
+        }
+
+        media?.filter {
+            matchingIndex(
+                it.first,
+                null,
+                title,
+                year,
+                season,
+                episode,
+                true
+            )
+        }?.sortedByDescending {
+            it.second.getFileSize()
+        }?.map { source ->
+            val quality = getIndexQuality(source.first)
+            val tags = getIndexQualityTags(source.first)
+            callback.invoke(
+                ExtractorLink(
+                    "Shivamhw",
+                    "Shivamhw $tags [${source.second}]",
+                    source.third?.removePrefix("vlc://") ?: return@map,
+                    "",
+                    quality,
+                )
+            )
         }
     }
 
@@ -2978,8 +2988,8 @@ object SoraExtractor : SoraStream() {
         app.get("$cryMoviesAPI/stream/movie/$imdbId.json")
             .parsedSafe<CryMoviesResponse>()?.streams?.map { stream ->
                 val quality = getIndexQuality(stream.title)
-                val tags = getIndexQualityTags(stream.title)
-                val size = stream.title?.substringAfter("\uD83D\uDCBE")?.trim()
+                val tags = getIndexQualityTags(stream.title, true)
+                val size = getIndexSize(stream.title)
                 val headers = stream.behaviorHints?.proxyHeaders?.request ?: mapOf()
 
                 callback.invoke(
@@ -3484,8 +3494,8 @@ data class AllanimeResponses(
 data class ShivamhwSources(
     @JsonProperty("id") val id: String? = null,
     @JsonProperty("stream_link") val stream_link: String? = null,
-    @JsonProperty("name") val name: String? = null,
-    @JsonProperty("size") val size: String? = null,
+    @JsonProperty("name") val name: String,
+    @JsonProperty("size") val size: String,
 )
 
 data class CryMoviesProxyHeaders(

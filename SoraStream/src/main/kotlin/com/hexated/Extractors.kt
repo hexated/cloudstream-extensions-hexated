@@ -40,6 +40,11 @@ class FileMoonIn : Filesim() {
     override val name = "FileMoon"
 }
 
+class StreamhideCom : Filesim() {
+    override var name: String = "Streamhide"
+    override var mainUrl: String = "https://streamhide.com"
+}
+
 class Watchx : Chillx() {
     override val name = "Watchx"
     override val mainUrl = "https://watchx.top"

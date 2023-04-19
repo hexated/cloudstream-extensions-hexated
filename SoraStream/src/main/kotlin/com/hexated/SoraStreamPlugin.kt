@@ -18,5 +18,6 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Sbnet())
         registerExtractorAPI(Chillx())
         registerExtractorAPI(Watchx())
+        registerExtractorAPI(StreamhideCom())
     }
 }

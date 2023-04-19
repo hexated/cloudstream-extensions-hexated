@@ -40,7 +40,8 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
 import kotlin.math.min
 
-val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
+val soraAPI =
+    base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
 val soraBackupAPI = base64DecodeAPI("dHY=bC4=aWw=Y2g=c3Q=anU=MS4=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")
 
 val soraHeaders = mapOf(
@@ -402,7 +403,8 @@ suspend fun invokeSmashyOne(
     url: String,
     callback: (ExtractorLink) -> Unit,
 ) {
-    val script = app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+    val script =
+        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
 
     val source =
         Regex("file:\\s['\"](\\S+?)['|\"]").find(script)?.groupValues?.get(
@@ -444,7 +446,7 @@ suspend fun invokeSmashyTwo(
     ).parsedSafe<Smashy1Source>() ?: return
 
     val videoUrl = base64Decode(source.file ?: return)
-    if(videoUrl.contains("/bug")) return
+    if (videoUrl.contains("/bug")) return
     val quality =
         Regex("(\\d{3,4})[Pp]").find(videoUrl)?.groupValues?.getOrNull(1)?.toIntOrNull()
             ?: Qualities.P720.value
@@ -473,15 +475,16 @@ suspend fun invokeSmashyThree(
     tryParseJson<ArrayList<DudetvSources>>(source)?.filter { it.title == "English" }?.map {
         M3u8Helper.generateM3u8(
             "Smashy [Player 2]",
-            it.file ?: return@map ,
+            it.file ?: return@map,
             ""
         ).forEach(callback)
     }
 
 }
 
-suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?) : Pair<String, String>? {
-    val doc = app.get("${base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")}/search?keyword=$title").document
+suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?): Pair<String, String>? {
+    val doc =
+        app.get("${base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")}/search?keyword=$title").document
     val scriptData = doc.select("div.search-list div.search-video-card").map {
         Triple(
             it.selectFirst("h2.title")?.text().toString(),
@@ -523,7 +526,7 @@ suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?) : Pair<St
     return id to type
 }
 
-suspend fun fetchSoraEpisodes(id: String, type: String, episode: Int?) : EpisodeVo? {
+suspend fun fetchSoraEpisodes(id: String, type: String, episode: Int?): EpisodeVo? {
     return app.get(
         "$soraAPI/movieDrama/get?id=${id}&category=${type}",
         headers = soraHeaders
@@ -634,7 +637,7 @@ suspend fun bypassHrefli(url: String): String? {
     return fixUrl(path, getBaseUrl(driveUrl))
 }
 
-suspend fun bypassTechmny(url: String) : String? {
+suspend fun bypassTechmny(url: String): String? {
     val postUrl = url.substringBefore("?id=").substringAfter("/?")
     var res = app.post(
         postUrl, data = mapOf(
@@ -656,14 +659,16 @@ suspend fun bypassTechmny(url: String) : String? {
     val newLongC = "$goToken=" + longC2.substringAfter("=")
     headers = mapOf("Cookie" to "$catC; rdst_post=; $newLongC")
 
-    val driveUrl = app.get(tokenUrl, headers = headers).document.selectFirst("meta[http-equiv=refresh]")?.attr("content")?.substringAfter("url=")
+    val driveUrl =
+        app.get(tokenUrl, headers = headers).document.selectFirst("meta[http-equiv=refresh]")
+            ?.attr("content")?.substringAfter("url=")
     val path = app.get(driveUrl ?: return null).text.substringAfter("replace(\"")
         .substringBefore("\")")
     if (path == "/404") return null
     return fixUrl(path, getBaseUrl(driveUrl))
 }
 
-suspend fun bypassDriveleech(url: String) : String? {
+suspend fun bypassDriveleech(url: String): String? {
     val path = app.get(url).text.substringAfter("replace(\"")
         .substringBefore("\")")
     if (path == "/404") return null
@@ -682,14 +687,18 @@ private fun getTechmnyCookies(page: String): Triple<String, String, String> {
             .substringBefore(";").let {
                 "$cat=$it"
             }
-    } else { "" }
+    } else {
+        ""
+    }
 
     val postC = if (page.contains("$post=")) {
         page.substringAfterLast("$post=")
             .substringBefore(";").let {
                 "$post=$it"
             }
-    } else { "" }
+    } else {
+        ""
+    }
 
     return Triple(longC, catC, postC)
 }
@@ -805,7 +814,7 @@ suspend fun searchWatchOnline(
 }
 
 suspend fun searchCrunchyrollAnimeId(title: String): String? {
-    val res = app.get("${consumetCrunchyrollAPI}/search/$title",timeout = 600L)
+    val res = app.get("${consumetCrunchyrollAPI}/search/$title", timeout = 600L)
         .parsedSafe<ConsumetSearchResponse>()?.results
     return (if (res?.size == 1) {
         res.firstOrNull()
@@ -825,8 +834,10 @@ fun CrunchyrollDetails.findCrunchyrollId(
     episode: Int?,
     epsTitle: String?
 ): List<Pair<CrunchyrollEpisodes?, String?>?> {
-    val sub = this.episodes?.filterKeys { it.contains("subbed") }.matchingEpisode(epsTitle, season, episode) to "Raw"
-    val dub = this.episodes?.filterKeys { it.contains("English Dub") }.matchingEpisode(epsTitle, season, episode) to "English Dub"
+    val sub = this.episodes?.filterKeys { it.contains("subbed") }
+        .matchingEpisode(epsTitle, season, episode) to "Raw"
+    val dub = this.episodes?.filterKeys { it.contains("English Dub") }
+        .matchingEpisode(epsTitle, season, episode) to "English Dub"
     return listOf(sub, dub)
 }
 
@@ -894,7 +905,7 @@ suspend fun PutlockerResponses?.callback(
 fun getPutlockerQuality(quality: String): Int {
     return when {
         quality.contains("NAME=\"1080p\"") || quality.contains("RESOLUTION=1920x1080") -> Qualities.P1080.value
-        quality.contains("NAME=\"720p\"") || quality.contains("RESOLUTION=1280x720")-> Qualities.P720.value
+        quality.contains("NAME=\"720p\"") || quality.contains("RESOLUTION=1280x720") -> Qualities.P720.value
         else -> Qualities.P480.value
     }
 }
@@ -1045,23 +1056,31 @@ fun getKisskhTitle(str: String?): String? {
     return str?.replace(Regex("[^a-zA-Z\\d]"), "-")
 }
 
-fun String.getFileSize() : Float? {
-    val size = Regex("(\\d+\\.?\\d+\\sGB|MB)").find(this)?.groupValues?.get(0)?.trim()
-    val num = Regex("(\\d+\\.?\\d+)").find(size ?: return null)?.groupValues?.get(0)?.toFloat() ?: return null
+fun String.getFileSize(): Float? {
+    val size = Regex("(?i)(\\d+\\.?\\d+\\sGB|MB)").find(this)?.groupValues?.get(0)?.trim()
+    val num = Regex("(\\d+\\.?\\d+)").find(size ?: return null)?.groupValues?.get(0)?.toFloat()
+        ?: return null
     return when {
         size.contains("GB") -> num * 1000000
         else -> num * 1000
     }
 }
 
-fun getIndexQualityTags(str: String?): String {
-    return Regex("(?i)\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(str ?: "")?.groupValues?.getOrNull(1)
+fun getIndexQualityTags(str: String?, fullTag: Boolean = false): String {
+    return if (fullTag) Regex("(?i)(.*)\\.(?:mkv|mp4|avi)").find(str ?: "")?.groupValues?.get(1)
+        ?.trim() ?: str ?: "" else Regex("(?i)\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(
+        str ?: ""
+    )?.groupValues?.getOrNull(1)
         ?.replace(".", " ")?.trim() ?: str ?: ""
 }
 
 fun getIndexQuality(str: String?): Int {
     return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
         ?: Qualities.Unknown.value
+}
+
+fun getIndexSize(str: String?): String? {
+    return Regex("(?i)([\\d.]+\\s*(?:gb|mb))").find(str ?: "")?.groupValues?.getOrNull(1)?.trim()
 }
 
 fun getQuality(str: String): Int {
@@ -1424,7 +1443,8 @@ object CryptoAES {
         }
     }
 
-    private fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
+    private fun ByteArray.toHex(): String =
+        joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
 
     private fun String.toHex(): String = toByteArray().toHex()
 
