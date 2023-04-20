@@ -1,6 +1,7 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.GogoExtractor.extractVidstream
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -157,38 +158,6 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invoke123Movie(
-        tmdbId: Int? = null,
-        imdbId: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val url = if (season == null) {
-            "$movie123API/imdb.php?imdb=$imdbId&server=vcu"
-        } else {
-            "$movie123API/tmdb_api.php?se=$season&ep=$episode&tmdb=$tmdbId&server_name=vcu"
-        }
-        val iframe = app.get(url).document.selectFirst("iframe")?.attr("src") ?: return
-
-        val doc = app.get(
-            iframe,
-            referer = url,
-            headers = mapOf("Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-        ).document
-
-        doc.select("ul.list-server-items li.linkserver").mapNotNull { server ->
-            server.attr("data-video").let {
-                Regex("(.*?)((\\?cap)|(\\?sub)|(#cap)|(#sub))").find(it)?.groupValues?.get(1)
-            }
-        }.apmap { link ->
-            loadExtractor(
-                link, "https://123moviesjr.cc/", subtitleCallback, callback
-            )
-        }
-    }
-
     suspend fun invokeMovieHab(
         imdbId: String? = null,
         season: Int? = null,
@@ -336,32 +305,41 @@ object SoraExtractor : SoraStream() {
             app.get("$series9API/film/$fixTitle-season-$season/watching.html").document
         }
 
-        doc.select("div#list-eps div.le-server").apmap { ele ->
-            val server = if (season == null) {
+        val server = doc.select("div#list-eps div.le-server").map { ele ->
+            if (season == null) {
                 ele.select("a").attr("player-data")
             } else {
                 ele.select("a[episode-data=$episode]").attr("player-data")
-            }.let { httpsify(it) }
-
-            if (server.startsWith("https://movembed.cc")) {
-                val iv = "9225679083961858"
-                val secretKey = "25742532592138496744665879883281"
-                val secretDecryptKey = secretKey
-                GogoExtractor.extractVidstream(
-                    server,
-                    "Vidstream",
-                    callback,
-                    iv,
-                    secretKey,
-                    secretDecryptKey,
-                    isUsingAdaptiveKeys = false,
-                    isUsingAdaptiveData = true,
-                    iframeDocument = app.get(server).document
-                )
-            } else {
-                loadExtractor(server, series9API, subtitleCallback, callback)
             }
-        }
+        }.find { it.contains(Regex("movembed|membed")) }
+
+        val iframe = app.get(httpsify(server ?: return))
+        val iframeDoc = iframe.document
+
+        argamap({
+            iframeDoc.select(".list-server-items > .linkserver")
+                .forEach { element ->
+                    val status = element.attr("data-status") ?: return@forEach
+                    if (status != "1") return@forEach
+                    val extractorData = element.attr("data-video") ?: return@forEach
+                    loadExtractor(extractorData, iframe.url, subtitleCallback, callback)
+                }
+        }, {
+            val iv = "9225679083961858"
+            val secretKey = "25742532592138496744665879883281"
+            val secretDecryptKey = secretKey
+            extractVidstream(
+                iframe.url,
+                "Vidstream",
+                callback,
+                iv,
+                secretKey,
+                secretDecryptKey,
+                isUsingAdaptiveKeys = false,
+                isUsingAdaptiveData = true,
+                iframeDocument = iframeDoc
+            )
+        })
     }
 
     suspend fun invokeIdlix(
@@ -2983,12 +2961,26 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeCryMovies(
         imdbId: String? = null,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
         app.get("$cryMoviesAPI/stream/movie/$imdbId.json")
-            .parsedSafe<CryMoviesResponse>()?.streams?.map { stream ->
+            .parsedSafe<CryMoviesResponse>()?.streams?.filter {
+                matchingIndex(
+                    it.title,
+                    null,
+                    title,
+                    year,
+                    season,
+                    episode,
+                    true
+                )
+            }?.map { stream ->
                 val quality = getIndexQuality(stream.title)
-                val tags = getIndexQualityTags(stream.title, true)
+                val tags = getIndexQualityTags(stream.title)
                 val size = getIndexSize(stream.title)
                 val headers = stream.behaviorHints?.proxyHeaders?.request ?: mapOf()
 

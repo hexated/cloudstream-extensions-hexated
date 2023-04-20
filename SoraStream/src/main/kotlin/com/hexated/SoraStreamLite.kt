@@ -1,6 +1,5 @@
 package com.hexated
 
-import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeCrunchyroll
@@ -92,16 +91,6 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
-                invoke123Movie(
-                    res.id,
-                    res.imdbId,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
             },
             {
                 invokeMovie123Net(

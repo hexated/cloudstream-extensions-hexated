@@ -19,5 +19,6 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Chillx())
         registerExtractorAPI(Watchx())
         registerExtractorAPI(StreamhideCom())
+        registerExtractorAPI(Movhide())
     }
 }

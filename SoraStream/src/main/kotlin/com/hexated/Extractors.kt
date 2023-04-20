@@ -45,6 +45,11 @@ class StreamhideCom : Filesim() {
     override var mainUrl: String = "https://streamhide.com"
 }
 
+class Movhide : Filesim() {
+    override var name: String = "Movhide"
+    override var mainUrl: String = "https://movhide.pro"
+}
+
 class Watchx : Chillx() {
     override val name = "Watchx"
     override val mainUrl = "https://watchx.top"

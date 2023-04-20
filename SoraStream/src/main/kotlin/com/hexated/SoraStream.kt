@@ -1,7 +1,6 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.hexated.SoraExtractor.invoke123Movie
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeBlackmovies
@@ -90,7 +89,6 @@ open class SoraStream : TmdbProvider() {
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
-        const val movie123API = "https://api.123movie.cc"
         const val movieHabAPI = "https://moviehab.com"
         const val databaseGdriveAPI = "https://databasegdriveplayer.co"
         const val hdMovieBoxAPI = "https://hdmoviebox.net"
@@ -386,16 +384,6 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
-                invoke123Movie(
-                    res.id,
-                    res.imdbId,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
             },
             {
                 invokeMovieHab(res.imdbId, res.season, res.episode, subtitleCallback, callback)
@@ -817,6 +805,10 @@ open class SoraStream : TmdbProvider() {
             {
                 if(!res.isAnime && res.season == null) invokeCryMovies(
                     res.imdbId,
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
                     callback
                 )
             }
