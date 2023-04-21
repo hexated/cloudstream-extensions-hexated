@@ -637,14 +637,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val (id, type) = getSoraIdAndType(title, year, season) ?: return invokeSoraBackup(
-            title,
-            year,
-            season,
-            episode,
-            subtitleCallback,
-            callback
-        )
+        val (id, type) = getSoraIdAndType(title, year, season) ?: return
         val json = fetchSoraEpisodes(id, type, episode) ?: return
 
         json.subtitlingList?.map { sub ->
@@ -656,9 +649,10 @@ object SoraExtractor : SoraStream() {
             )
         }
 
+        if(season == null) return
         json.definitionList?.map { video ->
             val media = app.get(
-                "$soraAPI/media/previewInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
+                "${BuildConfig.SORA_API}/movieDrama/getPlayInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
                 headers = soraHeaders,
             ).parsedSafe<SorastreamResponse>()?.data
 
@@ -667,81 +661,12 @@ object SoraExtractor : SoraStream() {
                     this.name,
                     this.name,
                     media?.mediaUrl ?: return@map null,
-                    "",
+                    "${BuildConfig.SORA_WEB}/",
                     getSoraQuality(media.currentDefinition ?: ""),
                     true,
                 )
             )
         }
-    }
-
-    private suspend fun invokeSoraBackup(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val results =
-            app.get("$soraBackupAPI/api/search?keyword=$title")
-                .parsedSafe<ChillSearch>()?.data?.results
-        val media = if (results?.size == 1) {
-            results.firstOrNull()
-        } else {
-            results?.find {
-                when (season) {
-                    null -> {
-                        it.name.equals(
-                            title,
-                            true
-                        ) && it.releaseTime == "$year"
-                    }
-                    1 -> {
-                        it.name.contains(
-                            "$title",
-                            true
-                        ) && (it.releaseTime == "$year" || it.name.contains("Season $season", true))
-                    }
-                    else -> {
-                        it.name.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) && it.releaseTime == "$year"
-                    }
-                }
-            }
-        } ?: return
-
-        val episodeId =
-            app.get("$soraBackupAPI/api/detail?id=${media.id}&category=${media.domainType}")
-                .parsedSafe<Load>()?.data?.episodeVo?.find {
-                    it.seriesNo == (episode ?: 0)
-                }?.id ?: return
-
-        val sources =
-            app.get("$soraBackupAPI/api/episode?id=${media.id}&category=${media.domainType}&episode=$episodeId")
-                .parsedSafe<ChillSources>()?.data
-
-        sources?.qualities?.map { source ->
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    source.url ?: return@map null,
-                    "",
-                    source.quality ?: Qualities.Unknown.value,
-                    true,
-                )
-            )
-        }
-
-        sources?.subtitles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    getVipLanguage(sub.lang ?: return@map),
-                    sub.url?.substringAfter("?url=") ?: return@map
-                )
-            )
-        }
-
     }
 
     suspend fun invokeXmovies(
@@ -2967,7 +2892,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        app.get("$cryMoviesAPI/stream/movie/$imdbId.json")
+        app.get("${BuildConfig.CRY_API}/stream/movie/$imdbId.json")
             .parsedSafe<CryMoviesResponse>()?.streams?.filter {
                 matchingIndex(
                     it.title,
@@ -3363,41 +3288,6 @@ data class WatchOnlineSearch(
 data class WatchOnlineResponse(
     @JsonProperty("streams") val streams: HashMap<String, String>? = null,
     @JsonProperty("subtitles") val subtitles: Any? = null,
-)
-
-data class ChillQualities(
-    @JsonProperty("quality") val quality: Int? = null,
-    @JsonProperty("url") val url: String? = null,
-)
-
-data class ChillSubtitles(
-    @JsonProperty("lang") val lang: String? = null,
-    @JsonProperty("language") val language: String? = null,
-    @JsonProperty("url") val url: String? = null,
-)
-
-data class ChillSource(
-    @JsonProperty("qualities") val qualities: ArrayList<ChillQualities>? = arrayListOf(),
-    @JsonProperty("subtitles") val subtitles: ArrayList<ChillSubtitles>? = arrayListOf(),
-)
-
-data class ChillSources(
-    @JsonProperty("data") val data: ChillSource? = null,
-)
-
-data class ChillResults(
-    @JsonProperty("id") val id: String,
-    @JsonProperty("domainType") val domainType: Int,
-    @JsonProperty("name") val name: String,
-    @JsonProperty("releaseTime") val releaseTime: String,
-)
-
-data class ChillData(
-    @JsonProperty("results") val results: ArrayList<ChillResults>? = arrayListOf(),
-)
-
-data class ChillSearch(
-    @JsonProperty("data") val data: ChillData? = null,
 )
 
 data class PutlockerEpisodes(

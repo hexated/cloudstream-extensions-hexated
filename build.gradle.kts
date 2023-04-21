@@ -1,5 +1,6 @@
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import com.android.build.gradle.BaseExtension
+//import org.jetbrains.kotlin.konan.properties.Properties
 
 buildscript {
     repositories {
@@ -51,7 +52,7 @@ subprojects {
 //            val properties = Properties()
 //            properties.load(project.rootProject.file("local.properties").inputStream())
 //
-//            buildConfigField("String", "API_KEY", "\"${properties.getProperty("API_KEY")}\"")
+//            buildConfigField("String", "LOKLOK_API", "\"${properties.getProperty("LOKLOK_API")}\"")
 
         }
 

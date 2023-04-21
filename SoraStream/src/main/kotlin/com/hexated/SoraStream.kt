@@ -83,7 +83,8 @@ open class SoraStream : TmdbProvider() {
         const val gdbot = "https://gdbot.xyz"
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
 
-        private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
+        private val apiKey =
+            base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
         /** ALL SOURCES */
         const val twoEmbedAPI = "https://www.2embed.to"
@@ -120,12 +121,14 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww8.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
+        val gomoviesAPI =
+            base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
         const val ask4MoviesAPI = "https://ask4movie.mx"
         const val biliBiliAPI = "https://api-vn.kaguya.app/server"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://api.9animetv.live"
         const val putlockerAPI = "https://ww7.putlocker.vip"
+
         // INDEX SITE
         const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
@@ -146,7 +149,6 @@ open class SoraStream : TmdbProvider() {
         const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
         const val vitoenMovieAPI = "https://openmatte.vitoencodes.workers.dev/0:"
         const val shivamhwAPI = "https://foogle.shivamhw.me"
-        val cryMoviesAPI = base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -429,7 +431,14 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeSeries9(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                invokeSeries9(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeIdlix(
@@ -455,7 +464,13 @@ open class SoraStream : TmdbProvider() {
 //                )
 //            },
             {
-                if (!res.isAnime) invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeFilmxy(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
@@ -471,7 +486,14 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeFmovies(res.title, res.airedYear ?: res.year, res.season, res.episode, subtitleCallback, callback)
+                invokeFmovies(
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
@@ -624,7 +646,13 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeNinetv(res.id, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeNinetv(
+                    res.id,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 if (!res.isAnime) invokeBlackmovies(
@@ -732,7 +760,13 @@ open class SoraStream : TmdbProvider() {
 //                if (!res.isAnime) invokeTgarMovies(res.title, res.year, res.season, res.episode, callback)
 //            },
             {
-                if (!res.isAnime) invokeGdbotMovies(res.title, res.year, res.season, res.episode, callback)
+                if (!res.isAnime) invokeGdbotMovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
             },
             {
                 if (!res.isAnime) invokeJmdkhMovies(
@@ -779,7 +813,14 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeAsk4Movies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeAsk4Movies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeWatchOnline(
@@ -794,7 +835,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if(!res.isAnime) invokeShivamhw(
+                if (!res.isAnime) invokeShivamhw(
                     res.title,
                     res.year,
                     res.season,
@@ -803,7 +844,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if(!res.isAnime && res.season == null) invokeCryMovies(
+                if (!res.isAnime && res.season == null) invokeCryMovies(
                     res.imdbId,
                     res.title,
                     res.year,

@@ -1,6 +1,19 @@
-// use an integer for version numbers
-version = 122
+import org.jetbrains.kotlin.konan.properties.Properties
 
+// use an integer for version numbers
+version = 123
+
+android {
+    defaultConfig {
+        val properties = Properties()
+        properties.load(project.rootProject.file("local.properties").inputStream())
+
+        buildConfigField("String", "SORA_API", "\"${properties.getProperty("SORA_API")}\"")
+        buildConfigField("String", "SORA_WEB", "\"${properties.getProperty("SORA_WEB")}\"")
+        buildConfigField("String", "CRY_API", "\"${properties.getProperty("CRY_API")}\"")
+
+    }
+}
 
 cloudstream {
     language = "en"
