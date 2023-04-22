@@ -40,6 +40,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
+      - name: Access SORA_API
+        env:
+          SORA_API: $
+        run: echo SORA_API=\"$SORA_API\" > ./local.properties
+
       - name: Build Plugins
         run: |
           cd $GITHUB_WORKSPACE/src

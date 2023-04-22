@@ -149,6 +149,7 @@ open class SoraStream : TmdbProvider() {
         const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
         const val vitoenMovieAPI = "https://openmatte.vitoencodes.workers.dev/0:"
         const val shivamhwAPI = "https://foogle.shivamhw.me"
+        val cryMoviesAPI = base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
 
         fun getType(t: String?): TvType {
             return when (t) {

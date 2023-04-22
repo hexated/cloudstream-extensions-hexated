@@ -661,7 +661,7 @@ object SoraExtractor : SoraStream() {
                     this.name,
                     this.name,
                     media?.mediaUrl ?: return@map null,
-                    "${BuildConfig.SORA_WEB}/",
+                    base64DecodeAPI("Lw==b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ="),
                     getSoraQuality(media.currentDefinition ?: ""),
                     true,
                 )
@@ -2892,7 +2892,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        app.get("${BuildConfig.CRY_API}/stream/movie/$imdbId.json")
+        app.get("${cryMoviesAPI}/stream/movie/$imdbId.json")
             .parsedSafe<CryMoviesResponse>()?.streams?.filter {
                 matchingIndex(
                     it.title,
