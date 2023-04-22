@@ -1,6 +1,5 @@
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import com.android.build.gradle.BaseExtension
-//import org.jetbrains.kotlin.konan.properties.Properties
 
 buildscript {
     repositories {
@@ -42,25 +41,12 @@ subprojects {
         authors = listOf("Hexated")
     }
 
-//    fun getApiKey(key: String): String {
-//        val propFile = rootProject.file("./local.properties")
-//        val properties = java.util.Properties()
-//        properties.load(java.io.FileInputStream(propFile))
-//        return properties.getProperty(key)
-//    }
-
     android {
         compileSdkVersion(33)
 
         defaultConfig {
             minSdk = 21
             targetSdk = 33
-
-//            val properties = Properties()
-//            properties.load(project.rootProject.file("local.properties").inputStream())
-//
-//            buildConfigField("String", "LOKLOK_API", "\"${properties.getProperty("LOKLOK_API")}\"")
-//            buildConfigField("String", "SORA_API", "\"${getApiKey("SORA_API")}\"")
 
         }
 
