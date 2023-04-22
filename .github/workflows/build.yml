@@ -43,7 +43,7 @@ jobs:
       - name: Access SORA_API
         env:
           SORA_API: $
-        run: echo SORA_API=\"$SORA_API\" > ./local.properties
+        run: echo SORA_API=\"$SORA_API\" > $GITHUB_WORKSPACE/src/local.properties
 
       - name: Build Plugins
         run: |
