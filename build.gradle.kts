@@ -42,12 +42,12 @@ subprojects {
         authors = listOf("Hexated")
     }
 
-    fun getApiKey(key: String): String {
-        val propFile = rootProject.file("./local.properties")
-        val properties = java.util.Properties()
-        properties.load(java.io.FileInputStream(propFile))
-        return properties.getProperty(key)
-    }
+//    fun getApiKey(key: String): String {
+//        val propFile = rootProject.file("./local.properties")
+//        val properties = java.util.Properties()
+//        properties.load(java.io.FileInputStream(propFile))
+//        return properties.getProperty(key)
+//    }
 
     android {
         compileSdkVersion(33)
@@ -60,7 +60,7 @@ subprojects {
 //            properties.load(project.rootProject.file("local.properties").inputStream())
 //
 //            buildConfigField("String", "LOKLOK_API", "\"${properties.getProperty("LOKLOK_API")}\"")
-            buildConfigField("String", "SORA_API", "\"${getApiKey("SORA_API")}\"")
+//            buildConfigField("String", "SORA_API", "\"${getApiKey("SORA_API")}\"")
 
         }
 
