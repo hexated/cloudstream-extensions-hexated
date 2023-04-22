@@ -5,10 +5,11 @@ version = 122
 
 android {
     defaultConfig {
-        val properties = Properties()
-        properties.load(project.rootProject.file("local.properties").inputStream())
+//        val properties = Properties()
+//        properties.load(project.rootProject.file("local.properties").inputStream())
+//
+//        buildConfigField("String", "SORA_API", "\"${properties.getProperty("SORA_API")}\"")
 
-        buildConfigField("String", "SORA_API", "\"${properties.getProperty("SORA_API")}\"")
 
     }
 }
