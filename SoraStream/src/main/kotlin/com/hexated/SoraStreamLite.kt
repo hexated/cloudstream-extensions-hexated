@@ -64,16 +64,16 @@ class SoraStreamLite : SoraStream() {
                     subtitleCallback
                 )
             },
-            {
-                invokeSoraStream(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeSoraStream(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokeNinetv(
                     res.id,

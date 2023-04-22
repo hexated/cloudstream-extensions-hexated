@@ -369,16 +369,16 @@ open class SoraStream : TmdbProvider() {
         val res = parseJson<LinkData>(data)
 
         argamap(
-            {
-                invokeSoraStream(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeSoraStream(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
             },
