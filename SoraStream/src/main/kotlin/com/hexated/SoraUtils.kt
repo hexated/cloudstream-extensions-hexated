@@ -29,6 +29,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.nodes.Document
 import java.net.URI
 import java.net.URL
+import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -40,8 +41,9 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
 import kotlin.math.min
 
-val soraAPI =
-    base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
+val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
+val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
+val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 val soraHeaders = mapOf(
     "lang" to "en",
@@ -395,6 +397,21 @@ suspend fun getDirectGdrive(url: String): String {
         )
     ).url
 
+}
+
+suspend fun invokeVizcloud(
+    url: String,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val id = Regex("(?:embed-|/e/)([^?]*)").find(url)?.groupValues?.getOrNull(1)
+    app.get("https://api.consumet.org/anime/9anime/helper?query=${id ?: return}&action=vizcloud")
+        .parsedSafe<VizcloudResponses>()?.data?.media?.sources?.map {
+            M3u8Helper.generateM3u8(
+                "Vizcloud",
+                it.file ?: return@map,
+                "${getBaseUrl(url)}/"
+            ).forEach(callback)
+        }
 }
 
 suspend fun invokeSmashyOne(
@@ -1154,13 +1171,18 @@ fun getDeviceId(length: Int = 16): String {
 fun encodeVrf(query: String): String {
     return encode(
         encryptVrf(
-            cipherVrf("DZmuZuXqa9O0z3b7", encode(query)),
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+            cipherVrf(bflixChipperKey, encode(query)),
+            bflixKey
         )
     )
 }
 
-fun encryptVrf(input: String, key: String): String {
+fun decodeVrf(text: String): String {
+    return decode(cipherVrf(bflixChipperKey, decryptVrf(text, bflixKey)))
+}
+
+@Suppress("SameParameterValue")
+private fun encryptVrf(input: String, key: String): String {
     if (input.any { it.code > 255 }) throw Exception("illegal characters!")
     var output = ""
     for (i in input.indices step 3) {
@@ -1183,6 +1205,42 @@ fun encryptVrf(input: String, key: String): String {
         }
     }
     return output
+}
+
+@Suppress("SameParameterValue")
+private fun decryptVrf(input: String, key: String): String {
+    val t = if (input.replace("""[\t\n\f\r]""".toRegex(), "").length % 4 == 0) {
+        input.replace("""==?$""".toRegex(), "")
+    } else input
+    if (t.length % 4 == 1 || t.contains("""[^+/0-9A-Za-z]""".toRegex())) throw Exception("bad input")
+    var i: Int
+    var r = ""
+    var e = 0
+    var u = 0
+    for (o in t.indices) {
+        e = e shl 6
+        i = key.indexOf(t[o])
+        e = e or i
+        u += 6
+        if (24 == u) {
+            r += ((16711680 and e) shr 16).toChar()
+            r += ((65280 and e) shr 8).toChar()
+            r += (255 and e).toChar()
+            e = 0
+            u = 0
+        }
+    }
+    return if (12 == u) {
+        e = e shr 4
+        r + e.toChar()
+    } else {
+        if (18 == u) {
+            e = e shr 2
+            r += ((65280 and e) shr 8).toChar()
+            r += (255 and e).toChar()
+        }
+        r
+    }
 }
 
 fun cipherVrf(key: String, text: String): String {
@@ -1224,6 +1282,8 @@ fun getBaseUrl(url: String): String {
 fun String.decodeBase64(): String {
     return Base64.decode(this, Base64.DEFAULT).toString(Charsets.UTF_8)
 }
+
+fun decode(input: String): String = URLDecoder.decode(input, "utf-8")
 
 fun encode(input: String): String = URLEncoder.encode(input, "utf-8").replace("+", "%20")
 

@@ -100,9 +100,7 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
-        const val consumetFmoviesAPI = "https://api.consumet.org/movies/fmovies"
         const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
-        const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream" // dead
         const val allanimeAPI = "https://api.allanime.to"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
@@ -121,21 +119,15 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww8.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        val gomoviesAPI =
-            base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
+        val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
         const val ask4MoviesAPI = "https://ask4movie.mx"
         const val biliBiliAPI = "https://api-vn.kaguya.app/server"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://api.9animetv.live"
         const val putlockerAPI = "https://ww7.putlocker.vip"
+        const val fmoviesAPI = "https://fmovies.to"
 
         // INDEX SITE
-        const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
-        const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
-        const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
-        const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:" // dead
-        const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:" // dead
-        const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:" // dead
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
         const val rinzryMoviesAPI = "https://rinzry.stream/0:"
         const val codexMoviesAPI = "https://packs.codexcloudx.tech/0:"
@@ -143,13 +135,22 @@ open class SoraStream : TmdbProvider() {
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
-        const val tgarMovieAPI = "https://tgarchive.eu.org" // dead
         const val jmdkhMovieAPI = "https://tg.jmdkh.eu.org/0:"
         const val rubyMovieAPI = "https://upload.rubyshare111.workers.dev/0:"
         const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
         const val vitoenMovieAPI = "https://openmatte.vitoencodes.workers.dev/0:"
         const val shivamhwAPI = "https://foogle.shivamhw.me"
         val cryMoviesAPI = base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
+
+        // DEAD SITE
+        const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream" // dead
+        const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
+        const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
+        const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:" // dead
+        const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:" // dead
+        const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:" // dead
+        const val tgarMovieAPI = "https://tgarchive.eu.org" // dead
+        const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
 
         fun getType(t: String?): TvType {
             return when (t) {

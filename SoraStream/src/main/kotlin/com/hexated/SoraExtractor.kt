@@ -732,8 +732,8 @@ object SoraExtractor : SoraStream() {
     ) {
         val query = title?.replace(Regex("[^\\w-\\s]"), "")
         val html =
-            app.get("https://fmovies.to/ajax/film/search?vrf=${encodeVrf("$query")}&keyword=$query")
-                .parsedSafe<FmoviesSearch>()?.html
+            app.get("$fmoviesAPI/ajax/film/search?vrf=${encodeVrf("$query")}&keyword=$query")
+                .parsedSafe<FmoviesResponses>()?.html
 
         val mediaId = Jsoup.parse(html ?: return).select("a.item").map {
             Triple(
@@ -748,7 +748,7 @@ object SoraExtractor : SoraStream() {
                 it.first.contains("/series/")
             } && (it.second.equals(title, true) || it.second.createSlug()
                 .equals(title.createSlug())) && it.third.toInt() == year
-        }?.first ?: return
+        }?.first?.substringAfterLast("-") ?: return
 
         val episodeId = if (season == null) {
             "1-full"
@@ -756,32 +756,32 @@ object SoraExtractor : SoraStream() {
             "$season-$episode"
         }
 
-        val sources = app.get(
-            "$consumetFmoviesAPI/watch?mediaId=${mediaId.removePrefix("/")}&episodeId=$episodeId"
-        ).parsedSafe<ConsumetSourcesResponse>()
+        val serversKname =
+            app.get("$fmoviesAPI/ajax/film/servers?id=$mediaId&vrf=${encodeVrf(mediaId)}")
+                .parsedSafe<FmoviesResponses>()?.html?.let { Jsoup.parse(it) }
+                ?.selectFirst("a[data-kname=$episodeId]")?.attr("data-ep")
 
-        sources?.sources?.map {
-            callback.invoke(
-                ExtractorLink(
-                    "Vizcloud",
-                    "Vizcloud",
-                    it.url ?: return@map null,
-                    sources.headers?.referer ?: "",
-                    getQualityFromName(it.quality),
-                    it.isM3U8 ?: true
-                )
-            )
+        val servers = tryParseJson<HashMap<String, String>>(serversKname)
+
+        servers?.apmap { server ->
+            val decryptServer = app.get("$fmoviesAPI/ajax/episode/info?id=${server.value}")
+                .parsedSafe<FmoviesResponses>()?.url?.let { decodeVrf(it) } ?: return@apmap
+            if (server.key == "41") {
+                invokeVizcloud(decryptServer, callback)
+            } else {
+                loadExtractor(decryptServer, fmoviesAPI, subtitleCallback, callback)
+            }
         }
 
-        sources?.subtitles?.map {
+        val sub = app.get("$fmoviesAPI/ajax/episode/subtitles/${servers?.get("28") ?: return}").text
+        tryParseJson<List<FmoviesSubtitles>>(sub)?.map {
             subtitleCallback.invoke(
                 SubtitleFile(
-                    it.lang ?: "", it.url ?: return@map null
+                    it.label ?: "",
+                    it.file ?: return@map
                 )
             )
         }
-
-
     }
 
     suspend fun invokeKisskh(
@@ -3403,6 +3403,28 @@ data class DudetvSources(
     @JsonProperty("title") val title: String? = null,
 )
 
-data class FmoviesSearch(
+data class FmoviesResponses(
     @JsonProperty("html") val html: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class FmoviesSubtitles(
+    @JsonProperty("label") val label: String? = null,
+    @JsonProperty("file") val file: String? = null,
+)
+
+data class VizcloudSources(
+    @JsonProperty("file") val file: String? = null,
+)
+
+data class VizcloudMedia(
+    @JsonProperty("sources") val sources: ArrayList<VizcloudSources>? = arrayListOf(),
+)
+
+data class VizcloudData(
+    @JsonProperty("media") val media: VizcloudMedia? = null,
+)
+
+data class VizcloudResponses(
+    @JsonProperty("data") val data: VizcloudData? = null,
 )
