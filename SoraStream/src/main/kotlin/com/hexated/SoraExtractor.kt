@@ -2844,7 +2844,7 @@ object SoraExtractor : SoraStream() {
                 Triple(
                     it.select("td[data-th=File Name]").text(),
                     it.select("td[data-th=Size]").text(),
-                    it.select("div.play_with_vlc_button > a").lastOrNull()?.attr("href")
+                    it.selectFirst("div.play_with_vlc_button > a")?.attr("href")
                 )
             }
         } else {
@@ -2852,7 +2852,7 @@ object SoraExtractor : SoraStream() {
                 Triple(
                     it.name,
                     it.size,
-                    it.stream_link,
+                    it.process_link,
                 )
             }
         }
@@ -2872,13 +2872,18 @@ object SoraExtractor : SoraStream() {
         }?.apmap { source ->
             val quality = getIndexQuality(source.first)
             val tags = getIndexQualityTags(source.first)
-            val video = source.third?.removePrefix("vlc://") ?: return@apmap
-            if(!app.get(video).isSuccessful) return@apmap
+            val video = app.get(
+                fixUrl(
+                    source.third ?: return@apmap,
+                    shivamhwAPI
+                )
+            ).document.selectFirst("table.rwd-table tr:contains(Direct Download Link) a")
+                ?.attr("href")
             callback.invoke(
                 ExtractorLink(
                     "Shivamhw",
                     "Shivamhw $tags [${source.second}]",
-                    video,
+                    video ?: return@apmap,
                     "",
                     quality,
                 )
@@ -3378,6 +3383,7 @@ data class AllanimeResponses(
 data class ShivamhwSources(
     @JsonProperty("id") val id: String? = null,
     @JsonProperty("stream_link") val stream_link: String? = null,
+    @JsonProperty("process_link") val process_link: String? = null,
     @JsonProperty("name") val name: String,
     @JsonProperty("size") val size: String,
 )
