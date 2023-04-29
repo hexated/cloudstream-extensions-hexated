@@ -2865,7 +2865,7 @@ object SoraExtractor : SoraStream() {
                 year,
                 season,
                 episode,
-                true
+                false
             )
         }?.sortedByDescending {
             it.second.getFileSize()
