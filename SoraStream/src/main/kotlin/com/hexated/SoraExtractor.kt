@@ -2869,11 +2869,11 @@ object SoraExtractor : SoraStream() {
             )
         }?.sortedByDescending {
             it.second.getFileSize()
-        }?.map { source ->
+        }?.apmap { source ->
             val quality = getIndexQuality(source.first)
             val tags = getIndexQualityTags(source.first)
-            val video = source.third?.removePrefix("vlc://") ?: return@map
-            if(!app.get(video).isSuccessful) return@map
+            val video = source.third?.removePrefix("vlc://") ?: return@apmap
+            if(!app.get(video).isSuccessful) return@apmap
             callback.invoke(
                 ExtractorLink(
                     "Shivamhw",
