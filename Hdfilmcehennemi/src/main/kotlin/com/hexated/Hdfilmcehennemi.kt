@@ -168,25 +168,20 @@ class Hdfilmcehennemi : MainAPI() {
             url,
             referer = "${mainUrl}/"
         ).document.select("script")
-            .find { it.data().contains("sources:") }?.data()
-        val videoData = script?.substringAfter("sources: [")
-            ?.substringBefore("],")?.addMarks("file")
-        val subData = script?.substringAfter("tracks: [")?.substringBefore("]")?.addMarks("file")
-            ?.addMarks("label")?.addMarks("kind")
+            .find { it.data().contains("sources:") }?.data() ?: return
+        val videoData = getAndUnpack(script).substringAfter("file_link=\"").substringBefore("\";")
+        val subData = script.substringAfter("tracks: [").substringBefore("]")
 
-        tryParseJson<Source>(videoData)?.file?.let { m3uLink ->
-            callback.invoke(
-                ExtractorLink(
-                    source,
-                    source,
-                    m3uLink,
-                    "$mainUrl/",
-                    Qualities.Unknown.value,
-                    true
-                )
-
+        callback.invoke(
+            ExtractorLink(
+                source,
+                source,
+                base64Decode(videoData),
+                "$mainUrl/",
+                Qualities.Unknown.value,
+                true
             )
-        }
+        )
 
         tryParseJson<List<SubSource>>("[${subData}]")
             ?.filter { it.kind == "captions" }?.map {

@@ -2872,11 +2872,13 @@ object SoraExtractor : SoraStream() {
         }?.map { source ->
             val quality = getIndexQuality(source.first)
             val tags = getIndexQualityTags(source.first)
+            val video = source.third?.removePrefix("vlc://") ?: return@map
+            if(!app.get(video).isSuccessful) return@map
             callback.invoke(
                 ExtractorLink(
                     "Shivamhw",
                     "Shivamhw $tags [${source.second}]",
-                    source.third?.removePrefix("vlc://") ?: return@map,
+                    video,
                     "",
                     quality,
                 )
