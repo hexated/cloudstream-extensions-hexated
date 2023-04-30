@@ -936,9 +936,9 @@ object SoraExtractor : SoraStream() {
             )
             app.get(serverUrl)
                 .parsedSafe<AllanimeLinks>()?.links?.filter { it.resolutionStr == "RAW" && it.hls == true }?.forEach { source ->
-                    val tlName = if (translation == "sub") "Raw" else "English Dub"
+                    val translation = if (tl == "sub") "Raw" else "English Dub"
                     M3u8Helper.generateM3u8(
-                        "Vrv [$tlName]",
+                        "Vrv [$translation]",
                         source.link ?: return@apmap,
                         "https://static.crunchyroll.com/",
                     ).forEach(callback)
