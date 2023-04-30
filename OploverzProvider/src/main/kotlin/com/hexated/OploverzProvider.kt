@@ -216,7 +216,7 @@ class OploverzProvider : MainAPI() {
                         link.name,
                         link.url,
                         link.referer,
-                        if (source.startsWith(acefile)) getQualityFromName(quality) else link.quality,
+                        getQualityFromName(quality),
                         link.isM3u8,
                         link.headers,
                         link.extractorData

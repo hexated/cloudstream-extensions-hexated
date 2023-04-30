@@ -9,7 +9,7 @@ import java.util.ArrayList
 
 
 class Gomunimeis : MainAPI() {
-    override var mainUrl = "https://gomunime.is"
+    override var mainUrl = "https://anoboy.life"
     override var name = "Gomunime.is"
     override val hasMainPage = true
     override var lang = "id"
@@ -66,7 +66,7 @@ class Gomunimeis : MainAPI() {
 
         return newAnimeSearchResponse(
             postTitle ?: return null,
-            "$mainUrl/anime/$postName.$salt",
+            "$mainUrl/anime/$postName",
             TvType.TvSeries,
         ) {
             this.posterUrl = "$mainImageUrl/$image"

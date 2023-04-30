@@ -932,21 +932,16 @@ object SoraExtractor : SoraStream() {
                 .parsedSafe<AllanimeResponses>()?.data?.episode?.sourceUrls?.find { it.sourceName == "Ac" }
             val serverUrl = fixUrl(
                 server?.sourceUrl?.replace("/clock", "/clock.json") ?: return@apmap,
-                if(tl == "sub") "https://allanimenews.com" else "https://mblog.allanimenews.com"
+                "https://blog.allanime.pro"
             )
             app.get(serverUrl)
-                .parsedSafe<AllanimeLinks>()?.links?.forEach { link ->
-                    link.portData?.streams?.filter {
-                        (it.format == "adaptive_hls" || it.format == "vo_adaptive_hls") && it.hardsub_lang.isNullOrEmpty()
-                    }?.forEach { source ->
-                        val name = if (source.format == "vo_adaptive_hls") "Vrv" else "Crunchyroll"
-                        val translation = if (tl == "sub") "Raw" else "English Dub"
-                        M3u8Helper.generateM3u8(
-                            "$name [$translation]",
-                            source.url ?: return@apmap,
-                            "https://static.crunchyroll.com/",
-                        ).forEach(callback)
-                    }
+                .parsedSafe<AllanimeLinks>()?.links?.filter { it.resolutionStr == "RAW" && it.hls == true }?.forEach { source ->
+                    val tlName = if (translation == "sub") "Raw" else "English Dub"
+                    M3u8Helper.generateM3u8(
+                        "Vrv [$tlName]",
+                        source.link ?: return@apmap,
+                        "https://static.crunchyroll.com/",
+                    ).forEach(callback)
                 }
 
         }
@@ -3328,7 +3323,11 @@ data class AllanimePortData(
 )
 
 data class AllanimeLink(
-    @JsonProperty("portData") val portData: AllanimePortData? = null
+    @JsonProperty("portData") val portData: AllanimePortData? = null,
+    @JsonProperty("resolutionStr") val resolutionStr: String? = null,
+    @JsonProperty("src") val src: String? = null,
+    @JsonProperty("link") val link: String? = null,
+    @JsonProperty("hls") val hls: Boolean? = null,
 )
 
 data class AllanimeLinks(
