@@ -104,7 +104,7 @@ open class SoraStream : TmdbProvider() {
         const val allanimeAPI = "https://api.allanime.to"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.vip"
+        const val uhdmoviesAPI = "https://uhdmovies.one"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
