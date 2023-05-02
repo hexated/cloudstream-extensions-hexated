@@ -50,7 +50,6 @@ class Loklok : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val home = ArrayList<HomePageList>()
         for (i in 0..6) {
-//            delay(500)
             app.get("$apiUrl/homePage/getHome?page=$i", headers = headers)
                 .parsedSafe<Home>()?.data?.recommendItems.orEmpty().ifEmpty { throw ErrorLoadingException(geoblockError) }
                 .filterNot { it.homeSectionType == "BLOCK_GROUP" }
