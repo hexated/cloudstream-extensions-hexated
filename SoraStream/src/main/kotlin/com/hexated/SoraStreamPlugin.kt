@@ -20,5 +20,8 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Watchx())
         registerExtractorAPI(StreamhideCom())
         registerExtractorAPI(Movhide())
+        registerExtractorAPI(Moviesm4u())
+        registerExtractorAPI(Fembed9hd())
+        registerExtractorAPI(Sbasian())
     }
 }

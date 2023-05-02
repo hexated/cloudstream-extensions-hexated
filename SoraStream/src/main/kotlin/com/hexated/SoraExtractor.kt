@@ -865,6 +865,7 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeAnimes(
         id: Int? = null,
         title: String? = null,
+        jpTitle: String? = null,
         epsTitle: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -894,48 +895,60 @@ object SoraExtractor : SoraStream() {
                 invokeBiliBili(aniId, episode, subtitleCallback, callback)
             },
             {
-                if (season != null) invokeAllanime(aniId, episode, callback)
+                if (season != null) invokeAllanime(aniId, title, jpTitle, episode, callback)
             }
         )
     }
 
     private suspend fun invokeAllanime(
         aniId: String? = null,
+        title: String? = null,
+        jpTitle: String? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val searchHash = "b645a686b1988327795e1203867ed24f27c6338b41e5e3412fc1478a8ab6774e"
-        val serverHash = "0ac09728ee9d556967c1a60bbcf55a9f58b4112006d09a258356aeafe1c33889"
-
-        val aniDetail = app.get("$consumetAnilistAPI/info/$aniId").parsedSafe<ConsumetDetails>()
-
-        val searchQuaery =
-            """$allanimeAPI/allanimeapi?variables={"search":{"query":"${aniDetail?.title?.romaji ?: return}","allowAdult":false,"allowUnknown":false},"limit":26,"page":1,"translationType":"sub","countryOrigin":"ALL"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$searchHash"}}"""
-        val id = app.get(searchQuaery)
-            .parsedSafe<AllanimeResponses>()?.data?.shows?.edges?.find {
-                it.thumbnail == aniDetail.cover || it.thumbnail == aniDetail.image || ((it.name?.equals(
-                    aniDetail.title.romaji,
-                    true
-                ) == true || it.englishName?.equals(
-                    aniDetail.title.romaji,
-                    true
-                ) == true) && it.airedStart?.year == aniDetail.releaseDate)
-            }?._id
+        val aniDetail = app.get("$consumetAnilistAPI/info/$aniId").parsedSafe<ConsumetDetails>() ?: return
+        val edges = app.get(allanimeQueries("""{"search":{"query":"$title","allowAdult":false,"allowUnknown":false},"limit":26,"page":1,"translationType":"sub","countryOrigin":"ALL"}""", allanimeSearchQuery))
+            .parsedSafe<AllanimeResponses>()?.data?.shows?.edges
+        val id = edges?.let { edge ->
+            if (edges.size == 1) {
+                edge.firstOrNull()
+            } else {
+                edge.find {
+                    (it.thumbnail == aniDetail.cover || it.thumbnail == aniDetail.image) || (
+                            (it.name.equals(
+                                aniDetail.title?.romaji,
+                                true
+                            ) || it.name.equals(
+                                jpTitle,
+                                true
+                            ) || it.englishName.equals(aniDetail.title?.english, true))
+                                    && it.airedStart?.year == aniDetail.releaseDate)
+                } ?: edge.find {
+                    it.name.equals(
+                        aniDetail.title?.romaji,
+                        true
+                    ) || it.name.equals(
+                        jpTitle,
+                        true
+                    ) || it.englishName.equals(aniDetail.title?.english, true) || it.englishName.equals(title, true)
+                }
+            }
+        }?._id ?: return
 
         listOf(
             "sub",
             "dub"
         ).apmap { tl ->
-            val serverQuery =
-                """$allanimeAPI/allanimeapi?variables={"showId":"${id ?: return@apmap}","translationType":"$tl","episodeString":"$episode"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$serverHash"}}"""
-            val server = app.get(serverQuery)
+            val server = app.get(allanimeQueries("""{"showId":"$id","translationType":"$tl","episodeString":"$episode"}""", allanimeServerQuery))
                 .parsedSafe<AllanimeResponses>()?.data?.episode?.sourceUrls?.find { it.sourceName == "Ac" }
             val serverUrl = fixUrl(
                 server?.sourceUrl?.replace("/clock", "/clock.json") ?: return@apmap,
                 "https://blog.allanime.pro"
             )
             app.get(serverUrl)
-                .parsedSafe<AllanimeLinks>()?.links?.filter { it.resolutionStr == "RAW" && it.hls == true }?.forEach { source ->
+                .parsedSafe<AllanimeLinks>()?.links?.filter { it.resolutionStr == "RAW" && it.hls == true }
+                ?.forEach { source ->
                     val translation = if (tl == "sub") "Raw" else "English Dub"
                     M3u8Helper.generateM3u8(
                         "Vrv [$translation]",
@@ -1470,7 +1483,7 @@ object SoraExtractor : SoraStream() {
         val doc = request.document
         val token = doc.selectFirst("meta[name=csrf-token]")?.attr("content")
         val m4uData = if (season == null) {
-            doc.select("div.le-server span#fem").attr("data")
+            doc.select("div.le-server span").map { it.attr("data") }
         } else {
             val episodeData =
                 doc.selectFirst("div.col-lg-9.col-xl-9 p:matches((?i)S0?$season-E0?$episode$)")
@@ -1493,26 +1506,28 @@ object SoraExtractor : SoraStream() {
             session =
                 cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
                     ?.substringBefore(";")
-            requestEmbed.document.select("span#fem").attr("data")
+            requestEmbed.document.select("div.le-server span").map { it.attr("data") }
         }
 
-        val iframe = app.post(
-            "$m4uhdAPI/ajax",
-            data = mapOf(
-                "m4u" to m4uData, "_token" to "$token"
-            ),
-            referer = link,
-            headers = mapOf(
-                "Accept" to "*/*",
-                "X-Requested-With" to "XMLHttpRequest",
-            ),
-            cookies = mapOf(
-                "laravel_session" to "$session",
-                "XSRF-TOKEN" to "$xsrf",
-            ),
-        ).document.select("iframe").attr("src")
+        m4uData.apmap { data ->
+            val iframe = app.post(
+                "$m4uhdAPI/ajax",
+                data = mapOf(
+                    "m4u" to data, "_token" to "$token"
+                ),
+                referer = link,
+                headers = mapOf(
+                    "Accept" to "*/*",
+                    "X-Requested-With" to "XMLHttpRequest",
+                ),
+                cookies = mapOf(
+                    "laravel_session" to "$session",
+                    "XSRF-TOKEN" to "$xsrf",
+                ),
+            ).document.select("iframe").attr("src")
 
-        loadExtractor(iframe, m4uhdAPI, subtitleCallback, callback)
+            loadExtractor(iframe, m4uhdAPI, subtitleCallback, callback)
+        }
 
     }
 

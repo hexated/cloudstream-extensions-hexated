@@ -243,10 +243,11 @@ open class SoraStream : TmdbProvider() {
     override suspend fun load(url: String): LoadResponse? {
         val data = parseJson<Data>(url)
         val type = getType(data.type)
+        val append = "alternative_titles,credits,external_ids,keywords,videos,recommendations"
         val resUrl = if (type == TvType.Movie) {
-            "$tmdbAPI/movie/${data.id}?api_key=$apiKey&append_to_response=keywords,credits,external_ids,videos,recommendations"
+            "$tmdbAPI/movie/${data.id}?api_key=$apiKey&append_to_response=$append"
         } else {
-            "$tmdbAPI/tv/${data.id}?api_key=$apiKey&append_to_response=keywords,credits,external_ids,videos,recommendations"
+            "$tmdbAPI/tv/${data.id}?api_key=$apiKey&append_to_response=$append"
         }
         val res = app.get(resUrl).parsedSafe<MediaDetail>()
             ?: throw ErrorLoadingException("Invalid Json Response")
@@ -297,6 +298,7 @@ open class SoraStream : TmdbProvider() {
                                 airedYear = year,
                                 lastSeason = lastSeason,
                                 epsTitle = eps.name,
+                                jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title
                             ).toJson(),
                             name = eps.name,
                             season = eps.seasonNumber,
@@ -339,6 +341,7 @@ open class SoraStream : TmdbProvider() {
                     year = year,
                     orgTitle = orgTitle,
                     isAnime = isAnime,
+                    jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title
                 ).toJson(),
             ) {
                 this.posterUrl = poster
@@ -405,6 +408,7 @@ open class SoraStream : TmdbProvider() {
                 if (res.isAnime) invokeAnimes(
                     res.id,
                     res.title,
+                    res.jpTitle,
                     res.epsTitle,
                     res.airedYear ?: res.year,
                     res.season,
@@ -875,6 +879,7 @@ open class SoraStream : TmdbProvider() {
         val airedYear: Int? = null,
         val lastSeason: Int? = null,
         val epsTitle: String? = null,
+        val jpTitle: String? = null,
     )
 
     data class Data(
@@ -951,6 +956,16 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("results") val results: ArrayList<Trailers>? = arrayListOf(),
     )
 
+    data class AltTitles(
+        @JsonProperty("iso_3166_1") val iso_3166_1: String? = null,
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("type") val type: String? = null,
+    )
+
+    data class ResultsAltTitles(
+        @JsonProperty("results") val results: ArrayList<AltTitles>? = arrayListOf(),
+    )
+
     data class ExternalIds(
         @JsonProperty("imdb_id") val imdb_id: String? = null,
         @JsonProperty("tvdb_id") val tvdb_id: String? = null,
@@ -993,6 +1008,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("external_ids") val external_ids: ExternalIds? = null,
         @JsonProperty("credits") val credits: Credits? = null,
         @JsonProperty("recommendations") val recommendations: ResultsRecommendations? = null,
+        @JsonProperty("alternative_titles") val alternative_titles: ResultsAltTitles? = null,
     )
 
     data class EmbedJson(

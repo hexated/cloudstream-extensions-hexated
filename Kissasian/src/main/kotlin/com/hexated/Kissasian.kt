@@ -3,6 +3,7 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
@@ -96,18 +97,6 @@ class Kissasian : MainAPI() {
         }
     }
 
-    private suspend fun invokeDembedSource(
-        url: String,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val document = app.get(url).document
-        document.select("ul.list-server-items li").map {
-            val iframe = it.attr("data-video").substringBefore("=http")
-            loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
-        }
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -116,21 +105,34 @@ class Kissasian : MainAPI() {
     ): Boolean {
 
         val document = app.get(data).document
+        val server = document.selectFirst("select#selectServer option")?.attr("value")
+        val iframe = app.get(httpsify(server ?: return false))
+        val iframeDoc = iframe.document
 
-        document.select("select#selectServer option").apmap {
-            safeApiCall {
-                val iframe = fixUrl(it.attr("value"))
-
-                when {
-                    iframe.startsWith("https://dembed2.com") -> invokeDembedSource(
-                        iframe,
-                        subtitleCallback,
-                        callback
-                    )
-                    else -> loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
+        argamap({
+            iframeDoc.select(".list-server-items > .linkserver")
+                .forEach { element ->
+                    val status = element.attr("data-status") ?: return@forEach
+                    if (status != "1") return@forEach
+                    val extractorData = element.attr("data-video") ?: return@forEach
+                    loadExtractor(extractorData, iframe.url, subtitleCallback, callback)
                 }
-            }
-        }
+        }, {
+            val iv = "9262859232435825"
+            val secretKey = "93422192433952489752342908585752"
+            val secretDecryptKey = secretKey
+            GogoExtractor.extractVidstream(
+                iframe.url,
+                this.name,
+                callback,
+                iv,
+                secretKey,
+                secretDecryptKey,
+                isUsingAdaptiveKeys = false,
+                isUsingAdaptiveData = true,
+                iframeDocument = iframeDoc
+            )
+        })
 
         return true
     }

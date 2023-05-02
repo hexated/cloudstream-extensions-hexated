@@ -108,6 +108,7 @@ class SoraStreamLite : SoraStream() {
                 if (res.isAnime) invokeAnimes(
                     res.id,
                     res.title,
+                    res.jpTitle,
                     res.epsTitle,
                     res.airedYear ?: res.year,
                     res.season,

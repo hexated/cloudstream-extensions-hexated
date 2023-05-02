@@ -15,6 +15,21 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
+class Sbasian : StreamSB() {
+    override var mainUrl = "https://sbasian.pro"
+    override var name = "Sbasian"
+}
+
+class Fembed9hd : XStreamCdn() {
+    override var mainUrl = "https://fembed9hd.com"
+    override var name = "Fembed9hd"
+}
+
+class Moviesm4u : Filesim() {
+    override val mainUrl = "https://moviesm4u.com"
+    override val name = "Moviesm4u"
+}
+
 class Sbnet : StreamSB() {
     override var name = "Sbnet"
     override var mainUrl = "https://sbnet.one"

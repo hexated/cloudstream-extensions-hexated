@@ -2,6 +2,7 @@ package com.hexated
 
 import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.SoraStream.Companion.allanimeAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
 import com.hexated.SoraStream.Companion.baymoviesAPI
 import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
@@ -44,14 +45,55 @@ import kotlin.math.min
 val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
 val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
 val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-
 val soraHeaders = mapOf(
     "lang" to "en",
     "versioncode" to "33",
     "clienttype" to "android_Official",
     "deviceid" to getDeviceId(),
 )
-
+val allanimeSearchQuery = """
+        query(
+                ${'$'}search: SearchInput
+                ${'$'}limit: Int
+                ${'$'}page: Int
+                ${'$'}translationType: VaildTranslationTypeEnumType
+                ${'$'}countryOrigin: VaildCountryOriginEnumType
+            ) {
+            shows(
+                search: ${'$'}search
+                limit: ${'$'}limit
+                page: ${'$'}page
+                translationType: ${'$'}translationType
+                countryOrigin: ${'$'}countryOrigin
+            ) {
+                pageInfo {
+                    total
+                }
+                edges {
+                    _id
+                    name
+                    thumbnail
+                    englishName
+                    nativeName
+                }
+            }
+        }
+    """.trimIndent().trim()
+val allanimeServerQuery = """
+        query(
+                ${'$'}showId: String!,
+                ${'$'}translationType: VaildTranslationTypeEnumType!,
+                ${'$'}episodeString: String!
+            ) {
+            episode(
+                showId: ${'$'}showId
+                translationType: ${'$'}translationType
+                episodeString: ${'$'}episodeString
+            ) {
+                sourceUrls
+            }
+        }
+    """.trimIndent().trim()
 val encodedIndex = arrayOf(
     "GamMovies",
     "JSMovies",
@@ -1042,6 +1084,10 @@ fun String.decryptGomoviesJson(key: String = "123"): String {
         }
     }
     return sb.toString()
+}
+
+fun allanimeQueries(variables: String, query: String) : String {
+    return "${allanimeAPI}/allanimeapi?variables=$variables&query=$query"
 }
 
 fun Headers.getGomoviesCookies(cookieKey: String = "set-cookie"): Map<String, String> {
