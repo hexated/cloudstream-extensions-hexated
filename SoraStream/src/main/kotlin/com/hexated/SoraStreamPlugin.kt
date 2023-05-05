@@ -23,5 +23,6 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Moviesm4u())
         registerExtractorAPI(Fembed9hd())
         registerExtractorAPI(Sbasian())
+        registerExtractorAPI(Bestx())
     }
 }

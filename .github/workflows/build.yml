@@ -52,9 +52,6 @@ jobs:
           echo SORAHE=$SORAHE >> local.properties
           echo SORAXA=$SORAXA >> local.properties
           echo SORATED=$SORATED >> local.properties
-#        run: |
-#          cd $GITHUB_WORKSPACE/src
-#          echo $'SORA_API=$SORA_API\nSORAHE=$SORAHE\nSORAXA=$SORAXA\nSORATED=$SORATED' > local.properties
 
       - name: Build Plugins
         run: |
