@@ -95,14 +95,14 @@ class Gomunimeis : MainAPI() {
         val tags = document.select(".genxed > a").map { it.text() }
         val type = document.selectFirst("div.info-content .spe span:last-child")?.ownText()?.lowercase() ?: "tv"
 
-        val year = Regex("\\d, ([0-9]*)").find(
+        val year = Regex("\\d, (\\d*)").find(
             document.selectFirst("div.info-content .spe span.split")?.ownText().toString()
         )?.groupValues?.get(1)?.toIntOrNull()
         val status = getStatus(document.selectFirst(".spe > span")!!.ownText())
         val description = document.select("div[itemprop = description] > p").text()
         val (malId, anilistId, image, cover) = getTracker(title, type, year)
         val episodes = document.select(".eplister > ul > li").map {
-            val episode = Regex("Episode\\s?([0-9]+)").find(
+            val episode = Regex("Episode\\s?(\\d+)").find(
                 it.select(".epl-title").text()
             )?.groupValues?.getOrNull(0)
             val link = it.select("a").attr("href")
