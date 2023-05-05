@@ -46,7 +46,12 @@ jobs:
           SORAHE: ${{ secrets.SORAHE }}
           SORAXA: ${{ secrets.SORAXA }}
           SORATED: ${{ secrets.SORATED }}
-        run: echo $'SORA_API=$SORA_API\nSORAHE=$SORAHE\nSORAXA=$SORAXA\nSORATED=$SORATED' > $GITHUB_WORKSPACE/src/local.properties
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          echo SORA_API=$SORA_API >> local.properties
+          echo SORAHE=$SORAHE >> local.properties
+          echo SORAXA=$SORAXA >> local.properties
+          echo SORATED=$SORATED >> local.properties
 #        run: |
 #          cd $GITHUB_WORKSPACE/src
 #          echo $'SORA_API=$SORA_API\nSORAHE=$SORAHE\nSORAXA=$SORAXA\nSORATED=$SORATED' > local.properties

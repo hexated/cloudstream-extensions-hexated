@@ -131,7 +131,6 @@ class Gomunimeis : MainAPI() {
     ): Boolean {
 
         val document = app.get(data).document
-
         document.select("div.player-container iframe").attr("src").substringAfter("html#")
             .let { id ->
                 app.get("https://gomunimes.com/stream?id=$id")
