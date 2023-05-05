@@ -27,6 +27,7 @@ import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.ByteString.Companion.encode
 import org.jsoup.nodes.Document
 import java.net.URI
 import java.net.URL
@@ -591,6 +592,12 @@ suspend fun fetchSoraEpisodes(id: String, type: String, episode: Int?): EpisodeV
     ).parsedSafe<Load>()?.data?.episodeVo?.find {
         it.seriesNo == (episode ?: 0)
     }
+}
+
+fun upgradeSoraUrl(url: String) : String {
+    val expiry = System.currentTimeMillis() * 60 * 60 * 12
+    val mac = "fuckfuck".encode().hmacSha256("$expiry".encode()).hex()
+    return "${url.replace(BuildConfig.SORAXA, BuildConfig.SORATED).substringBefore(".m3u8")}.m3u8?hdntl=exp=$expiry-acl=%2f*-data=hdntl-hmac=$mac"
 }
 
 suspend fun bypassOuo(url: String?): String? {

@@ -32,10 +32,6 @@ class Krakenfiles : ExtractorApi() {
 
     }
 
-    data class Source(
-        @JsonProperty("url") val url: String? = null,
-    )
-
 }
 
 class Gofile : ExtractorApi() {

@@ -40,10 +40,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
-      - name: Access SORA_API
+      - name: Access Secrets
         env:
           SORA_API: ${{ secrets.SORA_API }}
-        run: echo SORA_API=$SORA_API > $GITHUB_WORKSPACE/src/local.properties
+          SORAHE: ${{ secrets.SORAHE }}
+          SORAXA: ${{ secrets.SORAXA }}
+          SORATED: ${{ secrets.SORATED }}
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          echo SORA_API=$SORA_API > local.properties
+          echo SORAHE=$SORAHE > local.properties
+          echo SORAXA=$SORAXA > local.properties
+          echo SORATED=$SORATED > local.properties
 
       - name: Build Plugins
         run: |

@@ -9,6 +9,9 @@ android {
         properties.load(project.rootProject.file("local.properties").inputStream())
 
         buildConfigField("String", "SORA_API", "\"${properties.getProperty("SORA_API")}\"")
+        buildConfigField("String", "SORAHE", "\"${properties.getProperty("SORAHE")}\"")
+        buildConfigField("String", "SORAXA", "\"${properties.getProperty("SORAXA")}\"")
+        buildConfigField("String", "SORATED", "\"${properties.getProperty("SORATED")}\"")
 
 
     }

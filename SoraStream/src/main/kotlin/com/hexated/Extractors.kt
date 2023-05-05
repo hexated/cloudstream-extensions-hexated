@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.XStreamCdn
+import com.lagradost.cloudstream3.extractors.helper.AsianEmbedHelper
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -15,9 +16,9 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
-class Sbasian : StreamSB() {
-    override var mainUrl = "https://sbasian.pro"
-    override var name = "Sbasian"
+class StreamM4u : XStreamCdn() {
+    override val name: String = "StreamM4u"
+    override val mainUrl: String = "https://streamm4u.club"
 }
 
 class Fembed9hd : XStreamCdn() {
@@ -25,19 +26,14 @@ class Fembed9hd : XStreamCdn() {
     override var name = "Fembed9hd"
 }
 
-class Moviesm4u : Filesim() {
-    override val mainUrl = "https://moviesm4u.com"
-    override val name = "Moviesm4u"
+class Sbasian : StreamSB() {
+    override var mainUrl = "https://sbasian.pro"
+    override var name = "Sbasian"
 }
 
 class Sbnet : StreamSB() {
     override var name = "Sbnet"
     override var mainUrl = "https://sbnet.one"
-}
-
-class StreamM4u : XStreamCdn() {
-    override val name: String = "StreamM4u"
-    override val mainUrl: String = "https://streamm4u.club"
 }
 
 class Sblongvu : StreamSB() {
@@ -48,6 +44,11 @@ class Sblongvu : StreamSB() {
 class Keephealth : StreamSB() {
     override var name = "Keephealth"
     override var mainUrl = "https://keephealth.info"
+}
+
+class Moviesm4u : Filesim() {
+    override val mainUrl = "https://moviesm4u.com"
+    override val name = "Moviesm4u"
 }
 
 class FileMoonIn : Filesim() {
@@ -97,6 +98,7 @@ open class Chillx : ExtractorApi() {
         val source = Regex("""sources:\s*\[\{"file":"([^"]+)""").find(decrypt)?.groupValues?.get(1)
         val tracks = Regex("""tracks:\s*\[(.+)]""").find(decrypt)?.groupValues?.get(1)
 
+        // required
         val headers = mapOf(
             "Accept" to "*/*",
             "Connection" to "keep-alive",

@@ -78,8 +78,7 @@ open class SoraStream : TmdbProvider() {
     companion object {
         /** TOOLS */
         private const val tmdbAPI = "https://api.themoviedb.org/3"
-        const val tmdb2mal = "https://tmdb2mal.slidemovies.org"
-        const val jikanAPI = "https://api.jikan.moe/v4"
+        const val tmdb2anilist = "https://tmdb2anilist.slidemovies.org"
         const val gdbot = "https://gdbot.xyz"
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
 

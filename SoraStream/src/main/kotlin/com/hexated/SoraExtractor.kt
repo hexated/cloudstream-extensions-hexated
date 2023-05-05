@@ -649,24 +649,24 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-//        if(season == null) return
-//        json.definitionList?.map { video ->
-//            val media = app.get(
-//                "${BuildConfig.SORA_API}/movieDrama/getPlayInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
-//                headers = soraHeaders,
-//            ).parsedSafe<SorastreamResponse>()?.data
-//
-//            callback.invoke(
-//                ExtractorLink(
-//                    this.name,
-//                    this.name,
-//                    media?.mediaUrl ?: return@map null,
-//                    base64DecodeAPI("Lw==b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ="),
-//                    getSoraQuality(media.currentDefinition ?: ""),
-//                    true,
-//                )
-//            )
-//        }
+        if(season == null) return
+        json.definitionList?.map { video ->
+            val media = app.get(
+                "${BuildConfig.SORA_API}/movieDrama/getPlayInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
+                headers = soraHeaders,
+            ).parsedSafe<SorastreamResponse>()?.data
+
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    if(media?.mediaUrl?.startsWith(BuildConfig.SORAXA) == true) upgradeSoraUrl(media.mediaUrl) else media?.mediaUrl ?: return@map null,
+                    if(media.mediaUrl.startsWith(BuildConfig.SORAHE)) base64DecodeAPI("Lw==b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=") else "",
+                    getSoraQuality(media.currentDefinition ?: ""),
+                    true,
+                )
+            )
+        }
     }
 
     suspend fun invokeXmovies(
@@ -873,16 +873,9 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val malId =
-            if (season != null) app.get("$tmdb2mal/?id=$id&s=$season").text.trim()
-            else app.get("${jikanAPI}/anime?q=${title}&start_date=${year}&type=movie&limit=1")
-                .parsedSafe<JikanResponse>()?.data?.firstOrNull()?.mal_id
-
-        val aniId = app.post(
-            "https://graphql.anilist.co/", data = mapOf(
-                "query" to "{Media(idMal:$malId,type:ANIME){id}}",
-            )
-        ).parsedSafe<DataAni>()?.data?.media?.id
+        val (aniId, malId) = app.get(
+            if(season == null) "$tmdb2anilist/movie/?id=$id" else "$tmdb2anilist/tv/?id=$id&s=$season"
+        ).parsedSafe<Tmdb2Anilist>().let { it?.anilist_id to it?.mal_id }
 
         argamap(
             {
@@ -2956,6 +2949,12 @@ data class BaymoviesConfig(
     val workers: List<String>
 )
 
+data class Tmdb2Anilist(
+    @JsonProperty("tmdb_id") val tmdb_id: String? = null,
+    @JsonProperty("anilist_id") val anilist_id: String? = null,
+    @JsonProperty("mal_id") val mal_id: String? = null,
+)
+
 data class Movie123Media(
     @JsonProperty("url") val url: String? = null,
 )
@@ -3153,26 +3152,6 @@ data class Safelink(
 
 data class FDAds(
     @JsonProperty("linkr") val linkr: String? = null,
-)
-
-data class DataMal(
-    @JsonProperty("mal_id") val mal_id: String? = null,
-)
-
-data class JikanResponse(
-    @JsonProperty("data") val data: ArrayList<DataMal>? = arrayListOf(),
-)
-
-data class IdAni(
-    @JsonProperty("id") val id: String? = null,
-)
-
-data class MediaAni(
-    @JsonProperty("Media") val media: IdAni? = null,
-)
-
-data class DataAni(
-    @JsonProperty("data") val data: MediaAni? = null,
 )
 
 data class Smashy1Tracks(
