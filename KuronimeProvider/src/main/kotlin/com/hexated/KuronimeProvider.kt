@@ -14,7 +14,7 @@ import org.jsoup.nodes.Element
 import java.util.ArrayList
 
 class KuronimeProvider : MainAPI() {
-    override var mainUrl = "https://45.12.2.2"
+    override var mainUrl = "https://45.12.2.25"
     override var name = "Kuronime"
     override val hasQuickSearch = true
     override val hasMainPage = true
