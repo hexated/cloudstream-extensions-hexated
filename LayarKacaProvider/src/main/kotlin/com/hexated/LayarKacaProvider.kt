@@ -84,7 +84,6 @@ class LayarKacaProvider : MainAPI() {
                 addQuality(quality)
             }
         }
-
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
