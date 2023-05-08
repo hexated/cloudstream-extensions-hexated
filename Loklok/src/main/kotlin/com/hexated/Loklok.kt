@@ -33,9 +33,9 @@ class Loklok : MainAPI() {
         private const val mainImageUrl = "https://images.weserv.nl"
         private val headers = mutableMapOf(
             "lang" to "en",
-            "versioncode" to "33",
-            "clienttype" to "android_Official",
-            "deviceid" to getDeviceId()
+            "versioncode" to "999999999",
+            "clienttype" to "ios17",
+            "deviceid" to getDeviceId(),
         )
 
         private fun base64DecodeAPI(api: String): String {
