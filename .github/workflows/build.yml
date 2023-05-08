@@ -64,7 +64,7 @@ jobs:
       - name: Move Loklok
         run: |
           rm $GITHUB_WORKSPACE/builds/Loklok.cs3 || true
-          cp **/Loklok.cs3 $GITHUB_WORKSPACE/builds
+          cp $GITHUB_WORKSPACE/builds/stored/Loklok.cs3 $GITHUB_WORKSPACE/builds
 
       - name: Push builds
         run: |

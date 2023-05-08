@@ -176,6 +176,7 @@ class LayarKacaProvider : MainAPI() {
     ): Boolean {
 
         val document = app.get(data).document
+
         document.select("ul#loadProviders > li").map {
             fixUrl(it.select("a").attr("href"))
         }.apmap {
