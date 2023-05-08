@@ -64,18 +64,6 @@ class LayarKacaProvider : MainAPI() {
         }
     }
 
-//    private fun changesUrl(url: String): String {
-//        val startsWithNoHttp = url.startsWith("//")
-//        if (startsWithNoHttp) {
-//            return "https:$url"
-//        } else {
-//            if (url.startsWith('/')) {
-//                return seriesUrl + url
-//            }
-//            return "$seriesUrl/$url"
-//        }
-//    }
-
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h1.grid-title > a")?.ownText()?.trim() ?: return null
         val href = getProperLink(this.selectFirst("a")!!.attr("href"), title)
