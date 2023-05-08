@@ -176,26 +176,6 @@ class LayarKacaProvider : MainAPI() {
     ): Boolean {
 
         val document = app.get(data).document
-
-//        maybe will need this in future
-//        val sources = if (data.contains("-episode-")) {
-//            document.select("script").mapNotNull { script ->
-//                if (script.data().contains("var data =")) {
-//                    val scriptData =
-//                        script.toString().substringAfter("var data = '").substringBefore("';")
-//                    Jsoup.parse(scriptData).select("li").map {
-//                        fixUrl(it.select("a").attr("href"))
-//                    }
-//                } else {
-//                    null
-//                }
-//            }[0]
-//        } else {
-//            document.select("ul#loadProviders > li").map {
-//                fixUrl(it.select("a").attr("href"))
-//            }
-//        }
-
         document.select("ul#loadProviders > li").map {
             fixUrl(it.select("a").attr("href"))
         }.apmap {
