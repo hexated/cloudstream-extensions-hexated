@@ -200,7 +200,6 @@ class OploverzProvider : MainAPI() {
             "" to fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
         }
         if (streamingSources.isNotEmpty()) sources.addAll(streamingSources)
-
         val downloadSources =
             document.select("div.mctnx div.soraurlx").mapNotNull { item ->
                 item.select("a").map { item.select("strong").text() to it.attr("href") }
