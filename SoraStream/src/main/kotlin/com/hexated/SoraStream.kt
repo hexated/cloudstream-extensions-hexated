@@ -109,8 +109,8 @@ open class SoraStream : TmdbProvider() {
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val m4uhdAPI = "https://m4uhd.tv"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
-        const val moviezAddAPI = "https://45.143.223.244"
-        const val bollyMazaAPI = "https://b.bloginguru.info"
+        const val moviezAddAPI = "https://ww1.moviezaddiction.click"
+        const val bollyMazaAPI = "https://ww1.bollymaza.click"
         const val moviesbayAPI = "https://moviesbay.live"
         const val rStreamAPI = "https://remotestre.am"
         const val flixonAPI = "https://flixon.ru"
@@ -131,8 +131,6 @@ open class SoraStream : TmdbProvider() {
         const val rinzryMoviesAPI = "https://rinzry.stream/0:"
         const val codexMoviesAPI = "https://packs.codexcloudx.tech/0:"
         const val edithxMoviesAPI = "https://index.edithx.ga/0:"
-        const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
-        const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
         const val jmdkhMovieAPI = "https://tg.jmdkh.eu.org/0:"
         const val rubyMovieAPI = "https://upload.rubyshare111.workers.dev/0:"
@@ -150,6 +148,8 @@ open class SoraStream : TmdbProvider() {
         const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:" // dead
         const val tgarMovieAPI = "https://tgarchive.eu.org" // dead
         const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
+        const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:" // dead
+        const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:" // dead
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -600,48 +600,6 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeSmashyStream(res.imdbId, res.season, res.episode, callback)
             },
-//            {
-//                if (!res.isAnime) invokeBaymovies(
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    callback
-//                )
-//            },
-//            {
-//                invokeChillmovies0(
-//                    chillmovies0API,
-//                    "Chillmovies0",
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    callback
-//                )
-//            },
-//            {
-//                invokeChillmovies1(
-//                    chillmovies1API,
-//                    "Chillmovies1",
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    callback
-//                )
-//            },
-//            {
-//                if (!res.isAnime) invokeGammovies(
-//                    gamMoviesAPI,
-//                    "GamMovies",
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    callback
-//                )
-//            },
             {
                 invokeWatchsomuch(
                     res.imdbId,
@@ -670,17 +628,6 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-//            {
-//                if (!res.isAnime) invokeJsmovies(
-//                    jsMoviesAPI,
-//                    "JSMovies",
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    callback
-//                )
-//            },
             {
                 invokeRinzrymovies(
                     rinzryMoviesAPI,
@@ -714,39 +661,6 @@ open class SoraStream : TmdbProvider() {
                     res.episode,
                     callback,
                     "Basic ZWRpdGg6amFydmlz"
-                )
-            },
-//            {
-//                if (!res.isAnime) invokeXtrememovies(
-//                    xtremeMoviesAPI,
-//                    "XtremeMovies",
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    callback
-//                )
-//            },
-            {
-                if (!res.isAnime) invokePapaonMovies1(
-                    papaonMovies1API,
-                    "PapaonMovies[1]",
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokePapaonMovies2(
-                    papaonMovies2API,
-                    "PapaonMovies[2]",
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
                 )
             },
             {

@@ -889,9 +889,9 @@ object SoraExtractor : SoraStream() {
             {
                 invokeBiliBili(aniId, episode, subtitleCallback, callback)
             },
-            {
-                if (season != null) invokeAllanime(aniId, title, jpTitle, episode, callback)
-            }
+//            {
+//                if (season != null) invokeAllanime(aniId, title, jpTitle, episode, callback)
+//            }
         )
     }
 
@@ -976,25 +976,25 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get("$biliBiliAPI/anime/episodes?id=$aniId&source_id=bilibili")
+        val res = app.get("$biliBiliAPI/anime/episodes?id=$aniId&source_id=bilibili", referer = kaguyaBaseUrl)
             .parsedSafe<BiliBiliDetails>()?.episodes?.find {
                 it.episodeNumber == episode
             } ?: return
 
         val sources =
-            app.get("$biliBiliAPI/source?episode_id=${res.sourceEpisodeId}&source_media_id=${res.sourceMediaId}&source_id=${res.sourceId}")
+            app.get("$biliBiliAPI/source?episode_id=${res.sourceEpisodeId}&source_media_id=${res.sourceMediaId}&source_id=${res.sourceId}", referer = kaguyaBaseUrl)
                 .parsedSafe<BiliBiliSourcesResponse>()
 
         sources?.sources?.apmap { source ->
             val quality =
-                app.get(source.file ?: return@apmap null).document.selectFirst("Representation")
+                app.get(source.file ?: return@apmap null, referer = kaguyaBaseUrl).document.selectFirst("Representation")
                     ?.attr("height")
             callback.invoke(
                 ExtractorLink(
                     "BiliBili",
                     "BiliBili",
                     source.file,
-                    "",
+                    kaguyaBaseUrl,
                     quality?.toIntOrNull() ?: Qualities.Unknown.value,
                     isDash = true
                 )
