@@ -9,7 +9,6 @@ import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-import java.net.URI
 import java.util.ArrayList
 
 class OploverzProvider : MainAPI() {
@@ -209,9 +208,8 @@ class OploverzProvider : MainAPI() {
         sources.filter { it.second.startsWith("https") }.
         apmap { (quality, source) ->
             val video = fixedIframe(source)
-            val path = URI(video).path
             val videoQuality = getQualityFromName(quality)
-            if(path.endsWith(".mp4") || path.endsWith(".mkv")) {
+            if(video.endsWith(".mp4") || video.endsWith(".mkv")) {
                 callback.invoke(
                     ExtractorLink(
                         "Direct",
