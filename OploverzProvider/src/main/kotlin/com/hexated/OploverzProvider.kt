@@ -196,7 +196,6 @@ class OploverzProvider : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         val sources = mutableListOf<Pair<String?, String>>()
-
         val streamingSources = document.select(".mobius > .mirror > option").mapNotNull {
             "" to fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
         }
