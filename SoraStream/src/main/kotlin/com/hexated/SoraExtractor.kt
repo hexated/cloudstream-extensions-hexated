@@ -648,27 +648,6 @@ object SoraExtractor : SoraStream() {
                 )
             )
         }
-
-        if (season == null) return
-        json.definitionList?.map { video ->
-            val media = app.get(
-                "${BuildConfig.SORA_API}/movieDrama/getPlayInfo?category=${type}&contentId=${id}&episodeId=${json.id}&definition=${video.code}",
-                headers = soraHeaders,
-            ).parsedSafe<SorastreamResponse>()?.data
-
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    if (media?.mediaUrl?.startsWith(BuildConfig.SORAXA) == true) upgradeSoraUrl(
-                        media.mediaUrl
-                    ) else media?.mediaUrl ?: return@map null,
-                    if (media.mediaUrl.startsWith(BuildConfig.SORAHE)) base64DecodeAPI("Lw==b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=") else "",
-                    getSoraQuality(media.currentDefinition ?: ""),
-                    true,
-                )
-            )
-        }
     }
 
     suspend fun invokeXmovies(
