@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class Dubbindo : MainAPI() {
@@ -88,6 +89,7 @@ class Dubbindo : MainAPI() {
             Video(
                 it.attr("src"),
                 it.attr("size"),
+                it.attr("type"),
             )
         }
 
@@ -107,15 +109,19 @@ class Dubbindo : MainAPI() {
     ): Boolean {
 
         tryParseJson<List<Video>>(data)?.map { video ->
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    video.src ?: return@map,
-                    "",
-                    video.res?.toIntOrNull() ?: Qualities.Unknown.value,
+            if(video.type == "video/mp4" || video.type == "video/x-msvideo" || video.type == "video/x-matroska") {
+                callback.invoke(
+                    ExtractorLink(
+                        this.name,
+                        this.name,
+                        video.src ?: return@map,
+                        "",
+                        video.res?.toIntOrNull() ?: Qualities.Unknown.value,
+                    )
                 )
-            )
+            } else {
+                loadExtractor(video.src ?: return@map, "", subtitleCallback, callback)
+            }
         }
 
         return true
@@ -124,6 +130,7 @@ class Dubbindo : MainAPI() {
     data class Video(
         val src: String? = null,
         val res: String? = null,
+        val type: String? = null,
     )
 
 }
