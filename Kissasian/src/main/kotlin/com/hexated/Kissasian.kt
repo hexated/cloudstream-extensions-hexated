@@ -1,7 +1,7 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.mvvm.safeApiCall
+import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -72,7 +72,7 @@ class Kissasian : MainAPI() {
         val episodes = document.select("ul.listing li").map {
             val name = it.selectFirst("a")?.attr("title")
             val link = fixUrlNull(it.selectFirst("a")?.attr("href"))
-            val epNum = Regex("Episode\\s([0-9]+)").find("$name")?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val epNum = Regex("Episode\\s(\\d+)").find("$name")?.groupValues?.getOrNull(1)?.toIntOrNull()
             newEpisode(link) {
                 this.name = name
                 this.episode = epNum
@@ -121,7 +121,7 @@ class Kissasian : MainAPI() {
             val iv = "9262859232435825"
             val secretKey = "93422192433952489752342908585752"
             val secretDecryptKey = secretKey
-            GogoExtractor.extractVidstream(
+            GogoHelper.extractVidstream(
                 iframe.url,
                 this.name,
                 callback,

@@ -1,13 +1,13 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.hexated.GogoExtractor.extractVidstream
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.hexated.RabbitStream.extractRabbitStream
+import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
@@ -328,7 +328,7 @@ object SoraExtractor : SoraStream() {
             val iv = "9225679083961858"
             val secretKey = "25742532592138496744665879883281"
             val secretDecryptKey = secretKey
-            extractVidstream(
+            GogoHelper.extractVidstream(
                 iframe.url,
                 "Vidstream",
                 callback,

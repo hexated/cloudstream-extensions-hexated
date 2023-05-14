@@ -11,18 +11,5 @@ class SoraStreamPlugin: Plugin() {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(SoraStream())
         registerMainAPI(SoraStreamLite())
-        registerExtractorAPI(StreamM4u())
-        registerExtractorAPI(Sblongvu())
-        registerExtractorAPI(Keephealth())
-        registerExtractorAPI(FileMoonIn())
-        registerExtractorAPI(Sbnet())
-        registerExtractorAPI(Chillx())
-        registerExtractorAPI(Watchx())
-        registerExtractorAPI(StreamhideCom())
-        registerExtractorAPI(Movhide())
-        registerExtractorAPI(Moviesm4u())
-        registerExtractorAPI(Fembed9hd())
-        registerExtractorAPI(Sbasian())
-        registerExtractorAPI(Bestx())
     }
 }

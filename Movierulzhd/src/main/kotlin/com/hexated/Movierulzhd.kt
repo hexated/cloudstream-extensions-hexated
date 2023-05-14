@@ -12,7 +12,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class Movierulzhd : MainAPI() {
-    override var mainUrl = "https://movierulzhd.bid"
+    override var mainUrl = "https://movierulzhd.press"
     private var directUrl = mainUrl
     override var name = "Movierulzhd"
     override val hasMainPage = true
@@ -248,7 +248,11 @@ class Movierulzhd : MainAPI() {
                         headers = mapOf("X-Requested-With" to "XMLHttpRequest")
                     ).parsed<ResponseHash>().embed_url
 
-                    if(!source.contains("youtube")) loadExtractor(source, data, subtitleCallback, callback)
+                    when {
+                        source.contains("2embed") -> invokeTwoEmbed(source,subtitleCallback, callback)
+                        !source.contains("youtube") -> loadExtractor(source, data, subtitleCallback, callback)
+                        else -> return@safeApiCall
+                    }
                 }
             }
         }
