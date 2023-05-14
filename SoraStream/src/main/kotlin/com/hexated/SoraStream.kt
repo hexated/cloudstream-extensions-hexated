@@ -79,7 +79,7 @@ open class SoraStream : TmdbProvider() {
         /** TOOLS */
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         const val tmdb2anilist = "https://tmdb2anilist.slidemovies.org"
-        const val gdbot = "https://gdbot.xyz"
+        const val gdbot = "https://gdtot.pro"
         const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
 
         private val apiKey =
