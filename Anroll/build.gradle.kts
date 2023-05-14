@@ -2,7 +2,7 @@
 version = 1
 
 cloudstream {
-    language = "pt"
+    language = "pt-pt"
     // All of these properties are optional, you can safely remove them
 
     // description = "Lorem Ipsum"
