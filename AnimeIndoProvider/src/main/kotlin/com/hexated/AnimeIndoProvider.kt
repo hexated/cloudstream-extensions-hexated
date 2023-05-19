@@ -1,19 +1,15 @@
 package com.hexated
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.nicehttp.NiceResponse
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+
 class AnimeIndoProvider : MainAPI() {
-    override var mainUrl = "https://animeindo.cfd"
+    override var mainUrl = "https://animeindo.quest"
     override var name = "AnimeIndo"
     override val hasMainPage = true
     override var lang = "id"
@@ -40,42 +36,21 @@ class AnimeIndoProvider : MainAPI() {
             }
         }
 
-        private suspend fun request(url: String): NiceResponse {
-            val req = app.get(
-                url,
-                headers = mapOf("Cookie" to "_ga_RHDMEL4EDM=GS1.1.1668082390.1.0.1668082390.0.0.0; _ga=GA1.1.916626312.1668082390")
-            )
-            if (req.isSuccessful) {
-                return req
-            } else {
-                val document = app.get(url).document
-                val captchaKey =
-                    document.select("script[src*=https://www.google.com/recaptcha/api.js?render=]")
-                        .attr("src").substringAfter("render=").substringBefore("&amp")
-                val token = getCaptchaToken(url, captchaKey)
-                return app.post(
-                    url,
-                    data = mapOf(
-                        "action" to "recaptcha_for_all",
-                        "token" to "$token",
-                        "sitekey" to captchaKey
-                    )
-                )
-            }
-        }
     }
 
     override val mainPage = mainPageOf(
         "$mainUrl/anime-terbaru/page/" to "Anime Terbaru",
-        "$mainUrl/donghua-terbaru/page/" to "Donghua Terbaru"
+        "$mainUrl/ongoing/page/" to "Anime Ongoing",
+        "$mainUrl/populer/page/" to "Anime Populer",
+        "$mainUrl/donghua-terbaru/page/" to "Donghua Terbaru",
     )
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = request(request.data + page).document
-        val home = document.select("div.post-show > article").mapNotNull {
+        val document = app.get(request.data + page).document
+        val home = document.select("div.post-show > article, div.relat > article").mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(request.name, home)
@@ -118,7 +93,7 @@ class AnimeIndoProvider : MainAPI() {
         val anime = mutableListOf<SearchResponse>()
         (1..2).forEach { page ->
             val link = "$mainUrl/page/$page/?s=$query"
-            val document = request(link).document
+            val document = app.get(link).document
             val media = document.select(".site-main.relat > article").mapNotNull {
                 val title = it.selectFirst("div.title > h2")!!.ownText().trim()
                 val href = it.selectFirst("a")!!.attr("href")
@@ -134,7 +109,7 @@ class AnimeIndoProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = request(url).document
+        val document = app.get(url).document
 
         val title = document.selectFirst("h1.entry-title")?.text()?.replace("Subtitle Indonesia", "")
             ?.trim() ?: return null
@@ -148,7 +123,6 @@ class AnimeIndoProvider : MainAPI() {
         val status = getStatus(document.selectFirst("div.info-content > div.spe > span:nth-child(1)")!!.ownText().trim())
         val description = document.select("div[itemprop=description] > p").text()
 
-        val (malId, anilistId, image, cover) = getTracker(title, type, year)
         val trailer = document.selectFirst("div.player-embed iframe")?.attr("src")
         val episodes = document.select("div.lstepsiode.listeps ul li").mapNotNull {
             val header = it.selectFirst("span.lchx > a") ?: return@mapNotNull null
@@ -159,15 +133,12 @@ class AnimeIndoProvider : MainAPI() {
 
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
-            posterUrl = image ?: poster
-            backgroundPosterUrl = cover ?: image ?: poster
+            posterUrl = poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             plot = description
             this.tags = tags
-            addMalId(malId)
-            addAniListId(anilistId?.toIntOrNull())
             addTrailer(trailer)
         }
     }
@@ -179,7 +150,7 @@ class AnimeIndoProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = request(data).document
+        val document = app.get(data).document
         document.select("div.itemleft > .mirror > option").mapNotNull {
             fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
         }.apmap {
@@ -194,43 +165,5 @@ class AnimeIndoProvider : MainAPI() {
 
         return true
     }
-
-    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
-            .parsedSafe<AniSearch>()?.results?.find { media ->
-                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
-                    title,
-                    true
-                )) || (media.type.equals(type, true) && media.releaseDate == year)
-            }
-        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
-    }
-
-    data class Tracker(
-        val malId: Int? = null,
-        val aniId: String? = null,
-        val image: String? = null,
-        val cover: String? = null,
-    )
-
-    data class Title(
-        @JsonProperty("romaji") val romaji: String? = null,
-        @JsonProperty("english") val english: String? = null,
-    )
-
-    data class Results(
-        @JsonProperty("id") val aniId: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("title") val title: Title? = null,
-        @JsonProperty("releaseDate") val releaseDate: Int? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("cover") val cover: String? = null,
-    )
-
-    data class AniSearch(
-        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
-    )
-
 
 }
