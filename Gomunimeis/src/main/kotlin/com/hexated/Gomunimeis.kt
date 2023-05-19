@@ -23,7 +23,7 @@ class Gomunimeis : MainAPI() {
     )
 
     companion object {
-        private const val mainImageUrl = "https://upload.anoboy.live"
+        private const val mainImageUrl = "https://upload.anoboy.life"
 
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA

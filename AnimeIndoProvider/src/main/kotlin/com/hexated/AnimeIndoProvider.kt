@@ -13,7 +13,7 @@ import com.lagradost.nicehttp.NiceResponse
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 class AnimeIndoProvider : MainAPI() {
-    override var mainUrl = "https://animeindo.cfd"
+    override var mainUrl = "https://animeindo.quest"
     override var name = "AnimeIndo"
     override val hasMainPage = true
     override var lang = "id"
