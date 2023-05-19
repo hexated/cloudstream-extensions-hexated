@@ -27,7 +27,6 @@ import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
-import okio.ByteString.Companion.encode
 import org.jsoup.nodes.Document
 import java.net.URI
 import java.net.URL
@@ -458,7 +457,7 @@ suspend fun invokeVizcloud(
         }
 }
 
-suspend fun invokeSmashyOne(
+suspend fun invokeSmashyFfix(
     name: String,
     url: String,
     callback: (ExtractorLink) -> Unit,
@@ -488,7 +487,7 @@ suspend fun invokeSmashyOne(
 
 }
 
-suspend fun invokeSmashyTwo(
+suspend fun invokeSmashyGtop(
     name: String,
     url: String,
     callback: (ExtractorLink) -> Unit
@@ -522,7 +521,7 @@ suspend fun invokeSmashyTwo(
     )
 }
 
-suspend fun invokeSmashyThree(
+suspend fun invokeSmashyDude(
     name: String,
     url: String,
     callback: (ExtractorLink) -> Unit
@@ -538,6 +537,39 @@ suspend fun invokeSmashyThree(
             it.file ?: return@map,
             ""
         ).forEach(callback)
+    }
+
+}
+
+suspend fun invokeSmashyNflim(
+    name: String,
+    url: String,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val script =
+        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+
+    val source =
+        Regex("file:\\s*\"([^\"]+)").find(script)?.groupValues?.get(
+            1
+        ) ?: return
+
+    source.split(",").map { links ->
+        val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
+        val trimmedLink = links.removePrefix("[$quality]").trim()
+        callback.invoke(
+            ExtractorLink(
+                "Smashy [$name]",
+                "Smashy [$name]",
+                trimmedLink.substringAfter("url=").substringBefore("&cookie=").trim(),
+                "",
+                quality?.toIntOrNull() ?: return@map,
+                isM3u8 = true,
+                headers = mapOf(
+                    "Cookie" to trimmedLink.substringAfter("&cookie=").trim()
+                )
+            )
+        )
     }
 
 }

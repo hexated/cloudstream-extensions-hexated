@@ -1916,13 +1916,16 @@ object SoraExtractor : SoraStream() {
         }.apmap {
             when {
                 it.first.contains("/ffix") -> {
-                    invokeSmashyOne(it.second, it.first, callback)
+                    invokeSmashyFfix(it.second, it.first, callback)
                 }
                 it.first.contains("/gtop") -> {
-                    invokeSmashyTwo(it.second, it.first, callback)
+                    invokeSmashyGtop(it.second, it.first, callback)
                 }
                 it.first.contains("/dude_tv") -> {
-                    invokeSmashyThree(it.second, it.first, callback)
+                    invokeSmashyDude(it.second, it.first, callback)
+                }
+                it.first.contains("/nflim") -> {
+                    invokeSmashyNflim(it.second, it.first, callback)
                 }
                 else -> return@apmap
             }
@@ -2930,6 +2933,24 @@ object SoraExtractor : SoraStream() {
                 )
             }
 
+    }
+
+    suspend fun invokeNowTv(
+        tmdbId: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val referer = "https://2now.tv/"
+        val url = "$nowTvAPI/$tmdbId.mp4"
+        if(!app.get(url, referer = referer).isSuccessful) return
+        callback.invoke(
+            ExtractorLink(
+                "NowTv",
+                "NowTv",
+                url,
+                referer,
+                Qualities.P1080.value,
+            )
+        )
     }
 
 

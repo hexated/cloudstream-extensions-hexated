@@ -40,6 +40,7 @@ import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeNinetv
+import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokePapaonMovies1
 import com.hexated.SoraExtractor.invokePapaonMovies2
 import com.hexated.SoraExtractor.invokePutlocker
@@ -125,6 +126,7 @@ open class SoraStream : TmdbProvider() {
         const val nineTvAPI = "https://api.9animetv.live"
         const val putlockerAPI = "https://ww7.putlocker.vip"
         const val fmoviesAPI = "https://fmovies.to"
+        const val nowTvAPI = "https://myfilestorage.xyz"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -771,6 +773,9 @@ open class SoraStream : TmdbProvider() {
                     res.episode,
                     callback
                 )
+            },
+            {
+                if (!res.isAnime && res.season == null) invokeNowTv(res.id, callback)
             }
         )
 

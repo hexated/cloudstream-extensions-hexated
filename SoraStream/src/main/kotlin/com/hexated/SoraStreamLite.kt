@@ -18,6 +18,7 @@ import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNinetv
+import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeSeries9
@@ -245,6 +246,9 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
+            {
+                if (!res.isAnime && res.season == null) invokeNowTv(res.id, callback)
+            }
         )
 
         return true
