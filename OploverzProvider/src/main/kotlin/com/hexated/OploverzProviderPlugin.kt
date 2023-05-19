@@ -11,7 +11,5 @@ class OploverzProviderPlugin: Plugin() {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(OploverzProvider())
         registerExtractorAPI(Streamhide())
-        registerExtractorAPI(Krakenfiles())
-        registerExtractorAPI(Gofile())
     }
 }

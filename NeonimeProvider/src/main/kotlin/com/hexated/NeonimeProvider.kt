@@ -1,15 +1,11 @@
 package com.hexated
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 import java.net.URI
-import java.util.*
 
 class NeonimeProvider : MainAPI() {
     override var mainUrl = "https://neonime.fun"
@@ -124,17 +120,13 @@ class NeonimeProvider : MainAPI() {
             val mPoster = document.selectFirst(".sbox > .imagen > .fix > img[itemprop = image]")?.attr("data-src")
             val mTrailer = document.selectFirst("div.youtube_id iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
             val year = document.selectFirst("a[href*=release-year]")!!.text().toIntOrNull()
-            val (malId, anilistId, image, cover) = getTracker(mTitle, "movie", year)
             return newMovieLoadResponse(name = mTitle, url = url, type = TvType.Movie, dataUrl = url) {
-                posterUrl = image ?: mPoster
-                backgroundPosterUrl = cover ?: image ?: mPoster
+                posterUrl = mPoster
                 this.year = year
                 plot = document.select("div[itemprop = description]").text().trim()
                 rating = document.select("span[itemprop = ratingValue]").text().toIntOrNull()
                 tags = document.select("p.meta_dd > a").map { it.text() }
                 addTrailer(mTrailer)
-                addMalId(malId)
-                addAniListId(anilistId?.toIntOrNull())
             }
         }
         else {
@@ -142,7 +134,6 @@ class NeonimeProvider : MainAPI() {
             val poster = document.selectFirst(".imagen > img")?.attr("data-src")
             val trailer = document.selectFirst("div.youtube_id_tv iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
             val year = document.select("#info a[href*=\"-year/\"]").text().toIntOrNull()
-            val (malId, anilistId, image, cover) = getTracker(title, "tv", year)
             val episodes = document.select("ul.episodios > li").mapNotNull {
                 val link = fixUrl(it.selectFirst(".episodiotitle > a")!!.attr("href"))
                 val name = it.selectFirst(".episodiotitle > a")?.ownText().toString()
@@ -152,16 +143,13 @@ class NeonimeProvider : MainAPI() {
 
             return newAnimeLoadResponse(title, url, TvType.Anime) {
                 engName = title
-                posterUrl = image ?: poster
-                backgroundPosterUrl = cover ?: image ?: poster
+                posterUrl = poster
                 this.year = year
                 addEpisodes(DubStatus.Subbed, episodes)
                 showStatus = getStatus(document.select("div.metadatac > span").last()!!.text().trim())
                 plot = document.select("div[itemprop = description] > p").text().trim()
                 tags = document.select("#info a[href*=\"-genre/\"]").map { it.text() }
                 addTrailer(trailer)
-                addMalId(malId)
-                addAniListId(anilistId?.toIntOrNull())
             }
         }
     }
@@ -194,42 +182,5 @@ class NeonimeProvider : MainAPI() {
             "${it.scheme}://${it.host}"
         }
     }
-
-    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
-            .parsedSafe<AniSearch>()?.results?.find { media ->
-                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
-                    title,
-                    true
-                )) || (media.type.equals(type, true) && media.releaseDate == year)
-            }
-        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
-    }
-
-    data class Tracker(
-        val malId: Int? = null,
-        val aniId: String? = null,
-        val image: String? = null,
-        val cover: String? = null,
-    )
-
-    data class Title(
-        @JsonProperty("romaji") val romaji: String? = null,
-        @JsonProperty("english") val english: String? = null,
-    )
-
-    data class Results(
-        @JsonProperty("id") val aniId: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("title") val title: Title? = null,
-        @JsonProperty("releaseDate") val releaseDate: Int? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("cover") val cover: String? = null,
-    )
-
-    data class AniSearch(
-        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
-    )
 
 }

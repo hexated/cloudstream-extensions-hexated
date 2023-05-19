@@ -1,9 +1,6 @@
 package com.hexated
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.extractors.XStreamCdn
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -105,7 +102,7 @@ class Samehadaku : MainAPI() {
         val poster = document.selectFirst("div.thumb > img")?.attr("src")
         val tags = document.select("div.genre-info > a").map { it.text() }
         val year = document.selectFirst("div.spe > span:contains(Rilis)")?.ownText()?.let {
-            Regex("\\d,\\s([0-9]*)").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            Regex("\\d,\\s(\\d*)").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
         }
         val status = getStatus(document.selectFirst("div.spe > span:contains(Status)")?.ownText() ?: return null)
         val type = document.selectFirst("div.spe > span:contains(Type)")?.ownText()?.trim()?.lowercase() ?: "tv"
@@ -113,11 +110,9 @@ class Samehadaku : MainAPI() {
         val description = document.select("div.desc p").text().trim()
         val trailer = document.selectFirst("div.trailer-anime iframe")?.attr("src")
 
-        val (malId, anilistId, image, cover) = getTracker(title, type, year)
-
         val episodes = document.select("div.lstepsiode.listeps ul li").mapNotNull {
             val header = it.selectFirst("span.lchx > a") ?: return@mapNotNull null
-            val episode = Regex("Episode\\s?([0-9]+)").find(header.text())?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val episode = Regex("Episode\\s?(\\d+)").find(header.text())?.groupValues?.getOrNull(1)?.toIntOrNull()
             val link = fixUrl(header.attr("href"))
             Episode(link, episode = episode)
         }.reversed()
@@ -128,15 +123,12 @@ class Samehadaku : MainAPI() {
 
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
-            posterUrl = image ?: poster
-            backgroundPosterUrl = cover ?: image ?: poster
+            posterUrl = poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             this.rating = rating
             plot = description
-            addMalId(malId)
-            addAniListId(anilistId?.toIntOrNull())
             addTrailer(trailer)
             this.tags = tags
             this.recommendations = recommendations
@@ -183,43 +175,6 @@ class Samehadaku : MainAPI() {
     private fun String.removeBloat() : String{
         return this.replace(Regex("(Nonton)|(Anime)|(Subtitle\\sIndonesia)"), "").trim()
     }
-
-    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
-            .parsedSafe<AniSearch>()?.results?.find { media ->
-                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
-                    title,
-                    true
-                )) || (media.type.equals(type, true) && media.releaseDate == year)
-            }
-        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
-    }
-
-    data class Tracker(
-        val malId: Int? = null,
-        val aniId: String? = null,
-        val image: String? = null,
-        val cover: String? = null,
-    )
-
-    data class Title(
-        @JsonProperty("romaji") val romaji: String? = null,
-        @JsonProperty("english") val english: String? = null,
-    )
-
-    data class Results(
-        @JsonProperty("id") val aniId: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("title") val title: Title? = null,
-        @JsonProperty("releaseDate") val releaseDate: Int? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("cover") val cover: String? = null,
-    )
-
-    data class AniSearch(
-        @JsonProperty("results") val results: java.util.ArrayList<Results>? = arrayListOf(),
-    )
 
 }
 

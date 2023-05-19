@@ -2,8 +2,6 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -128,7 +126,6 @@ class KuronimeProvider : MainAPI() {
         val year = Regex("\\d, (\\d*)").find(
             document.select(".infodetail > ul > li:nth-child(5)").text()
         )?.groupValues?.get(1)?.toIntOrNull()
-        val (malId, anilistId, image, cover) = getTracker(title, type, year)
         val status = getStatus(
             document.selectFirst(".infodetail > ul > li:nth-child(3)")!!.ownText()
                 .replace(Regex("\\W"), "")
@@ -145,14 +142,11 @@ class KuronimeProvider : MainAPI() {
 
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
-            posterUrl = image ?: poster
-            backgroundPosterUrl = cover ?: image ?: poster
+            posterUrl = poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             plot = description
-            addMalId(malId)
-            addAniListId(anilistId?.toIntOrNull())
             addTrailer(trailer)
             this.tags = tags
         }
@@ -210,43 +204,6 @@ class KuronimeProvider : MainAPI() {
         }
         return true
     }
-
-    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
-            .parsedSafe<AniSearch>()?.results?.find { media ->
-                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
-                    title,
-                    true
-                )) || (media.type.equals(type, true) && media.releaseDate == year)
-            }
-        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
-    }
-
-    data class Tracker(
-        val malId: Int? = null,
-        val aniId: String? = null,
-        val image: String? = null,
-        val cover: String? = null,
-    )
-
-    data class Title(
-        @JsonProperty("romaji") val romaji: String? = null,
-        @JsonProperty("english") val english: String? = null,
-    )
-
-    data class Results(
-        @JsonProperty("id") val aniId: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("title") val title: Title? = null,
-        @JsonProperty("releaseDate") val releaseDate: Int? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("cover") val cover: String? = null,
-    )
-
-    data class AniSearch(
-        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
-    )
 
     data class All(
         @JsonProperty("post_image") var postImage: String? = null,

@@ -1,9 +1,6 @@
 package com.hexated
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
@@ -113,8 +110,6 @@ class AnimeSailProvider : MainAPI() {
         val type = document.select("tbody th:contains(Tipe)").next().text().lowercase()
         val year = document.select("tbody th:contains(Dirilis)").next().text().trim().toIntOrNull()
 
-        val (malId, anilistId, image, cover) = getTracker(title, type, year)
-
         val episodes = document.select("ul.daftar > li").map {
             val link = fixUrl(it.select("a").attr("href"))
             val name = it.select("a").text()
@@ -123,8 +118,7 @@ class AnimeSailProvider : MainAPI() {
         }.reversed()
 
         return newAnimeLoadResponse(title, url, getType(type)) {
-            posterUrl = image ?: poster
-            backgroundPosterUrl = cover ?: image ?: poster
+            posterUrl = poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus =
@@ -132,8 +126,6 @@ class AnimeSailProvider : MainAPI() {
             plot = document.selectFirst("div.entry-content > p")?.text()
             this.tags =
                 document.select("tbody th:contains(Genre)").next().select("a").map { it.text() }
-            addMalId(malId)
-            addAniListId(anilistId?.toIntOrNull())
         }
     }
 
@@ -165,7 +157,7 @@ class AnimeSailProvider : MainAPI() {
                                     else -> this.name
                                 }
                             val quality =
-                                Regex("\\.([0-9]{3,4})\\.").find(link)?.groupValues?.get(1)
+                                Regex("\\.(\\d{3,4})\\.").find(link)?.groupValues?.get(1)
                             callback.invoke(
                                 ExtractorLink(
                                     source = source,
@@ -200,42 +192,5 @@ class AnimeSailProvider : MainAPI() {
 
         return true
     }
-
-    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
-            .parsedSafe<AniSearch>()?.results?.find { media ->
-                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
-                    title,
-                    true
-                )) || (media.type.equals(type, true) && media.releaseDate == year)
-            }
-        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
-    }
-
-    data class Tracker(
-        val malId: Int? = null,
-        val aniId: String? = null,
-        val image: String? = null,
-        val cover: String? = null,
-    )
-
-    data class Title(
-        @JsonProperty("romaji") val romaji: String? = null,
-        @JsonProperty("english") val english: String? = null,
-    )
-
-    data class Results(
-        @JsonProperty("id") val aniId: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("title") val title: Title? = null,
-        @JsonProperty("releaseDate") val releaseDate: Int? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("cover") val cover: String? = null,
-    )
-
-    data class AniSearch(
-        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
-    )
 
 }

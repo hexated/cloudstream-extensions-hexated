@@ -2,15 +2,12 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.extractors.JWPlayer
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-import java.util.ArrayList
 
 class OtakudesuProvider : MainAPI() {
     override var mainUrl = "https://otakudesu.lol"
@@ -65,7 +62,7 @@ class OtakudesuProvider : MainAPI() {
         val title = this.selectFirst("h2.jdlflm")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
         val posterUrl = this.select("div.thumbz > img").attr("src").toString()
-        val epNum = this.selectFirst("div.epz")?.ownText()?.replace(Regex("[^0-9]"), "")?.trim()
+        val epNum = this.selectFirst("div.epz")?.ownText()?.replace(Regex("\\D"), "")?.trim()
             ?.toIntOrNull()
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
@@ -107,7 +104,7 @@ class OtakudesuProvider : MainAPI() {
         val type = document.selectFirst("div.infozingle > p:nth-child(5) > span")?.ownText()
             ?.replace(":", "")?.trim() ?: "tv"
 
-        val year = Regex("\\d, ([0-9]*)").find(
+        val year = Regex("\\d, (\\d*)").find(
             document.select("div.infozingle > p:nth-child(9) > span").text()
         )?.groupValues?.get(1)?.toIntOrNull()
         val status = getStatus(
@@ -117,11 +114,9 @@ class OtakudesuProvider : MainAPI() {
         )
         val description = document.select("div.sinopc > p").text()
 
-        val (malId, anilistId, image, cover) = getTracker(title, type, year)
-
         val episodes = document.select("div.episodelist")[1].select("ul > li").mapNotNull {
             val name = it.selectFirst("a")?.text() ?: return@mapNotNull null
-            val episode = Regex("Episode\\s?([0-9]+)").find(name)?.groupValues?.getOrNull(0)
+            val episode = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(0)
                 ?: it.selectFirst("a")?.text()
             val link = fixUrl(it.selectFirst("a")!!.attr("href"))
             Episode(link, name, episode = episode?.toIntOrNull())
@@ -140,15 +135,12 @@ class OtakudesuProvider : MainAPI() {
 
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
-            posterUrl = image ?: poster
-            backgroundPosterUrl = cover ?: image ?: poster
+            posterUrl = poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             plot = description
             this.tags = tags
-            addMalId(malId)
-            addAniListId(anilistId?.toIntOrNull())
             this.recommendations = recommendations
 //            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
@@ -221,43 +213,6 @@ class OtakudesuProvider : MainAPI() {
 
         return true
     }
-
-    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
-            .parsedSafe<AniSearch>()?.results?.find { media ->
-                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
-                    title,
-                    true
-                )) || (media.type.equals(type, true) && media.releaseDate == year)
-            }
-        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
-    }
-
-    data class Tracker(
-        val malId: Int? = null,
-        val aniId: String? = null,
-        val image: String? = null,
-        val cover: String? = null,
-    )
-
-    data class Title(
-        @JsonProperty("romaji") val romaji: String? = null,
-        @JsonProperty("english") val english: String? = null,
-    )
-
-    data class Results(
-        @JsonProperty("id") val aniId: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("title") val title: Title? = null,
-        @JsonProperty("releaseDate") val releaseDate: Int? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("cover") val cover: String? = null,
-    )
-
-    data class AniSearch(
-        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
-    )
 
 }
 
