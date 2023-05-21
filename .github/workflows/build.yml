@@ -46,12 +46,16 @@ jobs:
           SORAHE: ${{ secrets.SORAHE }}
           SORAXA: ${{ secrets.SORAXA }}
           SORATED: ${{ secrets.SORATED }}
+          CRUNCHYROLL_BASIC_TOKEN: ${{ secrets.CRUNCHYROLL_BASIC_TOKEN }}
+          CRUNCHYROLL_REFRESH_TOKEN: ${{ secrets.CRUNCHYROLL_REFRESH_TOKEN }}
         run: |
           cd $GITHUB_WORKSPACE/src
           echo SORA_API=$SORA_API >> local.properties
           echo SORAHE=$SORAHE >> local.properties
           echo SORAXA=$SORAXA >> local.properties
           echo SORATED=$SORATED >> local.properties
+          echo CRUNCHYROLL_BASIC_TOKEN=$CRUNCHYROLL_BASIC_TOKEN >> local.properties
+          echo CRUNCHYROLL_REFRESH_TOKEN=$CRUNCHYROLL_REFRESH_TOKEN >> local.properties
 
       - name: Build Plugins
         run: |

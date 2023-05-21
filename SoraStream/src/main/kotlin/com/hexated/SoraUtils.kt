@@ -2,10 +2,9 @@ package com.hexated
 
 import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.hexated.SoraStream.Companion.allanimeAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
 import com.hexated.SoraStream.Companion.baymoviesAPI
-import com.hexated.SoraStream.Companion.consumetCrunchyrollAPI
+import com.hexated.SoraStream.Companion.crunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.putlockerAPI
@@ -17,10 +16,12 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.nicehttp.RequestBodyTypes
+import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
 import okhttp3.Headers
@@ -28,10 +29,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.nodes.Document
-import java.net.URI
-import java.net.URL
-import java.net.URLDecoder
-import java.net.URLEncoder
+import java.net.*
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -45,56 +43,13 @@ import kotlin.math.min
 val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
 val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
 val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-val kaguyaBaseUrl = "https://kaguya.app/"
+const val kaguyaBaseUrl = "https://kaguya.app/"
 val soraHeaders = mapOf(
     "lang" to "en",
     "versioncode" to "33",
     "clienttype" to "android_Official",
     "deviceid" to getDeviceId(),
 )
-val allanimeSearchQuery = """
-        query(
-                ${'$'}search: SearchInput
-                ${'$'}limit: Int
-                ${'$'}page: Int
-                ${'$'}translationType: VaildTranslationTypeEnumType
-                ${'$'}countryOrigin: VaildCountryOriginEnumType
-            ) {
-            shows(
-                search: ${'$'}search
-                limit: ${'$'}limit
-                page: ${'$'}page
-                translationType: ${'$'}translationType
-                countryOrigin: ${'$'}countryOrigin
-            ) {
-                pageInfo {
-                    total
-                }
-                edges {
-                    _id
-                    name
-                    thumbnail
-                    englishName
-                    nativeName
-                }
-            }
-        }
-    """.trimIndent().trim()
-val allanimeServerQuery = """
-        query(
-                ${'$'}showId: String!,
-                ${'$'}translationType: VaildTranslationTypeEnumType!,
-                ${'$'}episodeString: String!
-            ) {
-            episode(
-                showId: ${'$'}showId
-                translationType: ${'$'}translationType
-                episodeString: ${'$'}episodeString
-            ) {
-                sourceUrls
-            }
-        }
-    """.trimIndent().trim()
 val encodedIndex = arrayOf(
     "GamMovies",
     "JSMovies",
@@ -574,6 +529,45 @@ suspend fun invokeSmashyNflim(
 
 }
 
+suspend fun invokeSmashyRip(
+    name: String,
+    url: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val script = app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+
+    val source = Regex("file:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1)
+    val subtitle = Regex("subtitle:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1)
+
+    source?.split(",")?.map { links ->
+        val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
+        val link = links.removePrefix("[$quality]").substringAfter("dev/").trim()
+        callback.invoke(
+            ExtractorLink(
+                "Smashy [$name]",
+                "Smashy [$name]",
+                link,
+                "",
+                quality?.toIntOrNull() ?: return@map,
+                isM3u8 = true,
+            )
+        )
+    }
+
+    subtitle?.replace("<br>", "")?.split(",")?.map { sub ->
+        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim()
+        val link = sub.removePrefix("[$lang]")
+        subtitleCallback.invoke(
+            SubtitleFile(
+                lang.orEmpty().ifEmpty { return@map },
+                link
+            )
+        )
+    }
+
+}
+
 suspend fun getSoraIdAndType(title: String?, year: Int?, season: Int?): Pair<String, String>? {
     val doc =
         app.get("${base64DecodeAPI("b20=LmM=b2s=a2w=bG8=Ly8=czo=dHA=aHQ=")}/search?keyword=$title").document
@@ -825,7 +819,7 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
     }
 }
 
-suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
+suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies {
 
     val url = if (season == null) {
         "${filmxyAPI}/movie/$imdbId"
@@ -905,47 +899,68 @@ suspend fun searchWatchOnline(
     )
 }
 
-suspend fun searchCrunchyrollAnimeId(title: String): String? {
-    val res = app.get("${consumetCrunchyrollAPI}/search/$title", timeout = 600L)
-        .parsedSafe<ConsumetSearchResponse>()?.results
-    return (if (res?.size == 1) {
-        res.firstOrNull()
-    } else {
-        res?.find {
-            (it.title?.contains(
-                title,
-                true
-            ) == true || it.title.createSlug()
-                ?.contains("${title.createSlug()}", true) == true) && it.type.equals("series")
+//modified code from https://github.com/jmir1/aniyomi-extensions/blob/master/src/all/kamyroll/src/eu/kanade/tachiyomi/animeextension/all/kamyroll/AccessTokenInterceptor.kt
+fun getCrunchyrollToken(): Map<String, String> {
+    val client = app.baseClient.newBuilder()
+        .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("cr-unblocker.us.to", 1080)))
+        .build()
+
+    Authenticator.setDefault(object : Authenticator() {
+        override fun getPasswordAuthentication(): PasswordAuthentication {
+            return PasswordAuthentication("crunblocker", "crunblocker".toCharArray())
         }
-    })?.id
+    })
+
+    val request = requestCreator(
+        method = "POST",
+        url = "$crunchyrollAPI/auth/v1/token",
+        headers = mapOf(
+            "User-Agent" to "Crunchyroll/3.26.1 Android/11 okhttp/4.9.2",
+            "Content-Type" to "application/x-www-form-urlencoded",
+            "Authorization" to "Basic ${BuildConfig.CRUNCHYROLL_BASIC_TOKEN}"
+        ),
+        data = mapOf(
+            "refresh_token" to BuildConfig.CRUNCHYROLL_REFRESH_TOKEN,
+            "grant_type" to "refresh_token",
+            "scope" to "offline_access"
+        )
+    )
+
+    val response = tryParseJson<CrunchyrollToken>(client.newCall(request).execute().body.string())
+    return mapOf("Authorization" to "${response?.tokenType} ${response?.accessToken}")
+
 }
 
-fun CrunchyrollDetails.findCrunchyrollId(
-    season: Int?,
-    episode: Int?,
-    epsTitle: String?
-): List<Pair<CrunchyrollEpisodes?, String?>?> {
-    val sub = this.episodes?.filterKeys { it.contains("subbed") }
-        .matchingEpisode(epsTitle, season, episode) to "Raw"
-    val dub = this.episodes?.filterKeys { it.contains("English Dub") }
-        .matchingEpisode(epsTitle, season, episode) to "English Dub"
-    return listOf(sub, dub)
-}
+suspend fun getCrunchyrollId(aniId: String?): String? {
+    val query = """
+        query media(${'$'}id: Int, ${'$'}type: MediaType, ${'$'}isAdult: Boolean) {
+          Media(id: ${'$'}id, type: ${'$'}type, isAdult: ${'$'}isAdult) {
+            id
+            externalLinks {
+              id
+              site
+              url
+              type
+            }
+          }
+        }
+    """.trimIndent().trim()
 
-fun Map<String, List<CrunchyrollEpisodes>>?.matchingEpisode(
-    epsTitle: String?,
-    season: Int?,
-    episode: Int?
-): CrunchyrollEpisodes? {
-    return this?.mapNotNull { eps ->
-        eps.value.find {
-            (it.episode_number == episode && it.season_number == season) || it.title.equals(
-                epsTitle,
-                true
-            )
-        } ?: eps.value.find { it.episode_number == episode }
-    }?.firstOrNull()
+    val variables = mapOf(
+        "id" to aniId,
+        "isAdult" to false,
+        "type" to "ANIME",
+    )
+
+    val data = mapOf(
+        "query" to query,
+        "variables" to variables
+    ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
+
+    return app.post("https://graphql.anilist.co", requestBody = data)
+        .parsedSafe<AnilistResponses>()?.data?.Media?.externalLinks?.find { it.site == "VRV" }?.url?.let {
+            Regex("series/(\\w+)/?").find(it)?.groupValues?.get(1)
+        }
 }
 
 suspend fun extractPutlockerSources(url: String?): NiceResponse? {
@@ -1120,10 +1135,6 @@ fun String.decryptGomoviesJson(key: String = "123"): String {
     return sb.toString()
 }
 
-fun allanimeQueries(variables: String, query: String) : String {
-    return "${allanimeAPI}/allanimeapi?variables=$variables&query=$query"
-}
-
 fun Headers.getGomoviesCookies(cookieKey: String = "set-cookie"): Map<String, String> {
     val cookieList =
         this.filter { it.first.equals(cookieKey, ignoreCase = true) }.mapNotNull {
@@ -1292,7 +1303,7 @@ private fun decryptVrf(input: String, key: String): String {
     val t = if (input.replace("""[\t\n\f\r]""".toRegex(), "").length % 4 == 0) {
         input.replace("""==?$""".toRegex(), "")
     } else input
-    if (t.length % 4 == 1 || t.contains("""[^+/0-9A-Za-z]""".toRegex())) throw Exception("bad input")
+    if (t.length % 4 == 1 || t.contains("""[^+/\dA-Za-z]""".toRegex())) throw Exception("bad input")
     var i: Int
     var r = ""
     var e = 0
@@ -1357,10 +1368,6 @@ fun getBaseUrl(url: String): String {
     return URI(url).let {
         "${it.scheme}://${it.host}"
     }
-}
-
-fun String.decodeBase64(): String {
-    return Base64.decode(this, Base64.DEFAULT).toString(Charsets.UTF_8)
 }
 
 fun decode(input: String): String = URLDecoder.decode(input, "utf-8")
@@ -1599,7 +1606,9 @@ object CryptoAES {
 object RabbitStream {
 
     suspend fun MainAPI.extractRabbitStream(
+        server: String,
         url: String,
+        ref: String,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
         useSidAuthentication: Boolean,
@@ -1681,8 +1690,8 @@ object RabbitStream {
         list.forEach { subList ->
             subList.first?.forEach { source ->
                 source?.toExtractorLink(
-                    "Vidcloud",
-                    "$twoEmbedAPI/",
+                    server,
+                    ref,
                     extractorData,
                 )
                     ?.forEach {
@@ -1792,9 +1801,13 @@ object RabbitStream {
         return code.reversed()
     }
 
-    suspend fun getKey(): String? {
+    suspend fun getKey(): String {
         return app.get("https://raw.githubusercontent.com/enimax-anime/key/e4/key.txt")
             .text
+    }
+
+    suspend fun getZoroKey(): String {
+        return app.get("https://raw.githubusercontent.com/enimax-anime/key/e6/key.txt").text
     }
 
     private inline fun <reified T> decryptMapped(input: String, key: String): T? {

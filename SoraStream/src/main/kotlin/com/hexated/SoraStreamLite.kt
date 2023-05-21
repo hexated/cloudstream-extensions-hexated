@@ -167,7 +167,7 @@ class SoraStreamLite : SoraStream() {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeSmashyStream(res.imdbId, res.season, res.episode, callback)
+                invokeSmashyStream(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeXmovies(

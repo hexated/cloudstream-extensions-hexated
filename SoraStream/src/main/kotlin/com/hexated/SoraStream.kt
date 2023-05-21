@@ -6,7 +6,6 @@ import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeBlackmovies
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeCodexmovies
-import com.hexated.SoraExtractor.invokeCrunchyroll
 import com.hexated.SoraExtractor.invokeCryMovies
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
@@ -17,7 +16,6 @@ import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNoverse
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeTwoEmbed
-import com.hexated.SoraExtractor.invokeUniqueStream
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeXmovies
 import com.lagradost.cloudstream3.*
@@ -41,8 +39,6 @@ import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
-import com.hexated.SoraExtractor.invokePapaonMovies1
-import com.hexated.SoraExtractor.invokePapaonMovies2
 import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRinzrymovies
@@ -51,7 +47,6 @@ import com.hexated.SoraExtractor.invokeShinobiMovies
 import com.hexated.SoraExtractor.invokeShivamhw
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
-import com.hexated.SoraExtractor.invokeTgarMovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVitoenMovies
@@ -81,17 +76,14 @@ open class SoraStream : TmdbProvider() {
         private const val tmdbAPI = "https://api.themoviedb.org/3"
         const val tmdb2anilist = "https://tmdb2anilist.slidemovies.org"
         const val gdbot = "https://gdtot.pro"
-        const val consumetAnilistAPI = "https://api.consumet.org/meta/anilist"
 
-        private val apiKey =
-            base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
+        private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
         /** ALL SOURCES */
         const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
         const val movieHabAPI = "https://moviehab.com"
-        const val databaseGdriveAPI = "https://databasegdriveplayer.co"
         const val hdMovieBoxAPI = "https://hdmoviebox.net"
         const val series9API = "https://series9.sh"
         const val idlixAPI = "https://idlixian.com"
@@ -100,11 +92,11 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
-        const val consumetZoroAPI = "https://api.consumet.org/anime/zoro"
-        const val allanimeAPI = "https://api.allanime.to"
+        const val zoroAPI = "https://sanji.to"
+        const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.one"
+        const val uhdmoviesAPI = "https://uhdmovies.bio"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
@@ -600,7 +592,7 @@ open class SoraStream : TmdbProvider() {
                 invokeMovie123Net(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeSmashyStream(res.imdbId, res.season, res.episode, callback)
+                invokeSmashyStream(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeWatchsomuch(
