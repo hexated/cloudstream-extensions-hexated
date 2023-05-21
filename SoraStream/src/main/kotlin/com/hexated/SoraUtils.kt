@@ -957,10 +957,12 @@ suspend fun getCrunchyrollId(aniId: String?): String? {
         "variables" to variables
     ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
 
-    return app.post("https://graphql.anilist.co", requestBody = data)
-        .parsedSafe<AnilistResponses>()?.data?.Media?.externalLinks?.find { it.site == "VRV" }?.url?.let {
-            Regex("series/(\\w+)/?").find(it)?.groupValues?.get(1)
-        }
+    val externalLinks = app.post("https://graphql.anilist.co", requestBody = data)
+        .parsedSafe<AnilistResponses>()?.data?.Media?.externalLinks
+
+    return (externalLinks?.find { it.site == "VRV" } ?: externalLinks?.find { it.site == "Crunchyroll" })?.url?.let {
+        Regex("series/(\\w+)/?").find(it)?.groupValues?.get(1)
+    }
 }
 
 suspend fun extractPutlockerSources(url: String?): NiceResponse? {

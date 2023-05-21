@@ -1474,14 +1474,14 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val id = getCrunchyrollId(aniId) ?: return
+        val id = getCrunchyrollId(aniId)
         val audioLocal = listOf(
             "ja-JP",
             "en-US",
             "zh-CN",
         )
         val headers = getCrunchyrollToken()
-        val seasonIdData = app.get("$crunchyrollAPI/content/v2/cms/series/$id/seasons", headers = headers)
+        val seasonIdData = app.get("$crunchyrollAPI/content/v2/cms/series/${id ?: return}/seasons", headers = headers)
             .parsedSafe<CrunchyrollResponses>()?.data?.let { s ->
                 if (s.size == 1) {
                     s.firstOrNull()
@@ -1496,9 +1496,9 @@ object SoraExtractor : SoraStream() {
                 }
             }
         val seasonId = seasonIdData?.versions?.filter { it.audio_locale in audioLocal }
-            ?.map { it.guid to it.audio_locale }
+            ?.map { it.guid to it.audio_locale } ?: listOf(seasonIdData?.id to "ja-JP")
 
-        seasonId?.apmap { (sId, audioL) ->
+        seasonId.apmap { (sId, audioL) ->
             val streamsLink =
                 app.get(
                     "$crunchyrollAPI/content/v2/cms/seasons/${sId ?: return@apmap}/episodes",
