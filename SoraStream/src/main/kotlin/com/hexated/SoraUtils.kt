@@ -43,7 +43,7 @@ import kotlin.math.min
 val soraAPI =
     base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
 val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
-val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+const val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 const val kaguyaBaseUrl = "https://kaguya.app/"
 val soraHeaders = mapOf(
     "lang" to "en",
@@ -545,6 +545,7 @@ suspend fun invokeSmashyRip(
     source?.split(",")?.map { links ->
         val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
         val link = links.removePrefix("[$quality]").substringAfter("dev/").trim()
+        if(link.isEmpty()) return@map
         callback.invoke(
             ExtractorLink(
                 "Smashy [$name]",
