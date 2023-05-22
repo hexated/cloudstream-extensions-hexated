@@ -916,7 +916,7 @@ object SoraExtractor : SoraStream() {
             val episodeId = app.get("$zoroAPI/ajax/v2/episode/list/${id ?: return@apmap}")
                 .parsedSafe<ZoroResponses>()?.html?.let {
                     Jsoup.parse(it)
-                }?.select("div.ss-list a")?.find { it.attr("data-number") == "$episode" }
+                }?.select("div.ss-list a")?.find { it.attr("data-number") == "${episode ?: 1}" }
                 ?.attr("data-id")
 
             val servers = app.get("$zoroAPI/ajax/v2/episode/servers?episodeId=${episodeId ?: return@apmap}")
@@ -1493,7 +1493,7 @@ object SoraExtractor : SoraStream() {
                             "Hunter x Hunter" -> it.season_number == 5
                             else -> it.season_number == season
                         }
-                    }
+                    } ?: s.find { it.season_number?.plus(1) == season }
                 }
             }
         val seasonId = seasonIdData?.versions?.filter { it.audio_locale in audioLocal }
