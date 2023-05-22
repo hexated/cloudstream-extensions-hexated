@@ -74,8 +74,8 @@ open class SoraStream : TmdbProvider() {
     companion object {
         /** TOOLS */
         private const val tmdbAPI = "https://api.themoviedb.org/3"
-        const val tmdb2anilist = "https://tmdb2anilist.slidemovies.org"
         const val gdbot = "https://gdtot.pro"
+        const val anilistAPI = "https://graphql.anilist.co"
 
         private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
@@ -291,7 +291,9 @@ open class SoraStream : TmdbProvider() {
                                 airedYear = year,
                                 lastSeason = lastSeason,
                                 epsTitle = eps.name,
-                                jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title
+                                jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
+                                date = season.airDate,
+                                airedDate = res.releaseDate ?: res.firstAirDate
                             ).toJson(),
                             name = eps.name,
                             season = eps.seasonNumber,
@@ -334,7 +336,8 @@ open class SoraStream : TmdbProvider() {
                     year = year,
                     orgTitle = orgTitle,
                     isAnime = isAnime,
-                    jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title
+                    jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
+                    airedDate = res.releaseDate ?: res.firstAirDate
                 ).toJson(),
             ) {
                 this.posterUrl = poster
@@ -399,11 +402,10 @@ open class SoraStream : TmdbProvider() {
 //            },
             {
                 if (res.isAnime) invokeAnimes(
-                    res.id,
                     res.title,
-                    res.jpTitle,
                     res.epsTitle,
-                    res.airedYear ?: res.year,
+                    res.date,
+                    res.airedDate,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -790,6 +792,8 @@ open class SoraStream : TmdbProvider() {
         val lastSeason: Int? = null,
         val epsTitle: String? = null,
         val jpTitle: String? = null,
+        val date: String? = null,
+        val airedDate: String? = null,
     )
 
     data class Data(

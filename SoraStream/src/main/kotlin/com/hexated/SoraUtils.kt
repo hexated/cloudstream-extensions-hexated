@@ -2,6 +2,7 @@ package com.hexated
 
 import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.SoraStream.Companion.anilistAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
 import com.hexated.SoraStream.Companion.baymoviesAPI
 import com.hexated.SoraStream.Companion.crunchyrollAPI
@@ -10,7 +11,6 @@ import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.putlockerAPI
 import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
-import com.hexated.SoraStream.Companion.twoEmbedAPI
 import com.hexated.SoraStream.Companion.watchOnlineAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
@@ -40,7 +40,8 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
 import kotlin.math.min
 
-val soraAPI = base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
+val soraAPI =
+    base64DecodeAPI("cA==YXA=cy8=Y20=di8=LnQ=b2s=a2w=bG8=aS4=YXA=ZS0=aWw=b2I=LW0=Z2E=Ly8=czo=dHA=aHQ=")
 val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
 val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 const val kaguyaBaseUrl = "https://kaguya.app/"
@@ -535,7 +536,8 @@ suspend fun invokeSmashyRip(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit,
 ) {
-    val script = app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+    val script =
+        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
 
     val source = Regex("file:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1)
     val subtitle = Regex("subtitle:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1)
@@ -957,10 +959,11 @@ suspend fun getCrunchyrollId(aniId: String?): String? {
         "variables" to variables
     ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
 
-    val externalLinks = app.post("https://graphql.anilist.co", requestBody = data)
+    val externalLinks = app.post(anilistAPI, requestBody = data)
         .parsedSafe<AnilistResponses>()?.data?.Media?.externalLinks
 
-    return (externalLinks?.find { it.site == "VRV" } ?: externalLinks?.find { it.site == "Crunchyroll" })?.url?.let {
+    return (externalLinks?.find { it.site == "VRV" }
+        ?: externalLinks?.find { it.site == "Crunchyroll" })?.url?.let {
         Regex("series/(\\w+)/?").find(it)?.groupValues?.get(1)
     }
 }
@@ -1009,6 +1012,89 @@ suspend fun PutlockerResponses?.callback(
             )
         )
     }
+}
+
+suspend fun convertTmdbToAnimeId(
+    title: String?,
+    date: String?,
+    airedDate: String?,
+    type: TvType
+): AniIds {
+    val sDate = date?.split("-")
+    val sAiredDate = airedDate?.split("-")
+
+    val year = sDate?.firstOrNull()?.toIntOrNull()
+    val airedYear = sAiredDate?.firstOrNull()?.toIntOrNull()
+    val season = getSeason(sDate?.get(1)?.toIntOrNull())
+    val airedSeason = getSeason(sAiredDate?.get(1)?.toIntOrNull())
+
+    return if (type == TvType.AnimeMovie) {
+        tmdbToAnimeId(title, airedYear, "", type)
+    } else {
+        val ids = tmdbToAnimeId(title, year, season, type)
+        if (ids.id == null && ids.idMal == null) tmdbToAnimeId(
+            title,
+            airedYear,
+            airedSeason,
+            type
+        ) else ids
+    }
+}
+
+suspend fun tmdbToAnimeId(title: String?, year: Int?, season: String?, type: TvType): AniIds {
+    val query = """
+        query (
+          ${'$'}page: Int = 1
+          ${'$'}search: String
+          ${'$'}sort: [MediaSort] = [POPULARITY_DESC, SCORE_DESC]
+          ${'$'}type: MediaType
+          ${'$'}season: MediaSeason
+          ${'$'}seasonYear: Int
+          ${'$'}format: [MediaFormat]
+        ) {
+          Page(page: ${'$'}page, perPage: 20) {
+            media(
+              search: ${'$'}search
+              sort: ${'$'}sort
+              type: ${'$'}type
+              season: ${'$'}season
+              seasonYear: ${'$'}seasonYear
+              format_in: ${'$'}format
+            ) {
+              id
+              idMal
+            }
+          }
+        }
+    """.trimIndent().trim()
+
+    val variables = mapOf(
+        "search" to title,
+        "sort" to "SEARCH_MATCH",
+        "type" to "ANIME",
+        "season" to season?.uppercase(),
+        "seasonYear" to year,
+        "format" to listOf(if (type == TvType.AnimeMovie) "MOVIE" else "TV")
+    ).filterValues { value -> value != null && value.toString().isNotEmpty() }
+
+    val data = mapOf(
+        "query" to query,
+        "variables" to variables
+    ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
+
+    val res = app.post(anilistAPI, requestBody = data)
+        .parsedSafe<AniSearch>()?.data?.Page?.media?.firstOrNull()
+    return AniIds(res?.id, res?.idMal)
+
+}
+
+fun getSeason(month: Int?): String? {
+    val seasons = arrayOf(
+        "Winter", "Winter", "Spring", "Spring", "Spring", "Summer",
+        "Summer", "Summer", "Fall", "Fall", "Fall", "Winter"
+    )
+    if(month == null) return null
+    return seasons[month - 1]
 }
 
 fun getPutlockerQuality(quality: String): Int {
