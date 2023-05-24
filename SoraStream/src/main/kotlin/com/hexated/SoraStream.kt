@@ -347,6 +347,7 @@ open class SoraStream : TmdbProvider() {
             ) {
                 this.posterUrl = poster
                 this.backgroundPosterUrl = bgPoster
+                this.comingSoon = res.status != "Released"
                 this.year = year
                 this.plot = res.overview
                 this.duration = res.runtime
