@@ -895,7 +895,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get("$biliBiliAPI/anime/episodes?id=$aniId&source_id=bilibili", referer = kaguyaBaseUrl)
+        val res = app.get("$biliBiliAPI/anime/episodes?id=${aniId ?: return}&source_id=bilibili", referer = kaguyaBaseUrl)
             .parsedSafe<BiliBiliDetails>()?.episodes?.find {
                 it.episodeNumber == episode
             } ?: return
@@ -920,15 +920,16 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        sources?.subtitles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    SubtitleHelper.fromTwoLettersToLanguage(sub.lang ?: "") ?: sub.language
-                    ?: return@map null,
-                    sub.file ?: return@map null
+        app.get("https://api.bilibili.tv/intl/gateway/web/v2/subtitle?s_locale=en_US&platform=web&episode_id=${res.sourceEpisodeId}&spm_id=bstar-web.pgc-video-detail.0.0&from_spm_id=bstar-web.homepage.anime.all")
+            .parsedSafe<BiliBiliSubtitlesResponses>()?.data?.subtitles?.map { sub ->
+                subtitleCallback.invoke(
+                    SubtitleFile(
+                        SubtitleHelper.fromTwoLettersToLanguage(sub.lang_key ?: "") ?: sub.lang
+                        ?: return@map null,
+                        sub.url ?: return@map null
+                    )
                 )
-            )
-        }
+            }
 
 
     }
@@ -3155,7 +3156,9 @@ data class BiliBiliDetails(
 
 data class BiliBiliSubtitles(
     @JsonProperty("file") val file: String? = null,
+    @JsonProperty("url") val url: String? = null,
     @JsonProperty("lang") val lang: String? = null,
+    @JsonProperty("lang_key") val lang_key: String? = null,
     @JsonProperty("language") val language: String? = null,
 )
 
@@ -3167,6 +3170,14 @@ data class BiliBiliSources(
 data class BiliBiliSourcesResponse(
     @JsonProperty("sources") val sources: ArrayList<BiliBiliSources>? = arrayListOf(),
     @JsonProperty("subtitles") val subtitles: ArrayList<BiliBiliSubtitles>? = arrayListOf(),
+)
+
+data class BiliBiliSubtitlesData(
+    @JsonProperty("subtitles") val subtitles: ArrayList<BiliBiliSubtitles>? = arrayListOf(),
+)
+
+data class BiliBiliSubtitlesResponses(
+    @JsonProperty("data") val data: BiliBiliSubtitlesData? = BiliBiliSubtitlesData(),
 )
 
 data class WatchOnlineItems(
