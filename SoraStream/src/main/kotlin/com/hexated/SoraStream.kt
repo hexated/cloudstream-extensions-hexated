@@ -609,7 +609,7 @@ open class SoraStream : TmdbProvider() {
                 invokeMovie123Net(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeSmashyStream(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+                invokeSmashyStream(res.imdbId, res.season, res.episode, res.isAnime, subtitleCallback, callback)
             },
             {
                 invokeWatchsomuch(

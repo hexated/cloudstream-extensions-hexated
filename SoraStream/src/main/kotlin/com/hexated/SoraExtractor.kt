@@ -920,17 +920,15 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        app.get("https://api.bilibili.tv/intl/gateway/web/v2/subtitle?s_locale=en_US&platform=web&episode_id=${res.sourceEpisodeId}&spm_id=bstar-web.pgc-video-detail.0.0&from_spm_id=bstar-web.homepage.anime.all")
-            .parsedSafe<BiliBiliSubtitlesResponses>()?.data?.subtitles?.map { sub ->
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        SubtitleHelper.fromTwoLettersToLanguage(sub.lang_key ?: "") ?: sub.lang
-                        ?: return@map null,
-                        sub.url ?: return@map null
-                    )
+        sources?.subtitles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    SubtitleHelper.fromTwoLettersToLanguage(sub.lang ?: "") ?: sub.language
+                    ?: return@map null,
+                    sub.file ?: return@map null
                 )
-            }
-
+            )
+        }
 
     }
 
@@ -1875,6 +1873,7 @@ object SoraExtractor : SoraStream() {
         imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
+        isAnime: Boolean = false,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
@@ -1891,7 +1890,7 @@ object SoraExtractor : SoraStream() {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
-                it.first.contains("/ffix") -> {
+                it.first.contains("/ffix") && !isAnime -> {
                     invokeSmashyFfix(it.second, it.first, callback)
                 }
                 it.first.contains("/gtop") -> {
@@ -3156,9 +3155,7 @@ data class BiliBiliDetails(
 
 data class BiliBiliSubtitles(
     @JsonProperty("file") val file: String? = null,
-    @JsonProperty("url") val url: String? = null,
     @JsonProperty("lang") val lang: String? = null,
-    @JsonProperty("lang_key") val lang_key: String? = null,
     @JsonProperty("language") val language: String? = null,
 )
 
@@ -3170,14 +3167,6 @@ data class BiliBiliSources(
 data class BiliBiliSourcesResponse(
     @JsonProperty("sources") val sources: ArrayList<BiliBiliSources>? = arrayListOf(),
     @JsonProperty("subtitles") val subtitles: ArrayList<BiliBiliSubtitles>? = arrayListOf(),
-)
-
-data class BiliBiliSubtitlesData(
-    @JsonProperty("subtitles") val subtitles: ArrayList<BiliBiliSubtitles>? = arrayListOf(),
-)
-
-data class BiliBiliSubtitlesResponses(
-    @JsonProperty("data") val data: BiliBiliSubtitlesData? = BiliBiliSubtitlesData(),
 )
 
 data class WatchOnlineItems(
