@@ -22,6 +22,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invokeDahmerMovies
+import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeEdithxmovies
 import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
@@ -77,7 +78,8 @@ open class SoraStream : TmdbProvider() {
         const val gdbot = "https://gdtot.pro"
         const val anilistAPI = "https://graphql.anilist.co"
 
-        private val apiKey = base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
+        private val apiKey =
+            base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
         /** ALL SOURCES */
         const val twoEmbedAPI = "https://www.2embed.to"
@@ -85,6 +87,7 @@ open class SoraStream : TmdbProvider() {
         const val dbgoAPI = "https://dbgo.fun"
         const val movieHabAPI = "https://moviehab.com"
         const val hdMovieBoxAPI = "https://hdmoviebox.net"
+        const val dreamfilmAPI = "https://dreamfilmsw.net"
         const val series9API = "https://series9.sh"
         const val idlixAPI = "https://idlixian.com"
         const val noverseAPI = "https://www.nollyverse.com"
@@ -111,7 +114,8 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww8.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
+        val gomoviesAPI =
+            base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
         const val ask4MoviesAPI = "https://ask4movie.mx"
         const val biliBiliAPI = "https://api-vn.kaguya.app/server"
         const val watchOnlineAPI = "https://watchonline.ag"
@@ -131,7 +135,8 @@ open class SoraStream : TmdbProvider() {
         const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
         const val vitoenMovieAPI = "https://openmatte.vitoencodes.workers.dev/0:"
         const val shivamhwAPI = "https://foogle.shivamhw.me"
-        val cryMoviesAPI = base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
+        val cryMoviesAPI =
+            base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
 
         // DEAD SITE
         const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream" // dead
@@ -424,6 +429,15 @@ open class SoraStream : TmdbProvider() {
 //            },
             {
                 if (!res.isAnime) invokeHDMovieBox(
+                    res.title,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeDreamfilm(
                     res.title,
                     res.season,
                     res.episode,

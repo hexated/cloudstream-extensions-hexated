@@ -15,7 +15,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.ByteString.Companion.encode
 import org.jsoup.Jsoup
-import java.time.LocalDate
 
 val session = Session(Requests().baseClient)
 
@@ -274,6 +273,38 @@ object SoraExtractor : SoraStream() {
             }
         }
 
+
+    }
+
+    suspend fun invokeDreamfilm(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.createSlug()
+        val url = if (season == null) {
+            "$dreamfilmAPI/$fixTitle"
+        } else {
+            "$dreamfilmAPI/series/$fixTitle/season-$season/episode-$episode"
+        }
+
+        val iframe = app.get(url).document.selectFirst("iframe.Moly")?.attr("data-src")
+        loadExtractor(iframe ?: return, "$dreamfilmAPI/", subtitleCallback) { link ->
+            callback.invoke(
+                ExtractorLink(
+                    link.name,
+                    link.name,
+                    link.url,
+                    link.referer,
+                    Qualities.P1080.value,
+                    link.isM3u8,
+                    link.headers,
+                    link.extractorData
+                )
+            )
+        }
 
     }
 
