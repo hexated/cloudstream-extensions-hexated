@@ -16,7 +16,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 
 open class Kickassanime : MainAPI() {
-    final override var mainUrl = "https://www2.kickassanime.ro"
+    final override var mainUrl = "https://kaas.am"
     override var name = "Kickassanime"
     override val hasMainPage = true
     override var lang = "en"
