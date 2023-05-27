@@ -150,6 +150,7 @@ class KuramanimeProvider : MainAPI() {
 
     private suspend fun invokeLocalSource(
         url: String,
+        server: String,
         ref: String,
         callback: (ExtractorLink) -> Unit
     ) {
@@ -163,14 +164,17 @@ class KuramanimeProvider : MainAPI() {
             val quality = it.attr("size").toIntOrNull()
             callback.invoke(
                 ExtractorLink(
-                    name,
-                    name,
+                    fixTitle(server),
+                    fixTitle(server),
                     link,
                     referer = "$mainUrl/",
                     quality = quality ?: Qualities.Unknown.value,
-//                    headers = mapOf(
-//                        "Range" to "bytes=0-"
-//                    )
+                    headers = mapOf(
+                        "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                        "Range" to "bytes=0-",
+                        "Sec-Fetch-Dest" to "video",
+                        "Sec-Fetch-Mode" to "no-cors",
+                    )
                 )
             )
         }
@@ -187,8 +191,8 @@ class KuramanimeProvider : MainAPI() {
             safeApiCall {
                 val server = source.attr("value")
                 val link = "$data?activate_stream=1&stream_server=$server"
-                if (server == "kuramadrive") {
-                    invokeLocalSource(link, data, callback)
+                if (server == "kuramadrive" || server == "archive") {
+                    invokeLocalSource(link, server, data, callback)
                 } else {
                     app.get(
                         link,
