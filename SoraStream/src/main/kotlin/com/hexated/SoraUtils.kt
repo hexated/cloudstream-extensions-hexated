@@ -8,6 +8,7 @@ import com.hexated.SoraStream.Companion.baymoviesAPI
 import com.hexated.SoraStream.Companion.crunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
+import com.hexated.SoraStream.Companion.malsyncAPI
 import com.hexated.SoraStream.Companion.putlockerAPI
 import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
