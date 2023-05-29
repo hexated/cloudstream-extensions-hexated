@@ -78,6 +78,7 @@ open class SoraStream : TmdbProvider() {
         const val gdbot = "https://gdtot.pro"
         const val anilistAPI = "https://graphql.anilist.co"
         const val malsyncAPI = "https://api.malsync.moe"
+        const val consumetHelper = "https://api.consumet.org/anime/9anime/helper"
 
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
@@ -106,8 +107,8 @@ open class SoraStream : TmdbProvider() {
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val m4uhdAPI = "https://m4uhd.tv"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
-        const val moviezAddAPI = "https://ww1.moviezaddiction.click"
-        const val bollyMazaAPI = "https://ww1.bollymaza.click"
+        const val moviezAddAPI = "https://ww2.moviezaddiction.click"
+        const val bollyMazaAPI = "https://m.bollymaza.click"
         const val moviesbayAPI = "https://moviesbay.live"
         const val rStreamAPI = "https://remotestre.am"
         const val flixonAPI = "https://flixon.ru"
@@ -117,7 +118,7 @@ open class SoraStream : TmdbProvider() {
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         val gomoviesAPI =
             base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
-        const val ask4MoviesAPI = "https://ask4movie.mx"
+        const val ask4MoviesAPI = "https://ask4movie.net"
         const val biliBiliAPI = "https://api-vn.kaguya.app/server"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://api.9animetv.live"
@@ -140,7 +141,6 @@ open class SoraStream : TmdbProvider() {
             base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
 
         // DEAD SITE
-        const val consumetCrunchyrollAPI = "https://cronchy.consumet.stream" // dead
         const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
         const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
         const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:" // dead
@@ -503,7 +503,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeFmovies(
+                if (!res.isAnime) invokeFmovies(
                     res.title,
                     res.airedYear ?: res.year,
                     res.season,
@@ -610,7 +610,14 @@ open class SoraStream : TmdbProvider() {
                 invokeMovie123Net(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeSmashyStream(res.imdbId, res.season, res.episode, res.isAnime, subtitleCallback, callback)
+                invokeSmashyStream(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    res.isAnime,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeWatchsomuch(

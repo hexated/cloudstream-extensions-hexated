@@ -730,14 +730,14 @@ object SoraExtractor : SoraStream() {
     ) {
         val query = title?.replace(Regex("[^\\w-\\s]"), "")
         val html =
-            app.get("$fmoviesAPI/ajax/film/search?vrf=${encodeVrf("$query")}&keyword=$query")
-                .parsedSafe<FmoviesResponses>()?.html
+            app.get("$fmoviesAPI/ajax/film/search?keyword=$query")
+                .parsedSafe<FmoviesResponses>()?.result?.html
 
         val mediaId = Jsoup.parse(html ?: return).select("a.item").map {
             Triple(
                 it.attr("href"),
-                it.select("div.title").text(),
-                it.selectFirst("i.dot")?.nextSibling().toString().trim(),
+                it.select("div.name").text(),
+                it.select("span.dot")[1].text(),
             )
         }.find {
             if (season == null) {
@@ -746,38 +746,35 @@ object SoraExtractor : SoraStream() {
                 it.first.contains("/series/")
             } && (it.second.equals(title, true) || it.second.createSlug()
                 .equals(title.createSlug())) && it.third.toInt() == year
-        }?.first?.substringAfterLast("-") ?: return
+        }?.first
 
-        val episodeId = if (season == null) {
-            "1-full"
-        } else {
-            "$season-$episode"
-        }
+        val watchId =
+            app.get(fixUrl(mediaId ?: return, fmoviesAPI)).document.selectFirst("div.watch")
+                ?.attr("data-id")
 
-        val serversKname =
-            app.get("$fmoviesAPI/ajax/film/servers?id=$mediaId&vrf=${encodeVrf(mediaId)}")
-                .parsedSafe<FmoviesResponses>()?.html?.let { Jsoup.parse(it) }
-                ?.selectFirst("a[data-kname=$episodeId]")?.attr("data-ep")
+        val episodeId = app.get(
+            "$fmoviesAPI/ajax/episode/list/${watchId ?: return}?vrf=${
+                comsumetEncodeVrf(watchId)
+            }"
+        ).parsedSafe<FmoviesResult>()?.result?.let { Jsoup.parse(it) }
+            ?.selectFirst("ul[data-season=${season ?: 1}] li a[data-num=${episode ?: 1}]")
+            ?.attr("data-id")
 
-        val servers = tryParseJson<HashMap<String, String>>(serversKname)
+        val servers =
+            app.get("$fmoviesAPI/ajax/server/list/${episodeId ?: return}?vrf=${comsumetEncodeVrf(episodeId)}")
+                .parsedSafe<FmoviesResult>()?.result?.let { Jsoup.parse(it) }
+                ?.select("ul li")?.map { it.attr("data-id") to it.attr("data-link-id") }
 
-        val sub = app.get("$fmoviesAPI/ajax/episode/subtitles/${servers?.get("28")}").text
-        tryParseJson<List<FmoviesSubtitles>>(sub)?.map {
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    it.label ?: "",
-                    it.file ?: return@map
-                )
-            )
-        }
-
-        servers?.apmap { server ->
-            val decryptServer = app.get("$fmoviesAPI/ajax/episode/info?id=${server.value}")
-                .parsedSafe<FmoviesResponses>()?.url?.let { decodeVrf(it) } ?: return@apmap
-            if (server.key == "41") {
-                invokeVizcloud(decryptServer, callback)
+        servers?.filter {
+            it.first == "41" || it.first == "45"
+        }?.apmap { (serverid, linkId) ->
+            delay(2000)
+            val decryptServer = app.get("$fmoviesAPI/ajax/server/$linkId?vrf=${comsumetEncodeVrf(linkId)}")
+                .parsedSafe<FmoviesResponses>()?.result?.url?.let { comsumetDecodeVrf(it) }
+            if (serverid == "41") {
+                invokeVizcloud(serverid, decryptServer ?: return@apmap, subtitleCallback, callback)
             } else {
-                loadExtractor(decryptServer, fmoviesAPI, subtitleCallback, callback)
+                loadExtractor(decryptServer ?: return@apmap, fmoviesAPI, subtitleCallback, callback)
             }
         }
     }
@@ -3236,7 +3233,12 @@ data class DudetvSources(
 )
 
 data class FmoviesResponses(
+    @JsonProperty("result") val result: FmoviesResult? = null,
+)
+
+data class FmoviesResult(
     @JsonProperty("html") val html: String? = null,
+    @JsonProperty("result") val result: String? = null,
     @JsonProperty("url") val url: String? = null,
 )
 

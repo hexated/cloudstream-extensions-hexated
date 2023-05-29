@@ -5,8 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraStream.Companion.anilistAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
 import com.hexated.SoraStream.Companion.baymoviesAPI
+import com.hexated.SoraStream.Companion.consumetHelper
 import com.hexated.SoraStream.Companion.crunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
+import com.hexated.SoraStream.Companion.fmoviesAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.malsyncAPI
 import com.hexated.SoraStream.Companion.putlockerAPI
@@ -400,11 +402,13 @@ suspend fun getDirectGdrive(url: String): String {
 }
 
 suspend fun invokeVizcloud(
+    serverid: String,
     url: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit,
 ) {
-    val id = Regex("(?:embed-|/e/)([^?]*)").find(url)?.groupValues?.getOrNull(1)
-    app.get("https://api.consumet.org/anime/9anime/helper?query=${id ?: return}&action=vizcloud")
+    val id = Regex("(?:/embed[-/]|/e/)([^?/]*)").find(url)?.groupValues?.getOrNull(1)
+    app.get("$consumetHelper?query=${id ?: return}&action=vizcloud")
         .parsedSafe<VizcloudResponses>()?.data?.media?.sources?.map {
             M3u8Helper.generateM3u8(
                 "Vizcloud",
@@ -412,6 +416,16 @@ suspend fun invokeVizcloud(
                 "${getBaseUrl(url)}/"
             ).forEach(callback)
         }
+
+    val sub = app.get("${fmoviesAPI}/ajax/episode/subtitles/$serverid")
+    tryParseJson<List<FmoviesSubtitles>>(sub.text)?.map {
+        subtitleCallback.invoke(
+            SubtitleFile(
+                it.label ?: "",
+                it.file ?: return@map
+            )
+        )
+    }
 }
 
 suspend fun invokeSmashyFfix(
@@ -1355,6 +1369,16 @@ fun getDeviceId(length: Int = 16): String {
     return (1..length)
         .map { allowedChars.random() }
         .joinToString("")
+}
+
+suspend fun comsumetEncodeVrf(query: String): String? {
+    return app.get("$consumetHelper?query=$query&action=fmovies-vrf")
+        .parsedSafe<Map<String, String>>()?.get("url")
+}
+
+suspend fun comsumetDecodeVrf(query: String): String? {
+    val res = app.get("$consumetHelper?query=$query&action=fmovies-decrypt")
+    return tryParseJson<Map<String, String>>(res.text)?.get("url")
 }
 
 fun encodeVrf(query: String): String {

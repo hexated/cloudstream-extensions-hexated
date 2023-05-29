@@ -145,7 +145,14 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeSeries9(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                invokeSeries9(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeIdlix(
@@ -168,13 +175,26 @@ class SoraStreamLite : SoraStream() {
 //                )
 //            },
             {
-                if (!res.isAnime) invokeFilmxy(res.imdbId, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeFilmxy(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
-                invokeSmashyStream(res.imdbId, res.season, res.episode, res.isAnime, subtitleCallback, callback)
+                invokeSmashyStream(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    res.isAnime,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 invokeXmovies(
@@ -187,7 +207,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeFmovies(
+                if (!res.isAnime) invokeFmovies(
                     res.title,
                     res.airedYear ?: res.year,
                     res.season,
