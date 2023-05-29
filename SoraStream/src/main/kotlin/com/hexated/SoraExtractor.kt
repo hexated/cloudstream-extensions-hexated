@@ -884,7 +884,7 @@ object SoraExtractor : SoraStream() {
                 invokeBiliBili(aniId, episode, subtitleCallback, callback)
             },
             {
-                if (season != null) invokeCrunchyroll(aniId, epsTitle, season, episode, subtitleCallback, callback)
+                if (season != null) invokeCrunchyroll(aniId, malId, epsTitle, season, episode, subtitleCallback, callback)
             }
         )
     }
@@ -1499,13 +1499,14 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeCrunchyroll(
         aniId: Int? = null,
+        malId: Int? = null,
         epsTitle: String? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val id = getCrunchyrollId("${aniId ?: return}")
+        val id = getCrunchyrollId("${aniId ?: return}") ?: getCrunchyrollIdFromMalSync("${malId ?: return}") ?: return
         val audioLocal = listOf(
             "ja-JP",
             "en-US",
@@ -3328,4 +3329,8 @@ data class MALSyncResponses(
 data class ZoroResponses(
     @JsonProperty("html") val html: String? = null,
     @JsonProperty("link") val link: String? = null,
+)
+
+data class MalSyncRes(
+    @JsonProperty("Sites") val Sites: Map<String,Map<String,Map<String,String>>>? = null,
 )

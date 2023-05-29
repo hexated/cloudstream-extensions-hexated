@@ -969,6 +969,14 @@ suspend fun getCrunchyrollId(aniId: String?): String? {
     }
 }
 
+suspend fun getCrunchyrollIdFromMalSync(aniId: String?): String? {
+    val res = app.get("$malsyncAPI/mal/anime/$aniId").parsedSafe<MalSyncRes>()?.Sites
+    val vrv = res?.get("Vrv")?.map { it.value }?.firstOrNull()?.get("url")
+    val crunchyroll = res?.get("Vrv")?.map { it.value }?.firstOrNull()?.get("url")
+    val regex = Regex("series/(\\w+)/?")
+    return regex.find("$vrv")?.groupValues?.getOrNull(1) ?: regex.find("$crunchyroll")?.groupValues?.getOrNull(1)
+}
+
 suspend fun extractPutlockerSources(url: String?): NiceResponse? {
     val embedHost = url?.substringBefore("/embed-player")
     val player = app.get(
