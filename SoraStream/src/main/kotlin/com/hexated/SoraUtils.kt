@@ -431,10 +431,11 @@ suspend fun invokeVizcloud(
 suspend fun invokeSmashyFfix(
     name: String,
     url: String,
+    ref: String,
     callback: (ExtractorLink) -> Unit,
 ) {
     val script =
-        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+        app.get(url, referer = ref).document.selectFirst("script:containsData(player =)")?.data() ?: return
 
     val source =
         Regex("file:\\s['\"](\\S+?)['|\"]").find(script)?.groupValues?.get(

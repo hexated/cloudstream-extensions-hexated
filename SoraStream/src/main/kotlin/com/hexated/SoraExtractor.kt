@@ -1889,7 +1889,7 @@ object SoraExtractor : SoraStream() {
         }.apmap {
             when {
                 it.first.contains("/ffix") && !isAnime -> {
-                    invokeSmashyFfix(it.second, it.first, callback)
+                    invokeSmashyFfix(it.second, it.first, url, callback)
                 }
                 it.first.contains("/gtop") -> {
                     invokeSmashyGtop(it.second, it.first, callback)
