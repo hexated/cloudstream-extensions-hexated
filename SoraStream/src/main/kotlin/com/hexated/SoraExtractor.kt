@@ -743,7 +743,7 @@ object SoraExtractor : SoraStream() {
             if (season == null) {
                 it.first.contains("/movie/")
             } else {
-                it.first.contains("/series/")
+                it.first.contains("/tv/")
             } && (it.second.equals(title, true) || it.second.createSlug()
                 .equals(title.createSlug())) && it.third.toInt() == year
         }?.first
