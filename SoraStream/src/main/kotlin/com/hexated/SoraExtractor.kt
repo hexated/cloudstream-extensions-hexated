@@ -2785,7 +2785,7 @@ object SoraExtractor : SoraStream() {
                 Triple(
                     it.select("td[data-th=File Name]").text(),
                     it.select("td[data-th=Size]").text(),
-                    it.selectFirst("div.play_with_vlc_button > a")?.attr("href")
+                    it.selectFirst("div.download_button.pls_wait > a")?.attr("href")
                 )
             }
         } else {
@@ -2793,7 +2793,7 @@ object SoraExtractor : SoraStream() {
                 Triple(
                     it.name,
                     it.size,
-                    it.process_link,
+                    it.stream_link,
                 )
             }
         }
@@ -2813,19 +2813,18 @@ object SoraExtractor : SoraStream() {
         }?.apmap { source ->
             val quality = getIndexQuality(source.first)
             val tags = getIndexQualityTags(source.first)
-            val video = app.get(
-                fixUrl(
-                    source.third ?: return@apmap,
-                    shivamhwAPI
-                )
-            ).document.selectFirst("table.rwd-table tr:contains(Direct Download Link) a")
-                ?.attr("href")
+            val video = source.third
+            if (!app.get(
+                    video ?: return@apmap,
+                    referer = "$shivamhwAPI/"
+                ).isSuccessful
+            ) return@apmap
             callback.invoke(
                 ExtractorLink(
                     "Shivamhw",
                     "Shivamhw $tags [${source.second}]",
-                    video ?: return@apmap,
-                    "",
+                    video,
+                    "$shivamhwAPI/",
                     quality,
                 )
             )
