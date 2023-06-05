@@ -112,7 +112,7 @@ open class SoraStream : TmdbProvider() {
         const val bollyMazaAPI = "https://m.bollymaza.click"
         const val moviesbayAPI = "https://moviesbay.live"
         const val rStreamAPI = "https://remotestre.am"
-        const val flixonAPI = "https://flixon.ru"
+        const val flixonAPI = "https://flixon.lol"
         const val animeKaizokuAPI = "https://animekaizoku.com"
         const val movie123NetAPI = "https://ww8.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"

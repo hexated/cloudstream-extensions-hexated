@@ -1767,14 +1767,13 @@ object SoraExtractor : SoraStream() {
         val unPacker =
             app.get(
                 iframe ?: return,
-                referer = "https://flixon.ru/"
+                referer = "$flixonAPI/"
             ).document.selectFirst("script:containsData(JuicyCodes.Run)")
                 ?.data()
                 ?.substringAfter("JuicyCodes.Run(")?.substringBefore(");")?.split("+")
                 ?.joinToString("") { it.replace("\"", "").trim() }
                 ?.let { getAndUnpack(base64Decode(it)) }
 
-        val ref = "https://onionflix.ru/"
         val link = Regex("[\"']file[\"']:[\"'](.+?)[\"'],").find(
             unPacker ?: return
         )?.groupValues?.getOrNull(1)
@@ -1784,7 +1783,7 @@ object SoraExtractor : SoraStream() {
                 "Flixon",
                 "Flixon",
                 link ?: return,
-                ref,
+                "https://onionplay.stream/",
                 Qualities.P720.value,
                 link.contains(".m3u8")
             )
