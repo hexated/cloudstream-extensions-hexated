@@ -2870,6 +2870,35 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeUpcloud(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val apiUrl = base64DecodeAPI("dWI=Y2w=cC4=bXU=ZWE=LWI=Ynk=YmE=bS4=ZWE=dHI=ZXM=aW4=LWM=NDA=MDg=NjE=YmQ=Y2I=MmU=Ly8=czo=dHA=aHQ=")
+        val url = if (season == null) {
+            "$apiUrl/stream/movie/$imdbId.json"
+        } else {
+            "$apiUrl/stream/series/$imdbId:$season:$episode.json"
+        }
+
+        app.get(url).parsedSafe<CryMoviesResponse>()?.streams?.map { stream ->
+            callback.invoke(
+                ExtractorLink(
+                    "Upcloud",
+                    "Upcloud",
+                    stream.url ?: return@map,
+                    "",
+                    stream.description?.toIntOrNull() ?: Qualities.Unknown.value,
+                    headers = stream.behaviorHints?.proxyHeaders?.request ?: mapOf(),
+                    isM3u8 = true
+                )
+            )
+        }
+
+    }
+
     suspend fun invokeNowTv(
         tmdbId: Int? = null,
         callback: (ExtractorLink) -> Unit
@@ -3219,6 +3248,7 @@ data class CryMoviesBehaviorHints(
 data class CryMoviesStream(
     @JsonProperty("title") val title: String? = null,
     @JsonProperty("url") val url: String? = null,
+    @JsonProperty("description") val description: String? = null,
     @JsonProperty("behaviorHints") val behaviorHints: CryMoviesBehaviorHints? = null,
 )
 

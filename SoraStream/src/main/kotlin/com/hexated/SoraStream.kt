@@ -50,6 +50,7 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
+import com.hexated.SoraExtractor.invokeUpcloud
 import com.hexated.SoraExtractor.invokeVitoenMovies
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -562,6 +563,14 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback,
+                    callback
+                )
+            },
+            {
+                invokeUpcloud(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
                     callback
                 )
             },

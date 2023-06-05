@@ -25,6 +25,7 @@ import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTwoEmbed
+import com.hexated.SoraExtractor.invokeUpcloud
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -193,6 +194,14 @@ class SoraStreamLite : SoraStream() {
                     res.episode,
                     res.isAnime,
                     subtitleCallback,
+                    callback
+                )
+            },
+            {
+                invokeUpcloud(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
                     callback
                 )
             },
