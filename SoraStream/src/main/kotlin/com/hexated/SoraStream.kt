@@ -567,7 +567,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeUpcloud(
+                if (!res.isAnime) invokeUpcloud(
                     res.imdbId,
                     res.season,
                     res.episode,

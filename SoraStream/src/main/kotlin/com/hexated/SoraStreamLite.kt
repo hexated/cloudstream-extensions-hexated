@@ -198,7 +198,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeUpcloud(
+                if (!res.isAnime) invokeUpcloud(
                     res.imdbId,
                     res.season,
                     res.episode,
