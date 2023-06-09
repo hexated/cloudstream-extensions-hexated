@@ -435,7 +435,8 @@ suspend fun invokeSmashyFfix(
     callback: (ExtractorLink) -> Unit,
 ) {
     val script =
-        app.get(url, referer = ref).document.selectFirst("script:containsData(player =)")?.data() ?: return
+        app.get(url, referer = ref).document.selectFirst("script:containsData(player =)")?.data()
+            ?: return
 
     val source =
         Regex("file:\\s['\"](\\S+?)['|\"]").find(script)?.groupValues?.get(
@@ -516,30 +517,38 @@ suspend fun invokeSmashyDude(
 suspend fun invokeSmashyNflim(
     name: String,
     url: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit,
 ) {
     val script =
         app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
 
-    val source =
-        Regex("file:\\s*\"([^\"]+)").find(script)?.groupValues?.get(
-            1
-        ) ?: return
+    val sources = Regex("file:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
+    val subtitles = Regex("subtitle:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
 
-    source.split(",").map { links ->
+    sources.split(",").map { links ->
         val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
         val trimmedLink = links.removePrefix("[$quality]").trim()
         callback.invoke(
             ExtractorLink(
                 "Smashy [$name]",
                 "Smashy [$name]",
-                trimmedLink.substringAfter("url=").substringBefore("&cookie=").trim(),
+                trimmedLink,
                 "",
                 quality?.toIntOrNull() ?: return@map,
                 isM3u8 = true,
-                headers = mapOf(
-                    "Cookie" to trimmedLink.substringAfter("&cookie=").trim()
-                )
+            )
+        )
+    }
+
+    subtitles.split(",").map { sub ->
+        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim()
+        val trimmedSubLink = sub.removePrefix("[$lang]").trim()
+
+        subtitleCallback.invoke(
+            SubtitleFile(
+                lang ?: return@map,
+                trimmedSubLink
             )
         )
     }
@@ -561,7 +570,7 @@ suspend fun invokeSmashyRip(
     source?.split(",")?.map { links ->
         val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
         val link = links.removePrefix("[$quality]").substringAfter("dev/").trim()
-        if(link.isEmpty()) return@map
+        if (link.isEmpty()) return@map
         callback.invoke(
             ExtractorLink(
                 "Smashy [$name]",
@@ -743,34 +752,52 @@ suspend fun bypassHrefli(url: String): String? {
 }
 
 suspend fun bypassTechmny(url: String): String? {
+    val techRes = app.get(url).document
     val postUrl = url.substringBefore("?id=").substringAfter("/?")
-    var res = app.post(
-        postUrl, data = mapOf(
-            "_wp_http_c" to url.substringAfter("?id=")
+    val (goUrl, goHeader) = if (techRes.selectFirst("form#landing input[name=_wp_http_c]") != null) {
+        var res = app.post(
+            postUrl, data = mapOf(
+                "_wp_http_c" to url.substringAfter("?id=")
+            )
         )
-    )
-    val (longC, catC, _) = getTechmnyCookies(res.text)
-    var headers = mapOf("Cookie" to "$longC; $catC")
-    var formLink = res.document.selectFirst("center a")?.attr("href")
+        val (longC, catC, _) = getTechmnyCookies(res.text)
+        var headers = mapOf("Cookie" to "$longC; $catC")
+        var formLink = res.document.selectFirst("center a")?.attr("href")
+        res = app.get(formLink ?: return null, headers = headers)
+        val (longC2, _, postC) = getTechmnyCookies(res.text)
+        headers = mapOf("Cookie" to "$catC; $longC2; $postC")
+        formLink = res.document.selectFirst("center a")?.attr("href")
 
-    res = app.get(formLink ?: return null, headers = headers)
-    val (longC2, _, postC) = getTechmnyCookies(res.text)
-    headers = mapOf("Cookie" to "$catC; $longC2; $postC")
-    formLink = res.document.selectFirst("center a")?.attr("href")
-
-    res = app.get(formLink ?: return null, headers = headers)
-    val goToken = res.text.substringAfter("?go=").substringBefore("\"")
-    val tokenUrl = "$postUrl?go=$goToken"
-    val newLongC = "$goToken=" + longC2.substringAfter("=")
-    headers = mapOf("Cookie" to "$catC; rdst_post=; $newLongC")
-
+        res = app.get(formLink ?: return null, headers = headers)
+        val goToken = res.text.substringAfter("?go=").substringBefore("\"")
+        val tokenUrl = "$postUrl?go=$goToken"
+        val newLongC = "$goToken=" + longC2.substringAfter("=")
+        headers = mapOf("Cookie" to "$catC; rdst_post=; $newLongC")
+        Pair(tokenUrl, headers)
+    } else {
+        val secondPage = techRes.getNextTechPage().document
+        val thirdPage = secondPage.getNextTechPage().text
+        val goToken = thirdPage.substringAfter("?go=").substringBefore("\"")
+        val tokenUrl = "$postUrl?go=$goToken"
+        val headers = mapOf("Cookie" to "$goToken=${secondPage.select("form#landing input[name=_wp_http2]").attr("value")}")
+        Pair(tokenUrl, headers)
+    }
     val driveUrl =
-        app.get(tokenUrl, headers = headers).document.selectFirst("meta[http-equiv=refresh]")
+        app.get(goUrl, headers = goHeader).document.selectFirst("meta[http-equiv=refresh]")
             ?.attr("content")?.substringAfter("url=")
     val path = app.get(driveUrl ?: return null).text.substringAfter("replace(\"")
         .substringBefore("\")")
     if (path == "/404") return null
     return fixUrl(path, getBaseUrl(driveUrl))
+}
+
+private suspend fun Document.getNextTechPage(): NiceResponse {
+    return app.post(
+        this.select("form").attr("action"),
+        data = this.select("form input").mapNotNull {
+            it.attr("name") to it.attr("value")
+        }.toMap().toMutableMap()
+    )
 }
 
 suspend fun bypassDriveleech(url: String): String? {
@@ -990,7 +1017,8 @@ suspend fun getCrunchyrollIdFromMalSync(aniId: String?): String? {
     val vrv = res?.get("Vrv")?.map { it.value }?.firstOrNull()?.get("url")
     val crunchyroll = res?.get("Vrv")?.map { it.value }?.firstOrNull()?.get("url")
     val regex = Regex("series/(\\w+)/?")
-    return regex.find("$vrv")?.groupValues?.getOrNull(1) ?: regex.find("$crunchyroll")?.groupValues?.getOrNull(1)
+    return regex.find("$vrv")?.groupValues?.getOrNull(1)
+        ?: regex.find("$crunchyroll")?.groupValues?.getOrNull(1)
 }
 
 suspend fun extractPutlockerSources(url: String?): NiceResponse? {
@@ -1118,7 +1146,7 @@ fun getSeason(month: Int?): String? {
         "Winter", "Winter", "Spring", "Spring", "Spring", "Summer",
         "Summer", "Summer", "Fall", "Fall", "Fall", "Winter"
     )
-    if(month == null) return null
+    if (month == null) return null
     return seasons[month - 1]
 }
 
