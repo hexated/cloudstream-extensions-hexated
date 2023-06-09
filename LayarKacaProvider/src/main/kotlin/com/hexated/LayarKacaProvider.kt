@@ -9,8 +9,8 @@ import java.net.URLDecoder
 import java.net.URI
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://nonton.lk21official.wiki"
-    private var seriesUrl = "https://tv.nontondrama.lol"
+    override var mainUrl = "https://d21.fun"
+    private var seriesUrl = "https://tv.nontondrama.click"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
@@ -22,8 +22,7 @@ class LayarKacaProvider : MainAPI() {
     )
 
     companion object {
-        const val filemoon = "https://filemoon.sx"
-        const val streamhide = "https://streamhide.to"
+        const val bananalicious = "https://bananalicious.xyz"
     }
 
     override val mainPage = mainPageOf(
@@ -39,34 +38,25 @@ class LayarKacaProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val res = app.get(request.data + page)
-        val baseUrl = getBaseUrl(res.url)
-        when {
-            request.data.startsWith(mainUrl) -> {
-                mainUrl = baseUrl
-            }
-            request.data.startsWith(seriesUrl) -> {
-                seriesUrl = baseUrl
-            }
-        }
-        val document = res.document
+        val document = app.get(request.data + page).document
         val home = document.select("article.mega-item").mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(request.name, home)
     }
 
-    private fun getProperLink(str: String, check: String): String {
-        return if (check.contains("/series", true) || check.contains("Season", true)) {
-            str.replace(mainUrl, seriesUrl)
+    private suspend fun getProperLink(url: String): String? {
+        val res = app.get(url).document
+        return if (res.select("title").text().contains("- Nontondrama", true)) {
+            res.selectFirst("div#content a")?.attr("href")
         } else {
-            str
+            url
         }
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h1.grid-title > a")?.ownText()?.trim() ?: return null
-        val href = getProperLink(this.selectFirst("a")!!.attr("href"), title)
+        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst(".grid-poster > a > img")?.attr("src"))
         val type =
             if (this.selectFirst("div.last-episode") == null) TvType.Movie else TvType.TvSeries
@@ -87,13 +77,10 @@ class LayarKacaProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val req = app.get("$mainUrl/?s=$query")
-        mainUrl = getBaseUrl(req.url)
-        val document = req.document
+        val document = app.get("$mainUrl/?s=$query").document
         return document.select("div.search-item").map {
             val title = it.selectFirst("h2 > a")!!.text().trim()
-            val type = it.selectFirst("p.cat-links a")?.attr("href").toString()
-            val href = getProperLink(it.selectFirst("a")!!.attr("href"), type)
+            val href = fixUrl(it.selectFirst("a")!!.attr("href"))
             val posterUrl = fixUrl(it.selectFirst("img.img-thumbnail")?.attr("src").toString())
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
@@ -101,8 +88,9 @@ class LayarKacaProvider : MainAPI() {
         }
     }
 
-    override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+    override suspend fun load(url: String): LoadResponse? {
+        val fixUrl = getProperLink(url)
+        val document = app.get(fixUrl ?: return null).document
 
         val title = document.selectFirst("li.last > span[itemprop=name]")?.text()?.trim().toString()
         val poster = fixUrl(document.select("img.img-thumbnail").attr("src").toString())
@@ -183,26 +171,22 @@ class LayarKacaProvider : MainAPI() {
                 it.startsWith("https://layarkacaxxi.icu") -> {
                     it.substringBeforeLast("/")
                 }
-                it.startsWith("https://bananalicious.xyz") -> decode(it.substringAfter("url="))
+                it.startsWith(bananalicious) -> decode(it.substringAfter("url="))
                 else -> {
                     it
                 }
             }
-            if(link.startsWith(filemoon) || link.startsWith(streamhide)) {
-                invokeBackup(link, callback)
-            } else {
-                loadExtractor(link, data, subtitleCallback, callback)
-            }
+            invokeCast(link, callback)
         }
 
         return true
     }
 
-    private suspend fun invokeBackup(
+    private suspend fun invokeCast(
         url: String,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url).document
+        val response = app.get(url, referer = bananalicious).document
         response.select("script[type=text/javascript]").map { script ->
             if (script.data().contains(Regex("eval\\(function\\(p,a,c,k,e,[rd]"))) {
                 val unpackedscript = getAndUnpack(script.data())
@@ -219,11 +203,6 @@ class LayarKacaProvider : MainAPI() {
         }
     }
 
-    private fun getBaseUrl(url: String): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
-        }
-    }
     private fun decode(input: String): String = URLDecoder.decode(input, "utf-8").replace(" ", "%20")
 
 }
