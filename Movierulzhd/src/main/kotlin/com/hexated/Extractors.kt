@@ -16,6 +16,11 @@ class Sbrulz : Sbflix() {
     override var mainUrl = "https://sbrulz.xyz"
 }
 
+class Sbmiz : Sbflix() { 
+     override val name = "Sbmiz" 
+     override var mainUrl = "https://sbmiz.site" 
+ }
+
 open class Sbflix : ExtractorApi() {
     override val mainUrl = "https://sbflix.xyz"
     override val name = "Sbflix"
