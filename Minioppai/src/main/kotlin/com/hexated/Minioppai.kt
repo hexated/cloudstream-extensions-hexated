@@ -161,7 +161,7 @@ class Minioppai : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val script = getAndUnpack(app.get(url).text)
+        val script = getAndUnpack(app.get(url, referer="$mainUrl/").text)
         val sources = script.substringAfter("sources:[").substringBefore("]").replace("'", "\"")
         val subtitles = script.substringAfter("\"tracks\":[").substringBefore("]")
 
