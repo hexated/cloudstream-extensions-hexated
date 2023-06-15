@@ -93,11 +93,19 @@ class Aniworld : MainAPI() {
         val actor =
             document.select("li:contains(Schauspieler:) ul li a").map { it.select("span").text() }
 
-        val episodes = document.select("div#stream > ul:nth-child(4) li").mapNotNull { eps ->
-            Episode(
-                fixUrl(eps.selectFirst("a")?.attr("href") ?: return@mapNotNull null),
-                episode = eps.selectFirst("a")?.text()?.toIntOrNull()
-            )
+        val episodes = mutableListOf<Episode>()
+        document.select("div#stream > ul:first-child li").apmap { ele ->
+            val page = ele.selectFirst("a")
+            val epsDocument = app.get(fixUrl(page?.attr("href") ?: return@apmap)).document
+            epsDocument.select("div#stream > ul:nth-child(4) li").mapNotNull { eps ->
+                episodes.add(
+                    Episode(
+                        fixUrl(eps.selectFirst("a")?.attr("href") ?: return@mapNotNull null),
+                        episode = eps.selectFirst("a")?.text()?.toIntOrNull(),
+                        season = page.text().toIntOrNull()
+                    )
+                )
+            }
         }
 
         return newAnimeLoadResponse(
