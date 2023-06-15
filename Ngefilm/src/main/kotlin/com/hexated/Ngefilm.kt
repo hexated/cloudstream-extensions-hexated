@@ -83,7 +83,7 @@ class Ngefilm : MainAPI() {
                 .filter { element -> !element.text().contains("Pilih Episode", true) }
                 .map { eps ->
                     val href = fixUrl(eps.attr("href"))
-                    val episode = eps.text().filter { it.isDigit() }.toIntOrNull()
+                    val episode = eps.text().substringAfter("Eps").toIntOrNull()
                     val season =
                         eps.text().split(" ").first().substringAfter("S").toIntOrNull() ?: 1
                     Episode(
