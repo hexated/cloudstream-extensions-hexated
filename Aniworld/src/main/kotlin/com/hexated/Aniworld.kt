@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
 class Aniworld : MainAPI() {
@@ -135,7 +136,7 @@ class Aniworld : MainAPI() {
         }.apmap {
             val redirectUrl = app.get(fixUrl(it.second)).url
             loadExtractor(redirectUrl, data, subtitleCallback) { link ->
-                val name = "${link.name} [${it.first.getLanguage()}]"
+                val name = "${link.name} [${it.first.getLanguage(document)}]"
                 callback.invoke(
                     ExtractorLink(
                         name,
@@ -163,15 +164,9 @@ class Aniworld : MainAPI() {
         }
     }
 
-    private fun String.getLanguage() : String {
-        return when(this) {
-            "1" -> "Deutsch"
-            "2" -> "Untertitel Deutsch"
-            "3" -> "Untertitel Englisch"
-            else -> {
-                ""
-            }
-        }
+    private fun String.getLanguage(document: Document): String? {
+        return document.selectFirst("div.changeLanguageBox img[data-lang-key=$this]")?.attr("title")
+            ?.removePrefix("mit")?.trim()
     }
 
     private data class AnimeSearch(
