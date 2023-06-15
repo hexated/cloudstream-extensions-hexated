@@ -15,7 +15,6 @@ import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNoverse
 import com.hexated.SoraExtractor.invokeSeries9
-import com.hexated.SoraExtractor.invokeTwoEmbed
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeXmovies
 import com.lagradost.cloudstream3.*
@@ -30,6 +29,7 @@ import com.hexated.SoraExtractor.invokeFmovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGdbotMovies
+import com.hexated.SoraExtractor.invokeGoku
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeJmdkhMovies
 import com.hexated.SoraExtractor.invokeKisskh
@@ -50,7 +50,6 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
-import com.hexated.SoraExtractor.invokeUpcloud
 import com.hexated.SoraExtractor.invokeVitoenMovies
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -85,7 +84,6 @@ open class SoraStream : TmdbProvider() {
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
         /** ALL SOURCES */
-        const val twoEmbedAPI = "https://www.2embed.to"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
         const val movieHabAPI = "https://moviehab.com"
@@ -117,8 +115,7 @@ open class SoraStream : TmdbProvider() {
         const val movie123NetAPI = "https://ww8.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        val gomoviesAPI =
-            base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
+        val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
         const val ask4MoviesAPI = "https://ask4movie.net"
         const val biliBiliAPI = "https://api-vn.kaguya.app/server"
         const val watchOnlineAPI = "https://watchonline.ag"
@@ -126,6 +123,7 @@ open class SoraStream : TmdbProvider() {
         const val putlockerAPI = "https://ww7.putlocker.vip"
         const val fmoviesAPI = "https://fmovies.to"
         const val nowTvAPI = "https://myfilestorage.xyz"
+        const val gokuAPI = "https://goku.sx"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -388,7 +386,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
+                invokeGoku(res.title, res.year, res.season, res.lastSeason, res.episode, subtitleCallback, callback)
             },
             {
                 invokeVidSrc(res.id, res.season, res.episode, subtitleCallback, callback)
@@ -563,14 +561,6 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeUpcloud(
-                    res.imdbId,
-                    res.season,
-                    res.episode,
                     callback
                 )
             },

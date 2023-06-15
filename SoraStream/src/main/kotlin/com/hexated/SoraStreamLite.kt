@@ -8,6 +8,7 @@ import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFmovies
 import com.hexated.SoraExtractor.invokeFwatayako
+import com.hexated.SoraExtractor.invokeGoku
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
@@ -24,8 +25,6 @@ import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
-import com.hexated.SoraExtractor.invokeTwoEmbed
-import com.hexated.SoraExtractor.invokeUpcloud
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -85,7 +84,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeTwoEmbed(res.id, res.season, res.episode, subtitleCallback, callback)
+                invokeGoku(res.title, res.year, res.season, res.lastSeason, res.episode, subtitleCallback, callback)
             },
             {
                 invokeVidSrc(res.id, res.season, res.episode, subtitleCallback, callback)
@@ -194,14 +193,6 @@ class SoraStreamLite : SoraStream() {
                     res.episode,
                     res.isAnime,
                     subtitleCallback,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeUpcloud(
-                    res.imdbId,
-                    res.season,
-                    res.episode,
                     callback
                 )
             },

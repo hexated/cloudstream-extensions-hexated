@@ -15,50 +15,91 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.ByteString.Companion.encode
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 
 val session = Session(Requests().baseClient)
 
 object SoraExtractor : SoraStream() {
 
-    suspend fun invokeTwoEmbed(
-        id: Int? = null,
+    suspend fun invokeGoku(
+        title: String? = null,
+        year: Int? = null,
         season: Int? = null,
+        lastSeason: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val url = if (season == null) {
-            "$twoEmbedAPI/embed/tmdb/movie?id=$id"
-        } else {
-            "$twoEmbedAPI/embed/tmdb/tv?id=$id&s=$season&e=$episode"
-        }
-        val document = app.get(url).document
-        val captchaKey =
-            document.select("script[src*=https://www.google.com/recaptcha/api.js?render=]")
-                .attr("src").substringAfter("render=")
+        val headers = mapOf(
+            "X-Requested-With" to "XMLHttpRequest"
+        )
 
-        document.select(".dropdown-menu a[data-id]").map { it.attr("data-id") }.apmap { serverID ->
-            val token = APIHolder.getCaptchaToken(url, captchaKey)
+        fun Document.getServers(): List<String> {
+            return this.select("a").map { it.attr("data-id") }
+        }
+
+        val media = app.get(
+            "$gokuAPI/ajax/movie/search?keyword=$title", headers = headers
+        ).document.select("div.item").find { ele ->
+            val url = ele.selectFirst("a")?.attr("href")
+            val titleMedia = ele.select("h3.movie-name").text()
+            val yearMedia =
+                ele.selectFirst("div.info-split > div:first-child")?.text()?.toIntOrNull()
+            val lastSeasonMedia =
+                ele.selectFirst("div.info-split > div:nth-child(2)")?.text()?.substringAfter("SS")
+                    ?.substringBefore("/")?.toIntOrNull()
+            titleMedia.equals(title, true) || titleMedia.createSlug().equals(title.createSlug()) &&
+                    if (season == null) {
+                        yearMedia == year && url?.contains("/series/") == true
+                    } else {
+                        lastSeasonMedia == lastSeason && url?.contains("/movie/") == true
+                    }
+        } ?: return
+
+        val serversId = if (season == null) {
+            val movieId = app.get(
+                fixUrl(
+                    media.selectFirst("a")?.attr("href") ?: return,
+                    gokuAPI
+                )
+            ).url.substringAfterLast("/")
             app.get(
-                "$twoEmbedAPI/ajax/embed/play?id=$serverID&_token=$token", referer = url
-            ).parsedSafe<EmbedJson>()?.let { source ->
-                val link = source.link ?: return@let
-                if (link.contains("rabbitstream")) {
-                    extractRabbitStream(
-                        "Vidcloud",
-                        link,
-                        "$twoEmbedAPI/",
-                        subtitleCallback,
-                        callback,
-                        false,
-                        decryptKey = RabbitStream.getKey()
-                    ) { it }
-                } else {
-                    loadExtractor(
-                        link, twoEmbedAPI, subtitleCallback, callback
-                    )
-                }
-            }
+                "$gokuAPI/ajax/movie/episode/servers/$movieId",
+                headers = headers
+            ).document.getServers()
+        } else {
+            val seasonId = app.get(
+                "$gokuAPI/ajax/movie/seasons/${
+                    media.selectFirst("a.btn-wl")?.attr("data-id") ?: return
+                }", headers = headers
+            ).document.select("a.ss-item").find { it.ownText().equals("Season $season", true) }?.attr("data-id")
+            val episodeId =
+                app.get(
+                    "$gokuAPI/ajax/movie/season/episodes/${seasonId ?: return}",
+                    headers = headers
+                ).document.select("div.item").find {
+                    it.selectFirst("strong")?.text().equals("Eps $episode:", true)
+                }?.selectFirst("a")?.attr("data-id")
+
+            app.get(
+                "$gokuAPI/ajax/movie/episode/servers/${episodeId ?: return}",
+                headers = headers
+            ).document.getServers()
+        }
+
+        serversId.apmap { id ->
+            val iframe =
+                app.get("$gokuAPI/ajax/movie/episode/server/sources/$id", headers = headers)
+                    .parsedSafe<GokuServer>()?.data?.link ?: return@apmap
+            extractRabbitStream(
+                if (iframe.contains("rabbitstream")) "Vidcloud" else "Upcloud",
+                iframe,
+                "$gokuAPI/",
+                subtitleCallback,
+                callback,
+                false,
+                decryptKey = RabbitStream.getKey()
+            ) { it }
         }
     }
 
@@ -2905,36 +2946,6 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeUpcloud(
-        imdbId: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val apiUrl =
-            base64DecodeAPI("dWI=Y2w=cC4=bXU=ZWE=LWI=Ynk=YmE=bS4=ZWE=dHI=ZXM=aW4=LWM=NDA=MDg=NjE=YmQ=Y2I=MmU=Ly8=czo=dHA=aHQ=")
-        val url = if (season == null) {
-            "$apiUrl/stream/movie/$imdbId.json"
-        } else {
-            "$apiUrl/stream/series/$imdbId:$season:$episode.json"
-        }
-
-        app.get(url).parsedSafe<CryMoviesResponse>()?.streams?.map { stream ->
-            callback.invoke(
-                ExtractorLink(
-                    "Upcloud",
-                    "Upcloud",
-                    stream.url ?: return@map,
-                    "",
-                    stream.description?.toIntOrNull() ?: Qualities.Unknown.value,
-                    headers = stream.behaviorHints?.proxyHeaders?.request ?: mapOf(),
-                    isM3u8 = true
-                )
-            )
-        }
-
-    }
-
     suspend fun invokeNowTv(
         tmdbId: Int? = null,
         callback: (ExtractorLink) -> Unit
@@ -3400,4 +3411,12 @@ data class ZoroResponses(
 
 data class MalSyncRes(
     @JsonProperty("Sites") val Sites: Map<String, Map<String, Map<String, String>>>? = null,
+)
+
+data class GokuData(
+    @JsonProperty("link") val link: String? = null,
+)
+
+data class GokuServer(
+    @JsonProperty("data") val data: GokuData? = GokuData(),
 )
