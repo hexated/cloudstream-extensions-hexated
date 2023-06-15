@@ -94,9 +94,9 @@ class Aniworld : MainAPI() {
             document.select("li:contains(Schauspieler:) ul li a").map { it.select("span").text() }
 
         val episodes = mutableListOf<Episode>()
-        document.select("div#stream > ul:first-child li").apmap { ele ->
+        document.select("div#stream > ul:first-child li").map { ele ->
             val page = ele.selectFirst("a")
-            val epsDocument = app.get(fixUrl(page?.attr("href") ?: return@apmap)).document
+            val epsDocument = app.get(fixUrl(page?.attr("href") ?: return@map)).document
             epsDocument.select("div#stream > ul:nth-child(4) li").mapNotNull { eps ->
                 episodes.add(
                     Episode(
