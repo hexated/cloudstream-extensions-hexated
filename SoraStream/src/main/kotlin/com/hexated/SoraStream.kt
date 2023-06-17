@@ -127,7 +127,6 @@ open class SoraStream : TmdbProvider() {
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
-        const val rinzryMoviesAPI = "https://rinzry.stream/0:"
         const val codexMoviesAPI = "https://packs.codexcloudx.tech/0:"
         const val edithxMoviesAPI = "https://index.edithx.ga/0:"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -140,15 +139,16 @@ open class SoraStream : TmdbProvider() {
             base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
 
         // DEAD SITE
-        const val chillmovies0API = "https://chill.aicirou.workers.dev/0:" // dead
-        const val chillmovies1API = "https://chill.aicirou.workers.dev/1:" // dead
-        const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:" // dead
-        const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:" // dead
-        const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:" // dead
-        const val tgarMovieAPI = "https://tgarchive.eu.org" // dead
-        const val baymoviesAPI = "https://opengatewayindex.pages.dev" // dead
-        const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:" // dead
-        const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:" // dead
+        const val rinzryMoviesAPI = "https://rinzry.stream/0:"
+        const val chillmovies0API = "https://chill.aicirou.workers.dev/0:"
+        const val chillmovies1API = "https://chill.aicirou.workers.dev/1:"
+        const val gamMoviesAPI = "https://drive.gamick.workers.dev/0:"
+        const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:"
+        const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:"
+        const val tgarMovieAPI = "https://tgarchive.eu.org"
+        const val baymoviesAPI = "https://opengatewayindex.pages.dev"
+        const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
+        const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -646,17 +646,17 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                invokeRinzrymovies(
-                    rinzryMoviesAPI,
-                    "RinzryMovies",
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback,
-                )
-            },
+//            {
+//                invokeRinzrymovies(
+//                    rinzryMoviesAPI,
+//                    "RinzryMovies",
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    callback,
+//                )
+//            },
             {
                 if (!res.isAnime) invokeCodexmovies(
                     codexMoviesAPI,

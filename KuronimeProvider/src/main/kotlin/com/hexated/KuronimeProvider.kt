@@ -9,10 +9,11 @@ import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.net.URI
 import java.util.ArrayList
 
 class KuronimeProvider : MainAPI() {
-    override var mainUrl = "https://kuronime.lol"
+    override var mainUrl = "https://kuronime.top"
     override var name = "Kuronime"
     override val hasQuickSearch = true
     override val hasMainPage = true
@@ -53,7 +54,9 @@ class KuronimeProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page).document
+        val req = app.get(request.data + page)
+        mainUrl = getBaseUrl(req.url)
+        val document = req.document
         val home = document.select("article").map {
             it.toSearchResult()
         }
@@ -98,6 +101,7 @@ class KuronimeProvider : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun search(query: String): List<SearchResponse>? {
+        mainUrl = app.get(mainUrl).url
         return app.post(
             "$mainUrl/wp-admin/admin-ajax.php", data = mapOf(
                 "action" to "ajaxy_sf",
@@ -203,6 +207,12 @@ class KuronimeProvider : MainAPI() {
             }
         }
         return true
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
     }
 
     data class All(

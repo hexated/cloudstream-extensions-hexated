@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class OploverzProvider : MainAPI() {
-    override var mainUrl = "https://oploverz.love"
+    override var mainUrl = "https://oploverz.care"
     override var name = "Oploverz"
     override val hasMainPage = true
     override var lang = "id"
