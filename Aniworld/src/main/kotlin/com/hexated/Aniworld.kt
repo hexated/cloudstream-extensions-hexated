@@ -3,6 +3,7 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -140,7 +141,7 @@ class Aniworld : MainAPI() {
                 it.select("h4").text()
             )
         }.filter {
-            it.third == "VOE"
+            it.third != "Vidoza"
         }.apmap {
             val redirectUrl = app.get(fixUrl(it.second)).url
             loadExtractor(redirectUrl, data, subtitleCallback) { link ->
@@ -182,6 +183,14 @@ class Aniworld : MainAPI() {
         @JsonProperty("title") val title: String? = null,
     )
 
+}
+
+class Dooood : DoodLaExtractor() {
+    override var mainUrl = "https://urochsunloath.com"
+}
+
+class Simpulumlamerop : Voe() {
+    override var mainUrl = "https://simpulumlamerop.com"
 }
 
 class Urochsunloath : Voe() {

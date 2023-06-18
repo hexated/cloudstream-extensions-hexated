@@ -263,3 +263,27 @@ class Streamhide : Filesim() {
     override val mainUrl = "https://streamhide.to"
     override val name = "Streamhide"
 }
+
+open class Pixeldrain : ExtractorApi() {
+    override val name = "Pixeldrain"
+    override val mainUrl = "https://pixeldrain.com"
+    override val requiresReferer = false
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val mId = Regex("/([ul]/[\\da-zA-Z\\-]+)").find(url)?.groupValues?.get(1)?.split("/")
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                "$mainUrl/api/file/${mId?.last() ?: return}?download",
+                url,
+                Qualities.Unknown.value,
+            )
+        )
+    }
+
+}
