@@ -50,9 +50,9 @@ object SoraExtractor : SoraStream() {
                     ?.substringBefore("/")?.toIntOrNull()
             titleMedia.equals(title, true) || titleMedia.createSlug().equals(title.createSlug()) &&
                     if (season == null) {
-                        yearMedia == year && url?.contains("/series/") == true
+                        yearMedia == year && url?.contains("/movie/") == true
                     } else {
-                        lastSeasonMedia == lastSeason && url?.contains("/movie/") == true
+                        lastSeasonMedia == lastSeason && url?.contains("/series/") == true
                     }
         } ?: return
 
