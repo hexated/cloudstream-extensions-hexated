@@ -44,15 +44,15 @@ object SoraExtractor : SoraStream() {
             val url = ele.selectFirst("a")?.attr("href")
             val titleMedia = ele.select("h3.movie-name").text()
             val yearMedia =
-                ele.selectFirst("div.info-split > div:first-child")?.text()?.toIntOrNull()
+                ele.select("div.info-split > div:first-child").text().toIntOrNull()
             val lastSeasonMedia =
-                ele.selectFirst("div.info-split > div:nth-child(2)")?.text()?.substringAfter("SS")
-                    ?.substringBefore("/")?.toIntOrNull()
+                ele.select("div.info-split > div:nth-child(2)").text().substringAfter("SS")
+                    .substringBefore("/").trim().toIntOrNull()
             titleMedia.equals(title, true) || titleMedia.createSlug().equals(title.createSlug()) &&
                     if (season == null) {
-                        yearMedia == year && url?.contains("/movie/") == true
+                        yearMedia == year && url?.contains("/watch-movie/") == true
                     } else {
-                        lastSeasonMedia == lastSeason && url?.contains("/series/") == true
+                        lastSeasonMedia == lastSeason && url?.contains("/watch-series/") == true
                     }
         } ?: return
 
