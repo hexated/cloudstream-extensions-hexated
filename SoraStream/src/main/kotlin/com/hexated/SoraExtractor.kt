@@ -48,12 +48,12 @@ object SoraExtractor : SoraStream() {
             val lastSeasonMedia =
                 ele.select("div.info-split > div:nth-child(2)").text().substringAfter("SS")
                     .substringBefore("/").trim().toIntOrNull()
-            titleMedia.equals(title, true) || titleMedia.createSlug().equals(title.createSlug()) &&
-                    if (season == null) {
+            (titleMedia.equals(title, true) || titleMedia.createSlug().equals(title.createSlug())) &&
+                    (if (season == null) {
                         yearMedia == year && url?.contains("/watch-movie/") == true
                     } else {
                         lastSeasonMedia == lastSeason && url?.contains("/watch-series/") == true
-                    }
+                    })
         } ?: return
 
         val serversId = if (season == null) {
