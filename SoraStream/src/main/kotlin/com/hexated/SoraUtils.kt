@@ -17,6 +17,7 @@ import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.hexated.SoraStream.Companion.watchOnlineAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
+import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
@@ -36,6 +37,7 @@ import java.net.*
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.text.SimpleDateFormat
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
@@ -1521,6 +1523,12 @@ fun getBaseUrl(url: String): String {
     }
 }
 
+fun isUpcoming(dateString: String?) : Boolean {
+    if(dateString == null) return false
+    val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val dateTime = format.parse(dateString)?.time ?: return false
+    return unixTimeMS < dateTime
+}
 fun decode(input: String): String = URLDecoder.decode(input, "utf-8")
 
 fun encode(input: String): String = URLEncoder.encode(input, "utf-8").replace("+", "%20")

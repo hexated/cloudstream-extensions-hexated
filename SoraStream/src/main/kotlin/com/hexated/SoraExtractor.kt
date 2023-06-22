@@ -2924,19 +2924,21 @@ object SoraExtractor : SoraStream() {
                     year,
                     season,
                     episode,
-                    true
+                    false
                 )
-            }?.map { stream ->
+            }?.apmap { stream ->
                 val quality = getIndexQuality(stream.title)
                 val tags = getIndexQualityTags(stream.title)
                 val size = getIndexSize(stream.title)
                 val headers = stream.behaviorHints?.proxyHeaders?.request ?: mapOf()
 
+                if(!app.get(stream.url ?: return@apmap, headers = headers).isSuccessful) return@apmap
+
                 callback.invoke(
                     ExtractorLink(
                         "CryMovies",
                         "CryMovies $tags [${size}]",
-                        stream.url ?: return@map,
+                        stream.url,
                         "",
                         quality,
                         headers = headers
@@ -2948,10 +2950,13 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeNowTv(
         tmdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
         val referer = "https://2now.tv/"
-        val url = "$nowTvAPI/$tmdbId.mp4"
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+        val url = if(season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${episodeSlug}.mp4"
         if (!app.get(url, referer = referer).isSuccessful) return
         callback.invoke(
             ExtractorLink(
