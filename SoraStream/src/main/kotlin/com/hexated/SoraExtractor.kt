@@ -2969,6 +2969,30 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokeRidomovies(
+        title: String? = null,
+        year: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val iframe =
+            app.get("$ridomoviesAPI/movies/${title.createSlug()}-watch-online-$year").document.selectFirst(
+                "div.player-div iframe"
+            )?.attr("data-src")
+        val unpacked = getAndUnpack(app.get(iframe ?: return, referer = "$ridomoviesAPI/").text)
+        val video = Regex("=\"(aHR.*?)\";").find(unpacked)?.groupValues?.get(1)
+        callback.invoke(
+            ExtractorLink(
+                "Ridomovies",
+                "Ridomovies",
+                base64Decode(video ?: return),
+                "${getBaseUrl(iframe)}/",
+                Qualities.P1080.value,
+                isM3u8 = true
+            )
+        )
+
+    }
+
 
 }
 

@@ -42,6 +42,7 @@ import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
+import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeRinzrymovies
 import com.hexated.SoraExtractor.invokeRubyMovies
 import com.hexated.SoraExtractor.invokeShinobiMovies
@@ -124,6 +125,7 @@ open class SoraStream : TmdbProvider() {
         const val fmoviesAPI = "https://fmovies.to"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
+        const val ridomoviesAPI = "https://ridomovies.pw"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -793,6 +795,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime && res.season == null) invokeNowTv(res.id, res.season, res.episode, callback)
+            },
+            {
+                if (res.season == null) invokeRidomovies(res.title, res.year, callback)
             }
         )
 

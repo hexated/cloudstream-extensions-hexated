@@ -22,6 +22,7 @@ import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
+import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeSoraStream
@@ -275,6 +276,13 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 if (!res.isAnime && res.season == null) invokeNowTv(res.id, res.season, res.episode, callback)
+            },
+            {
+                if (res.season == null) invokeRidomovies(
+                    res.title,
+                    res.year,
+                    callback
+                )
             }
         )
 

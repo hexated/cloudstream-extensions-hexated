@@ -441,7 +441,7 @@ suspend fun invokeSmashyFfix(
             ?: return
 
     val source =
-        Regex("file:\\s['\"](\\S+?)['|\"]").find(script)?.groupValues?.get(
+        Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(
             1
         ) ?: return
 
@@ -525,8 +525,8 @@ suspend fun invokeSmashyNflim(
     val script =
         app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
 
-    val sources = Regex("file:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
-    val subtitles = Regex("subtitle:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
+    val sources = Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
+    val subtitles = Regex("['\"]?subtitle['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
 
     sources.split(",").map { links ->
         val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
@@ -544,12 +544,12 @@ suspend fun invokeSmashyNflim(
     }
 
     subtitles.split(",").map { sub ->
-        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim()
-        val trimmedSubLink = sub.removePrefix("[$lang]").trim()
-
+        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim() ?: return@map
+        val trimmedSubLink = sub.removePrefix("[$lang]").trim().substringAfter("?url=")
+        if(lang.contains("\\u")) return@map
         subtitleCallback.invoke(
             SubtitleFile(
-                lang ?: return@map,
+                lang,
                 trimmedSubLink
             )
         )
