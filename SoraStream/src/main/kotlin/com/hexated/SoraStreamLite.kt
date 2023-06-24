@@ -18,6 +18,7 @@ import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMovieHab
+import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokePutlocker
@@ -275,7 +276,10 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                if (!res.isAnime && res.season == null) invokeNowTv(res.id, res.season, res.episode, callback)
+                if (!res.isAnime) invokeNowTv(res.id, res.season, res.episode, callback)
+            },
+            {
+                invokeNavy(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if (res.season == null) invokeRidomovies(

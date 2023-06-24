@@ -2993,6 +2993,50 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeNavy(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val res = app.get(
+            "$navyAPI/play/$imdbId",
+            referer = "$navyAPI/"
+        ).document.selectFirst("script:containsData(player =)")?.data()?.substringAfter("{")
+            ?.substringBefore(";")?.substringBefore(")")
+        val json = tryParseJson<NavyPlaylist>("{${res ?: return}")
+        val headers = mapOf(
+            "X-CSRF-TOKEN" to "${json?.key}"
+        )
+        val serverRes = app.get(
+            fixUrl(json?.file ?: return, navyAPI), headers = headers, referer = "$navyAPI/"
+        ).text.replace(Regex(""",\s*\[]"""), "")
+        val server = tryParseJson<ArrayList<NavyServer>>(serverRes).let { server ->
+            if (season == null) {
+                server?.find { it.title == "English" }?.file
+            } else {
+                server?.find { it.id.equals("$season") }?.folder?.find { it.episode.equals("$episode") }?.folder?.find {
+                    it.title.equals(
+                        "English"
+                    )
+                }?.file
+            }
+        }
+
+        val path = app.post(
+            "${navyAPI}/playlist/${server ?: return}.txt",
+            headers = headers,
+            referer = "$navyAPI/"
+        ).text
+
+        M3u8Helper.generateM3u8(
+            "Navy",
+            path,
+            "${navyAPI}/"
+        ).forEach(callback)
+
+    }
+
 
 }
 
@@ -3448,4 +3492,29 @@ data class GokuData(
 
 data class GokuServer(
     @JsonProperty("data") val data: GokuData? = GokuData(),
+)
+
+data class NavyEpisodeFolder(
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("file") val file: String? = null,
+)
+
+data class NavySeasonFolder(
+    @JsonProperty("episode") val episode: String? = null,
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("folder") val folder: ArrayList<NavyEpisodeFolder>? = arrayListOf(),
+)
+
+data class NavyServer(
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("folder") val folder: ArrayList<NavySeasonFolder>? = arrayListOf(),
+)
+
+data class NavyPlaylist(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("key") val key: String? = null,
+    @JsonProperty("href") val href: String? = null,
 )
