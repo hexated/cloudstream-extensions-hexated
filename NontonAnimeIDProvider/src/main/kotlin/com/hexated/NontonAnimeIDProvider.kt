@@ -3,13 +3,15 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.extractors.Hxfile
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.net.URI
 
 class NontonAnimeIDProvider : MainAPI() {
-    override var mainUrl = "https://nontonanimeid.fun"
+    override var mainUrl = "https://nontonanimeid.bio"
     override var name = "NontonAnimeID"
     override val hasQuickSearch = false
     override val hasMainPage = true
@@ -114,7 +116,9 @@ class NontonAnimeIDProvider : MainAPI() {
             app.get(url).document.selectFirst("div.nvs.nvsc a")?.attr("href")
         }
 
-        val document = app.get(fixUrl ?: return null).document
+        val req = app.get(fixUrl ?: return null)
+        mainUrl = getBaseUrl(req.url)
+        val document = req.document
 
         val title = document.selectFirst("h1.entry-title.cs")!!.text().removeSurrounding("Nonton Anime", "Sub Indo").trim()
         val poster = document.selectFirst(".poster > img")?.attr("data-src")
@@ -227,6 +231,11 @@ class NontonAnimeIDProvider : MainAPI() {
         return true
     }
 
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
+    }
     private data class EpResponse(
         @JsonProperty("posts") val posts: String?,
         @JsonProperty("max_page") val max_page: Int?,
@@ -234,4 +243,10 @@ class NontonAnimeIDProvider : MainAPI() {
         @JsonProperty("content") val content: String
     )
 
+}
+
+class KotakAnimeid2 : Hxfile() {
+    override val name = "KotakAnimeid2"
+    override val mainUrl = "https://embed2.kotakanimeid.com"
+    override val requiresReferer = true
 }
