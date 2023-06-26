@@ -26,7 +26,7 @@ import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
-import com.hexated.SoraExtractor.invokeSoraStream
+import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -67,7 +67,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeSoraStream(
+                invokeDumpStream(
                     res.title,
                     res.year,
                     res.season,

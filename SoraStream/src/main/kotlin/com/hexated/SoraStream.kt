@@ -44,12 +44,11 @@ import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRidomovies
-import com.hexated.SoraExtractor.invokeRinzrymovies
 import com.hexated.SoraExtractor.invokeRubyMovies
 import com.hexated.SoraExtractor.invokeShinobiMovies
 import com.hexated.SoraExtractor.invokeShivamhw
 import com.hexated.SoraExtractor.invokeSmashyStream
-import com.hexated.SoraExtractor.invokeSoraStream
+import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVitoenMovies
@@ -381,7 +380,7 @@ open class SoraStream : TmdbProvider() {
 
         argamap(
             {
-                invokeSoraStream(
+                invokeDumpStream(
                     res.title,
                     res.year,
                     res.season,

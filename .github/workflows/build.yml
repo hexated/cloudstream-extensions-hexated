@@ -46,6 +46,8 @@ jobs:
           SORAHE: ${{ secrets.SORAHE }}
           SORAXA: ${{ secrets.SORAXA }}
           SORATED: ${{ secrets.SORATED }}
+          DUMP_API: ${{ secrets.DUMP_API }}
+          DUMP_KEY: ${{ secrets.DUMP_KEY }}
           CRUNCHYROLL_BASIC_TOKEN: ${{ secrets.CRUNCHYROLL_BASIC_TOKEN }}
           CRUNCHYROLL_REFRESH_TOKEN: ${{ secrets.CRUNCHYROLL_REFRESH_TOKEN }}
         run: |
@@ -54,6 +56,8 @@ jobs:
           echo SORAHE=$SORAHE >> local.properties
           echo SORAXA=$SORAXA >> local.properties
           echo SORATED=$SORATED >> local.properties
+          echo DUMP_API=$DUMP_API >> local.properties
+          echo DUMP_KEY=$DUMP_KEY >> local.properties
           echo CRUNCHYROLL_BASIC_TOKEN=$CRUNCHYROLL_BASIC_TOKEN >> local.properties
           echo CRUNCHYROLL_REFRESH_TOKEN=$CRUNCHYROLL_REFRESH_TOKEN >> local.properties
 
