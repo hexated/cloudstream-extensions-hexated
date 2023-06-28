@@ -1972,9 +1972,6 @@ object SoraExtractor : SoraStream() {
                 it.first.contains("/dude_tv") -> {
                     invokeSmashyDude(it.second, it.first, callback)
                 }
-                it.first.contains("/nflim") -> {
-                    invokeSmashyNflim(it.second, it.first, subtitleCallback, callback)
-                }
                 it.first.contains("/rip") -> {
                     invokeSmashyRip(it.second, it.first, subtitleCallback, callback)
                 }

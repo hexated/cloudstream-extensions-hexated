@@ -518,47 +518,6 @@ suspend fun invokeSmashyDude(
 
 }
 
-suspend fun invokeSmashyNflim(
-    name: String,
-    url: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    val script =
-        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
-
-    val sources = Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
-    val subtitles = Regex("['\"]?subtitle['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
-
-    sources.split(",").map { links ->
-        val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
-        val trimmedLink = links.removePrefix("[$quality]").trim()
-        callback.invoke(
-            ExtractorLink(
-                "Smashy [$name]",
-                "Smashy [$name]",
-                trimmedLink,
-                "",
-                quality?.toIntOrNull() ?: return@map,
-                isM3u8 = true,
-            )
-        )
-    }
-
-    subtitles.split(",").map { sub ->
-        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim() ?: return@map
-        val trimmedSubLink = sub.removePrefix("[$lang]").trim().substringAfter("?url=")
-        if(lang.contains("\\u")) return@map
-        subtitleCallback.invoke(
-            SubtitleFile(
-                lang,
-                trimmedSubLink
-            )
-        )
-    }
-
-}
-
 suspend fun invokeSmashyRip(
     name: String,
     url: String,
