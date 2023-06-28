@@ -3,6 +3,7 @@ package com.hexated
 import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.DumpUtils.createHeaders
+import com.hexated.DumpUtils.queryApi
 import com.hexated.SoraStream.Companion.anilistAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
 import com.hexated.SoraStream.Companion.baymoviesAPI
@@ -600,17 +601,16 @@ suspend fun invokeSmashyRip(
 }
 
 suspend fun getDumpIdAndType(title: String?, year: Int?, season: Int?): Pair<String?, Int?> {
-    val body = mapOf(
-        "searchKeyWord" to "$title",
-        "size" to "50",
-        "sort" to "",
-        "searchType" to "",
-    )
-    val res = app.post(
-        "${BuildConfig.DUMP_API}/search/searchWithKeyWord",
-        requestBody = body.toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull()),
-        headers = createHeaders(body)
-    ).parsedSafe<DumpQuickSearchRes>()?.data?.searchResults
+    val res = tryParseJson<DumpQuickSearchData>(
+        queryApi(
+            "POST",
+            "${BuildConfig.DUMP_API}/search/searchWithKeyWord",
+            mapOf(
+                "searchKeyWord" to "$title",
+                "size" to "50",
+            )
+        )
+    )?.searchResults
 
     val media = if (res?.size == 1) {
         res.firstOrNull()
@@ -641,15 +641,16 @@ suspend fun getDumpIdAndType(title: String?, year: Int?, season: Int?): Pair<Str
 }
 
 suspend fun fetchDumpEpisodes(id: String, type: String, episode: Int?): EpisodeVo? {
-    val params = mapOf(
-        "category" to type,
-        "id" to id,
-    )
-    return app.get(
-        "${BuildConfig.DUMP_API}/movieDrama/get",
-        params = params,
-        headers = createHeaders(params)
-    ).parsedSafe<DumpLoad>()?.data?.episodeVo?.find {
+    return tryParseJson<DumpMediaDetail>(
+        queryApi(
+            "GET",
+            "${BuildConfig.DUMP_API}/movieDrama/get",
+            mapOf(
+                "category" to type,
+                "id" to id,
+            )
+        )
+    )?.episodeVo?.find {
         it.seriesNo == (episode ?: 0)
     }
 }
@@ -2056,15 +2057,32 @@ object RabbitStream {
 object DumpUtils {
 
     private val deviceId = getDeviceId()
-    fun createHeaders(
+
+    suspend fun queryApi(method: String, url: String, params: Map<String, String>): String {
+        return app.custom(
+            method,
+            url,
+            requestBody = if(method == "POST") params.toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull()) else null,
+            params = if(method == "GET") params else emptyMap(),
+            headers = createHeaders(params)
+        ).parsedSafe<HashMap<String, String>>()?.get("data").let {
+            cryptoHandler(
+                it.toString(),
+                deviceId,
+                false
+            )
+        }
+    }
+
+    private fun createHeaders(
         params: Map<String, String>,
         currentTime: String = System.currentTimeMillis().toString(),
     ): Map<String, String> {
         return mapOf(
             "lang" to "en",
             "currentTime" to currentTime,
-            "sign" to getSign(currentTime, params, deviceId).toString(),
-            "aesKey" to getAesKey(deviceId).toString(),
+            "sign" to getSign(currentTime, params).toString(),
+            "aesKey" to getAesKey().toString(),
         )
     }
 
@@ -2084,13 +2102,16 @@ object DumpUtils {
         }
     }
 
-    private fun getAesKey(deviceId: String): String? {
+    private fun getAesKey(): String? {
         val publicKey = RSAEncryptionHelper.getPublicKeyFromString(BuildConfig.DUMP_KEY) ?: return null
         return RSAEncryptionHelper.encryptText(deviceId, publicKey)
     }
 
-    private fun getSign(currentTime: String, params:  Map<String, String>, deviceId: String): String? {
-        val chipper = listOf(currentTime, params.map { it.value }.joinToString("")).joinToString("")
+    private fun getSign(currentTime: String, params: Map<String, String>): String? {
+        val chipper = listOf(
+            currentTime,
+            params.map { it.value }.reversed().joinToString("")
+                .let { base64Encode(it.toByteArray()) }).joinToString("")
         val enc = cryptoHandler(chipper, deviceId)
         return md5(enc)
     }

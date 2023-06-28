@@ -466,10 +466,6 @@ data class DumpQuickSearchData(
     @JsonProperty("searchResults") val searchResults: ArrayList<DumpMedia>? = arrayListOf(),
 )
 
-data class DumpQuickSearchRes(
-    @JsonProperty("data") val data: DumpQuickSearchData? = DumpQuickSearchData(),
-)
-
 data class SubtitlingList(
     @JsonProperty("languageAbbr") val languageAbbr: String? = null,
     @JsonProperty("language") val language: String? = null,
@@ -490,8 +486,4 @@ data class EpisodeVo(
 
 data class DumpMediaDetail(
     @JsonProperty("episodeVo") val episodeVo: ArrayList<EpisodeVo>? = arrayListOf(),
-)
-
-data class DumpLoad(
-    @JsonProperty("data") val data: DumpMediaDetail? = null,
 )
