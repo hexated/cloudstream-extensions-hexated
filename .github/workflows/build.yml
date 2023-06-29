@@ -50,6 +50,10 @@ jobs:
           DUMP_KEY: ${{ secrets.DUMP_KEY }}
           CRUNCHYROLL_BASIC_TOKEN: ${{ secrets.CRUNCHYROLL_BASIC_TOKEN }}
           CRUNCHYROLL_REFRESH_TOKEN: ${{ secrets.CRUNCHYROLL_REFRESH_TOKEN }}
+          ANICHI_API: ${{ secrets.ANICHI_API }}
+          ANICHI_SERVER: ${{ secrets.ANICHI_SERVER }}
+          ANICHI_ENDPOINT: ${{ secrets.ANICHI_ENDPOINT }}
+          ANICHI_APP: ${{ secrets.ANICHI_APP }}
         run: |
           cd $GITHUB_WORKSPACE/src
           echo SORA_API=$SORA_API >> local.properties
@@ -60,6 +64,10 @@ jobs:
           echo DUMP_KEY=$DUMP_KEY >> local.properties
           echo CRUNCHYROLL_BASIC_TOKEN=$CRUNCHYROLL_BASIC_TOKEN >> local.properties
           echo CRUNCHYROLL_REFRESH_TOKEN=$CRUNCHYROLL_REFRESH_TOKEN >> local.properties
+          echo ANICHI_API=$ANICHI_API >> local.properties
+          echo ANICHI_SERVER=$ANICHI_SERVER >> local.properties
+          echo ANICHI_ENDPOINT=$ANICHI_ENDPOINT >> local.properties
+          echo ANICHI_APP=$ANICHI_APP >> local.properties
 
       - name: Build Plugins
         run: |
