@@ -7,9 +7,11 @@ import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.net.URI
 
 class Aniworld : MainAPI() {
     override var mainUrl = "https://aniworld.to"
@@ -144,24 +146,48 @@ class Aniworld : MainAPI() {
             it.third != "Vidoza"
         }.apmap {
             val redirectUrl = app.get(fixUrl(it.second)).url
-            loadExtractor(redirectUrl, data, subtitleCallback) { link ->
-                val name = "${link.name} [${it.first.getLanguage(document)}]"
-                callback.invoke(
-                    ExtractorLink(
-                        name,
-                        name,
-                        link.url,
-                        link.referer,
-                        link.quality,
-                        link.isM3u8,
-                        link.headers,
-                        link.extractorData
+            if (it.third == "VOE") {
+                invokeVoe(redirectUrl, data, callback)
+            } else {
+                loadExtractor(redirectUrl, data, subtitleCallback) { link ->
+                    val name = "${link.name} [${it.first.getLanguage(document)}]"
+                    callback.invoke(
+                        ExtractorLink(
+                            name,
+                            name,
+                            link.url,
+                            link.referer,
+                            link.quality,
+                            link.isM3u8,
+                            link.headers,
+                            link.extractorData
+                        )
                     )
-                )
+                }
             }
         }
 
         return true
+    }
+
+    private suspend fun invokeVoe(
+        url: String,
+        referer: String,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val request = app.get(url, referer = referer)
+        val baseUrl = getBaseUrl(request.url)
+        val res = request.document
+        val script = res.select("script").find { it.data().contains("sources =") }?.data()
+        val link =
+            Regex("[\"']hls[\"']:\\s*[\"'](.*)[\"']").find(script ?: return)?.groupValues?.get(1)
+
+        M3u8Helper.generateM3u8(
+            name,
+            link ?: return,
+            "$baseUrl/",
+            headers = mapOf("Origin" to "$baseUrl/")
+        ).forEach(callback)
     }
 
     private fun Element.toSearchResult(): AnimeSearchResponse? {
@@ -176,6 +202,12 @@ class Aniworld : MainAPI() {
     private fun String.getLanguage(document: Document): String? {
         return document.selectFirst("div.changeLanguageBox img[data-lang-key=$this]")?.attr("title")
             ?.removePrefix("mit")?.trim()
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
     }
 
     private data class AnimeSearch(
