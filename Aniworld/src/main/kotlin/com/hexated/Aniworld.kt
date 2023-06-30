@@ -146,11 +146,12 @@ class Aniworld : MainAPI() {
             it.third != "Vidoza"
         }.apmap {
             val redirectUrl = app.get(fixUrl(it.second)).url
+            val lang = it.first.getLanguage(document)
             if (it.third == "VOE") {
-                invokeVoe(redirectUrl, data, callback)
+                invokeVoe(redirectUrl, lang, data, callback)
             } else {
                 loadExtractor(redirectUrl, data, subtitleCallback) { link ->
-                    val name = "${link.name} [${it.first.getLanguage(document)}]"
+                    val name = "${link.name} [${lang}]"
                     callback.invoke(
                         ExtractorLink(
                             name,
@@ -172,9 +173,11 @@ class Aniworld : MainAPI() {
 
     private suspend fun invokeVoe(
         url: String,
+        lang: String?,
         referer: String,
         callback: (ExtractorLink) -> Unit,
     ) {
+        val name = "Voe [${lang}]"
         val request = app.get(url, referer = referer)
         val baseUrl = getBaseUrl(request.url)
         val res = request.document
