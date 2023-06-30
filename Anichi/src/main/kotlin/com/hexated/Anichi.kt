@@ -2,7 +2,10 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.APIHolder.getTracker
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.mvvm.safeApiCall
@@ -25,6 +28,14 @@ class Anichi : MainAPI() {
             "Finished" -> ShowStatus.Completed
             "Releasing" -> ShowStatus.Ongoing
             else -> ShowStatus.Completed
+        }
+    }
+
+    private fun getType(t: String?): TvType {
+        return when {
+            t.equals("OVA", true) || t.equals("Special") -> TvType.OVA
+            t.equals("Movie", true) -> TvType.AnimeMovie
+            else -> TvType.Anime
         }
     }
 
@@ -148,6 +159,7 @@ class Anichi : MainAPI() {
         val title = showData.name
         val description = showData.description
         val poster = showData.thumbnail
+        val type = getType(showData.type ?: "")
 
         val episodes = showData.availableEpisodes.let {
             if (it == null) return@let Pair(null, null)
@@ -176,9 +188,13 @@ class Anichi : MainAPI() {
             Pair(Actor(name, image), role)
         }
 
-        return newAnimeLoadResponse(title ?: "", url, TvType.Anime) {
-            posterUrl = poster
-            backgroundPosterUrl = showData.banner
+        val names = showData.altNames?.plus(title)?.filterNotNull() ?: emptyList()
+        val trackers = getTracker(names, TrackerType.getTypes(type), showData.airedStart?.year)
+
+        return newAnimeLoadResponse(title ?: "", url, type) {
+            engName = showData.altNames?.firstOrNull()
+            posterUrl = trackers?.image ?: poster
+            backgroundPosterUrl = trackers?.cover ?: showData.banner
             rating = showData.averageScore?.times(100)
             tags = showData.genres
             year = showData.airedStart?.year
@@ -192,7 +208,8 @@ class Anichi : MainAPI() {
             //this.recommendations = recommendations
 
             showStatus = getStatus(showData.status.toString())
-
+            addMalId(trackers?.malId)
+            addAniListId(trackers?.aniId?.toIntOrNull())
             plot = description?.replace(Regex("""<(.*?)>"""), "")
         }
     }
@@ -215,10 +232,10 @@ class Anichi : MainAPI() {
                 val link = source.sourceUrl?.replace(" ", "%20") ?: return@safeApiCall
                 if (URI(link).isAbsolute || link.startsWith("//")) {
                     val fixedLink = if (link.startsWith("//")) "https:$link" else link
-                    val host = URI(link).host.fixHost()
+                    val host = link.getHost()
 
                     when {
-                        fixedLink.contains(Regex("(?i)playtaku|gogo")) -> {
+                        fixedLink.contains(Regex("(?i)playtaku|gogo")) || source.sourceName == "Vid-mp4" -> {
                             invokeGogo(fixedLink, subtitleCallback, callback)
                         }
                         embedIsBlacklisted(fixedLink) -> {
@@ -245,7 +262,7 @@ class Anichi : MainAPI() {
                     val links = app.get(fixedLink).parsedSafe<AnichiVideoApiResponse>()?.links
                         ?: emptyList()
                     links.forEach { server ->
-                        val host = server.link.fixHost()
+                        val host = server.link.getHost()
                         when {
                             source.sourceName == "Default" -> {
                                 if (server.resolutionStr == "SUB" || server.resolutionStr == "Alt vo_SUB") {
@@ -359,8 +376,8 @@ class Anichi : MainAPI() {
         })
     }
 
-    private fun String.fixHost(): String {
-        return fixTitle(URI(this).host.substringBeforeLast(".").substringAfter("."))
+    private fun String.getHost(): String {
+        return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
     }
 
     companion object {
@@ -451,6 +468,7 @@ class Anichi : MainAPI() {
         @JsonProperty("genres") val genres: List<String>?,
         @JsonProperty("averageScore") val averageScore: Int?,
         @JsonProperty("characters") val characters: List<Characters>?,
+        @JsonProperty("altNames") val altNames: List<String>?,
         @JsonProperty("description") val description: String?,
         @JsonProperty("status") val status: String?,
         @JsonProperty("banner") val banner: String?,
