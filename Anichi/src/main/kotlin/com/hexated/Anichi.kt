@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.RequestBodyTypes
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -229,7 +230,7 @@ class Anichi : MainAPI() {
 
         apiResponse.data?.episode?.sourceUrls?.apmap { source ->
             safeApiCall {
-                val link = source.sourceUrl?.replace(" ", "%20") ?: return@safeApiCall
+                val link = fixSourceUrls(source.sourceUrl ?: return@safeApiCall, source.sourceName) ?: return@safeApiCall
                 if (URI(link).isAbsolute || link.startsWith("//")) {
                     val fixedLink = if (link.startsWith("//")) "https:$link" else link
                     val host = link.getHost()
@@ -258,7 +259,7 @@ class Anichi : MainAPI() {
                         }
                     }
                 } else {
-                    val fixedLink = apiEndPoint + URI(link).path + ".json?" + URI(link).query
+                    val fixedLink = link.fixUrlPath()
                     val links = app.get(fixedLink).parsedSafe<AnichiVideoApiResponse>()?.links
                         ?: emptyList()
                     links.forEach { server ->
@@ -293,7 +294,8 @@ class Anichi : MainAPI() {
                                         ).path),
                                         server.resolutionStr.removeSuffix("p").toIntOrNull()
                                             ?: Qualities.P1080.value,
-                                        false
+                                        false,
+                                        isDash = server.resolutionStr == "Dash 1"
                                     )
                                 )
                             }
@@ -380,6 +382,18 @@ class Anichi : MainAPI() {
         return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
     }
 
+    private fun String.fixUrlPath() : String {
+        return if(this.contains(".json?")) apiEndPoint + this else apiEndPoint + URI(this).path + ".json?" + URI(this).query
+    }
+
+    private fun fixSourceUrls(url: String, source: String?) : String? {
+        return if(source == "Ak" || url.contains("/player/vitemb")) {
+            tryParseJson<AkIframe>(base64Decode(url.substringAfter("=")))?.idUrl
+        } else {
+            url.replace(" ", "%20")
+        }
+    }
+
     companion object {
         private const val apiUrl = BuildConfig.ANICHI_API
         private const val serverUrl = BuildConfig.ANICHI_SERVER
@@ -403,6 +417,10 @@ class Anichi : MainAPI() {
         val episode: Int
     )
 
+    data class AkIframe(
+        @JsonProperty("idUrl") val idUrl: String? = null,
+    )
+
     data class Stream(
         @JsonProperty("format") val format: String? = null,
         @JsonProperty("audio_lang") val audio_lang: String? = null,
@@ -414,12 +432,19 @@ class Anichi : MainAPI() {
         @JsonProperty("streams") val streams: ArrayList<Stream>? = arrayListOf(),
     )
 
+    data class Subtitles(
+        @JsonProperty("lang") val lang: String?,
+        @JsonProperty("label") val label: String?,
+        @JsonProperty("src") val src: String?,
+    )
+
     data class Links(
         @JsonProperty("link") val link: String,
         @JsonProperty("hls") val hls: Boolean?,
         @JsonProperty("resolutionStr") val resolutionStr: String,
         @JsonProperty("src") val src: String?,
         @JsonProperty("portData") val portData: PortData? = null,
+        @JsonProperty("subtitles") val subtitles: ArrayList<Subtitles>? = arrayListOf(),
     )
 
     data class AnichiVideoApiResponse(
