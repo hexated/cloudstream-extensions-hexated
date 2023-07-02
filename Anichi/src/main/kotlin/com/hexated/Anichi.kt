@@ -60,7 +60,10 @@ class Anichi : MainAPI() {
         val res = app.get(url, headers = headers).parsedSafe<AnichiQuery>()?.data
         val query = res?.shows ?: res?.queryPopular ?: res?.queryListForTag
         val card = if(request.name == popularTitle) query?.recommendations?.map { it.anyCard } else query?.edges
-        val home = card?.mapNotNull { media ->
+        val home = card?.filter {
+            // filtering in case there is an anime with 0 episodes available on the site.
+            !(it?.availableEpisodes?.raw == 0 && it.availableEpisodes.sub == 0 && it.availableEpisodes.dub == 0)
+        }?.mapNotNull { media ->
             media?.toSearchResponse()
         } ?: emptyList()
         return newHomePageResponse(
@@ -170,7 +173,7 @@ class Anichi : MainAPI() {
         val names = showData.altNames?.plus(title)?.filterNotNull() ?: emptyList()
         val trackers = getTracker(names, TrackerType.getTypes(type), showData.airedStart?.year)
 
-        return newAnimeLoadResponse(title ?: "", url, type) {
+        return newAnimeLoadResponse(title ?: "", url, TvType.Anime) {
             engName = showData.altNames?.firstOrNull()
             posterUrl = trackers?.image ?: poster
             backgroundPosterUrl = trackers?.cover ?: showData.banner
