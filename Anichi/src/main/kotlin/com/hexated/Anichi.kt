@@ -43,73 +43,51 @@ class Anichi : MainAPI() {
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie)
 
     private val popularTitle = "Popular"
-    private val recentTitle = "Latest Updated"
-    override val mainPage = listOf(
-        MainPageData(
-            recentTitle,
-            """$apiUrl?variables={"search":{"sortBy":"Latest_Update","allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false},"limit":26,"page":%d,"translationType":"sub","countryOrigin":"ALL"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$mainHash"}}"""
-        ),
-        MainPageData(
-            popularTitle,
-            """$apiUrl?variables={"type":"anime","size":30,"dateRange":1,"page":%d,"allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$popularHash"}}"""
-        )
+    private val animeRecentTitle = "Latest Anime"
+    private val donghuaRecentTitle = "Latest Donghua"
+    private val movieTitle = "Movie"
+
+    override val mainPage = mainPageOf(
+        """$apiUrl?variables={"search":{"sortBy":"Latest_Update","allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false},"limit":26,"page":%d,"translationType":"sub","countryOrigin":"JP"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$mainHash"}}""" to animeRecentTitle,
+        """$apiUrl?variables={"search":{"sortBy":"Latest_Update","allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false},"limit":26,"page":%d,"translationType":"sub","countryOrigin":"CN"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$mainHash"}}""" to donghuaRecentTitle,
+        """$apiUrl?variables={"type":"anime","size":30,"dateRange":1,"page":%d,"allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$popularHash"}}""" to popularTitle,
+        """$apiUrl?variables={"search":{"slug":"movie-anime","format":"anime","tagType":"upcoming","name":"Trending Movies"}}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$slugHash"}}""" to movieTitle
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
 
         val url = request.data.format(page)
-        val test = app.get(url, headers = headers).text
-
-        val home = when (request.name) {
-            recentTitle -> {
-                val json = parseJson<AnichiQuery>(test)
-                val results = json.data.shows.edges.filter {
-                    // filtering in case there is an anime with 0 episodes available on the site.
-                    !(it.availableEpisodes?.raw == 0 && it.availableEpisodes.sub == 0 && it.availableEpisodes.dub == 0)
-                }
-
-                results.map {
-                    newAnimeSearchResponse(it.name ?: "", "${it.Id}", fix = false) {
-                        this.posterUrl = it.thumbnail
-                        this.year = it.airedStart?.year
-                        this.otherName = it.englishName
-                        addDub(it.availableEpisodes?.dub)
-                        addSub(it.availableEpisodes?.sub)
-                    }
-                }
-            }
-            popularTitle -> {
-                val json = parseJson<PopularQuery>(test)
-                val results = json.data?.queryPopular?.recommendations?.filter {
-                    // filtering in case there is an anime with 0 episodes available on the site.
-                    !(it.anyCard?.availableEpisodes?.raw == 0 && it.anyCard.availableEpisodes.sub == 0 && it.anyCard.availableEpisodes.dub == 0)
-                }
-                results?.mapNotNull {
-                    newAnimeSearchResponse(
-                        it.anyCard?.name ?: return@mapNotNull null,
-                        "${it.anyCard.Id ?: it.pageStatus?.Id}",
-                        fix = false
-                    ) {
-                        this.posterUrl = it.anyCard.thumbnail
-                        this.otherName = it.anyCard.englishName
-                        addDub(it.anyCard.availableEpisodes?.dub)
-                        addSub(it.anyCard.availableEpisodes?.sub)
-                    }
-                } ?: emptyList()
-            }
-            else -> emptyList()
-        }
-
-
-
-        return HomePageResponse(
-            listOf(
-                HomePageList(request.name, home)
-            ), hasNext = home.isNotEmpty()
+        val res = app.get(url, headers = headers).parsedSafe<AnichiQuery>()?.data
+        val query = res?.shows ?: res?.queryPopular ?: res?.queryListForTag
+        val card = if(request.name == popularTitle) query?.recommendations?.map { it.anyCard } else query?.edges
+        val home = card?.mapNotNull { media ->
+            media?.toSearchResponse()
+        } ?: emptyList()
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+            ),
+            hasNext = request.name != movieTitle
         )
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
+    private fun Edges.toSearchResponse(): AnimeSearchResponse? {
+
+        return newAnimeSearchResponse(
+            name ?: englishName ?: nativeName ?: "",
+            Id ?: return null,
+            fix = false
+        ) {
+            this.posterUrl = thumbnail
+            this.year = airedStart?.year
+            this.otherName = englishName
+            addDub(availableEpisodes?.dub)
+            addSub(availableEpisodes?.sub)
+        }
+    }
+
+    override suspend fun search(query: String): List<SearchResponse>? {
 
         val link =
             """$apiUrl?variables={"search":{"allowAdult":false,"allowUnknown":false,"query":"$query"},"limit":26,"page":1,"translationType":"sub","countryOrigin":"ALL"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$mainHash"}}"""
@@ -126,12 +104,12 @@ class Anichi : MainAPI() {
 
         val response = parseJson<AnichiQuery>(res)
 
-        val results = response.data.shows.edges.filter {
+        val results = response.data?.shows?.edges?.filter {
             // filtering in case there is an anime with 0 episodes available on the site.
             !(it.availableEpisodes?.raw == 0 && it.availableEpisodes.sub == 0 && it.availableEpisodes.dub == 0)
         }
 
-        return results.map {
+        return results?.map {
             newAnimeSearchResponse(it.name ?: "", "${it.Id}", fix = false) {
                 this.posterUrl = it.thumbnail
                 this.year = it.airedStart?.year
@@ -401,6 +379,7 @@ class Anichi : MainAPI() {
 
         private const val mainHash = "e42a4466d984b2c0a2cecae5dd13aa68867f634b16ee0f17b380047d14482406"
         private const val popularHash = "31a117653812a2547fd981632e8c99fa8bf8a75c4ef1a77a1567ef1741a7ab9c"
+        private const val slugHash = "bf603205eb2533ca21d0324a11f623854d62ed838a27e1b3fcfb712ab98b03f4"
         private const val detailHash = "bb263f91e5bdd048c1c978f324613aeccdfe2cbc694a419466a31edb58c0cc0b"
         private const val serverHash = "5e7e17cdd0166af5a2d8f43133d9ce3ce9253d1fdb5160a0cfd515564f98d061"
 
@@ -452,13 +431,18 @@ class Anichi : MainAPI() {
     )
 
     data class Data(
-        @JsonProperty("shows") val shows: Shows
+        @JsonProperty("shows") val shows: Shows? = null,
+        @JsonProperty("queryListForTag") val queryListForTag: Shows? = null,
+        @JsonProperty("queryPopular") val queryPopular: Shows? = null,
     )
 
     data class Shows(
-        @JsonProperty("pageInfo") val pageInfo: PageInfo,
-        @JsonProperty("edges") val edges: List<Edges>,
-        @JsonProperty("__typename") val _typename: String?
+        @JsonProperty("edges") val edges: List<Edges>? = arrayListOf(),
+        @JsonProperty("recommendations") val recommendations: List<EdgesCard>? = arrayListOf(),
+    )
+
+    data class EdgesCard(
+        @JsonProperty("anyCard") val anyCard: Edges? = null,
     )
 
     data class CharacterImage(
@@ -518,13 +502,8 @@ class Anichi : MainAPI() {
         @JsonProperty("year") val year: Int
     )
 
-    data class PageInfo(
-        @JsonProperty("total") val total: Int?,
-        @JsonProperty("__typename") val _typename: String?
-    )
-
     data class AnichiQuery(
-        @JsonProperty("data") val data: Data
+        @JsonProperty("data") val data: Data? = null
     )
 
     data class Detail(
@@ -560,10 +539,6 @@ class Anichi : MainAPI() {
 
     data class Episode(
         @JsonProperty("sourceUrls") val sourceUrls: ArrayList<SourceUrls> = arrayListOf(),
-    )
-
-    data class PopularQuery(
-        @JsonProperty("data") val data: DataPopular? = DataPopular()
     )
 
     data class Sub(
