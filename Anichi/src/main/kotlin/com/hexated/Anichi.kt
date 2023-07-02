@@ -143,19 +143,21 @@ class Anichi : MainAPI() {
         val poster = showData.thumbnail
         val type = getType(showData.type ?: "")
 
-        val episodes = showData.availableEpisodes.let {
+        val episodes = showData.availableEpisodesDetail.let {
             if (it == null) return@let Pair(null, null)
             if (showData.Id == null) return@let Pair(null, null)
-
-            Pair(if (it.sub != 0) ((1..it.sub).map { epNum ->
-                Episode(
-                    AnichiLoadData(showData.Id, "sub", epNum).toJson(), episode = epNum
-                )
-            }) else null, if (it.dub != 0) ((1..it.dub).map { epNum ->
-                Episode(
-                    AnichiLoadData(showData.Id, "dub", epNum).toJson(), episode = epNum
-                )
-            }) else null)
+            Pair(
+                it.sub.map { eps ->
+                    Episode(
+                        AnichiLoadData(showData.Id, "sub", eps).toJson(), eps
+                    )
+                }.reversed(),
+                it.dub.map { eps ->
+                    Episode(
+                        AnichiLoadData(showData.Id, "dub", eps).toJson(), eps
+                    )
+                }.reversed()
+            )
         }
 
         val characters = showData.characters?.map {
@@ -396,7 +398,7 @@ class Anichi : MainAPI() {
     data class AnichiLoadData(
         val hash: String,
         val dubStatus: String,
-        val episode: Int
+        val episode: String
     )
 
     data class AkIframe(
