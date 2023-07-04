@@ -147,16 +147,8 @@ class Anichi : MainAPI() {
             if (it == null) return@let Pair(null, null)
             if (showData.Id == null) return@let Pair(null, null)
             Pair(
-                it.sub.map { eps ->
-                    Episode(
-                        AnichiLoadData(showData.Id, "sub", eps).toJson(), eps
-                    )
-                }.reversed(),
-                it.dub.map { eps ->
-                    Episode(
-                        AnichiLoadData(showData.Id, "dub", eps).toJson(), eps
-                    )
-                }.reversed()
+                it.getEpisode("sub", showData.Id),
+                it.getEpisode("dub", showData.Id),
             )
         }
 
@@ -313,6 +305,19 @@ class Anichi : MainAPI() {
             }
         }
         return false
+    }
+
+    private fun AvailableEpisodesDetail.getEpisode(
+        lang: String,
+        id: String
+    ): List<com.lagradost.cloudstream3.Episode> {
+        val meta = if (lang == "sub") this.sub else this.dub
+        return meta.map { eps ->
+            Episode(
+                AnichiLoadData(id, lang, eps).toJson(),
+                "Ep $eps"
+            )
+        }.reversed()
     }
 
     private suspend fun getM3u8Qualities(

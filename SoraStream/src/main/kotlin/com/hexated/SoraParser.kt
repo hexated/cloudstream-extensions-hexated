@@ -487,3 +487,16 @@ data class EpisodeVo(
 data class DumpMediaDetail(
     @JsonProperty("episodeVo") val episodeVo: ArrayList<EpisodeVo>? = arrayListOf(),
 )
+
+data class EMovieServer(
+    @JsonProperty("value") val value: String? = null,
+)
+
+data class EMovieSources(
+    @JsonProperty("file") val file: String? = null,
+)
+
+data class EMovieTraks(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("label") val label: String? = null,
+)

@@ -27,6 +27,7 @@ import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
+import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -219,7 +220,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeKisskh(res.title, res.season, res.episode, res.isAnime, res.lastSeason, subtitleCallback, callback)
             },
             {
                 invokeLing(
@@ -287,7 +288,17 @@ class SoraStreamLite : SoraStream() {
                     res.year,
                     callback
                 )
-            }
+            },
+            {
+                invokeEmovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
         )
 
         return true

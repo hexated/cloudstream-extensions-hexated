@@ -49,6 +49,7 @@ import com.hexated.SoraExtractor.invokeShinobiMovies
 import com.hexated.SoraExtractor.invokeShivamhw
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
+import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVitoenMovies
@@ -97,7 +98,7 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
-        const val zoroAPI = "https://sanji.to"
+        const val zoroAPI = "https://aniwatch.to"
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
@@ -127,6 +128,7 @@ open class SoraStream : TmdbProvider() {
         const val gokuAPI = "https://goku.sx"
         const val ridomoviesAPI = "https://ridomovies.pw"
         const val navyAPI = "https://navy-issue-i-239.site"
+        const val emoviesAPI = "https://emovies.si"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -516,7 +518,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeKisskh(res.title, res.season, res.episode, res.isAnime, res.lastSeason, subtitleCallback, callback)
             },
             {
                 invokeLing(
@@ -802,6 +804,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)
+            },
+            {
+                invokeEmovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
         )
 

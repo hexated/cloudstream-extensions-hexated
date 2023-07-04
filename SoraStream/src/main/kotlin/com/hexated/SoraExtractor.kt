@@ -831,12 +831,19 @@ object SoraExtractor : SoraStream() {
         title: String? = null,
         season: Int? = null,
         episode: Int? = null,
+        isAnime: Boolean = false,
+        lastSeason: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val fixTitle = title?.replace("–", "-")
+        val slug = title.createSlug() ?: return
+        val type = when {
+            isAnime -> "3"
+            season == null -> "2"
+            else -> "1"
+        }
         val res = app.get(
-            "$kissKhAPI/api/DramaList/Search?q=$title&type=0", referer = "$kissKhAPI/"
+            "$kissKhAPI/api/DramaList/Search?q=$title&type=$type", referer = "$kissKhAPI/"
         ).text.let {
             tryParseJson<ArrayList<KisskhResults>>(it)
         } ?: return
@@ -844,17 +851,15 @@ object SoraExtractor : SoraStream() {
         val (id, contentTitle) = if (res.size == 1) {
             res.first().id to res.first().title
         } else {
-            if (season == null) {
-                val data = res.find { it.title.equals(fixTitle, true) }
-                data?.id to data?.title
-            } else {
-                val data = res.find {
-                    it.title?.contains(
-                        "$fixTitle", true
-                    ) == true && it.title.contains("Season $season", true)
+            val data = res.find {
+                val slugTitle = it.title.createSlug()
+                when {
+                    season == null -> slugTitle?.equals(slug) == true
+                    lastSeason == 1 -> slugTitle?.contains(slug) == true
+                    else -> slugTitle?.contains(slug) == true && it.title?.contains("Season $season", true) == true
                 }
-                data?.id to data?.title
             }
+            data?.id to data?.title
         }
 
         val resDetail = app.get(
@@ -3030,6 +3035,70 @@ object SoraExtractor : SoraStream() {
             path,
             "${navyAPI}/"
         ).forEach(callback)
+
+    }
+
+    suspend fun invokeEmovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val slug = title.createSlug()
+        val url = if (season == null) {
+            "$emoviesAPI/watch-$slug-$year-1080p-hd-online-free/watching.html"
+        } else {
+            val first = "$emoviesAPI/watch-$slug-season-$season-$year-1080p-hd-online-free.html"
+            val second = "$emoviesAPI/watch-$slug-$year-1080p-hd-online-free.html"
+            if (app.get(first).isSuccessful) first else second
+        }
+
+        val res = app.get(url).document
+        val id = (if (season == null) {
+            res.selectFirst("select#selectServer option[sv=oserver]")?.attr("value")
+        } else {
+            res.select("div.le-server a").find {
+                val num =
+                    Regex("Episode (\\d+)").find(it.text())?.groupValues?.get(1)?.toIntOrNull()
+                num == episode
+            }?.attr("href")
+        })?.substringAfter("id=")?.substringBefore("&")
+
+        val server =
+            app.get(
+                "$emoviesAPI/ajax/v4_get_sources?s=oserver&id=${id ?: return}&_=${APIHolder.unixTimeMS}",
+                headers = mapOf(
+                    "X-Requested-With" to "XMLHttpRequest"
+                )
+            ).parsedSafe<EMovieServer>()?.value
+
+        val script = app.get(server ?: return, referer = "$emoviesAPI/").document.selectFirst("script:containsData(sources:)")?.data() ?: return
+        val sources = Regex("sources:\\s*\\[(.*)],").find(script)?.groupValues?.get(1)?.let {
+            tryParseJson<List<EMovieSources>>("[$it]")
+        }
+        val tracks = Regex("tracks:\\s*\\[(.*)],").find(script)?.groupValues?.get(1)?.let {
+            tryParseJson<List<EMovieTraks>>("[$it]")
+        }
+
+        sources?.map { source ->
+            M3u8Helper.generateM3u8(
+                "Emovies",
+                source.file ?: return@map,
+                "https://embed.vodstream.xyz/"
+            ).forEach(callback)
+        }
+
+        tracks?.map { track ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    track.label ?: "",
+                    track.file ?: return@map,
+                )
+            )
+        }
+
 
     }
 
