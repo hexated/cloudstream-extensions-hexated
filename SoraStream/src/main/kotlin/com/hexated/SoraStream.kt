@@ -50,6 +50,7 @@ import com.hexated.SoraExtractor.invokeShivamhw
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
+import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVitoenMovies
@@ -129,6 +130,7 @@ open class SoraStream : TmdbProvider() {
         const val ridomoviesAPI = "https://ridomovies.pw"
         const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"
+        const val pobmoviesAPI = "https://pobmovies.cam"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -806,8 +808,11 @@ open class SoraStream : TmdbProvider() {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokeEmovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeEmovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
             },
+            {
+                if(!res.isAnime && res.season == null) invokePobmovies(res.title, res.year, callback)
+            }
         )
 
         return true

@@ -1013,16 +1013,18 @@ object SoraExtractor : SoraStream() {
         val animeId =
             app.get("https://raw.githubusercontent.com/MALSync/MAL-Sync-Backup/master/data/anilist/anime/${aniId ?: return}.json")
                 .parsedSafe<MALSyncResponses>()?.pages?.zoro?.keys?.map { it }
-
+        val headers = mapOf(
+            "X-Requested-With" to "XMLHttpRequest",
+        )
         animeId?.apmap { id ->
-            val episodeId = app.get("$zoroAPI/ajax/v2/episode/list/${id ?: return@apmap}")
+            val episodeId = app.get("$zoroAPI/ajax/v2/episode/list/${id ?: return@apmap}", headers = headers)
                 .parsedSafe<ZoroResponses>()?.html?.let {
                     Jsoup.parse(it)
                 }?.select("div.ss-list a")?.find { it.attr("data-number") == "${episode ?: 1}" }
                 ?.attr("data-id")
 
             val servers =
-                app.get("$zoroAPI/ajax/v2/episode/servers?episodeId=${episodeId ?: return@apmap}")
+                app.get("$zoroAPI/ajax/v2/episode/servers?episodeId=${episodeId ?: return@apmap}", headers = headers)
                     .parsedSafe<ZoroResponses>()?.html?.let { Jsoup.parse(it) }
                     ?.select("div.item.server-item")?.map {
                         Triple(
@@ -1034,7 +1036,7 @@ object SoraExtractor : SoraStream() {
 
             servers?.apmap servers@{ server ->
                 val iframe =
-                    app.get("$zoroAPI/ajax/v2/episode/sources?id=${server.second ?: return@servers}")
+                    app.get("$zoroAPI/ajax/v2/episode/sources?id=${server.second ?: return@servers}", headers = headers)
                         .parsedSafe<ZoroResponses>()?.link ?: return@servers
                 val audio = if (server.third == "sub") "Raw" else "English Dub"
                 if (server.first == "Vidstreaming" || server.first == "Vidcloud") {
@@ -1260,20 +1262,13 @@ object SoraExtractor : SoraStream() {
                 extractMirrorUHD(bitLink, base)
             }
 
-            val tags =
-                Regex("\\d{3,4}[Pp]\\.?(.*?)\\[").find(quality)?.groupValues?.getOrNull(1)
-                    ?.replace(".", " ")?.trim()
-                    ?: ""
-            val qualities =
-                Regex("(\\d{3,4})[Pp]").find(quality)?.groupValues?.getOrNull(1)?.toIntOrNull()
-                    ?: Qualities.Unknown.value
-            val size =
-                Regex("(?i)\\[(\\S+\\s?(gb|mb))[]/]").find(quality)?.groupValues?.getOrNull(1)
-                    ?.let { "[$it]" } ?: quality
+            val tags = getUhdTags(quality)
+            val qualities = getIndexQuality(quality)
+            val size = getIndexSize(quality)
             callback.invoke(
                 ExtractorLink(
                     "UHDMovies",
-                    "UHDMovies $tags $size",
+                    "UHDMovies $tags [$size]",
                     downloadLink ?: return@apmap,
                     "",
                     qualities
@@ -1282,6 +1277,72 @@ object SoraExtractor : SoraStream() {
 
         }
 
+
+    }
+
+    suspend fun invokePobmovies(
+        title: String? = null,
+        year: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val detailDoc = app.get("$pobmoviesAPI/${title.createSlug()}-$year").document
+        val iframeList = detailDoc.select("div.entry-content p").map { it }
+            .filter { it.text().filterIframe(year = year, title = title) }.mapNotNull {
+                it.text() to it.nextElementSibling()?.select("a")?.attr("href")
+            }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
+
+        val sources = mutableListOf<Pair<String, String?>>()
+        if (iframeList.any {
+                it.first.contains(
+                    "2160p",
+                    true
+                )
+            }) {
+            sources.addAll(iframeList.filter {
+                it.first.contains(
+                    "2160p",
+                    true
+                )
+            })
+            sources.add(iframeList.first {
+                it.first.contains(
+                    "1080p",
+                    true
+                )
+            })
+        } else {
+            sources.addAll(iframeList.filter { it.first.contains("1080p", true) })
+        }
+
+        sources.apmap { (name, link) ->
+            if (link.isNullOrEmpty()) return@apmap
+            val videoLink = when {
+                link.contains("gdtot") -> {
+                    val gdBotLink = extractGdbot(link)
+                    extractGdflix(gdBotLink ?: return@apmap)
+                }
+                link.contains("gdflix") -> {
+                    extractGdflix(link)
+                }
+                else -> {
+                    return@apmap
+                }
+            }
+
+            val tags = getUhdTags(name)
+            val qualities = getIndexQuality(name)
+            val size = getIndexSize(name)
+            callback.invoke(
+                ExtractorLink(
+                    "Pobmovies",
+                    "Pobmovies $tags [${size}]",
+                    videoLink ?: return@apmap,
+                    "",
+                    qualities
+                )
+            )
+
+        }
 
     }
 

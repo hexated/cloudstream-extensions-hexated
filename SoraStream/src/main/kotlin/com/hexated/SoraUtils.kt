@@ -111,7 +111,12 @@ data class FilmxyCookies(
     val wSec: String? = null,
 )
 
-fun String.filterIframe(seasonNum: Int?, lastSeason: Int?, year: Int?, title: String?): Boolean {
+fun String.filterIframe(
+    seasonNum: Int? = null,
+    lastSeason: Int? = null,
+    year: Int?,
+    title: String?
+): Boolean {
     val slug = title.createSlug()
     val dotSlug = slug?.replace("-", ".")
     val spaceSlug = slug?.replace("-", " ")
@@ -271,8 +276,8 @@ suspend fun extractDrivebot(url: String): String? {
 
 suspend fun extractGdflix(url: String): String? {
     val iframeGdflix =
-        app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(GDFlix Direct)")
-            ?.attr("href") ?: return null
+        if (!url.contains("gdflix")) app.get(url).document.selectFirst("li.flex.flex-col.py-6 a:contains(GDFlix Direct)")
+            ?.attr("href") ?: return null else url
     val base = getBaseUrl(iframeGdflix)
 
     val req = app.get(iframeGdflix).document.selectFirst("script:containsData(replace)")?.data()
@@ -586,7 +591,10 @@ suspend fun getDumpIdAndType(title: String?, year: Int?, season: Int?): Pair<Str
                     it.name?.contains(
                         "$title",
                         true
-                    ) == true && (it.releaseTime == "$year" || it.name.contains("Season $season", true)) && it.domainType == 1
+                    ) == true && (it.releaseTime == "$year" || it.name.contains(
+                        "Season $season",
+                        true
+                    )) && it.domainType == 1
                 }
                 else -> {
                     it.name?.contains(Regex("(?i)$title\\s?($season|${season.toRomanNumeral()}|Season\\s$season)")) == true && it.releaseTime == "$year" && it.domainType == 1
@@ -744,7 +752,11 @@ suspend fun bypassTechmny(url: String): String? {
         val thirdPage = secondPage.getNextTechPage().text
         val goToken = thirdPage.substringAfter("?go=").substringBefore("\"")
         val tokenUrl = "$postUrl?go=$goToken"
-        val headers = mapOf("Cookie" to "$goToken=${secondPage.select("form#landing input[name=_wp_http2]").attr("value")}")
+        val headers = mapOf(
+            "Cookie" to "$goToken=${
+                secondPage.select("form#landing input[name=_wp_http2]").attr("value")
+            }"
+        )
         Pair(tokenUrl, headers)
     }
     val driveUrl =
@@ -1279,6 +1291,12 @@ fun String.getFileSize(): Float? {
     }
 }
 
+fun getUhdTags(str: String?): String {
+    return Regex("\\d{3,4}[Pp]\\.?(.*?)\\[").find(str ?: "")?.groupValues?.getOrNull(1)
+        ?.replace(".", " ")?.trim()
+        ?: str ?: ""
+}
+
 fun getIndexQualityTags(str: String?, fullTag: Boolean = false): String {
     return if (fullTag) Regex("(?i)(.*)\\.(?:mkv|mp4|avi)").find(str ?: "")?.groupValues?.get(1)
         ?.trim() ?: str ?: "" else Regex("(?i)\\d{3,4}[pP]\\.?(.*?)\\.(mkv|mp4|avi)").find(
@@ -1486,12 +1504,13 @@ fun getBaseUrl(url: String): String {
     }
 }
 
-fun isUpcoming(dateString: String?) : Boolean {
-    if(dateString == null) return false
+fun isUpcoming(dateString: String?): Boolean {
+    if (dateString == null) return false
     val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val dateTime = format.parse(dateString)?.time ?: return false
     return unixTimeMS < dateTime
 }
+
 fun decode(input: String): String = URLDecoder.decode(input, "utf-8")
 
 fun encode(input: String): String = URLEncoder.encode(input, "utf-8").replace("+", "%20")
@@ -2021,8 +2040,9 @@ object DumpUtils {
         return app.custom(
             method,
             url,
-            requestBody = if(method == "POST") params.toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull()) else null,
-            params = if(method == "GET") params else emptyMap(),
+            requestBody = if (method == "POST") params.toJson()
+                .toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull()) else null,
+            params = if (method == "GET") params else emptyMap(),
             headers = createHeaders(params)
         ).parsedSafe<HashMap<String, String>>()?.get("data").let {
             cryptoHandler(
@@ -2062,7 +2082,8 @@ object DumpUtils {
     }
 
     private fun getAesKey(): String? {
-        val publicKey = RSAEncryptionHelper.getPublicKeyFromString(BuildConfig.DUMP_KEY) ?: return null
+        val publicKey =
+            RSAEncryptionHelper.getPublicKeyFromString(BuildConfig.DUMP_KEY) ?: return null
         return RSAEncryptionHelper.encryptText(deviceId, publicKey)
     }
 

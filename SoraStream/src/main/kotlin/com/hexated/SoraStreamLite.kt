@@ -290,7 +290,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeEmovies(
+                if (!res.isAnime) invokeEmovies(
                     res.title,
                     res.year,
                     res.season,
