@@ -1039,7 +1039,7 @@ object SoraExtractor : SoraStream() {
                     app.get("$zoroAPI/ajax/v2/episode/sources?id=${server.second ?: return@servers}", headers = headers)
                         .parsedSafe<ZoroResponses>()?.link ?: return@servers
                 val audio = if (server.third == "sub") "Raw" else "English Dub"
-                if (server.first == "Vidstreaming" || server.first == "Vidcloud") {
+                if (server.first == "Vidstreaming" || server.first == "MegaCloud") {
                     extractRabbitStream(
                         "${server.first} [$audio]",
                         iframe,

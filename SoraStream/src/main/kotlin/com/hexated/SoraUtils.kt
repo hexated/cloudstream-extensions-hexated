@@ -1780,12 +1780,16 @@ object RabbitStream {
                 ioSafe { app.get("$extractorData&t=${generateTimeStamp()}&sid=${pollingData.sid}") }
             }
         }
-        val getSourcesUrl = "${
-            mainIframeUrl.replace(
+        val mainIframeAjax = mainIframeUrl.let {
+            if(it.contains("/embed-2/e-1")) it.replace(
+                "/embed-2/e-1",
+                "/embed-2/ajax/e-1"
+            ) else it.replace(
                 "/embed",
                 "/ajax/embed"
             )
-        }/getSources?id=$mainIframeId${sid?.let { "$&sId=$it" } ?: ""}"
+        }
+        val getSourcesUrl = "$mainIframeAjax/getSources?id=$mainIframeId${sid?.let { "$&sId=$it" } ?: ""}"
         val response = app.get(
             getSourcesUrl,
             referer = mainUrl,
