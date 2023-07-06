@@ -77,13 +77,13 @@ open class SoraStream : TmdbProvider() {
     /** AUTHOR : Hexated & Sora */
     companion object {
         /** TOOLS */
-        private const val tmdbAPI = "https://api.themoviedb.org/3"
+        const val tmdbAPI = "https://api.themoviedb.org/3"
         const val gdbot = "https://gdtot.pro"
         const val anilistAPI = "https://graphql.anilist.co"
         const val malsyncAPI = "https://api.malsync.moe"
         const val consumetHelper = "https://api.consumet.org/anime/9anime/helper"
 
-        private val apiKey =
+        val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
         /** ALL SOURCES */
@@ -225,7 +225,7 @@ open class SoraStream : TmdbProvider() {
         return newHomePageResponse(request.name, home)
     }
 
-    private fun Media.toSearchResponse(type: String? = null): SearchResponse? {
+    fun Media.toSearchResponse(type: String? = null): SearchResponse? {
         return newMovieSearchResponse(
             title ?: name ?: originalTitle ?: return null,
             Data(id = id, type = mediaType ?: type).toJson(),
