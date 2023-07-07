@@ -1952,7 +1952,7 @@ object RabbitStream {
     }
 
     suspend fun getZoroKey(): String {
-        return app.get("https://raw.githubusercontent.com/enimax-anime/key/e6/key.txt").text
+        return app.get("https://raw.githubusercontent.com/enimax-anime/key/e0/key.txt").text
     }
 
     private inline fun <reified T> decryptMapped(input: String, key: String): T? {
