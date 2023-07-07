@@ -3163,6 +3163,54 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeFourCartoon(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.createSlug()
+        val headers = mapOf(
+            "X-Requested-With" to "XMLHttpRequest"
+        )
+        val url = if (season == null) {
+            "$fourCartoonAPI/movies/$fixTitle-$year"
+        } else {
+            "$fourCartoonAPI/episode/$fixTitle-season-$season-episode-$episode"
+        }
+
+        val document = app.get(url).document
+        val id = document.selectFirst("input[name=idpost]")?.attr("value")
+        val server = app.get(
+            "$fourCartoonAPI/ajax-get-link-stream/?server=streamango&filmId=${id ?: return}",
+            headers = headers
+        ).text
+        val hash =
+            getAndUnpack(app.get(server, referer = fourCartoonAPI).text).substringAfter("(\"")
+                .substringBefore("\",")
+        val iframeUrl = getBaseUrl(server)
+        val source = app.post(
+            "$iframeUrl/player/index.php?data=$hash&do=getVideo", data = mapOf(
+                "hast" to hash,
+                "r" to "$fourCartoonAPI/",
+            ),
+            headers = headers
+        ).parsedSafe<FourCartoonSources>()?.videoSource
+
+        callback.invoke(
+            ExtractorLink(
+                "4Cartoon",
+                "4Cartoon",
+                source ?: return,
+                "$iframeUrl/",
+                Qualities.P720.value,
+                true,
+            )
+        )
+
+    }
+
 
 }
 

@@ -500,3 +500,7 @@ data class EMovieTraks(
     @JsonProperty("file") val file: String? = null,
     @JsonProperty("label") val label: String? = null,
 )
+
+data class FourCartoonSources(
+    @JsonProperty("videoSource") val videoSource: String? = null,
+)
