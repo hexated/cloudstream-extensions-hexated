@@ -1017,14 +1017,14 @@ object SoraExtractor : SoraStream() {
             "X-Requested-With" to "XMLHttpRequest",
         )
         animeId?.apmap { id ->
-            val episodeId = app.get("$zoroAPI/ajax/v2/episode/list/${id ?: return@apmap}", headers = headers)
+            val episodeId = app.get("$zoroAPI/ajax/episode/list/${id ?: return@apmap}", headers = headers)
                 .parsedSafe<ZoroResponses>()?.html?.let {
                     Jsoup.parse(it)
                 }?.select("div.ss-list a")?.find { it.attr("data-number") == "${episode ?: 1}" }
                 ?.attr("data-id")
 
             val servers =
-                app.get("$zoroAPI/ajax/v2/episode/servers?episodeId=${episodeId ?: return@apmap}", headers = headers)
+                app.get("$zoroAPI/ajax/episode/servers?episodeId=${episodeId ?: return@apmap}", headers = headers)
                     .parsedSafe<ZoroResponses>()?.html?.let { Jsoup.parse(it) }
                     ?.select("div.item.server-item")?.map {
                         Triple(
@@ -1036,10 +1036,10 @@ object SoraExtractor : SoraStream() {
 
             servers?.apmap servers@{ server ->
                 val iframe =
-                    app.get("$zoroAPI/ajax/v2/episode/sources?id=${server.second ?: return@servers}", headers = headers)
+                    app.get("$zoroAPI/ajax/episode/sources?id=${server.second ?: return@servers}", headers = headers)
                         .parsedSafe<ZoroResponses>()?.link ?: return@servers
                 val audio = if (server.third == "sub") "Raw" else "English Dub"
-                if (server.first == "Vidstreaming" || server.first == "MegaCloud") {
+                if (server.first.contains(Regex("Vidstreaming|MegaCloud|Vidcloud"))) {
                     extractRabbitStream(
                         "${server.first} [$audio]",
                         iframe,
