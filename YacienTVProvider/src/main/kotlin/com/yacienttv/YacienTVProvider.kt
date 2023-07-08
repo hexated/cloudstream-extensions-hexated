@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import org.jsoup.nodes.Element
 import android.util.Log
-import java.util.Base64
+import android.util.Base64
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.Qualities
@@ -29,7 +29,7 @@ class YacienTV : MainAPI() {
 
     fun decrypt(enc: String, headerstr: String): String {
         var key = mainkey + headerstr
-        val decodedBytes = Base64.getDecoder().decode(enc.toByteArray())
+        val decodedBytes = Base64.decode(enc, Base64.DEFAULT)
         val encString = String(decodedBytes)
         var result = ""
         for (i in encString.indices) {
