@@ -129,7 +129,7 @@ class Gomunimeis : MainAPI() {
             .let { id ->
                 app.get("https://gomunimes.com/stream?id=$id")
                     .parsedSafe<Sources>()?.server?.streamsb?.link?.let { link ->
-                        loadExtractor(link, "https://vidgomunime.xyz/", subtitleCallback, callback)
+                        loadExtractor(link.replace("vidgomunimesb.xyz", "watchsb.com"), mainUrl, subtitleCallback, callback)
                     }
             }
 
