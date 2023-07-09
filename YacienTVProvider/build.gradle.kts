@@ -21,5 +21,5 @@ cloudstream {
         "Live",
     )
 
-    iconUrl = "https://raw.githubusercontent.com/KingLucius/cs-hx/tree/master/YacienTVProvider/Icon.png"
+    iconUrl = "https://raw.githubusercontent.com/KingLucius/cs-hx/master/YacienTVProvider/icon.png"
 }
