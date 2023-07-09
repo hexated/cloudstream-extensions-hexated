@@ -1,22 +1,19 @@
 package com.yacientv
 
+import android.util.Base64
+//import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.M3u8Helper
-import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.network.CloudflareKiller
-import org.jsoup.nodes.Element
-import android.util.Log
-import android.util.Base64
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.nicehttp.requestCreator
 
 class YacienTV : MainAPI() {
     override var lang = "ar"
 
-    override var name = "YacienTV"
+    override var name = "Yacien TV"
     override val usesWebView = false
     override val hasMainPage = true
     override val hasDownloadSupport = false
@@ -27,13 +24,13 @@ class YacienTV : MainAPI() {
     private val yacienTVAPI = "http://ver3.yacinelive.com/api"
     private val mainkey = "c!xZj+N9&G@Ev@vw"
 
-    fun decrypt(enc: String, headerstr: String): String {
-        var key = mainkey + headerstr
+    private fun decrypt(enc: String, headerstr: String): String {
+        val key = mainkey + headerstr
         val decodedBytes = Base64.decode(enc, Base64.DEFAULT)
-        val encString = String(decodedBytes)
+        val encString = decodedBytes.toString(charset("UTF-8"))
         var result = ""
         for (i in encString.indices) {
-            result += (encString[i].toInt() xor key[i % key.length].toInt()).toChar()
+            result += (encString[i].code xor key[i % key.length].code).toChar()
         }
         return result
     }
@@ -80,12 +77,10 @@ class YacienTV : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = mutableListOf<HomePageList>()
         if (page <= 1) {
-            val req = app.get(request.data)
-            val response = req.document
-            val theader = req.headers.get("t").toString()
-            val responsebody = decrypt(response.select("body").text(), theader)
 
-            val list = parseJson<Results>(responsebody)?.results?.mapNotNull { element ->
+            val decodedbody = getDecoded(request.data)
+
+            val list = parseJson<Results>(decodedbody).results?.mapNotNull { element ->
                 element.toSearchResponse()
             } ?: throw ErrorLoadingException("Invalid Json reponse")
             if (list.isNotEmpty()) items.add(HomePageList(request.name, list, true))
@@ -105,34 +100,27 @@ class YacienTV : MainAPI() {
         val posterUrl: String? = null,
     )
 
-    fun Channel.toSearchResponse(type: String? = null): SearchResponse? {
-        //Log.d("King", "Channel.toSearchResponse")
-        val hr = LiveSearchResponse(
+    private fun Channel.toSearchResponse(type: String? = null): SearchResponse? {
+        return LiveSearchResponse(
             name ?: return null,
             Data(id = id, name = name, posterUrl = logo).toJson(),
             this@YacienTV.name,
             TvType.Live,
             logo,
         )
-        //Log.d("King", hr.toString())
-        return hr
     }
 
     override suspend fun load(url: String): LoadResponse {
-        //Log.d("King", "Load:" + url)
         val data = parseJson<LinksData>(url)
-        Log.d("King", "Load:" + data)
-        val loadret =  LiveStreamLoadResponse(
+        return LiveStreamLoadResponse(
             name = data.name,
             url = data.id,
             dataUrl = data.id,
-            apiName = this.name,
+            apiName = name,
             posterUrl = data.posterUrl,
             type = TvType.Live,
             plot = "${data.name} live stream."
         )
-        Log.d("King", loadret.toString())
-        return loadret
     }
 
     override suspend fun loadLinks(
@@ -141,15 +129,10 @@ class YacienTV : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("King", "loadlinks:"+ data)
 
-        val chaurl = "$yacienTVAPI/channel/$data"
-        val req = app.get(chaurl)
-        val response = req.document
-        var theader = req.headers.get("t").toString()
-        val responsebody = decrypt(response.select("body").text(), theader)
+        val decodedbody = getDecoded("$yacienTVAPI/channel/$data")
 
-        val channel = parseJson<ChannelResults>(responsebody)?.links?.mapNotNull { element ->
+        parseJson<ChannelResults>(decodedbody).links?.map { element ->
             callback.invoke(
                 ExtractorLink(
                     source = element.name,
@@ -160,7 +143,25 @@ class YacienTV : MainAPI() {
                     isM3u8 = true,
                 )
             )
-        } ?: throw ErrorLoadingException("Invalid Json reponse")
+        } ?: throw ErrorLoadingException("Invalid Json response")
         return true
     }
+    private fun getDecoded(url: String): String {
+        val client = app.baseClient.newBuilder()
+            .build()
+
+        val request = requestCreator(
+            method = "GET",
+            url = url,
+            headers = mapOf(
+                "user-agent" to "okhttp/3.12.8",
+                "Accept" to "application/json",
+                "Cache-Control" to "no-cache",
+            ),
+        )
+        val req = client.newCall(request).execute()
+
+        return decrypt(req.body.string(), req.headers["t"].toString())
+    }
+
 }
