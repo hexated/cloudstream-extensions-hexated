@@ -28,6 +28,7 @@ import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
+import com.hexated.SoraExtractor.invokeFourCartoon
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -187,7 +188,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
+                if(!res.isAnime) invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeSmashyStream(
@@ -299,6 +300,15 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
+            {
+                if(!res.isAnime) invokeFourCartoon(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            }
         )
 
         return true

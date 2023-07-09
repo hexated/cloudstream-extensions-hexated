@@ -1,13 +1,13 @@
 // use an integer for version numbers
-version = 1
+version = 6
 
 
 cloudstream {
-    language = "ar"
+    language = "id"
     // All of these properties are optional, you can safely remove them
 
-    description = "Yacien TV livestreams"
-    authors = listOf("KingLucius")
+    // description = "Lorem Ipsum"
+     authors = listOf("Hexated")
 
     /**
      * Status int as the following:
@@ -18,8 +18,10 @@ cloudstream {
      * */
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
-        "Live",
+        "AnimeMovie",
+        "Anime",
+        "OVA",
     )
 
-    iconUrl = "https://raw.githubusercontent.com/KingLucius/cs-hx/master/YacienTVProvider/icon.png"
+    iconUrl = "https://www.google.com/s2/favicons?domain=gomunime.is&sz=%size%"
 }

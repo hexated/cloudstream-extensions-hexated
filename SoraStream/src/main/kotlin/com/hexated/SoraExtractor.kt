@@ -1017,14 +1017,14 @@ object SoraExtractor : SoraStream() {
             "X-Requested-With" to "XMLHttpRequest",
         )
         animeId?.apmap { id ->
-            val episodeId = app.get("$zoroAPI/ajax/v2/episode/list/${id ?: return@apmap}", headers = headers)
+            val episodeId = app.get("$zoroAPI/ajax/episode/list/${id ?: return@apmap}", headers = headers)
                 .parsedSafe<ZoroResponses>()?.html?.let {
                     Jsoup.parse(it)
                 }?.select("div.ss-list a")?.find { it.attr("data-number") == "${episode ?: 1}" }
                 ?.attr("data-id")
 
             val servers =
-                app.get("$zoroAPI/ajax/v2/episode/servers?episodeId=${episodeId ?: return@apmap}", headers = headers)
+                app.get("$zoroAPI/ajax/episode/servers?episodeId=${episodeId ?: return@apmap}", headers = headers)
                     .parsedSafe<ZoroResponses>()?.html?.let { Jsoup.parse(it) }
                     ?.select("div.item.server-item")?.map {
                         Triple(
@@ -1036,10 +1036,10 @@ object SoraExtractor : SoraStream() {
 
             servers?.apmap servers@{ server ->
                 val iframe =
-                    app.get("$zoroAPI/ajax/v2/episode/sources?id=${server.second ?: return@servers}", headers = headers)
+                    app.get("$zoroAPI/ajax/episode/sources?id=${server.second ?: return@servers}", headers = headers)
                         .parsedSafe<ZoroResponses>()?.link ?: return@servers
                 val audio = if (server.third == "sub") "Raw" else "English Dub"
-                if (server.first == "Vidstreaming" || server.first == "MegaCloud") {
+                if (server.first.contains(Regex("Vidstreaming|MegaCloud|Vidcloud"))) {
                     extractRabbitStream(
                         "${server.first} [$audio]",
                         iframe,
@@ -3160,6 +3160,54 @@ object SoraExtractor : SoraStream() {
             )
         }
 
+
+    }
+
+    suspend fun invokeFourCartoon(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.createSlug()
+        val headers = mapOf(
+            "X-Requested-With" to "XMLHttpRequest"
+        )
+        val url = if (season == null) {
+            "$fourCartoonAPI/movies/$fixTitle-$year"
+        } else {
+            "$fourCartoonAPI/episode/$fixTitle-season-$season-episode-$episode"
+        }
+
+        val document = app.get(url).document
+        val id = document.selectFirst("input[name=idpost]")?.attr("value")
+        val server = app.get(
+            "$fourCartoonAPI/ajax-get-link-stream/?server=streamango&filmId=${id ?: return}",
+            headers = headers
+        ).text
+        val hash =
+            getAndUnpack(app.get(server, referer = fourCartoonAPI).text).substringAfter("(\"")
+                .substringBefore("\",")
+        val iframeUrl = getBaseUrl(server)
+        val source = app.post(
+            "$iframeUrl/player/index.php?data=$hash&do=getVideo", data = mapOf(
+                "hast" to hash,
+                "r" to "$fourCartoonAPI/",
+            ),
+            headers = headers
+        ).parsedSafe<FourCartoonSources>()?.videoSource
+
+        callback.invoke(
+            ExtractorLink(
+                "4Cartoon",
+                "4Cartoon",
+                source ?: return,
+                "$iframeUrl/",
+                Qualities.P720.value,
+                true,
+            )
+        )
 
     }
 
