@@ -21,5 +21,5 @@ cloudstream {
         "Live",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=app.yacineapp.tv&sz=%size%"
+    iconUrl = "https://raw.githubusercontent.com/KingLucius/cs-hx/tree/master/YacienTVProvider/Icon.png"
 }
