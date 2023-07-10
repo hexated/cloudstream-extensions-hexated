@@ -9,7 +9,7 @@ import org.jsoup.nodes.Element
 import java.net.URLDecoder
 
 class PhimmoichillProvider : MainAPI() {
-    override var mainUrl = "https://phimmoichilla.net"
+    override var mainUrl = "https://phimmoichilld.net"
     override var name = "Phimmoichill"
     override val hasMainPage = true
     override var lang = "vi"
@@ -26,9 +26,11 @@ class PhimmoichillProvider : MainAPI() {
         "$mainUrl/list/phim-le/page-" to "Phim Lẻ",
         "$mainUrl/list/phim-bo/page-" to "Phim Bộ",
         "$mainUrl/genre/phim-hoat-hinh/page-" to "Phim Hoạt Hình",
+        "$mainUrl/genre/phim-anime/page-" to "Phim Anime",
         "$mainUrl/country/phim-han-quoc/page-" to "Phim Hàn Quốc",
         "$mainUrl/country/phim-trung-quoc/page-" to "Phim Trung Quốc",
         "$mainUrl/country/phim-thai-lan/page-" to "Phim Thái Lan",
+        "$mainUrl/genre/phim-sap-chieu/page-" to "Phim Sắp Chiếu",
     )
 
     override suspend fun getMainPage(
@@ -64,6 +66,10 @@ class PhimmoichillProvider : MainAPI() {
                 this.posterUrl = posterUrl
                 addSub(episode)
             }
+        } else if (temp.contains(Regex("Trailer"))) {
+            newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = posterUrl
+            }
         } else {
             val quality =
                 temp.replace(Regex("(-.*)|(\\|.*)|(?i)(VietSub.*)|(?i)(Thuyết.*)"), "").trim()
@@ -83,21 +89,20 @@ class PhimmoichillProvider : MainAPI() {
         }
     }
 
-    override suspend fun load(url: String): LoadResponse {
+    override suspend fun load( url: String ): LoadResponse {
         val document = app.get(url).document
 
         val title = document.selectFirst("h1[itemprop=name]")?.text()?.trim().toString()
         val link = document.select("ul.list-button li:last-child a").attr("href")
         val poster = document.selectFirst("div.image img[itemprop=image]")?.attr("src")
-        val tags = document.select("ul.entry-meta.block-film li:nth-child(4) a").map { it.text() }
+        val tags = document.select("ul.entry-meta.block-film li:nth-child(4) a").map { it.text()!!.substringAfter("Phim") }
         val year = document.select("ul.entry-meta.block-film li:nth-child(2) a").text().trim()
             .toIntOrNull()
         val tvType = if (document.select("div.latest-episode").isNotEmpty()
         ) TvType.TvSeries else TvType.Movie
-        val description = document.select("div#film-content").text().trim()
-        val trailer =
-            document.select("div#trailer script").last()?.data()?.substringAfter("file: \"")
-                ?.substringBefore("\",")
+        val description = document.select("div#film-content").text().substringAfter("Full HD Vietsub Thuyết Minh").substringBefore("@phimmoi").trim()
+        val trailer = document.select("body script")
+            .find { it.data().contains("youtube.com") }?.data()?.substringAfterLast("file: \"")?.substringBefore("\",")
         val rating =
             document.select("ul.entry-meta.block-film li:nth-child(7) span").text().toRatingInt()
         val actors = document.select("ul.entry-meta.block-film li:last-child a").map { it.text() }
@@ -143,7 +148,7 @@ class PhimmoichillProvider : MainAPI() {
             }
         }
     }
-
+ 
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -156,8 +161,7 @@ class PhimmoichillProvider : MainAPI() {
             .find { it.data().contains("filmInfo.episodeID =") }?.data()?.let { script ->
                 val id = script.substringAfter("filmInfo.episodeID = parseInt('")
                 app.post(
-                    // Not mainUrl
-                    url = "https://phimmoichills.net/pmplayer.php",
+                    url = "${this.mainUrl}/chillsplayer.php",
                     data = mapOf("qcao" to id, "sv" to "0"),
                     referer = data,
                     headers = mapOf(
@@ -171,6 +175,7 @@ class PhimmoichillProvider : MainAPI() {
         listOf(
             Pair("https://so-trym.topphimmoi.org/raw/$key/index.m3u8", "PMFAST"),
             Pair("https://dash.megacdn.xyz/raw/$key/index.m3u8", "PMHLS"),
+            Pair("https://so-trym.phimchill.net/dash/$key/index.m3u8", "PMPRO"),
             Pair("https://dash.megacdn.xyz/dast/$key/index.m3u8", "PMBK")
         ).apmap { (link, source) ->
             safeApiCall {
