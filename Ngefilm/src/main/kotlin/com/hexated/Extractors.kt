@@ -15,40 +15,6 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
-class Dooood : DoodLaExtractor() {
-    override var mainUrl = "https://dooood.com"
-}
-
-class Guccihide : Filesim() {
-    override val name = "Guccihide"
-    override var mainUrl = "https://guccihide.com"
-}
-
-class Ahvsh : Filesim() {
-    override val name = "Ahvsh"
-    override var mainUrl = "https://ahvsh.com"
-}
-
-class Lvturbo : StreamSB() {
-    override var name = "Lvturbo"
-    override var mainUrl = "https://lvturbo.com"
-}
-
-class Sbrapid : StreamSB() {
-    override var name = "Sbrapid"
-    override var mainUrl = "https://sbrapid.com"
-}
-
-class Sbface : StreamSB() {
-    override var name = "Sbface"
-    override var mainUrl = "https://sbface.com"
-}
-
-class Sbsonic : StreamSB() {
-    override var name = "Sbsonic"
-    override var mainUrl = "https://sbsonic.com"
-}
-
 object LocalServer {
     private const val KEY = "4VqE3#N7zt&HEP^a"
 
