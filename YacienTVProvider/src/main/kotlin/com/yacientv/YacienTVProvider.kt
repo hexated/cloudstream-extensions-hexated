@@ -1,7 +1,7 @@
 package com.yacientv
 
 import android.util.Base64
-//import android.util.Log
+import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -22,10 +22,10 @@ class YacienTV : MainAPI() {
             TvType.Live
         )
     private val yacienTVAPI = "http://ver3.yacinelive.com/api"
-    private val mainkey = "c!xZj+N9&G@Ev@vw"
+    private val mainkey = "YyF4WmorTjkmR0BFdkB2dw=="
 
     private fun decrypt(enc: String, headerstr: String): String {
-        val key = mainkey + headerstr
+        val key = Base64.decode(mainkey, Base64.DEFAULT).toString(charset("UTF-8")) + headerstr
         val decodedBytes = Base64.decode(enc, Base64.DEFAULT)
         val encString = decodedBytes.toString(charset("UTF-8"))
         var result = ""
@@ -77,11 +77,11 @@ class YacienTV : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = mutableListOf<HomePageList>()
         if (page <= 1) {
-
+            //Log.d("King", "request:$request")
             val decodedbody = getDecoded(request.data)
 
             val list = parseJson<Results>(decodedbody).results?.mapNotNull { element ->
-                element.toSearchResponse()
+                element.toSearchResponse(request)
             } ?: throw ErrorLoadingException("Invalid Json reponse")
             if (list.isNotEmpty()) items.add(HomePageList(request.name, list, true))
         }
@@ -92,18 +92,20 @@ class YacienTV : MainAPI() {
         val id: String? = null,
         val name: String,
         val posterUrl: String? = null,
+        val category: String,
     )
 
     data class LinksData(
         val id: String,
         val name: String,
         val posterUrl: String? = null,
+        val category: String,
     )
 
-    private fun Channel.toSearchResponse(type: String? = null): SearchResponse? {
+    private fun Channel.toSearchResponse(request: MainPageRequest, type: String? = null): SearchResponse? {
         return LiveSearchResponse(
             name ?: return null,
-            Data(id = id, name = name, posterUrl = logo).toJson(),
+            Data(id = id, name = this.name, posterUrl = logo, category = request.name).toJson(),
             this@YacienTV.name,
             TvType.Live,
             logo,
@@ -111,15 +113,16 @@ class YacienTV : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        //Log.d("King", "Load:$url")
         val data = parseJson<LinksData>(url)
         return LiveStreamLoadResponse(
             name = data.name,
-            url = data.id,
+            url = Data(id = data.id, name = data.name, posterUrl = data.posterUrl, category = data.category).toJson(),
             dataUrl = data.id,
             apiName = name,
             posterUrl = data.posterUrl,
             type = TvType.Live,
-            plot = "${data.name} live stream."
+            plot = "${data.name} live stream of ${data.category} category."
         )
     }
 
@@ -129,6 +132,7 @@ class YacienTV : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        //Log.d("King", "loadLinks:$data")
 
         val decodedbody = getDecoded("$yacienTVAPI/channel/$data")
 
