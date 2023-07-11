@@ -27,6 +27,8 @@ import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
+import com.hexated.SoraExtractor.invokeEmovies
+import com.hexated.SoraExtractor.invokeFourCartoon
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -186,7 +188,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
+                if(!res.isAnime) invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeSmashyStream(
@@ -198,16 +200,16 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-            {
-                invokeXmovies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeXmovies(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokeFmovies(
                     res.title,
@@ -219,7 +221,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeKisskh(res.title, res.season, res.episode, res.isAnime, res.lastSeason, subtitleCallback, callback)
             },
             {
                 invokeLing(
@@ -285,6 +287,25 @@ class SoraStreamLite : SoraStream() {
                 if (res.season == null) invokeRidomovies(
                     res.title,
                     res.year,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeEmovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if(!res.isAnime) invokeFourCartoon(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
                     callback
                 )
             }

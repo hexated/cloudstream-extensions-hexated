@@ -165,14 +165,20 @@ class Minioppai : MainAPI() {
         val sources = script.substringAfter("sources:[").substringBefore("]").replace("'", "\"")
         val subtitles = script.substringAfter("\"tracks\":[").substringBefore("]")
 
-        tryParseJson<List<Sources>>("[$sources]")?.map {
+        tryParseJson<List<Sources>>("[$sources]")?.map { source ->
+            val pStream = fixLink(source.file ?: return@map, paistream).takeIf {
+                app.get(
+                    it,
+                    referer = "$paistream/"
+                ).isSuccessful
+            }
             callback.invoke(
                 ExtractorLink(
                     server,
                     server,
-                    fixLink(it.file ?: return@map, if(server == "Stream 1") libPaistream else paistream),
+                    pStream ?: fixLink(source.file ?: return@map, libPaistream),
                     "$paistream/",
-                    getQualityFromName(it.label)
+                    getQualityFromName(source.label)
                 )
             )
         }

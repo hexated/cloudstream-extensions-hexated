@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.RequestBodyTypes
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -42,73 +43,54 @@ class Anichi : MainAPI() {
     override val supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie)
 
     private val popularTitle = "Popular"
-    private val recentTitle = "Latest Updated"
-    override val mainPage = listOf(
-        MainPageData(
-            recentTitle,
-            """$apiUrl?variables={"search":{"sortBy":"Latest_Update","allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false},"limit":26,"page":%d,"translationType":"sub","countryOrigin":"ALL"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$mainHash"}}"""
-        ),
-        MainPageData(
-            popularTitle,
-            """$apiUrl?variables={"type":"anime","size":30,"dateRange":1,"page":%d,"allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$popularHash"}}"""
-        )
+    private val animeRecentTitle = "Latest Anime"
+    private val donghuaRecentTitle = "Latest Donghua"
+    private val movieTitle = "Movie"
+
+    override val mainPage = mainPageOf(
+        """$apiUrl?variables={"search":{"sortBy":"Latest_Update","allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false},"limit":26,"page":%d,"translationType":"sub","countryOrigin":"JP"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$mainHash"}}""" to animeRecentTitle,
+        """$apiUrl?variables={"search":{"sortBy":"Latest_Update","allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false},"limit":26,"page":%d,"translationType":"sub","countryOrigin":"CN"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$mainHash"}}""" to donghuaRecentTitle,
+        """$apiUrl?variables={"type":"anime","size":30,"dateRange":1,"page":%d,"allowAdult":${settingsForProvider.enableAdult},"allowUnknown":false}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$popularHash"}}""" to popularTitle,
+        """$apiUrl?variables={"search":{"slug":"movie-anime","format":"anime","tagType":"upcoming","name":"Trending Movies"}}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$slugHash"}}""" to movieTitle
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
 
         val url = request.data.format(page)
-        val test = app.get(url, headers = headers).text
-
-        val home = when (request.name) {
-            recentTitle -> {
-                val json = parseJson<AnichiQuery>(test)
-                val results = json.data.shows.edges.filter {
-                    // filtering in case there is an anime with 0 episodes available on the site.
-                    !(it.availableEpisodes?.raw == 0 && it.availableEpisodes.sub == 0 && it.availableEpisodes.dub == 0)
-                }
-
-                results.map {
-                    newAnimeSearchResponse(it.name ?: "", "${it.Id}", fix = false) {
-                        this.posterUrl = it.thumbnail
-                        this.year = it.airedStart?.year
-                        this.otherName = it.englishName
-                        addDub(it.availableEpisodes?.dub)
-                        addSub(it.availableEpisodes?.sub)
-                    }
-                }
-            }
-            popularTitle -> {
-                val json = parseJson<PopularQuery>(test)
-                val results = json.data?.queryPopular?.recommendations?.filter {
-                    // filtering in case there is an anime with 0 episodes available on the site.
-                    !(it.anyCard?.availableEpisodes?.raw == 0 && it.anyCard.availableEpisodes.sub == 0 && it.anyCard.availableEpisodes.dub == 0)
-                }
-                results?.mapNotNull {
-                    newAnimeSearchResponse(
-                        it.anyCard?.name ?: return@mapNotNull null,
-                        "${it.anyCard.Id ?: it.pageStatus?.Id}",
-                        fix = false
-                    ) {
-                        this.posterUrl = it.anyCard.thumbnail
-                        this.otherName = it.anyCard.englishName
-                        addDub(it.anyCard.availableEpisodes?.dub)
-                        addSub(it.anyCard.availableEpisodes?.sub)
-                    }
-                } ?: emptyList()
-            }
-            else -> emptyList()
-        }
-
-
-
-        return HomePageResponse(
-            listOf(
-                HomePageList(request.name, home)
-            ), hasNext = home.isNotEmpty()
+        val res = app.get(url, headers = headers).parsedSafe<AnichiQuery>()?.data
+        val query = res?.shows ?: res?.queryPopular ?: res?.queryListForTag
+        val card = if(request.name == popularTitle) query?.recommendations?.map { it.anyCard } else query?.edges
+        val home = card?.filter {
+            // filtering in case there is an anime with 0 episodes available on the site.
+            !(it?.availableEpisodes?.raw == 0 && it.availableEpisodes.sub == 0 && it.availableEpisodes.dub == 0)
+        }?.mapNotNull { media ->
+            media?.toSearchResponse()
+        } ?: emptyList()
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+            ),
+            hasNext = request.name != movieTitle
         )
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
+    private fun Edges.toSearchResponse(): AnimeSearchResponse? {
+
+        return newAnimeSearchResponse(
+            name ?: englishName ?: nativeName ?: "",
+            Id ?: return null,
+            fix = false
+        ) {
+            this.posterUrl = thumbnail
+            this.year = airedStart?.year
+            this.otherName = englishName
+            addDub(availableEpisodes?.dub)
+            addSub(availableEpisodes?.sub)
+        }
+    }
+
+    override suspend fun search(query: String): List<SearchResponse>? {
 
         val link =
             """$apiUrl?variables={"search":{"allowAdult":false,"allowUnknown":false,"query":"$query"},"limit":26,"page":1,"translationType":"sub","countryOrigin":"ALL"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$mainHash"}}"""
@@ -125,12 +107,12 @@ class Anichi : MainAPI() {
 
         val response = parseJson<AnichiQuery>(res)
 
-        val results = response.data.shows.edges.filter {
+        val results = response.data?.shows?.edges?.filter {
             // filtering in case there is an anime with 0 episodes available on the site.
             !(it.availableEpisodes?.raw == 0 && it.availableEpisodes.sub == 0 && it.availableEpisodes.dub == 0)
         }
 
-        return results.map {
+        return results?.map {
             newAnimeSearchResponse(it.name ?: "", "${it.Id}", fix = false) {
                 this.posterUrl = it.thumbnail
                 this.year = it.airedStart?.year
@@ -161,19 +143,13 @@ class Anichi : MainAPI() {
         val poster = showData.thumbnail
         val type = getType(showData.type ?: "")
 
-        val episodes = showData.availableEpisodes.let {
+        val episodes = showData.availableEpisodesDetail.let {
             if (it == null) return@let Pair(null, null)
             if (showData.Id == null) return@let Pair(null, null)
-
-            Pair(if (it.sub != 0) ((1..it.sub).map { epNum ->
-                Episode(
-                    AnichiLoadData(showData.Id, "sub", epNum).toJson(), episode = epNum
-                )
-            }) else null, if (it.dub != 0) ((1..it.dub).map { epNum ->
-                Episode(
-                    AnichiLoadData(showData.Id, "dub", epNum).toJson(), episode = epNum
-                )
-            }) else null)
+            Pair(
+                it.getEpisode("sub", showData.Id),
+                it.getEpisode("dub", showData.Id),
+            )
         }
 
         val characters = showData.characters?.map {
@@ -191,7 +167,7 @@ class Anichi : MainAPI() {
         val names = showData.altNames?.plus(title)?.filterNotNull() ?: emptyList()
         val trackers = getTracker(names, TrackerType.getTypes(type), showData.airedStart?.year)
 
-        return newAnimeLoadResponse(title ?: "", url, type) {
+        return newAnimeLoadResponse(title ?: "", url, TvType.Anime) {
             engName = showData.altNames?.firstOrNull()
             posterUrl = trackers?.image ?: poster
             backgroundPosterUrl = trackers?.cover ?: showData.banner
@@ -229,7 +205,7 @@ class Anichi : MainAPI() {
 
         apiResponse.data?.episode?.sourceUrls?.apmap { source ->
             safeApiCall {
-                val link = source.sourceUrl?.replace(" ", "%20") ?: return@safeApiCall
+                val link = fixSourceUrls(source.sourceUrl ?: return@safeApiCall, source.sourceName) ?: return@safeApiCall
                 if (URI(link).isAbsolute || link.startsWith("//")) {
                     val fixedLink = if (link.startsWith("//")) "https:$link" else link
                     val host = link.getHost()
@@ -258,7 +234,7 @@ class Anichi : MainAPI() {
                         }
                     }
                 } else {
-                    val fixedLink = apiEndPoint + URI(link).path + ".json?" + URI(link).query
+                    val fixedLink = link.fixUrlPath()
                     val links = app.get(fixedLink).parsedSafe<AnichiVideoApiResponse>()?.links
                         ?: emptyList()
                     links.forEach { server ->
@@ -293,7 +269,8 @@ class Anichi : MainAPI() {
                                         ).path),
                                         server.resolutionStr.removeSuffix("p").toIntOrNull()
                                             ?: Qualities.P1080.value,
-                                        false
+                                        false,
+                                        isDash = server.resolutionStr == "Dash 1"
                                     )
                                 )
                             }
@@ -328,6 +305,19 @@ class Anichi : MainAPI() {
             }
         }
         return false
+    }
+
+    private fun AvailableEpisodesDetail.getEpisode(
+        lang: String,
+        id: String
+    ): List<com.lagradost.cloudstream3.Episode> {
+        val meta = if (lang == "sub") this.sub else this.dub
+        return meta.map { eps ->
+            Episode(
+                AnichiLoadData(id, lang, eps).toJson(),
+                "Ep $eps"
+            )
+        }.reversed()
     }
 
     private suspend fun getM3u8Qualities(
@@ -380,6 +370,18 @@ class Anichi : MainAPI() {
         return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
     }
 
+    private fun String.fixUrlPath() : String {
+        return if(this.contains(".json?")) apiEndPoint + this else apiEndPoint + URI(this).path + ".json?" + URI(this).query
+    }
+
+    private fun fixSourceUrls(url: String, source: String?) : String? {
+        return if(source == "Ak" || url.contains("/player/vitemb")) {
+            tryParseJson<AkIframe>(base64Decode(url.substringAfter("=")))?.idUrl
+        } else {
+            url.replace(" ", "%20")
+        }
+    }
+
     companion object {
         private const val apiUrl = BuildConfig.ANICHI_API
         private const val serverUrl = BuildConfig.ANICHI_SERVER
@@ -387,6 +389,7 @@ class Anichi : MainAPI() {
 
         private const val mainHash = "e42a4466d984b2c0a2cecae5dd13aa68867f634b16ee0f17b380047d14482406"
         private const val popularHash = "31a117653812a2547fd981632e8c99fa8bf8a75c4ef1a77a1567ef1741a7ab9c"
+        private const val slugHash = "bf603205eb2533ca21d0324a11f623854d62ed838a27e1b3fcfb712ab98b03f4"
         private const val detailHash = "bb263f91e5bdd048c1c978f324613aeccdfe2cbc694a419466a31edb58c0cc0b"
         private const val serverHash = "5e7e17cdd0166af5a2d8f43133d9ce3ce9253d1fdb5160a0cfd515564f98d061"
 
@@ -400,7 +403,11 @@ class Anichi : MainAPI() {
     data class AnichiLoadData(
         val hash: String,
         val dubStatus: String,
-        val episode: Int
+        val episode: String
+    )
+
+    data class AkIframe(
+        @JsonProperty("idUrl") val idUrl: String? = null,
     )
 
     data class Stream(
@@ -414,12 +421,19 @@ class Anichi : MainAPI() {
         @JsonProperty("streams") val streams: ArrayList<Stream>? = arrayListOf(),
     )
 
+    data class Subtitles(
+        @JsonProperty("lang") val lang: String?,
+        @JsonProperty("label") val label: String?,
+        @JsonProperty("src") val src: String?,
+    )
+
     data class Links(
         @JsonProperty("link") val link: String,
         @JsonProperty("hls") val hls: Boolean?,
         @JsonProperty("resolutionStr") val resolutionStr: String,
         @JsonProperty("src") val src: String?,
         @JsonProperty("portData") val portData: PortData? = null,
+        @JsonProperty("subtitles") val subtitles: ArrayList<Subtitles>? = arrayListOf(),
     )
 
     data class AnichiVideoApiResponse(
@@ -427,13 +441,18 @@ class Anichi : MainAPI() {
     )
 
     data class Data(
-        @JsonProperty("shows") val shows: Shows
+        @JsonProperty("shows") val shows: Shows? = null,
+        @JsonProperty("queryListForTag") val queryListForTag: Shows? = null,
+        @JsonProperty("queryPopular") val queryPopular: Shows? = null,
     )
 
     data class Shows(
-        @JsonProperty("pageInfo") val pageInfo: PageInfo,
-        @JsonProperty("edges") val edges: List<Edges>,
-        @JsonProperty("__typename") val _typename: String?
+        @JsonProperty("edges") val edges: List<Edges>? = arrayListOf(),
+        @JsonProperty("recommendations") val recommendations: List<EdgesCard>? = arrayListOf(),
+    )
+
+    data class EdgesCard(
+        @JsonProperty("anyCard") val anyCard: Edges? = null,
     )
 
     data class CharacterImage(
@@ -493,13 +512,8 @@ class Anichi : MainAPI() {
         @JsonProperty("year") val year: Int
     )
 
-    data class PageInfo(
-        @JsonProperty("total") val total: Int?,
-        @JsonProperty("__typename") val _typename: String?
-    )
-
     data class AnichiQuery(
-        @JsonProperty("data") val data: Data
+        @JsonProperty("data") val data: Data? = null
     )
 
     data class Detail(
@@ -535,10 +549,6 @@ class Anichi : MainAPI() {
 
     data class Episode(
         @JsonProperty("sourceUrls") val sourceUrls: ArrayList<SourceUrls> = arrayListOf(),
-    )
-
-    data class PopularQuery(
-        @JsonProperty("data") val data: DataPopular? = DataPopular()
     )
 
     data class Sub(

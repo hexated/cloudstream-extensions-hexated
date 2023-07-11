@@ -49,6 +49,9 @@ import com.hexated.SoraExtractor.invokeShinobiMovies
 import com.hexated.SoraExtractor.invokeShivamhw
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
+import com.hexated.SoraExtractor.invokeEmovies
+import com.hexated.SoraExtractor.invokeFourCartoon
+import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVitoenMovies
@@ -97,11 +100,11 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val xMovieAPI = "https://xemovies.to"
-        const val zoroAPI = "https://sanji.to"
+        const val zoroAPI = "https://kaido.to"
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.cc"
+        const val uhdmoviesAPI = "https://uhdmovies.life"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
@@ -118,7 +121,7 @@ open class SoraStream : TmdbProvider() {
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
         const val ask4MoviesAPI = "https://ask4movie.net"
-        const val biliBiliAPI = "https://api-vn.kaguya.app/server"
+        const val biliBiliAPI = "https://api-vn.otakuz.live/server"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://api.9animetv.live"
         const val putlockerAPI = "https://ww7.putlocker.vip"
@@ -127,6 +130,9 @@ open class SoraStream : TmdbProvider() {
         const val gokuAPI = "https://goku.sx"
         const val ridomoviesAPI = "https://ridomovies.pw"
         const val navyAPI = "https://navy-issue-i-239.site"
+        const val emoviesAPI = "https://emovies.si"
+        const val pobmoviesAPI = "https://pobmovies.cam"
+        const val fourCartoonAPI = "https://4cartoon.net"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -261,8 +267,7 @@ open class SoraStream : TmdbProvider() {
         val year = releaseDate?.split("-")?.first()?.toIntOrNull()
         val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
-        val isAnime =
-            genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
+        val isAnime = genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
         val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
             .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
 
@@ -302,7 +307,7 @@ open class SoraStream : TmdbProvider() {
                                 epsTitle = eps.name,
                                 jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
                                 date = season.airDate,
-                                airedDate = res.releaseDate ?: res.firstAirDate
+                                airedDate = res.releaseDate ?: res.firstAirDate,
                             ).toJson(),
                             name = eps.name + if(isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
                             season = eps.seasonNumber,
@@ -346,7 +351,7 @@ open class SoraStream : TmdbProvider() {
                     orgTitle = orgTitle,
                     isAnime = isAnime,
                     jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
-                    airedDate = res.releaseDate ?: res.firstAirDate
+                    airedDate = res.releaseDate ?: res.firstAirDate,
                 ).toJson(),
             ) {
                 this.posterUrl = poster
@@ -493,18 +498,18 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
+                if(!res.isAnime) invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
-            {
-                invokeXmovies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeXmovies(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokeFmovies(
                     res.title,
@@ -516,7 +521,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeKisskh(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeKisskh(res.title, res.season, res.episode, res.isAnime, res.lastSeason, subtitleCallback, callback)
             },
             {
                 invokeLing(
@@ -803,6 +808,15 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)
             },
+            {
+                if (!res.isAnime) invokeEmovies(res.title, res.year, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if(!res.isAnime && res.season == null) invokePobmovies(res.title, res.year, callback)
+            },
+            {
+                if(!res.isAnime) invokeFourCartoon(res.title, res.year, res.season, res.episode, callback)
+            }
         )
 
         return true
