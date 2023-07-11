@@ -19,14 +19,6 @@ class Ngefilm : MainAPI() {
         TvType.AsianDrama
     )
 
-    companion object {
-        private val localServer = arrayOf(
-            "https://bestx.stream",
-            "https://chillx.top",
-            "https://watchx.top",
-        )
-    }
-
     override val mainPage = mainPageOf(
         "?s&search=advanced&post_type=movie&index&orderby&genre&movieyear&country&quality=" to "Movies Terbaru",
         "?s=&search=advanced&post_type=tv&index=&orderby=&genre=&movieyear=&country=&quality=" to "Series Terbaru",
@@ -128,11 +120,7 @@ class Ngefilm : MainAPI() {
         document.select("ul.muvipro-player-tabs li a").apmap { server ->
             val iframe = app.get(fixUrl(server.attr("href"))).document.selectFirst("div.gmr-embed-responsive iframe")
                     ?.attr("src")?.let { fixUrl(it) } ?: return@apmap
-            if (localServer.any { iframe.startsWith(it) }) {
-                LocalServer.getUrl(iframe, "$mainUrl/", subtitleCallback, callback)
-            } else {
-                loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
-            }
+            loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
         }
 
         return true

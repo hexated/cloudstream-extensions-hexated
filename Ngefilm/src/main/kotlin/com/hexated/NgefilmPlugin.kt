@@ -10,12 +10,5 @@ class NgefilmPlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(Ngefilm())
-        registerExtractorAPI(Sbsonic())
-        registerExtractorAPI(Sbface())
-        registerExtractorAPI(Sbrapid())
-        registerExtractorAPI(Lvturbo())
-        registerExtractorAPI(Ahvsh())
-        registerExtractorAPI(Guccihide())
-        registerExtractorAPI(Dooood())
     }
 }

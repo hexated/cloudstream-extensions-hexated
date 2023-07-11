@@ -200,16 +200,16 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-            {
-                invokeXmovies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeXmovies(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokeFmovies(
                     res.title,

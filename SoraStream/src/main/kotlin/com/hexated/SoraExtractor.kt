@@ -960,7 +960,7 @@ object SoraExtractor : SoraStream() {
     ) {
         val res = app.get(
             "$biliBiliAPI/anime/episodes?id=${aniId ?: return}&source_id=bilibili",
-            referer = kaguyaBaseUrl
+            referer = otakuzBaseUrl
         )
             .parsedSafe<BiliBiliDetails>()?.episodes?.find {
                 it.episodeNumber == episode
@@ -969,7 +969,7 @@ object SoraExtractor : SoraStream() {
         val sources =
             app.get(
                 "$biliBiliAPI/source?episode_id=${res.sourceEpisodeId}&source_media_id=${res.sourceMediaId}&source_id=${res.sourceId}",
-                referer = kaguyaBaseUrl
+                referer = otakuzBaseUrl
             )
                 .parsedSafe<BiliBiliSourcesResponse>()
 
@@ -977,7 +977,7 @@ object SoraExtractor : SoraStream() {
             val quality =
                 app.get(
                     source.file ?: return@apmap null,
-                    referer = kaguyaBaseUrl
+                    referer = otakuzBaseUrl
                 ).document.selectFirst("Representation")
                     ?.attr("height")
             callback.invoke(
@@ -985,7 +985,7 @@ object SoraExtractor : SoraStream() {
                     "BiliBili",
                     "BiliBili",
                     source.file,
-                    kaguyaBaseUrl,
+                    "",
                     quality?.toIntOrNull() ?: Qualities.Unknown.value,
                     isDash = true
                 )
