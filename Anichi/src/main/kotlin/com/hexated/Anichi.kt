@@ -2,12 +2,12 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.APIHolder.getTracker
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.extractors.helper.GogoHelper
+import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -29,14 +29,6 @@ class Anichi : MainAPI() {
             "Finished" -> ShowStatus.Completed
             "Releasing" -> ShowStatus.Ongoing
             else -> ShowStatus.Completed
-        }
-    }
-
-    private fun getType(t: String?): TvType {
-        return when {
-            t.equals("OVA", true) || t.equals("Special") -> TvType.OVA
-            t.equals("Movie", true) -> TvType.AnimeMovie
-            else -> TvType.Anime
         }
     }
 
@@ -141,7 +133,6 @@ class Anichi : MainAPI() {
         val title = showData.name
         val description = showData.description
         val poster = showData.thumbnail
-        val type = getType(showData.type ?: "")
 
         val episodes = showData.availableEpisodesDetail.let {
             if (it == null) return@let Pair(null, null)
@@ -164,13 +155,12 @@ class Anichi : MainAPI() {
             Pair(Actor(name, image), role)
         }
 
-        val names = showData.altNames?.plus(title)?.filterNotNull() ?: emptyList()
-        val trackers = getTracker(names, TrackerType.getTypes(type), showData.airedStart?.year)
+        val trackers = getTracker(title, showData.altNames?.firstOrNull(), showData.airedStart?.year, showData.season?.quarter, showData.type)
 
         return newAnimeLoadResponse(title ?: "", url, TvType.Anime) {
             engName = showData.altNames?.firstOrNull()
-            posterUrl = trackers?.image ?: poster
-            backgroundPosterUrl = trackers?.cover ?: showData.banner
+            posterUrl = trackers?.coverImage?.extraLarge ?: trackers?.coverImage?.large ?: poster
+            backgroundPosterUrl = trackers?.bannerImage ?: showData.banner
             rating = showData.averageScore?.times(100)
             tags = showData.genres
             year = showData.airedStart?.year
@@ -184,8 +174,8 @@ class Anichi : MainAPI() {
             //this.recommendations = recommendations
 
             showStatus = getStatus(showData.status.toString())
-            addMalId(trackers?.malId)
-            addAniListId(trackers?.aniId?.toIntOrNull())
+            addMalId(trackers?.idMal)
+            addAniListId(trackers?.id)
             plot = description?.replace(Regex("""<(.*?)>"""), "")
         }
     }
@@ -273,6 +263,14 @@ class Anichi : MainAPI() {
                                         isDash = server.resolutionStr == "Dash 1"
                                     )
                                 )
+                                server.subtitles?.map { sub ->
+                                    subtitleCallback.invoke(
+                                        SubtitleFile(
+                                            SubtitleHelper.fromTwoLettersToLanguage(sub.lang ?: "") ?: sub.lang ?: "",
+                                            httpsify(sub.src ?: return@map)
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -315,7 +313,8 @@ class Anichi : MainAPI() {
         return meta.map { eps ->
             Episode(
                 AnichiLoadData(id, lang, eps).toJson(),
-                "Ep $eps"
+                "Ep $eps",
+                episode = eps.toIntOrNull()
             )
         }.reversed()
     }
@@ -382,6 +381,69 @@ class Anichi : MainAPI() {
         }
     }
 
+    private suspend fun getTracker(name: String?, altName: String?, year: Int?, season: String?, type: String?): AniMedia? {
+        val ids = fetchId(name, year, season, type)
+        return if (ids?.id == null && ids?.idMal == null) fetchId(
+            altName,
+            year,
+            season,
+            type
+        ) else ids
+    }
+
+    private suspend fun fetchId(title: String?, year: Int?, season: String?, type: String?): AniMedia? {
+        val query = """
+        query (
+          ${'$'}page: Int = 1
+          ${'$'}search: String
+          ${'$'}sort: [MediaSort] = [POPULARITY_DESC, SCORE_DESC]
+          ${'$'}type: MediaType
+          ${'$'}season: MediaSeason
+          ${'$'}year: String
+          ${'$'}format: [MediaFormat]
+        ) {
+          Page(page: ${'$'}page, perPage: 20) {
+            media(
+              search: ${'$'}search
+              sort: ${'$'}sort
+              type: ${'$'}type
+              season: ${'$'}season
+              startDate_like: ${'$'}year
+              format_in: ${'$'}format
+            ) {
+              id
+              idMal
+              coverImage { extraLarge large }
+              bannerImage
+            }
+          }
+        }
+    """.trimIndent().trim()
+
+        val variables = mapOf(
+            "search" to title,
+            "sort" to "SEARCH_MATCH",
+            "type" to "ANIME",
+            "season" to if(type.equals("ona", true)) "" else season?.uppercase(),
+            "year" to "$year%",
+            "format" to listOf(type?.uppercase())
+        ).filterValues { value -> value != null && value.toString().isNotEmpty() }
+
+        val data = mapOf(
+            "query" to query,
+            "variables" to variables
+        ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
+
+        return try {
+            app.post("https://graphql.anilist.co", requestBody = data)
+                .parsedSafe<AniSearch>()?.data?.Page?.media?.firstOrNull()
+        } catch (t: Throwable) {
+            logError(t)
+            null
+        }
+
+    }
+
     companion object {
         private const val apiUrl = BuildConfig.ANICHI_API
         private const val serverUrl = BuildConfig.ANICHI_SERVER
@@ -404,6 +466,30 @@ class Anichi : MainAPI() {
         val hash: String,
         val dubStatus: String,
         val episode: String
+    )
+
+    data class CoverImage(
+        @JsonProperty("extraLarge") var extraLarge: String? = null,
+        @JsonProperty("large") var large: String? = null,
+    )
+
+    data class AniMedia(
+        @JsonProperty("id") var id: Int? = null,
+        @JsonProperty("idMal") var idMal: Int? = null,
+        @JsonProperty("coverImage") var coverImage: CoverImage? = null,
+        @JsonProperty("bannerImage") var bannerImage: String? = null,
+    )
+
+    data class AniPage(
+        @JsonProperty("media") var media: ArrayList<AniMedia> = arrayListOf()
+    )
+
+    data class AniData(
+        @JsonProperty("Page") var Page: AniPage? = AniPage()
+    )
+
+    data class AniSearch(
+        @JsonProperty("data") var data: AniData? = AniData()
     )
 
     data class AkIframe(

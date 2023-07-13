@@ -6,11 +6,10 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.net.URLDecoder
-import java.net.URI
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://d21.fun"
-    private var seriesUrl = "https://tv.nontondrama.click"
+    override var mainUrl = "https://tv.lk21official.pro"
+    private var seriesUrl = "https://tv1.nontondrama.click"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
@@ -57,7 +56,7 @@ class LayarKacaProvider : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h1.grid-title > a")?.ownText()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst(".grid-poster > a > img")?.attr("src"))
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
         val type =
             if (this.selectFirst("div.last-episode") == null) TvType.Movie else TvType.TvSeries
         return if (type == TvType.TvSeries) {
@@ -176,33 +175,34 @@ class LayarKacaProvider : MainAPI() {
                     it
                 }
             }
-            invokeCast(link, callback)
+            loadExtractor(link, bananalicious, subtitleCallback, callback)
         }
 
         return true
     }
 
-    private suspend fun invokeCast(
+    private fun decode(input: String): String = URLDecoder.decode(input, "utf-8").replace(" ", "%20")
+
+}
+
+open class Emturbovid : ExtractorApi() {
+    override val name = "Emturbovid"
+    override val mainUrl = "https://emturbovid.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
         url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url, referer = bananalicious).document
-        response.select("script[type=text/javascript]").map { script ->
-            if (script.data().contains(Regex("eval\\(function\\(p,a,c,k,e,[rd]"))) {
-                val unpackedscript = getAndUnpack(script.data())
-                val m3u8Regex = Regex("file.\"(.*?m3u8.*?)\"")
-                val m3u8 = m3u8Regex.find(unpackedscript)?.destructured?.component1() ?: ""
-                if (m3u8.isNotEmpty()) {
-                    M3u8Helper.generateM3u8(
-                        fixTitle(URI(url).host).substringBefore("."),
-                        m3u8,
-                        mainUrl
-                    ).forEach(callback)
-                }
-            }
-        }
+        val response = app.get(url, referer = referer)
+        val m3u8 = Regex("[\"'](.*?master\\.m3u8.*?)[\"']").find(response.text)?.groupValues?.getOrNull(1)
+        M3u8Helper.generateM3u8(
+            name,
+            m3u8 ?: return,
+            mainUrl
+        ).forEach(callback)
     }
-
-    private fun decode(input: String): String = URLDecoder.decode(input, "utf-8").replace(" ", "%20")
 
 }

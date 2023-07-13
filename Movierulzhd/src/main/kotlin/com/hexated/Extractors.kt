@@ -11,6 +11,11 @@ import kotlin.random.Random
 
 const val twoEmbedAPI = "https://www.2embed.to"
 
+class Sbnmp : Sbflix() {
+    override val name = "Sbnmp"
+    override var mainUrl = "https://sbnmp.bar"
+}
+
 class Sbrulz : Sbflix() {
     override val name = "Sbrulz"
     override var mainUrl = "https://sbrulz.xyz"

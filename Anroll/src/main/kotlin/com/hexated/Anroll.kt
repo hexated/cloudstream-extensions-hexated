@@ -35,7 +35,7 @@ class Anroll : MainAPI() {
     ): HomePageResponse {
         val document = app.get("$mainUrl/home").document
         val home = mutableListOf<HomePageList>()
-        document.select("div.sc-f5d5b250-1.iJHcsI").map { div ->
+        document.select("div.hAbQAe").map { div ->
             val header = div.selectFirst("h2")?.text() ?: return@map
             val child = HomePageList(
                 header,
@@ -91,11 +91,11 @@ class Anroll : MainAPI() {
         val fixUrl = getProperAnimeLink(url) ?: throw ErrorLoadingException()
         val document = app.get(fixUrl).document
 
-        val article = document.selectFirst("article.sc-f5d5b250-9") ?: return null
+        val article = document.selectFirst("article.animedetails") ?: return null
         val title = article.selectFirst("h2")?.text() ?: return null
-        val poster = fixUrlNull(document.select("article.sc-f5d5b250-8 img").attr("src"))
+        val poster = fixUrlNull(document.select("section.animecontent img").attr("src"))
         val tags = article.select("div#generos a").map { it.text() }
-        val year = article.selectFirst("div.sc-f5d5b250-4")?.nextElementSibling()?.text()
+        val year = article.selectFirst("div.dfuefM")?.nextElementSibling()?.text()
             ?.toIntOrNull()
         val description = document.select("div.sinopse").text().trim()
         val type = if (fixUrl.contains("/a/")) TvType.Anime else TvType.AnimeMovie

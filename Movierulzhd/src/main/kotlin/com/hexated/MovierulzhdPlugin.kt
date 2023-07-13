@@ -13,5 +13,6 @@ class MovierulzhdPlugin: Plugin() {
         registerExtractorAPI(Sbflix())
         registerExtractorAPI(Sbrulz())
         registerExtractorAPI(Sbmiz())
+        registerExtractorAPI(Sbnmp())
     }
 }
