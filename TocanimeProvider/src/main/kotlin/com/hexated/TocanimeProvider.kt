@@ -29,14 +29,6 @@ class TocanimeProvider : MainAPI() {
                 else -> TvType.Anime
             }
         }
-
-        fun getStatus(t: String): ShowStatus {
-            return when (t) {
-                "Đã hoàn thành" -> ShowStatus.Completed
-                "Chưa hoàn thành" -> ShowStatus.Ongoing
-                else -> ShowStatus.Completed
-            }
-        }
     }
 
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
@@ -51,7 +43,6 @@ class TocanimeProvider : MainAPI() {
             }
             if (items.isNotEmpty()) homePageList.add(HomePageList(header, items))
         }
-
         return HomePageResponse(homePageList)
     }
 
@@ -71,43 +62,38 @@ class TocanimeProvider : MainAPI() {
             this.posterUrl = posterUrl
             addSub(epNum)
         }
-
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/content/search?t=kw&q=$query").document
-
         return document.select("div.col-lg-3.col-md-4.col-6").map {
             it.toSearchResult()
         }
-
     }
 
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
         val title = document.selectFirst("h1.title")?.text() ?: return null
-        val type =
-            if (document.select("div.me-list.scroller a").size == 1) TvType.AnimeMovie else TvType.Anime
-        val episodes = document.select("div.me-list.scroller a").mapNotNull {
-            Episode(fixUrl(it.attr("href")), it.text())
-        }.reversed()
+        val poster = fixUrlNull(document.selectFirst("img.mb20")?.attr("data-original"))
         val trailer =
             document.selectFirst("div#trailer script")?.data()?.substringAfter("<iframe src=\"")
                 ?.substringBefore("\"")
+        val description = document.select("div.box-content > p").text()
+        val type =
+            if (document.select("div.me-list.scroller a").size == 1) TvType.AnimeMovie else TvType.Anime
+        val year = document.select("dl.movie-des").text()?.substringAfter("Ngày công chiếu :")
+            ?.substringBefore("Số tập :")?.trim()?.split("/")?.last()?.toIntOrNull()
+        val tags = document.select("ul.color-list li").map { it.select("a").text().removeSuffix(",").trim() }
+        val episodes = document.select("div.me-list.scroller a").mapNotNull {
+            Episode(fixUrl(it.attr("href")), it.text())
+        }.reversed()
 
         return newAnimeLoadResponse(title, url, type) {
-            posterUrl = fixUrlNull(document.selectFirst("img.img")?.attr("data-original"))
-            year = document.select("dl.movie-des dd")[1].text().split("/").last().toIntOrNull()
-            showStatus = getStatus(
-                document.select("dl.movie-des dd")[0].text()
-                    .toString()
-            )
-            plot = document.select("div.box-content > p").text()
-            tags = document.select("dl.movie-des dd")[4].select("li")
-                .map { it.select("a").text().removeSuffix(",").trim() }
-            recommendations =
-                document.select("div.col-lg-3.col-md-4.col-6").map { it.toSearchResult() }
+            this.posterUrl = poster
+            this.year = year
+            this.plot = description
+            this.tags = tags
             addEpisodes(DubStatus.Subbed, episodes)
             addTrailer(trailer)
         }
@@ -128,21 +114,14 @@ class TocanimeProvider : MainAPI() {
         ).document
 
         document.select("script").apmap { script ->
-            if (script.data().contains("var PnPlayer=")) {
+            if (script.data().contains("var PnPlayer")) {
                 val key = script.data().substringAfter("\"btsurl\":[[").substringBefore("]}]")
                     .replace("]", "").replace("\"", "").split(",")
+                val keyEncode = encode(key.first())
                 val id = data.split("_").last().substringBefore(".html")
 
                 app.get(
-                    url = "$mainUrl/content/parseUrl?v=2&len=0&prefer=&ts=${Date().time}&item_id=$id&username=$id&sv=btsurl&${
-                        encode(
-                            "bts_url[]"
-                        )
-                    }=${
-                        encode(
-                            key.first()
-                        )
-                    }&sig=${key.last()}",
+                    url = "$mainUrl/content/parseUrl?v=2&len=0&prefer=&ts=${Date().time}&item_id=$id&username=$id&sv=btsurl&bts_url%5B%5D=$keyEncode&sig=${key.last()}",
                     referer = data,
                     headers = mapOf(
                         "Accept" to "application/json, text/javascript, */*; q=0.01",
@@ -160,10 +139,8 @@ class TocanimeProvider : MainAPI() {
                         )
                     )
                 }
-
             }
         }
-
         return true
     }
 
@@ -174,5 +151,4 @@ class TocanimeProvider : MainAPI() {
     data class Responses(
         @JsonProperty("formats") val formats: Formats?,
     )
-
 }
