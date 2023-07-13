@@ -1,24 +1,19 @@
 package com.hexated
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.AnichiExtractors.invokeExternalSources
+import com.hexated.AnichiExtractors.invokeInternalSources
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.extractors.helper.GogoHelper
-import com.lagradost.cloudstream3.mvvm.logError
-import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.RequestBodyTypes
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.net.URI
 
-class Anichi : MainAPI() {
+open class Anichi : MainAPI() {
     override var name = "Anichi"
     override val instantLinkLoading = true
     override val hasQuickSearch = false
@@ -134,12 +129,20 @@ class Anichi : MainAPI() {
         val description = showData.description
         val poster = showData.thumbnail
 
+        val trackers = getTracker(
+            title,
+            showData.altNames?.firstOrNull(),
+            showData.airedStart?.year,
+            showData.season?.quarter,
+            showData.type
+        )
+
         val episodes = showData.availableEpisodesDetail.let {
             if (it == null) return@let Pair(null, null)
             if (showData.Id == null) return@let Pair(null, null)
             Pair(
-                it.getEpisode("sub", showData.Id),
-                it.getEpisode("dub", showData.Id),
+                it.getEpisode("sub", showData.Id, trackers?.idMal),
+                it.getEpisode("dub", showData.Id, trackers?.idMal),
             )
         }
 
@@ -155,8 +158,6 @@ class Anichi : MainAPI() {
             Pair(Actor(name, image), role)
         }
 
-        val trackers = getTracker(title, showData.altNames?.firstOrNull(), showData.airedStart?.year, showData.season?.quarter, showData.type)
-
         return newAnimeLoadResponse(title ?: "", url, TvType.Anime) {
             engName = showData.altNames?.firstOrNull()
             posterUrl = trackers?.coverImage?.extraLarge ?: trackers?.coverImage?.large ?: poster
@@ -167,7 +168,6 @@ class Anichi : MainAPI() {
             duration = showData.episodeDuration?.div(60_000)
             addTrailer(showData.prevideos.filter { it.isNotBlank() }
                 .map { "https://www.youtube.com/watch?v=$it" })
-
             addEpisodes(DubStatus.Subbed, episodes.first)
             addEpisodes(DubStatus.Dubbed, episodes.second)
             addActors(characters)
@@ -189,507 +189,48 @@ class Anichi : MainAPI() {
 
         val loadData = parseJson<AnichiLoadData>(data)
 
-        val apiUrl =
-            """$apiUrl?variables={"showId":"${loadData.hash}","translationType":"${loadData.dubStatus}","episodeString":"${loadData.episode}"}&extensions={"persistedQuery":{"version":1,"sha256Hash":"$serverHash"}}"""
-        val apiResponse = app.get(apiUrl, headers = headers).parsed<LinksQuery>()
-
-        apiResponse.data?.episode?.sourceUrls?.apmap { source ->
-            safeApiCall {
-                val link = fixSourceUrls(source.sourceUrl ?: return@safeApiCall, source.sourceName) ?: return@safeApiCall
-                if (URI(link).isAbsolute || link.startsWith("//")) {
-                    val fixedLink = if (link.startsWith("//")) "https:$link" else link
-                    val host = link.getHost()
-
-                    when {
-                        fixedLink.contains(Regex("(?i)playtaku|gogo")) || source.sourceName == "Vid-mp4" -> {
-                            invokeGogo(fixedLink, subtitleCallback, callback)
-                        }
-                        embedIsBlacklisted(fixedLink) -> {
-                            loadExtractor(fixedLink, subtitleCallback, callback)
-                        }
-                        URI(fixedLink).path.contains(".m3u") -> {
-                            getM3u8Qualities(fixedLink, serverUrl, host).forEach(callback)
-                        }
-                        else -> {
-                            callback(
-                                ExtractorLink(
-                                    name,
-                                    host,
-                                    fixedLink,
-                                    serverUrl,
-                                    Qualities.P1080.value,
-                                    false
-                                )
-                            )
-                        }
-                    }
-                } else {
-                    val fixedLink = link.fixUrlPath()
-                    val links = app.get(fixedLink).parsedSafe<AnichiVideoApiResponse>()?.links
-                        ?: emptyList()
-                    links.forEach { server ->
-                        val host = server.link.getHost()
-                        when {
-                            source.sourceName == "Default" -> {
-                                if (server.resolutionStr == "SUB" || server.resolutionStr == "Alt vo_SUB") {
-                                    getM3u8Qualities(
-                                        server.link,
-                                        "https://static.crunchyroll.com/",
-                                        host,
-                                    ).forEach(callback)
-                                }
-                            }
-                            server.hls != null && server.hls -> {
-                                getM3u8Qualities(
-                                    server.link,
-                                    "$apiEndPoint/player?uri=" + (if (URI(server.link).host.isNotEmpty()) server.link else apiEndPoint + URI(
-                                        server.link
-                                    ).path),
-                                    host
-                                ).forEach(callback)
-                            }
-                            else -> {
-                                callback(
-                                    ExtractorLink(
-                                        host,
-                                        host,
-                                        server.link,
-                                        "$apiEndPoint/player?uri=" + (if (URI(server.link).host.isNotEmpty()) server.link else apiEndPoint + URI(
-                                            server.link
-                                        ).path),
-                                        server.resolutionStr.removeSuffix("p").toIntOrNull()
-                                            ?: Qualities.P1080.value,
-                                        false,
-                                        isDash = server.resolutionStr == "Dash 1"
-                                    )
-                                )
-                                server.subtitles?.map { sub ->
-                                    subtitleCallback.invoke(
-                                        SubtitleFile(
-                                            SubtitleHelper.fromTwoLettersToLanguage(sub.lang ?: "") ?: sub.lang ?: "",
-                                            httpsify(sub.src ?: return@map)
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+        argamap(
+            {
+                invokeInternalSources(
+                    loadData.hash,
+                    loadData.dubStatus,
+                    loadData.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                invokeExternalSources(
+                    loadData.idMal,
+                    loadData.dubStatus,
+                    loadData.episode,
+                    subtitleCallback,
+                    callback
+                )
             }
-        }
+        )
+
         return true
     }
 
-    private val embedBlackList = listOf(
-        "https://mp4upload.com/",
-        "https://streamsb.net/",
-        "https://dood.to/",
-        "https://videobin.co/",
-        "https://ok.ru",
-        "https://streamlare.com",
-        "streaming.php",
-    )
-
-    private fun embedIsBlacklisted(url: String): Boolean {
-        embedBlackList.forEach {
-            if (it.javaClass.name == "kotlin.text.Regex") {
-                if ((it as Regex).matches(url)) {
-                    return true
-                }
-            } else {
-                if (url.contains(it)) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    private fun AvailableEpisodesDetail.getEpisode(
-        lang: String,
-        id: String
-    ): List<com.lagradost.cloudstream3.Episode> {
-        val meta = if (lang == "sub") this.sub else this.dub
-        return meta.map { eps ->
-            Episode(
-                AnichiLoadData(id, lang, eps).toJson(),
-                "Ep $eps",
-                episode = eps.toIntOrNull()
-            )
-        }.reversed()
-    }
-
-    private suspend fun getM3u8Qualities(
-        m3u8Link: String,
-        referer: String,
-        qualityName: String,
-    ): List<ExtractorLink> {
-        return M3u8Helper.generateM3u8(
-            this.name,
-            m3u8Link,
-            referer,
-            name = qualityName
-        )
-    }
-
-    private suspend fun invokeGogo(
-        link: String,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val iframe = app.get(link)
-        val iframeDoc = iframe.document
-        argamap({
-            iframeDoc.select(".list-server-items > .linkserver")
-                .forEach { element ->
-                    val status = element.attr("data-status") ?: return@forEach
-                    if (status != "1") return@forEach
-                    val extractorData = element.attr("data-video") ?: return@forEach
-                    loadExtractor(extractorData, iframe.url, subtitleCallback, callback)
-                }
-        }, {
-            val iv = "3134003223491201"
-            val secretKey = "37911490979715163134003223491201"
-            val secretDecryptKey = "54674138327930866480207815084989"
-            GogoHelper.extractVidstream(
-                iframe.url,
-                "Gogoanime",
-                callback,
-                iv,
-                secretKey,
-                secretDecryptKey,
-                isUsingAdaptiveKeys = false,
-                isUsingAdaptiveData = true,
-                iframeDocument = iframeDoc
-            )
-        })
-    }
-
-    private fun String.getHost(): String {
-        return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
-    }
-
-    private fun String.fixUrlPath() : String {
-        return if(this.contains(".json?")) apiEndPoint + this else apiEndPoint + URI(this).path + ".json?" + URI(this).query
-    }
-
-    private fun fixSourceUrls(url: String, source: String?) : String? {
-        return if(source == "Ak" || url.contains("/player/vitemb")) {
-            tryParseJson<AkIframe>(base64Decode(url.substringAfter("=")))?.idUrl
-        } else {
-            url.replace(" ", "%20")
-        }
-    }
-
-    private suspend fun getTracker(name: String?, altName: String?, year: Int?, season: String?, type: String?): AniMedia? {
-        val ids = fetchId(name, year, season, type)
-        return if (ids?.id == null && ids?.idMal == null) fetchId(
-            altName,
-            year,
-            season,
-            type
-        ) else ids
-    }
-
-    private suspend fun fetchId(title: String?, year: Int?, season: String?, type: String?): AniMedia? {
-        val query = """
-        query (
-          ${'$'}page: Int = 1
-          ${'$'}search: String
-          ${'$'}sort: [MediaSort] = [POPULARITY_DESC, SCORE_DESC]
-          ${'$'}type: MediaType
-          ${'$'}season: MediaSeason
-          ${'$'}year: String
-          ${'$'}format: [MediaFormat]
-        ) {
-          Page(page: ${'$'}page, perPage: 20) {
-            media(
-              search: ${'$'}search
-              sort: ${'$'}sort
-              type: ${'$'}type
-              season: ${'$'}season
-              startDate_like: ${'$'}year
-              format_in: ${'$'}format
-            ) {
-              id
-              idMal
-              coverImage { extraLarge large }
-              bannerImage
-            }
-          }
-        }
-    """.trimIndent().trim()
-
-        val variables = mapOf(
-            "search" to title,
-            "sort" to "SEARCH_MATCH",
-            "type" to "ANIME",
-            "season" to if(type.equals("ona", true)) "" else season?.uppercase(),
-            "year" to "$year%",
-            "format" to listOf(type?.uppercase())
-        ).filterValues { value -> value != null && value.toString().isNotEmpty() }
-
-        val data = mapOf(
-            "query" to query,
-            "variables" to variables
-        ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
-
-        return try {
-            app.post("https://graphql.anilist.co", requestBody = data)
-                .parsedSafe<AniSearch>()?.data?.Page?.media?.firstOrNull()
-        } catch (t: Throwable) {
-            logError(t)
-            null
-        }
-
-    }
-
     companion object {
-        private const val apiUrl = BuildConfig.ANICHI_API
-        private const val serverUrl = BuildConfig.ANICHI_SERVER
-        private const val apiEndPoint = BuildConfig.ANICHI_ENDPOINT
+        const val apiUrl = BuildConfig.ANICHI_API
+        const val serverUrl = BuildConfig.ANICHI_SERVER
+        const val apiEndPoint = BuildConfig.ANICHI_ENDPOINT
+
+        const val marinHost = "https://marin.moe"
 
         private const val mainHash = "e42a4466d984b2c0a2cecae5dd13aa68867f634b16ee0f17b380047d14482406"
         private const val popularHash = "31a117653812a2547fd981632e8c99fa8bf8a75c4ef1a77a1567ef1741a7ab9c"
         private const val slugHash = "bf603205eb2533ca21d0324a11f623854d62ed838a27e1b3fcfb712ab98b03f4"
         private const val detailHash = "bb263f91e5bdd048c1c978f324613aeccdfe2cbc694a419466a31edb58c0cc0b"
-        private const val serverHash = "5e7e17cdd0166af5a2d8f43133d9ce3ce9253d1fdb5160a0cfd515564f98d061"
+        const val serverHash = "5e7e17cdd0166af5a2d8f43133d9ce3ce9253d1fdb5160a0cfd515564f98d061"
 
-        private val headers = mapOf(
+        val headers = mapOf(
             "app-version" to "android_c-247",
             "from-app" to BuildConfig.ANICHI_APP,
             "platformstr" to "android_c",
         )
     }
-
-    data class AnichiLoadData(
-        val hash: String,
-        val dubStatus: String,
-        val episode: String
-    )
-
-    data class CoverImage(
-        @JsonProperty("extraLarge") var extraLarge: String? = null,
-        @JsonProperty("large") var large: String? = null,
-    )
-
-    data class AniMedia(
-        @JsonProperty("id") var id: Int? = null,
-        @JsonProperty("idMal") var idMal: Int? = null,
-        @JsonProperty("coverImage") var coverImage: CoverImage? = null,
-        @JsonProperty("bannerImage") var bannerImage: String? = null,
-    )
-
-    data class AniPage(
-        @JsonProperty("media") var media: ArrayList<AniMedia> = arrayListOf()
-    )
-
-    data class AniData(
-        @JsonProperty("Page") var Page: AniPage? = AniPage()
-    )
-
-    data class AniSearch(
-        @JsonProperty("data") var data: AniData? = AniData()
-    )
-
-    data class AkIframe(
-        @JsonProperty("idUrl") val idUrl: String? = null,
-    )
-
-    data class Stream(
-        @JsonProperty("format") val format: String? = null,
-        @JsonProperty("audio_lang") val audio_lang: String? = null,
-        @JsonProperty("hardsub_lang") val hardsub_lang: String? = null,
-        @JsonProperty("url") val url: String? = null,
-    )
-
-    data class PortData(
-        @JsonProperty("streams") val streams: ArrayList<Stream>? = arrayListOf(),
-    )
-
-    data class Subtitles(
-        @JsonProperty("lang") val lang: String?,
-        @JsonProperty("label") val label: String?,
-        @JsonProperty("src") val src: String?,
-    )
-
-    data class Links(
-        @JsonProperty("link") val link: String,
-        @JsonProperty("hls") val hls: Boolean?,
-        @JsonProperty("resolutionStr") val resolutionStr: String,
-        @JsonProperty("src") val src: String?,
-        @JsonProperty("portData") val portData: PortData? = null,
-        @JsonProperty("subtitles") val subtitles: ArrayList<Subtitles>? = arrayListOf(),
-    )
-
-    data class AnichiVideoApiResponse(
-        @JsonProperty("links") val links: List<Links>
-    )
-
-    data class Data(
-        @JsonProperty("shows") val shows: Shows? = null,
-        @JsonProperty("queryListForTag") val queryListForTag: Shows? = null,
-        @JsonProperty("queryPopular") val queryPopular: Shows? = null,
-    )
-
-    data class Shows(
-        @JsonProperty("edges") val edges: List<Edges>? = arrayListOf(),
-        @JsonProperty("recommendations") val recommendations: List<EdgesCard>? = arrayListOf(),
-    )
-
-    data class EdgesCard(
-        @JsonProperty("anyCard") val anyCard: Edges? = null,
-    )
-
-    data class CharacterImage(
-        @JsonProperty("large") val large: String?,
-        @JsonProperty("medium") val medium: String?
-    )
-
-    data class CharacterName(
-        @JsonProperty("full") val full: String?,
-        @JsonProperty("native") val native: String?
-    )
-
-    data class Characters(
-        @JsonProperty("image") val image: CharacterImage?,
-        @JsonProperty("role") val role: String?,
-        @JsonProperty("name") val name: CharacterName?,
-    )
-
-    data class Edges(
-        @JsonProperty("_id") val Id: String?,
-        @JsonProperty("name") val name: String?,
-        @JsonProperty("englishName") val englishName: String?,
-        @JsonProperty("nativeName") val nativeName: String?,
-        @JsonProperty("thumbnail") val thumbnail: String?,
-        @JsonProperty("type") val type: String?,
-        @JsonProperty("season") val season: Season?,
-        @JsonProperty("score") val score: Double?,
-        @JsonProperty("airedStart") val airedStart: AiredStart?,
-        @JsonProperty("availableEpisodes") val availableEpisodes: AvailableEpisodes?,
-        @JsonProperty("availableEpisodesDetail") val availableEpisodesDetail: AvailableEpisodesDetail?,
-        @JsonProperty("studios") val studios: List<String>?,
-        @JsonProperty("genres") val genres: List<String>?,
-        @JsonProperty("averageScore") val averageScore: Int?,
-        @JsonProperty("characters") val characters: List<Characters>?,
-        @JsonProperty("altNames") val altNames: List<String>?,
-        @JsonProperty("description") val description: String?,
-        @JsonProperty("status") val status: String?,
-        @JsonProperty("banner") val banner: String?,
-        @JsonProperty("episodeDuration") val episodeDuration: Int?,
-        @JsonProperty("prevideos") val prevideos: List<String> = emptyList(),
-    )
-
-    data class AvailableEpisodes(
-        @JsonProperty("sub") val sub: Int,
-        @JsonProperty("dub") val dub: Int,
-        @JsonProperty("raw") val raw: Int
-    )
-
-    data class AiredStart(
-        @JsonProperty("year") val year: Int,
-        @JsonProperty("month") val month: Int,
-        @JsonProperty("date") val date: Int
-    )
-
-    data class Season(
-        @JsonProperty("quarter") val quarter: String,
-        @JsonProperty("year") val year: Int
-    )
-
-    data class AnichiQuery(
-        @JsonProperty("data") val data: Data? = null
-    )
-
-    data class Detail(
-        @JsonProperty("data") val data: DetailShow
-    )
-
-    data class DetailShow(
-        @JsonProperty("show") val show: Edges
-    )
-
-    data class AvailableEpisodesDetail(
-        @JsonProperty("sub") val sub: List<String>,
-        @JsonProperty("dub") val dub: List<String>,
-        @JsonProperty("raw") val raw: List<String>
-    )
-
-    data class LinksQuery(
-        @JsonProperty("data") val data: LinkData? = LinkData()
-    )
-
-    data class LinkData(
-        @JsonProperty("episode") val episode: Episode? = Episode()
-    )
-
-    data class SourceUrls(
-        @JsonProperty("sourceUrl") val sourceUrl: String? = null,
-        @JsonProperty("priority") val priority: Int? = null,
-        @JsonProperty("sourceName") val sourceName: String? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("className") val className: String? = null,
-        @JsonProperty("streamerId") val streamerId: String? = null
-    )
-
-    data class Episode(
-        @JsonProperty("sourceUrls") val sourceUrls: ArrayList<SourceUrls> = arrayListOf(),
-    )
-
-    data class Sub(
-        @JsonProperty("hour") val hour: Int? = null,
-        @JsonProperty("minute") val minute: Int? = null,
-        @JsonProperty("year") val year: Int? = null,
-        @JsonProperty("month") val month: Int? = null,
-        @JsonProperty("date") val date: Int? = null
-    )
-
-    data class LastEpisodeDate(
-        @JsonProperty("dub") val dub: Sub? = Sub(),
-        @JsonProperty("sub") val sub: Sub? = Sub(),
-        @JsonProperty("raw") val raw: Sub? = Sub()
-    )
-
-    data class AnyCard(
-        @JsonProperty("_id") val Id: String? = null,
-        @JsonProperty("name") val name: String? = null,
-        @JsonProperty("englishName") val englishName: String? = null,
-        @JsonProperty("nativeName") val nativeName: String? = null,
-        @JsonProperty("availableEpisodes") val availableEpisodes: AvailableEpisodes? = null,
-        @JsonProperty("score") val score: Double? = null,
-        @JsonProperty("lastEpisodeDate") val lastEpisodeDate: LastEpisodeDate? = LastEpisodeDate(),
-        @JsonProperty("thumbnail") val thumbnail: String? = null,
-        @JsonProperty("lastChapterDate") val lastChapterDate: String? = null,
-        @JsonProperty("availableChapters") val availableChapters: String? = null,
-        @JsonProperty("__typename") val _typename: String? = null
-    )
-
-    data class PageStatus(
-        @JsonProperty("_id") val Id: String? = null,
-        @JsonProperty("views") val views: String? = null,
-        @JsonProperty("showId") val showId: String? = null,
-        @JsonProperty("rangeViews") val rangeViews: String? = null,
-        @JsonProperty("isManga") val isManga: Boolean? = null,
-        @JsonProperty("__typename") val _typename: String? = null
-    )
-
-
-    data class Recommendations(
-        @JsonProperty("anyCard") val anyCard: AnyCard? = null,
-        @JsonProperty("pageStatus") val pageStatus: PageStatus? = PageStatus(),
-        @JsonProperty("__typename") val _typename: String? = null
-    )
-
-    data class QueryPopular(
-        @JsonProperty("total") val total: Int? = null,
-        @JsonProperty("recommendations") val recommendations: ArrayList<Recommendations> = arrayListOf(),
-        @JsonProperty("__typename") val _typename: String? = null
-    )
-
-    data class DataPopular(
-        @JsonProperty("queryPopular") val queryPopular: QueryPopular? = QueryPopular()
-    )
-
 
 }
