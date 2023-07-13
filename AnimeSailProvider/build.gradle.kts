@@ -23,5 +23,5 @@ cloudstream {
         "OVA",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=111.90.143.42&sz=%size%"
+    iconUrl = "https://aghanim.xyz/wp-content/themes/animesail/assets/images/ico.png"
 }
