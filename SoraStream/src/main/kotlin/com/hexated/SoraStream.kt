@@ -121,7 +121,7 @@ open class SoraStream : TmdbProvider() {
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
         const val ask4MoviesAPI = "https://ask4movie.net"
-        const val biliBiliAPI = "https://api-vn.kaguya.app/server"
+        const val biliBiliAPI = "https://api-vn.otakuz.live/server"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://api.9animetv.live"
         const val putlockerAPI = "https://ww7.putlocker.vip"
@@ -500,16 +500,16 @@ open class SoraStream : TmdbProvider() {
             {
                 if(!res.isAnime) invokeKimcartoon(res.title, res.season, res.episode, subtitleCallback, callback)
             },
-            {
-                invokeXmovies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeXmovies(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokeFmovies(
                     res.title,
