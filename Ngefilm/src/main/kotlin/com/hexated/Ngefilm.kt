@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class Ngefilm : MainAPI() {
-    override var mainUrl = "https://ngefilm21.club"
+    override var mainUrl = "https://ngefilm21.cfd"
     override var name = "Ngefilm"
     override val hasMainPage = true
     override var lang = "id"
