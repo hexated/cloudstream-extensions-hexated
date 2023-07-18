@@ -19,7 +19,7 @@ open class TimefourTv : MainAPI() {
     )
 
     companion object {
-        const val daddyUrl = "https://daddylivehd.sx"
+        const val daddyUrl = "https://daddylive.watch"
         val daddyHost: String = URI(daddyUrl).host.split(".").first()
     }
 
