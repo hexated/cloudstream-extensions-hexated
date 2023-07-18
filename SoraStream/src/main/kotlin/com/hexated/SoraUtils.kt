@@ -2,7 +2,6 @@ package com.hexated
 
 import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.hexated.DumpUtils.createHeaders
 import com.hexated.DumpUtils.queryApi
 import com.hexated.SoraStream.Companion.anilistAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
@@ -51,7 +50,7 @@ import kotlin.math.min
 
 val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
 const val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-const val kaguyaBaseUrl = "https://kaguya.app/"
+const val otakuzBaseUrl = "https://otakuz.live/"
 val soraHeaders = mapOf(
     "lang" to "en",
     "versioncode" to "33",
