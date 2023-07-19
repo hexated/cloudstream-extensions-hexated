@@ -1,12 +1,13 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class DramaSerial : MainAPI() {
-    override var mainUrl = "https://dramaserial.wiki"
+    override var mainUrl = "https://dramaserial.sbs"
     override var name = "DramaSerial"
     override val hasMainPage = true
     override var lang = "id"
@@ -113,7 +114,7 @@ class DramaSerial : MainAPI() {
             mLink.attr("onclick").substringAfter("frame('").substringBefore("')").let { iLink ->
                 val uLink = app.get(iLink, referer = iframe).document.select("script").find { it.data().contains("(document).ready") }?.data()?.substringAfter("replace(\"")?.substringBefore("\");") ?: return@apmap null
                 val link = app.get(uLink, referer = iLink).document.selectFirst("iframe")?.attr("src") ?: return@apmap null
-                loadExtractor(fixUrl(link), "$mainUrl/", subtitleCallback, callback)
+                loadExtractor(fixUrl(link), "https://juraganfilm.info/", subtitleCallback, callback)
             }
         }
 
@@ -121,4 +122,9 @@ class DramaSerial : MainAPI() {
 
     }
 
+}
+
+class Bk21 : Filesim() {
+    override val name = "Bk21"
+    override var mainUrl = "https://bk21.net"
 }

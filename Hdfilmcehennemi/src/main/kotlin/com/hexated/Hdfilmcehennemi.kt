@@ -83,7 +83,7 @@ class Hdfilmcehennemi : MainAPI() {
         val title = document.selectFirst("div.card-header > h1, div.card-header > h2")?.text()
             ?.removeSuffix("Filminin Bilgileri")?.trim()
             ?: return null
-        val poster = fixUrlNull(document.selectFirst("img.img-fluid")?.attr("src"))
+        val poster = fixUrlNull(document.select("img.img-fluid").lastOrNull()?.attr("src"))
         val tags = document.select("div.mb-0.lh-lg div:nth-child(5) a").map { it.text() }
         val year =
             document.selectFirst("div.mb-0.lh-lg div:nth-child(4) a")?.text()?.trim()?.toIntOrNull()
@@ -154,10 +154,6 @@ class Hdfilmcehennemi : MainAPI() {
         }
     }
 
-    private fun String.addMarks(str: String): String {
-        return this.replace(Regex("\"?$str\"?"), "\"$str\"")
-    }
-
     private suspend fun invokeLocalSource(
         source: String,
         url: String,
@@ -205,21 +201,30 @@ class Hdfilmcehennemi : MainAPI() {
         }.apmap { (url, source) ->
             safeApiCall {
                 app.get(url).document.select("div.card-video > iframe").attr("data-src")
-                    .let { link ->
-                        if (link.startsWith(mainUrl)) {
-                            invokeLocalSource(source, link, subtitleCallback, callback)
+                    .let { url ->
+                        if (url.startsWith(mainUrl)) {
+                            invokeLocalSource(source, url, subtitleCallback, callback)
                         } else {
-                            loadExtractor(link, "$mainUrl/", subtitleCallback, callback)
+                            loadExtractor(url, "$mainUrl/", subtitleCallback) { link ->
+                                callback.invoke(
+                                    ExtractorLink(
+                                        source,
+                                        source,
+                                        link.url,
+                                        link.referer,
+                                        link.quality,
+                                        link.isM3u8,
+                                        link.headers,
+                                        link.extractorData
+                                    )
+                                )
+                            }
                         }
                     }
             }
         }
         return true
     }
-
-    private data class Source(
-        @JsonProperty("file") val file: String? = null,
-    )
 
     private data class SubSource(
         @JsonProperty("file") val file: String? = null,

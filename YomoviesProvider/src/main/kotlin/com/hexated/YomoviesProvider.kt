@@ -10,7 +10,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class YomoviesProvider : MainAPI() {
-    override var mainUrl = "https://yomovies.team"
+    override var mainUrl = "https://yomovies.baby"
     private var directUrl = mainUrl
     override var name = "Yomovies"
     override val hasMainPage = true
@@ -142,7 +142,7 @@ class YomoviesProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        if (data.contains("yomovies")) {
+        if (data.contains(directUrl.getHost(), true)) {
             val doc = app.get(data).document
             doc.select("div.movieplay iframe").map { fixUrl(it.attr("src")) }
                 .apmap { source ->
@@ -171,5 +171,8 @@ class YomoviesProvider : MainAPI() {
         return true
     }
 
+    private fun String.getHost(): String {
+        return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
+    }
 
 }
