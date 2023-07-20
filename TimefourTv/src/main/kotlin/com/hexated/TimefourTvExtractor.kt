@@ -72,7 +72,7 @@ object TimefourTvExtractor : TimefourTv() {
             return getSportLink(url)
         }
 
-        if(url.contains(daddyHost)) {
+        if(url.contains(daddyHost, true)) {
             mainServer = getBaseUrl(url)
             return getFinalLink(app.get(url, referer = daddyUrl))
         }
