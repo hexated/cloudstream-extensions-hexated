@@ -13,7 +13,6 @@ class AnimeIndoProvider : MainAPI() {
     override var name = "AnimeIndo"
     override val hasMainPage = true
     override var lang = "id"
-    override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
         TvType.Anime,
@@ -39,18 +38,19 @@ class AnimeIndoProvider : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "$mainUrl/anime-terbaru/page/" to "Anime Terbaru",
-        "$mainUrl/ongoing/page/" to "Anime Ongoing",
-        "$mainUrl/populer/page/" to "Anime Populer",
-        "$mainUrl/donghua-terbaru/page/" to "Donghua Terbaru",
+        "episode-terbaru" to "Episode Terbaru",
+        "ongoing" to "Anime Ongoing",
+        "populer" to "Anime Populer",
+        "donghua-terbaru" to "Donghua Terbaru",
     )
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page).document
-        val home = document.select("div.post-show > article, div.relat > article").mapNotNull {
+        val url = "$mainUrl/pages/${request.data}/page/$page"
+        val document = app.get(url).document
+        val home = document.select("main#main div.animposx").mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(request.name, home)
@@ -60,7 +60,7 @@ class AnimeIndoProvider : MainAPI() {
         return if (uri.contains("/anime/")) {
             uri
         } else {
-            var title = uri.substringAfter("$mainUrl/")
+            var title = uri.substringAfter("nonton/")
             title = when {
                 (title.contains("-episode")) && !(title.contains("-movie")) -> Regex("(.+)-episode").find(
                     title
@@ -74,15 +74,13 @@ class AnimeIndoProvider : MainAPI() {
         }
     }
 
-    private fun Element.toSearchResult(): AnimeSearchResponse? {
-        val title = this.selectFirst("div.title")?.text()?.trim() ?: return null
+    private fun Element.toSearchResult(): AnimeSearchResponse {
+        val title = this.selectFirst("div.titlex, h2.entry-title, h4")?.text()?.trim() ?: ""
         val href = getProperAnimeLink(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = this.select("img[itemprop=image]").attr("src").toString()
-        val type = getType(this.select("div.type").text().trim())
-        val epNum =
-            this.selectFirst("span.episode")?.ownText()?.replace(Regex("\\D"), "")?.trim()
-                ?.toIntOrNull()
-        return newAnimeSearchResponse(title, href, type) {
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val epNum = this.selectFirst("span.episode")?.ownText()?.replace(Regex("\\D"), "")?.trim()
+            ?.toIntOrNull()
+        return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
             addSub(epNum)
         }
@@ -131,6 +129,10 @@ class AnimeIndoProvider : MainAPI() {
             Episode(link, header.text(), episode = episode)
         }.reversed()
 
+        val recommendations = document.select("div.relat div.animposx").mapNotNull {
+            it.toSearchResult()
+        }
+
         return newAnimeLoadResponse(title, url, getType(type)) {
             engName = title
             posterUrl = poster
@@ -139,6 +141,7 @@ class AnimeIndoProvider : MainAPI() {
             showStatus = status
             plot = description
             this.tags = tags
+            this.recommendations = recommendations
             addTrailer(trailer)
         }
     }
