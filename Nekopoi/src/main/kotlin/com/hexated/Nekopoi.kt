@@ -155,8 +155,8 @@ class Nekopoi : MainAPI() {
                     ) to ele.selectFirst("a:contains(ouo)")
                         ?.attr("href")
                 }.filter { it.first != Qualities.P360.value }.map {
-                    val bypassedAds = bypassMirrored(bypassOuo(it.second ?: return@map) ?: return@map)
-                    bypassedAds.apmap ads@{ adsLink ->
+                    val bypassedAds = bypassMirrored(bypassOuo(it.second))
+                    bypassedAds.amap ads@{ adsLink ->
                         loadExtractor(
                             fixEmbed(adsLink) ?: return@ads,
                             "$mainUrl/",
@@ -225,8 +225,8 @@ class Nekopoi : MainAPI() {
         return res.headers["location"]
     }
 
-    private suspend fun bypassMirrored(url: String): List<String?> {
-        val request = app.get(url)
+    private suspend fun bypassMirrored(url: String?): List<String?> {
+        val request = app.get(url ?: return emptyList())
         val hostUrl = getBaseUrl(request.url)
         var nextUrl = request.document.selectFirst("div.row div.centered a")?.attr("href")
         nextUrl = app.get(nextUrl ?: return emptyList()).text.substringAfter("\"GET\", \"")
@@ -234,11 +234,11 @@ class Nekopoi : MainAPI() {
         return app.get(fixUrl(nextUrl, hostUrl)).document.select("table.hoverable tbody tr")
             .filter { mirror ->
                 !mirrorIsBlackList(mirror.selectFirst("img")?.attr("alt"))
-            }.apmap {
+            }.amap {
                 val fileLink = it.selectFirst("a")?.attr("href")
                 app.get(
                     fixUrl(
-                        fileLink.toString(),
+                        fileLink ?: return@amap null,
                         hostUrl
                     )
                 ).document.selectFirst("div.code_wrap code")?.text()
