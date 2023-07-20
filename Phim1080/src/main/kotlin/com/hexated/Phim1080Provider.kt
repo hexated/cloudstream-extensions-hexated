@@ -22,8 +22,8 @@ class Phim1080Provider : MainAPI() {
     
     private fun encodeString(e: String, t: Int): String {
         var a = ""
-        for (i in 0 until e.length) {
-            val r = e[i].code
+        for (element in e) {
+            val r = element.code
             val o = r xor t
             a += o.toChar()
         }
@@ -109,7 +109,7 @@ class Phim1080Provider : MainAPI() {
                 "Content-Type" to "application/json",
                 "X-Requested-With" to "XMLHttpRequest"
             )
-        ).parsedSafe<filmInfo>()
+        ).parsedSafe<FilmInfo>()
         val title = filmInfo?.name?.trim().toString()
         val poster = filmInfo?.thumbnail
         val background = filmInfo?.poster
@@ -209,7 +209,7 @@ class Phim1080Provider : MainAPI() {
         return true
     }
     
-    data class filmInfo(
+    data class FilmInfo(
         @JsonProperty("name") val name: String? = null,
         @JsonProperty("poster") val poster: String? = null,
         @JsonProperty("thumbnail") val thumbnail: String? = null,

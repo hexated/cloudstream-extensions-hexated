@@ -43,8 +43,8 @@ open class Gomov : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("src"))
-        val quality = this.select("div.gmr-qual").text().trim()
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("src"))?.fixImageQuality()
+        val quality = this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")
         return if (quality.isEmpty()) {
             val episode = this.select("div.gmr-numbeps > span").text().toIntOrNull()
             newAnimeSearchResponse(title, href, TvType.TvSeries) {
@@ -59,10 +59,10 @@ open class Gomov : MainAPI() {
         }
     }
 
-    private fun Element.toBottomSearchResult(): SearchResponse? {
+    private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrl(this.selectFirst("a > img")?.attr("data-src").toString())
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("src").fixImageQuality())
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
@@ -82,7 +82,7 @@ open class Gomov : MainAPI() {
             document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.trim()
                 .toString()
         val poster =
-            fixUrl(document.selectFirst("figure.pull-left > img")?.attr("src").toString())
+            fixUrlNull(document.selectFirst("figure.pull-left > img")?.attr("src"))?.fixImageQuality()
         val tags = document.select("span.gmr-movie-genre:contains(Genre:) > a").map { it.text() }
 
         val year =
@@ -97,7 +97,7 @@ open class Gomov : MainAPI() {
             ?.map { it.select("a").text() }
 
         val recommendations = document.select("div.idmuvi-rp ul li").mapNotNull {
-            it.toBottomSearchResult()
+            it.toRecommendResult()
         }
 
         return if (tvType == TvType.TvSeries) {
@@ -109,7 +109,7 @@ open class Gomov : MainAPI() {
                 Episode(
                     href,
                     name,
-                    season = season,
+                    season = if(name.contains(" ")) season else null,
                     episode = episode,
                 )
             }.filter { it.episode != null }
@@ -158,6 +158,13 @@ open class Gomov : MainAPI() {
 
         return true
 
+    }
+
+    private fun String?.fixImageQuality(): String? {
+        if(this == null) return null
+        val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues
+        if(regex?.isEmpty() == true) return this
+        return this.replace(regex?.get(0) ?: return null, "")
     }
 
 }
