@@ -3,13 +3,12 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
-class Gomov : MainAPI() {
+open class Gomov : MainAPI() {
     override var mainUrl = "https://gomov.bio"
     override var name = "Gomov"
     override val hasMainPage = true
@@ -102,16 +101,18 @@ class Gomov : MainAPI() {
         }
 
         return if (tvType == TvType.TvSeries) {
-            val episodes = document.select("div.vid-episodes div.episode").map { eps ->
-                val href = fixUrl(eps.select("a").attr("href"))
-                val episode = eps.attr("data-epi").toIntOrNull()
-                val season = eps.attr("data-sea").toIntOrNull()
+            val episodes = document.select("div.vid-episodes a, div.gmr-listseries a").map { eps ->
+                val href = fixUrl(eps.attr("href"))
+                val name = eps.text()
+                val episode = name.split(" ").lastOrNull()?.filter { it.isDigit() }?.toIntOrNull()
+                val season = name.split(" ").firstOrNull()?.filter { it.isDigit() }?.toIntOrNull()
                 Episode(
                     href,
+                    name,
                     season = season,
                     episode = episode,
                 )
-            }
+            }.filter { it.episode != null }
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.year = year
@@ -159,18 +160,4 @@ class Gomov : MainAPI() {
 
     }
 
-}
-
-class Filelions : Filesim() {
-    override val name = "Filelions"
-    override var mainUrl = "https://filelions.to"
-}
-
-class Likessb : StreamSB() {
-    override var name = "Likessb"
-    override var mainUrl = "https://likessb.com"
-}
-
-class DbGdriveplayer : Gdriveplayer() {
-    override var mainUrl = "https://database.gdriveplayer.us"
 }

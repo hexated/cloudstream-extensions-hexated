@@ -10,8 +10,10 @@ class GomovPlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(Gomov())
+        registerMainAPI(DutaMovie())
         registerExtractorAPI(Filelions())
         registerExtractorAPI(Likessb())
         registerExtractorAPI(DbGdriveplayer())
+        registerExtractorAPI(Dutamovie21())
     }
 }
