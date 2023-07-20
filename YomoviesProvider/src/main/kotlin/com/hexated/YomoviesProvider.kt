@@ -9,37 +9,32 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 import java.net.URI
 
-class YomoviesProvider : MainAPI() {
+open class YomoviesProvider : MainAPI() {
     override var mainUrl = "https://yomovies.baby"
-    private var directUrl = mainUrl
+    private var directUrl = ""
     override var name = "Yomovies"
     override val hasMainPage = true
     override var lang = "hi"
-    override val hasDownloadSupport = true
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
     )
 
     override val mainPage = mainPageOf(
-        "$mainUrl/most-favorites/page/" to "Most Viewed",
-        "$mainUrl/genre/web-series/page/" to "Web Series Movies",
-        "$mainUrl/genre/dual-audio/page/" to "Dual Audio Movies",
-        "$mainUrl/genre/bollywood/page/" to "Bollywood Movies",
-        "$mainUrl/genre/tv-shows/page/" to "TV Shows Movies",
-        "$mainUrl/genre/hollywood/page/" to "Hollywood Movies",
-        "$mainUrl/series/page/" to "All TV Series",
+        "most-favorites" to "Most Viewed",
+        "genre/web-series" to "Web Series Movies",
+        "genre/dual-audio" to "Dual Audio Movies",
+        "genre/bollywood" to "Bollywood Movies",
+        "genre/tv-shows" to "TV Shows Movies",
+        "genre/hollywood" to "Hollywood Movies",
+        "series" to "All TV Series",
     )
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = if (page == 1) {
-            app.get(request.data.removeSuffix("page/")).document
-        } else {
-            app.get(request.data + page).document
-        }
+        val document = app.get("$mainUrl/${request.data}/page/$page").document
         val home = document.select("div.ml-item").mapNotNull {
             it.toSearchResult()
         }
@@ -129,12 +124,6 @@ class YomoviesProvider : MainAPI() {
         }
     }
 
-    private fun getBaseUrl(url: String): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
-        }
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -173,6 +162,12 @@ class YomoviesProvider : MainAPI() {
 
     private fun String.getHost(): String {
         return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
     }
 
 }
