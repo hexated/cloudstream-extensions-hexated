@@ -203,7 +203,7 @@ class DramaidProvider : MainAPI() {
             it.replace("https://ndrama.xyz", "https://www.fembed.com")
         }.apmap {
             when {
-                it.contains("motonews.club") -> invokeDriveSource(
+                it.contains("motonews") -> invokeDriveSource(
                     it,
                     this.name,
                     subtitleCallback,
