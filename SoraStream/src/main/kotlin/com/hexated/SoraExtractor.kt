@@ -1491,7 +1491,13 @@ object SoraExtractor : SoraStream() {
                     extractGdflix(gdBotLink ?: return@apmap null)
                 }
                 type.contains("oiya") -> {
-                    extractOiya(fdLink ?: return@apmap null, qualities)
+                    val oiyaLink = extractOiya(fdLink ?: return@apmap null, qualities)
+                    if(oiyaLink?.contains("gdtot") == true) {
+                        val gdBotLink = extractGdbot(oiyaLink)
+                        extractGdflix(gdBotLink ?: return@apmap null)
+                    } else {
+                        oiyaLink
+                    }
                 }
                 else -> {
                     return@apmap null
@@ -2040,6 +2046,9 @@ object SoraExtractor : SoraStream() {
                 }
                 it.first.contains("/rip") -> {
                     invokeSmashyRip(it.second, it.first, subtitleCallback, callback)
+                }
+                it.first.contains("/im.php") && !isAnime -> {
+                    invokeSmashyIm(it.second, it.first, subtitleCallback, callback)
                 }
                 else -> return@apmap
             }

@@ -563,6 +563,39 @@ suspend fun invokeSmashyRip(
 
 }
 
+suspend fun invokeSmashyIm(
+    name: String,
+    url: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val script =
+        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+
+    val sources =
+        Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
+    val subtitles =
+        Regex("['\"]?subtitle['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
+
+    M3u8Helper.generateM3u8(
+        name,
+        sources,
+        ""
+    ).forEach(callback)
+
+    subtitles.split(",").map { sub ->
+        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim()
+        val trimmedSubLink = sub.removePrefix("[$lang]").trim().substringAfter("?url=")
+        subtitleCallback.invoke(
+            SubtitleFile(
+                lang.takeIf { !it.isNullOrEmpty() } ?: return@map,
+                trimmedSubLink
+            )
+        )
+    }
+
+}
+
 suspend fun getDumpIdAndType(title: String?, year: Int?, season: Int?): Pair<String?, Int?> {
     val res = tryParseJson<DumpQuickSearchData>(
         queryApi(
