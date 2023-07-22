@@ -1,13 +1,13 @@
 package com.hexated
 
+import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.mainPageOf
 
 class Watchomovies : YomoviesProvider() {
     override var mainUrl = "https://watchomovies.mom"
     override var name = "Watchomovies"
-    override val hasMainPage = true
-    override var lang = "hi"
+    override var lang = "en"
     override val supportedTypes = setOf(
         TvType.NSFW,
     )
@@ -20,4 +20,8 @@ class Watchomovies : YomoviesProvider() {
         "genre/parody" to "Parody Movies",
         "genre/tv-shows" to "TV Shows Movies",
     )
+
+    override suspend fun load(url: String): LoadResponse? {
+        return super.load(url).apply { this?.type = TvType.NSFW }
+    }
 }
