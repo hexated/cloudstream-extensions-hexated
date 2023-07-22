@@ -10,14 +10,11 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
-class DramaidProvider : MainAPI() {
+open class DramaidProvider : MainAPI() {
     override var mainUrl = "https://dramaid.best"
     override var name = "DramaId"
-    override val hasQuickSearch = false
     override val hasMainPage = true
     override var lang = "id"
-    override val hasDownloadSupport = true
-    override val hasChromecastSupport = false
     override val supportedTypes = setOf(TvType.AsianDrama)
 
     companion object {
@@ -26,6 +23,14 @@ class DramaidProvider : MainAPI() {
                 "Completed" -> ShowStatus.Completed
                 "Ongoing" -> ShowStatus.Ongoing
                 else -> ShowStatus.Completed
+            }
+        }
+
+        fun getType(t: String?): TvType {
+            return when {
+                t?.contains("Movie", true) == true -> TvType.Movie
+                t?.contains("Anime", true) == true -> TvType.Anime
+                else -> TvType.AsianDrama
             }
         }
     }
@@ -45,18 +50,19 @@ class DramaidProvider : MainAPI() {
     }
 
     private fun getProperDramaLink(uri: String): String {
-        return if (uri.contains("/series/")) {
-            uri
-        } else {
+        return if (uri.contains("-episode-")) {
             "$mainUrl/series/" + Regex("$mainUrl/(.+)-ep.+").find(uri)?.groupValues?.get(1)
-                .toString()
+        } else {
+            uri
         }
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
         val href = getProperDramaLink(this.selectFirst("a.tip")!!.attr("href"))
         val title = this.selectFirst("h2[itemprop=headline]")?.text()?.trim() ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst(".limit > noscript > img")?.attr("src"))
+        val posterUrl = fixUrlNull(
+            this.selectFirst("noscript img")?.attr("src") ?: this.selectFirst("img")?.attr("src")
+        )
 
         return newTvSeriesSearchResponse(title, href, TvType.AsianDrama) {
             this.posterUrl = posterUrl
@@ -64,27 +70,19 @@ class DramaidProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/?s=$query"
-        val document = app.get(link).document
-
-        return document.select("article[itemscope=itemscope]").map {
-            val title = it.selectFirst("h2[itemprop=headline]")!!.text().trim()
-            val poster = it.selectFirst(".limit > noscript > img")!!.attr("src")
-            val href = it.selectFirst("a.tip")!!.attr("href")
-
-            newTvSeriesSearchResponse(title, href, TvType.AsianDrama) {
-                this.posterUrl = poster
-            }
+        val document = app.get("$mainUrl/?s=$query").document
+        return document.select("article[itemscope=itemscope]").mapNotNull {
+            it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
-        val title = document.selectFirst("h1.entry-title")!!.text().trim()
-        val poster = document.select(".thumb > noscript > img").attr("src")
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: ""
+        val poster = fixUrlNull(document.selectFirst("div.thumb noscript img")?.attr("src") ?: document.selectFirst("div.thumb img")?.attr("src"))
         val tags = document.select(".genxed > a").map { it.text() }
-
+        val type = document.selectFirst(".info-content .spe span:contains(Tipe:)")?.ownText()
         val year = Regex("\\d, ([0-9]*)").find(
             document.selectFirst(".info-content > .spe > span > time")!!.text().trim()
         )?.groupValues?.get(1).toString().toIntOrNull()
@@ -94,44 +92,34 @@ class DramaidProvider : MainAPI() {
         )
         val description = document.select(".entry-content > p").text().trim()
 
-        val episodes = document.select(".eplister > ul > li").map {
-            val name = it.selectFirst("a > .epl-title")!!.text().trim()
-            val link = it.select("a").attr("href")
-            val epNum = it.selectFirst("a > .epl-num")!!.text().trim().toIntOrNull()
-            newEpisode(link) {
-                this.name = name
-                this.episode = epNum
-            }
+        val episodes = document.select(".eplister > ul > li").mapNotNull {
+            val name = it.selectFirst("a > .epl-title")?.text()
+            val link = fixUrl(it.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
+            val epNum = it.selectFirst(".epl-num")?.text()?.toIntOrNull()
+            Episode(
+                link,
+                name,
+                episode = epNum
+            )
         }.reversed()
 
         val recommendations =
-            document.select(".listupd > article[itemscope=itemscope]").map { rec ->
-                val epTitle = rec.selectFirst("h2[itemprop=headline]")!!.text().trim()
-                val epPoster = rec.selectFirst(".limit > noscript > img")!!.attr("src")
-                val epHref = fixUrl(rec.selectFirst("a.tip")!!.attr("href"))
-
-                newTvSeriesSearchResponse(epTitle, epHref, TvType.AsianDrama) {
-                    this.posterUrl = epPoster
-                }
+            document.select(".listupd > article[itemscope=itemscope]").mapNotNull { rec ->
+                rec.toSearchResult()
             }
 
-        if (episodes.size == 1) {
-            return newMovieLoadResponse(title, url, TvType.Movie, episodes[0].data) {
-                posterUrl = poster
-                this.year = year
-                plot = description
-                this.tags = tags
-                this.recommendations = recommendations
-            }
-        } else {
-            return newTvSeriesLoadResponse(title, url, TvType.AsianDrama, episodes = episodes) {
-                posterUrl = poster
-                this.year = year
-                showStatus = status
-                plot = description
-                this.tags = tags
-                this.recommendations = recommendations
-            }
+        return newTvSeriesLoadResponse(
+            title,
+            url,
+            getType(type),
+            episodes = episodes
+        ) {
+            posterUrl = poster
+            this.year = year
+            showStatus = status
+            plot = description
+            this.tags = tags
+            this.recommendations = recommendations
         }
 
     }
@@ -209,6 +197,7 @@ class DramaidProvider : MainAPI() {
                     subtitleCallback,
                     callback
                 )
+
                 else -> loadExtractor(it, data, subtitleCallback, callback)
             }
         }
