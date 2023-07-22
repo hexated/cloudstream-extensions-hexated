@@ -12,6 +12,7 @@ class GomovPlugin: Plugin() {
         registerMainAPI(Gomov())
         registerMainAPI(DutaMovie())
         registerMainAPI(Ngefilm())
+        registerMainAPI(Nodrakorid())
         registerExtractorAPI(Filelions())
         registerExtractorAPI(Likessb())
         registerExtractorAPI(DbGdriveplayer())

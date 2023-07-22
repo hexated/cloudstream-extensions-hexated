@@ -3,6 +3,7 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.XStreamCdn
+import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -60,9 +61,7 @@ open class DramaidProvider : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val href = getProperDramaLink(this.selectFirst("a.tip")!!.attr("href"))
         val title = this.selectFirst("h2[itemprop=headline]")?.text()?.trim() ?: return null
-        val posterUrl = fixUrlNull(
-            this.selectFirst("noscript img")?.attr("src") ?: this.selectFirst("img")?.attr("src")
-        )
+        val posterUrl = fixUrlNull(this.select("img:last-child").attr("src"))
 
         return newTvSeriesSearchResponse(title, href, TvType.AsianDrama) {
             this.posterUrl = posterUrl
@@ -80,7 +79,7 @@ open class DramaidProvider : MainAPI() {
         val document = app.get(url).document
 
         val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: ""
-        val poster = fixUrlNull(document.selectFirst("div.thumb noscript img")?.attr("src") ?: document.selectFirst("div.thumb img")?.attr("src"))
+        val poster = fixUrlNull(document.select("div.thumb img:last-child").attr("src"))
         val tags = document.select(".genxed > a").map { it.text() }
         val type = document.selectFirst(".info-content .spe span:contains(Tipe:)")?.ownText()
         val year = Regex("\\d, ([0-9]*)").find(

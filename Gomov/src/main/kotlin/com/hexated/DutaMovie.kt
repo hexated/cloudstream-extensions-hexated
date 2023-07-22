@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 
-class DutaMovie : Gomov() {
+open class DutaMovie : Gomov() {
     override var mainUrl = "https://dutamovie21.live"
     override var name = "DutaMovie"
 

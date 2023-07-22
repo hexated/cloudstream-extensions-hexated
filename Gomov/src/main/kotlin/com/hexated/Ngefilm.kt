@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 
-class Ngefilm : Gomov() {
+class Ngefilm : DutaMovie() {
     override var mainUrl = "https://ngefilm21.lol"
     override var name = "Ngefilm"
 
@@ -18,23 +18,5 @@ class Ngefilm : Gomov() {
         "/page/%d/?s=&search=advanced&post_type=tv&index=&orderby=&genre=drakor&movieyear=&country=&quality=" to "Series Korea",
         "/page/%d/?s=&search=advanced&post_type=tv&index=&orderby=&genre=&movieyear=&country=indonesia&quality=" to "Series Indonesia",
     )
-
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-
-        val document = app.get(data).document
-        document.select("ul.muvipro-player-tabs li a").apmap { server ->
-            val iframe = app.get(fixUrl(server.attr("href"))).document.selectFirst("div.gmr-embed-responsive iframe")
-                ?.attr("src")?.let { fixUrl(it) } ?: return@apmap
-            loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
-        }
-
-        return true
-
-    }
 
 }
