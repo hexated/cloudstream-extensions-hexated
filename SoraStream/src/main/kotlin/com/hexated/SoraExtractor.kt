@@ -930,7 +930,7 @@ object SoraExtractor : SoraStream() {
 
         argamap(
             {
-                invokeZoro(aniId, episode, subtitleCallback, callback)
+                invokeAniwatch(malId, episode, subtitleCallback, callback)
             },
             {
                 invokeAnimeKaizoku(malId, epsTitle, season, episode, callback)
@@ -1004,28 +1004,26 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    private suspend fun invokeZoro(
-        aniId: Int? = null,
+    private suspend fun invokeAniwatch(
+        malId: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val animeId =
-            app.get("https://raw.githubusercontent.com/MALSync/MAL-Sync-Backup/master/data/anilist/anime/${aniId ?: return}.json")
-                .parsedSafe<MALSyncResponses>()?.pages?.zoro?.keys?.map { it }
         val headers = mapOf(
             "X-Requested-With" to "XMLHttpRequest",
         )
+        val animeId = app.get("$malsyncAPI/mal/anime/${malId ?: return}").parsedSafe<MALSyncResponses>()?.sites?.zoro?.keys?.map { it }
         animeId?.apmap { id ->
-            val episodeId = app.get("$zoroAPI/ajax/episode/list/${id ?: return@apmap}", headers = headers)
-                .parsedSafe<ZoroResponses>()?.html?.let {
+            val episodeId = app.get("$aniwatchAPI/ajax/v2/episode/list/${id ?: return@apmap}", headers = headers)
+                .parsedSafe<AniwatchResponses>()?.html?.let {
                     Jsoup.parse(it)
                 }?.select("div.ss-list a")?.find { it.attr("data-number") == "${episode ?: 1}" }
                 ?.attr("data-id")
 
             val servers =
-                app.get("$zoroAPI/ajax/episode/servers?episodeId=${episodeId ?: return@apmap}", headers = headers)
-                    .parsedSafe<ZoroResponses>()?.html?.let { Jsoup.parse(it) }
+                app.get("$aniwatchAPI/ajax/v2/episode/servers?episodeId=${episodeId ?: return@apmap}", headers = headers)
+                    .parsedSafe<AniwatchResponses>()?.html?.let { Jsoup.parse(it) }
                     ?.select("div.item.server-item")?.map {
                         Triple(
                             it.text(),
@@ -1035,22 +1033,21 @@ object SoraExtractor : SoraStream() {
                     }
 
             servers?.apmap servers@{ server ->
-                val iframe =
-                    app.get("$zoroAPI/ajax/episode/sources?id=${server.second ?: return@servers}", headers = headers)
-                        .parsedSafe<ZoroResponses>()?.link ?: return@servers
+                val iframe = app.get("$aniwatchAPI/ajax/v2/episode/sources?id=${server.second ?: return@servers}", headers = headers)
+                        .parsedSafe<AniwatchResponses>()?.link ?: return@servers
                 val audio = if (server.third == "sub") "Raw" else "English Dub"
                 if (server.first.contains(Regex("Vidstreaming|MegaCloud|Vidcloud"))) {
                     extractRabbitStream(
                         "${server.first} [$audio]",
                         iframe,
-                        "$zoroAPI/",
+                        "$aniwatchAPI/",
                         subtitleCallback,
                         callback,
                         false,
                         decryptKey = RabbitStream.getZoroKey()
                     ) { it }
                 } else {
-                    loadExtractor(iframe, "$zoroAPI/", subtitleCallback, callback)
+                    loadExtractor(iframe, "$aniwatchAPI/", subtitleCallback, callback)
                 }
 
             }

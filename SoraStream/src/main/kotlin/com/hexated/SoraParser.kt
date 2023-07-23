@@ -405,15 +405,15 @@ data class CrunchyrollSourcesResponses(
     @JsonProperty("meta") val meta: CrunchyrollMeta? = null,
 )
 
-data class MALSyncPages(
+data class MALSyncSites(
     @JsonProperty("Zoro") val zoro: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
 )
 
 data class MALSyncResponses(
-    @JsonProperty("Pages") val pages: MALSyncPages? = null,
+    @JsonProperty("Sites") val sites: MALSyncSites? = null,
 )
 
-data class ZoroResponses(
+data class AniwatchResponses(
     @JsonProperty("html") val html: String? = null,
     @JsonProperty("link") val link: String? = null,
 )
