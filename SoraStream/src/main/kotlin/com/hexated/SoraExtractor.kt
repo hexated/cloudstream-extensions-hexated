@@ -933,9 +933,6 @@ object SoraExtractor : SoraStream() {
                 invokeAniwatch(malId, episode, subtitleCallback, callback)
             },
             {
-                invokeAnimeKaizoku(malId, epsTitle, season, episode, callback)
-            },
-            {
                 invokeBiliBili(aniId, episode, subtitleCallback, callback)
             },
             {
