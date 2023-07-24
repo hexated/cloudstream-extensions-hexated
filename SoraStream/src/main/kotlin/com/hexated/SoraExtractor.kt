@@ -2695,7 +2695,15 @@ object SoraExtractor : SoraStream() {
             epsDoc.select("ul.group-links-list li:nth-child($episode) a").attr("data-embed-src")
         }
 
-        loadExtractor(iframe, ask4MoviesAPI, subtitleCallback, callback)
+        val iframeDoc = app.get(iframe, referer = "$ask4MoviesAPI/").text
+        val script =  Regex("""eval\(function\(p,a,c,k,e,.*\)\)""").findAll(iframeDoc).lastOrNull()?.value
+        val unpacked = getAndUnpack(script ?: return)
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(unpacked)?.groupValues?.getOrNull(1)
+        M3u8Helper.generateM3u8(
+            "Ask4movie",
+            m3u8 ?: return,
+            mainUrl
+        ).forEach(callback)
 
     }
 

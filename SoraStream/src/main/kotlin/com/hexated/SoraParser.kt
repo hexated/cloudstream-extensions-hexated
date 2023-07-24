@@ -336,16 +336,12 @@ data class VizcloudSources(
     @JsonProperty("file") val file: String? = null,
 )
 
-data class VizcloudMedia(
+data class VizcloudResult(
     @JsonProperty("sources") val sources: ArrayList<VizcloudSources>? = arrayListOf(),
 )
 
-data class VizcloudData(
-    @JsonProperty("media") val media: VizcloudMedia? = null,
-)
-
 data class VizcloudResponses(
-    @JsonProperty("data") val data: VizcloudData? = null,
+    @JsonProperty("result") val result: VizcloudResult? = null,
 )
 
 data class AnilistExternalLinks(

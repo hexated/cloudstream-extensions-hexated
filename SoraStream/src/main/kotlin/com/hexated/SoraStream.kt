@@ -119,7 +119,7 @@ open class SoraStream : TmdbProvider() {
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         val gomoviesAPI = base64DecodeAPI("bQ==Y28=ZS4=aW4=bmw=LW8=ZXM=dmk=bW8=Z28=Ly8=czo=dHA=aHQ=")
-        const val ask4MoviesAPI = "https://ask4movie.net"
+        const val ask4MoviesAPI = "https://ask4movie.nl"
         const val biliBiliAPI = "https://api-vn.otakuz.live/server"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://api.9animetv.live"

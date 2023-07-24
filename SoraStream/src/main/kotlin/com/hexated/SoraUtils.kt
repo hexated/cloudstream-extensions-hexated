@@ -418,7 +418,7 @@ suspend fun invokeVizcloud(
 ) {
     val id = Regex("(?:/embed[-/]|/e/)([^?/]*)").find(url)?.groupValues?.getOrNull(1)
     app.get("$consumetHelper?query=${id ?: return}&action=vizcloud")
-        .parsedSafe<VizcloudResponses>()?.data?.media?.sources?.map {
+        .parsedSafe<VizcloudResponses>()?.result?.sources?.map {
             M3u8Helper.generateM3u8(
                 "Vizcloud",
                 it.file ?: return@map,
