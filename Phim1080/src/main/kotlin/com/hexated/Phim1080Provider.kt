@@ -3,6 +3,7 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.nodes.Element
@@ -20,10 +21,10 @@ class Phim1080Provider : MainAPI() {
         TvType.AsianDrama
     )
     
-    private fun encodeString(e: String, t: Int): String {
+    private fun decodeString(e: String, t: Int): String {
         var a = ""
-        for (element in e) {
-            val r = element.code
+        for (i in 0 until e.length) {
+            val r = e[i].code
             val o = r xor t
             a += o.toChar()
         }
@@ -109,7 +110,7 @@ class Phim1080Provider : MainAPI() {
                 "Content-Type" to "application/json",
                 "X-Requested-With" to "XMLHttpRequest"
             )
-        ).parsedSafe<FilmInfo>()
+        ).parsedSafe<filmInfo>()
         val title = filmInfo?.name?.trim().toString()
         val poster = filmInfo?.thumbnail
         val background = filmInfo?.poster
@@ -176,26 +177,44 @@ class Phim1080Provider : MainAPI() {
         val fId = document.select("div.container").attr("data-id")
         val epId = document.select("div.container").attr("data-episode-id")
         val doc = app.get(
-                "$mainUrl/api/v2/films/$fId/episodes/$epId",
-                referer = data,
-                headers = mapOf(
-                    "Content-Type" to "application/json",
-                    "cookie" to "xem1080=%3D",
-                    "X-Requested-With" to "XMLHttpRequest"
-                )
+            "$mainUrl/api/v2/films/$fId/episodes/$epId",
+            referer = data,
+            headers = mapOf(
+                "Content-Type" to "application/json",
+                "cookie" to "xem1080=%3D",
+                "X-Requested-With" to "XMLHttpRequest"
             )
-        val source = doc.text.substringAfter(":{\"hls\":\"").substringBefore("\"},")
-        val link = encodeString(source, 69)
-            callback.invoke(
-                ExtractorLink(
-                    "HS",
-                    "HS",
-                    link,
-                    referer = data,
-                    quality = Qualities.Unknown.value,
-                    isM3u8 = true,
-                )
-            )
+        )
+        val optEncode = if (doc.text.indexOf("\"opt\":\"") != -1) {
+            doc.text.substringAfter("\"opt\":\"").substringBefore("\"},")
+        } else { "" }
+        val opt = decodeString(optEncode as String, 69).replace("0uut$", "_").replace("index.m3u8", "3000k/hls/mixed.m3u8")
+        val hlsEncode = if (doc.text.indexOf(":{\"hls\":\"") != -1) {
+            doc.text.substringAfter(":{\"hls\":\"").substringBefore("\"},")
+        } else { "" }
+        val hls = decodeString(hlsEncode as String, 69)
+        val fb = if (doc.text.indexOf("\"fb\":[{\"src\":\"") != -1) {
+            doc.text.substringAfter("\"fb\":[{\"src\":\"").substringBefore("\",").replace("\\", "")
+        } else { "" }
+        
+        listOfNotNull(
+            if (hls.contains(".m3u8")) {Triple("$hls", "HS", true)} else null,
+            if (fb.contains(".mp4")) {Triple("$fb", "FB", false)} else null,
+            if (opt.contains(".m3u8")) {Triple("$opt", "OP", true)} else null,
+        ).apmap { (link, source, isM3u8) ->
+            safeApiCall {
+                callback.invoke(
+                    ExtractorLink(
+                        source,
+                        source,
+                        link,
+                        referer = data,
+                        quality = Qualities.Unknown.value,
+                        isM3u8,
+                        )
+                    )
+                }
+            }
         val subId = doc.parsedSafe<Media>()?.subtitle?.vi
         val isSubIdEmpty = subId.isNullOrBlank()
         if (!isSubIdEmpty) {
@@ -208,8 +227,8 @@ class Phim1080Provider : MainAPI() {
         }
         return true
     }
-    
-    data class FilmInfo(
+
+    data class filmInfo(
         @JsonProperty("name") val name: String? = null,
         @JsonProperty("poster") val poster: String? = null,
         @JsonProperty("thumbnail") val thumbnail: String? = null,
@@ -221,27 +240,27 @@ class Phim1080Provider : MainAPI() {
     data class TrailerInfo(
         @JsonProperty("original") val original: TrailerKey? = null,
     )
-    
+
     data class TrailerKey(
         @JsonProperty("id") val id: String? = null,
     )
-    
+
     data class MediaDetailEpisodes(
         @JsonProperty("data") val eps: ArrayList<Episodes>? = arrayListOf(),
     )
-    
+
     data class Episodes(
         @JsonProperty("link") val link: String? = null,
         @JsonProperty("detail_name") val detailname: String? = null,
         @JsonProperty("name") val episodeNumber: Int? = null,
-    )    
-    
+    )
+
     data class Media(
         @JsonProperty("subtitle") val subtitle: SubInfo? = null,
     )
-    
+
     data class SubInfo(
         @JsonProperty("vi") val vi: String? = null,
-    )    
-    
+    )
+
 }
