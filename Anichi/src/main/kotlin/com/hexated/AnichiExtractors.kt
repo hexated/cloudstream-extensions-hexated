@@ -6,6 +6,8 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.argamap
 import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.mvvm.safeApiCall
+import com.lagradost.cloudstream3.utils.AppUtils
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.SubtitleHelper
@@ -146,20 +148,19 @@ object AnichiExtractors : Anichi() {
             ),
             referer = "$marinHost/anime",
         ).cookies.let {
-            it["XSRF-TOKEN"] to it["marin_session"]
+            decode(it["XSRF-TOKEN"].toString()) to decode(it["marin_session"].toString())
         }
 
-        app.get(
+        val json = app.get(
             url,
             headers = mapOf(
-                "Referer" to "$marinHost/",
-                "Cookie" to "__ddg1=;__ddg2_=; XSRF-TOKEN=${cookies.first}; marin_session=${cookies.second};",
-                "x-inertia" to "true",
-                "x-inertia-version" to "5ee7503af8c9844b1e8d34466b727694",
-                "X-Requested-With" to "XMLHttpRequest",
-                "X-XSRF-TOKEN" to decode(cookies.first.toString())
-            )
-        ).parsedSafe<MarinResponses>()?.props?.video?.data?.mirror?.map { video ->
+                "Accept" to "text/html, application/xhtml+xml",
+                "Cookie" to "__ddg1=;__ddg2_=;XSRF-TOKEN=${cookies.first};marin_session=${cookies.second};",
+                "X-XSRF-TOKEN" to cookies.first
+            ),
+            referer = "$marinHost/anime/$id"
+        ).document.selectFirst("div#app")?.attr("data-page")
+        tryParseJson<MarinResponses>(json)?.props?.video?.data?.mirror?.map { video ->
             callback.invoke(
                 ExtractorLink(
                     "Marin",

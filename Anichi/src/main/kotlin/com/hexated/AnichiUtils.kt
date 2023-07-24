@@ -87,6 +87,7 @@ private val embedBlackList = listOf(
     "https://videobin.co/",
     "https://ok.ru",
     "https://streamlare.com",
+    "https://filemoon",
     "streaming.php",
 )
 

@@ -1,20 +1,18 @@
 package com.hexated
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.utils.httpsify
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
-class MultiplexProvider : MainAPI() {
-    override var mainUrl = "http://5.104.81.46"
-    override var name = "Multiplex"
+open class Gomov : MainAPI() {
+    override var mainUrl = "https://gomov.bio"
+    override var name = "Gomov"
     override val hasMainPage = true
     override var lang = "id"
-    override val hasDownloadSupport = true
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -22,17 +20,20 @@ class MultiplexProvider : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        "$mainUrl/genre/top-popular-movies/page/" to "Top Popolar Movies",
-        "$mainUrl/genre/series-ongoing/page/" to "Series Ongoing",
-        "$mainUrl/genre/series-barat/page/" to "Series Barat",
-        "$mainUrl/genre/series-korea/page/" to "Series Korea",
+        "page/%d/?s&search=advanced&post_type=movie" to "Movies",
+        "category/western-series/page/%d/" to "Western Series",
+        "tv/page/%d/" to "Tv Shows",
+        "category/korean-series/page/%d/" to "Korean Series",
+        "category/chinese-series/page/%d/" to "Chinese Series",
+        "category/india-series/page/%d/" to "India Series",
     )
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(request.data + page).document
+        val data = request.data.format(page)
+        val document = app.get("$mainUrl/$data").document
         val home = document.select("article.item").mapNotNull {
             it.toSearchResult()
         }
@@ -42,8 +43,8 @@ class MultiplexProvider : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("data-src"))
-        val quality = this.select("div.gmr-quality-item > a").text().trim()
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("src"))?.fixImageQuality()
+        val quality = this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")
         return if (quality.isEmpty()) {
             val episode = this.select("div.gmr-numbeps > span").text().toIntOrNull()
             newAnimeSearchResponse(title, href, TvType.TvSeries) {
@@ -58,21 +59,20 @@ class MultiplexProvider : MainAPI() {
         }
     }
 
-    private fun Element.toBottomSearchResult(): SearchResponse? {
+    private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrl(this.selectFirst("a > img")?.attr("data-src").toString())
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("src").fixImageQuality())
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/?s=$query&post_type[]=post&post_type[]=tv"
-        val document = app.get(link).document
-        return document.select("article.item").mapNotNull {
-            it.toSearchResult()
-        }
+        return app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv").document.select("article.item")
+            .mapNotNull {
+                it.toSearchResult()
+            }
     }
 
     override suspend fun load(url: String): LoadResponse {
@@ -82,7 +82,7 @@ class MultiplexProvider : MainAPI() {
             document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.trim()
                 .toString()
         val poster =
-            fixUrl(document.selectFirst("figure.pull-left > img")?.attr("data-src").toString())
+            fixUrlNull(document.selectFirst("figure.pull-left > img")?.attr("src"))?.fixImageQuality()
         val tags = document.select("span.gmr-movie-genre:contains(Genre:) > a").map { it.text() }
 
         val year =
@@ -97,21 +97,22 @@ class MultiplexProvider : MainAPI() {
             ?.map { it.select("a").text() }
 
         val recommendations = document.select("div.idmuvi-rp ul li").mapNotNull {
-            it.toBottomSearchResult()
+            it.toRecommendResult()
         }
 
         return if (tvType == TvType.TvSeries) {
-            val episodes = document.select("div.gmr-listseries > a").map {
-                val href = fixUrl(it.attr("href"))
-                val episode = it.text().split(" ").last().toIntOrNull()
-                val season = it.text().split(" ").first().substringAfter("S").toIntOrNull()
+            val episodes = document.select("div.vid-episodes a, div.gmr-listseries a").map { eps ->
+                val href = fixUrl(eps.attr("href"))
+                val name = eps.text()
+                val episode = name.split(" ").lastOrNull()?.filter { it.isDigit() }?.toIntOrNull()
+                val season = name.split(" ").firstOrNull()?.filter { it.isDigit() }?.toIntOrNull()
                 Episode(
                     href,
-                    "Episode $episode",
-                    season,
-                    episode,
+                    name,
+                    season = if(name.contains(" ")) season else null,
+                    episode = episode,
                 )
-            }
+            }.filter { it.episode != null }
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.year = year
@@ -136,12 +137,6 @@ class MultiplexProvider : MainAPI() {
         }
     }
 
-    private data class ResponseSource(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("type") val type: String?,
-        @JsonProperty("label") val label: String?
-    )
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -150,39 +145,26 @@ class MultiplexProvider : MainAPI() {
     ): Boolean {
 
         val document = app.get(data).document
-
         val id = document.selectFirst("div#muvipro_player_content_id")!!.attr("data-id")
-        val server = app.post(
-            "$mainUrl/wp-admin/admin-ajax.php",
-            data = mapOf("action" to "muvipro_player_content", "tab" to "player1", "post_id" to id)
-        ).document.select("iframe").attr("src")
 
-        app.get(server, referer = "$mainUrl/").document.select("script").map { script ->
-            if (script.data().contains("var config = {")) {
-                val source = script.data().substringAfter("sources: [").substringBefore("],")
-                tryParseJson<List<ResponseSource>>("[$source]")?.map { m3u ->
-                    val m3uData = app.get(m3u.file, referer = "https://gdriveplayer.link/").text
-                    val quality =
-                        Regex("\\d{3,4}\\.m3u8").findAll(m3uData).map { it.value }.toList()
-                    quality.forEach {
-                        callback.invoke(
-                            ExtractorLink(
-                                source = name,
-                                name = name,
-                                url = m3u.file.replace("video.m3u8", it),
-                                referer = "https://gdriveplayer.link/",
-                                quality = getQualityFromName("${it.replace(".m3u8", "")}p"),
-                                isM3u8 = true
-                            )
-                        )
-                    }
-                }
-            }
+        document.select("div.tab-content-ajax").apmap {
+            val server = app.post(
+                "$mainUrl/wp-admin/admin-ajax.php",
+                data = mapOf("action" to "muvipro_player_content", "tab" to it.attr("id"), "post_id" to id)
+            ).document.select("iframe").attr("src")
+
+            loadExtractor(httpsify(server), "$mainUrl/", subtitleCallback, callback)
         }
 
         return true
 
     }
 
+    private fun String?.fixImageQuality(): String? {
+        if(this == null) return null
+        val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues
+        if(regex?.isEmpty() == true) return this
+        return this.replace(regex?.get(0) ?: return null, "")
+    }
 
 }

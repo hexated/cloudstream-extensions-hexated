@@ -1,12 +1,12 @@
 // use an integer for version numbers
-version = 4
+version = 3
 
 
 cloudstream {
     language = "id"
     // All of these properties are optional, you can safely remove them
 
-    // description = "Lorem Ipsum"
+    description = "Include: DutaMovie, Ngefilm, Nodrakorid"
     authors = listOf("Hexated")
 
     /**
@@ -23,5 +23,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=ngefilm21.club&sz=%size%"
+    iconUrl = "https://www.google.com/s2/favicons?domain=gomov.bio&sz=%size%"
 }

@@ -21,6 +21,7 @@ import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
@@ -417,7 +418,7 @@ suspend fun invokeVizcloud(
 ) {
     val id = Regex("(?:/embed[-/]|/e/)([^?/]*)").find(url)?.groupValues?.getOrNull(1)
     app.get("$consumetHelper?query=${id ?: return}&action=vizcloud")
-        .parsedSafe<VizcloudResponses>()?.data?.media?.sources?.map {
+        .parsedSafe<VizcloudResponses>()?.result?.sources?.map {
             M3u8Helper.generateM3u8(
                 "Vizcloud",
                 it.file ?: return@map,
@@ -557,6 +558,39 @@ suspend fun invokeSmashyRip(
             SubtitleFile(
                 lang.orEmpty().ifEmpty { return@map },
                 link
+            )
+        )
+    }
+
+}
+
+suspend fun invokeSmashyIm(
+    name: String,
+    url: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val script =
+        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
+
+    val sources =
+        Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
+    val subtitles =
+        Regex("['\"]?subtitle['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
+
+    M3u8Helper.generateM3u8(
+        "Smashy [$name]",
+        sources,
+        ""
+    ).forEach(callback)
+
+    subtitles.split(",").map { sub ->
+        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim()
+        val trimmedSubLink = sub.removePrefix("[$lang]").trim().substringAfter("?url=")
+        subtitleCallback.invoke(
+            SubtitleFile(
+                lang.takeIf { !it.isNullOrEmpty() } ?: return@map,
+                trimmedSubLink
             )
         )
     }
@@ -922,7 +956,7 @@ suspend fun searchWatchOnline(
 }
 
 //modified code from https://github.com/jmir1/aniyomi-extensions/blob/master/src/all/kamyroll/src/eu/kanade/tachiyomi/animeextension/all/kamyroll/AccessTokenInterceptor.kt
-fun getCrunchyrollToken(): Map<String, String> {
+suspend fun getCrunchyrollToken(): Map<String, String> {
     val client = app.baseClient.newBuilder()
         .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("cr-unblocker.us.to", 1080)))
         .build()
@@ -942,7 +976,7 @@ fun getCrunchyrollToken(): Map<String, String> {
             "Authorization" to "Basic ${BuildConfig.CRUNCHYROLL_BASIC_TOKEN}"
         ),
         data = mapOf(
-            "refresh_token" to BuildConfig.CRUNCHYROLL_REFRESH_TOKEN,
+            "refresh_token" to app.get(BuildConfig.CRUNCHYROLL_REFRESH_TOKEN).text,
             "grant_type" to "refresh_token",
             "scope" to "offline_access"
         )
@@ -1807,8 +1841,8 @@ object RabbitStream {
             if (sources == null || encryptedMap.encrypted == false) {
                 response.parsedSafe()
             } else {
-                val decrypted =
-                    decryptMapped<List<Sources>>(sources, decryptKey)
+                val (realKey, encData) = extractRealKey(sources, decryptKey)
+                val decrypted = decryptMapped<List<Sources>>(encData, realKey)
                 SourceObject(
                     sources = decrypted,
                     tracks = encryptedMap.tracks
@@ -1951,7 +1985,21 @@ object RabbitStream {
     }
 
     suspend fun getZoroKey(): String {
-        return app.get("https://raw.githubusercontent.com/enimax-anime/key/e0/key.txt").text
+        return app.get("https://raw.githubusercontent.com/enimax-anime/key/e6/key.txt").text
+    }
+
+    private fun extractRealKey(originalString: String?, stops: String) : Pair<String,String> {
+        val table = parseJson<List<List<Int>>>(stops)
+        val decryptedKey = StringBuilder()
+        var offset = 0
+        var encryptedString = originalString
+
+        table.forEach { (start, end) ->
+            decryptedKey.append(encryptedString?.substring(start - offset, end - offset))
+            encryptedString = encryptedString?.substring(0, start - offset) + encryptedString?.substring(end - offset)
+            offset += end - start
+        }
+        return decryptedKey.toString() to encryptedString.toString()
     }
 
     private inline fun <reified T> decryptMapped(input: String, key: String): T? {

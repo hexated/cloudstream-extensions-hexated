@@ -19,8 +19,11 @@ open class TimefourTv : MainAPI() {
     )
 
     companion object {
-        const val daddyUrl = "https://daddylive.watch"
-        val daddyHost: String = URI(daddyUrl).host.split(".").first()
+        const val daddyUrl = "https://daddylivehd.com"
+        val daddyHost: String = daddyUrl.getHost()
+        private fun String.getHost(): String {
+            return URI(this).host.substringBeforeLast(".").substringAfterLast(".")
+        }
     }
 
     override val mainPage = mainPageOf(

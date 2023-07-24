@@ -30,6 +30,7 @@ class Nekopoi : MainAPI() {
             "SendCm",
             "GoogleDrive",
         )
+        const val mirroredHost = "https://www.mirrored.to"
 
         fun getStatus(t: String?): ShowStatus {
             return when (t) {
@@ -155,7 +156,7 @@ class Nekopoi : MainAPI() {
                     ) to ele.selectFirst("a:contains(ouo)")
                         ?.attr("href")
                 }.filter { it.first != Qualities.P360.value }.map {
-                    val bypassedAds = bypassMirrored(bypassOuo(it.second ?: return@map) ?: return@map)
+                    val bypassedAds = bypassMirrored(bypassOuo(it.second))
                     bypassedAds.apmap ads@{ adsLink ->
                         loadExtractor(
                             fixEmbed(adsLink) ?: return@ads,
@@ -225,21 +226,20 @@ class Nekopoi : MainAPI() {
         return res.headers["location"]
     }
 
-    private suspend fun bypassMirrored(url: String): List<String?> {
-        val request = app.get(url)
-        val hostUrl = getBaseUrl(request.url)
+    private suspend fun bypassMirrored(url: String?): List<String?> {
+        val request = app.get(url ?: return emptyList())
         var nextUrl = request.document.selectFirst("div.row div.centered a")?.attr("href")
         nextUrl = app.get(nextUrl ?: return emptyList()).text.substringAfter("\"GET\", \"")
             .substringBefore("\"")
-        return app.get(fixUrl(nextUrl, hostUrl)).document.select("table.hoverable tbody tr")
+        return app.get(fixUrl(nextUrl, mirroredHost)).document.select("table.hoverable tbody tr")
             .filter { mirror ->
                 !mirrorIsBlackList(mirror.selectFirst("img")?.attr("alt"))
             }.apmap {
                 val fileLink = it.selectFirst("a")?.attr("href")
                 app.get(
                     fixUrl(
-                        fileLink.toString(),
-                        hostUrl
+                        fileLink ?: return@apmap null,
+                        mirroredHost
                     )
                 ).document.selectFirst("div.code_wrap code")?.text()
             }
