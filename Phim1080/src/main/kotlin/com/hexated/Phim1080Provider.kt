@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.nodes.Element
 
 class Phim1080Provider : MainAPI() {
-    override var mainUrl = "https://xem1080.com"
+    override var mainUrl = "https://phimnhanh2.com"
     override var name = "Phim1080"
     override val hasMainPage = true
     override var lang = "vi"
@@ -181,10 +181,11 @@ class Phim1080Provider : MainAPI() {
             referer = data,
             headers = mapOf(
                 "Content-Type" to "application/json",
-                "cookie" to "xem1080=%3D",
+                "cookie" to "phimnhanh=%3D",
                 "X-Requested-With" to "XMLHttpRequest"
             )
         )
+
         val optEncode = if (doc.text.indexOf("\"opt\":\"") != -1) {
             doc.text.substringAfter("\"opt\":\"").substringBefore("\"},")
         } else { "" }
