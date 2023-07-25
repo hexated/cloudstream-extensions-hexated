@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.TvType
 
 class Serienstream : Aniworld() {
@@ -9,4 +10,8 @@ class Serienstream : Aniworld() {
         TvType.Movie,
         TvType.TvSeries,
     )
+
+    override suspend fun load(url: String): LoadResponse? {
+        return super.load(url).apply { this?.type = TvType.TvSeries }
+    }
 }
