@@ -10,6 +10,7 @@ class AniworldPlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(Aniworld())
+        registerMainAPI(Serienstream())
         registerExtractorAPI(Urochsunloath())
         registerExtractorAPI(Simpulumlamerop())
         registerExtractorAPI(Dooood())

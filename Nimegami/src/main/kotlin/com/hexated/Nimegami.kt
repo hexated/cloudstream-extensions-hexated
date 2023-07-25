@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
@@ -21,9 +22,12 @@ class Nimegami : MainAPI() {
 
     companion object {
         fun getType(t: String): TvType {
-            return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
-            else if (t.contains("Movie", true)) TvType.AnimeMovie
-            else TvType.Anime
+            return when {
+                t.contains("Tv", true) -> TvType.AnimeMovie
+                t.contains("Movie", true) -> TvType.AnimeMovie
+                t.contains("OVA", true) || t.contains("Special", true) -> TvType.OVA
+                else -> TvType.Anime
+            }
         }
 
         fun getStatus(t: String?): ShowStatus {
@@ -94,7 +98,7 @@ class Nimegami : MainAPI() {
         val status = getStatus(document.selectFirst("h1[itemprop=headline]")?.text())
         val type = table.getContent("Type").text()
         val description = document.select("div#Sinopsis p").text().trim()
-
+        val trailer = document.selectFirst("div#Trailer iframe")?.attr("src")
 
         val episodes = document.select("div.list_eps_stream li")
             .mapNotNull {
@@ -124,6 +128,7 @@ class Nimegami : MainAPI() {
             plot = description
             this.tags = tags
             this.recommendations = recommendations
+            addTrailer(trailer)
         }
 
     }

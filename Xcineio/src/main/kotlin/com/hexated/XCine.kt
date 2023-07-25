@@ -9,22 +9,22 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 
-class XCine : MainAPI() {
+open class XCine : MainAPI() {
     override var name = "XCine"
-    override var mainUrl = "https://xcine.info"
+    override var mainUrl = "https://xcine.ru"
     override var lang = "de"
     override val hasQuickSearch = true
     override val usesWebView = false
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.TvSeries, TvType.Movie)
-    private val mainAPI = "https://api.xcine.info"
+    open var mainAPI = "https://api.xcine.ru"
 
     override val mainPage = mainPageOf(
-        "$mainAPI/data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=movies&order_by=trending&page=" to "Trending",
-        "$mainAPI/data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=movies&order_by=Views&page=" to "Most View Filme",
-        "$mainAPI/data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=tvseries&order_by=Trending&page=" to "Trending Serien",
-        "$mainAPI/data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=movies&order_by=Updates&page=" to "Updated Filme",
-        "$mainAPI/data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=tvseries&order_by=Updates&page=" to "Updated Serien",
+        "data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=movies&order_by=trending" to "Trending",
+        "data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=movies&order_by=Views" to "Most View Filme",
+        "data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=tvseries&order_by=Trending" to "Trending Serien",
+        "data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=movies&order_by=Updates" to "Updated Filme",
+        "data/browse/?lang=2&keyword=&year=&rating=&votes=&genre=&country=&cast=&directors=&type=tvseries&order_by=Updates" to "Updated Serien",
     )
 
     private fun getImageUrl(link: String?): String? {
@@ -32,12 +32,17 @@ class XCine : MainAPI() {
         return if (link.startsWith("/")) "https://image.tmdb.org/t/p/w500/$link" else link
     }
 
+    private fun getBackupImageUrl(link: String?): String? {
+        if (link == null) return null
+        return "https://cdn.movie4k.stream/data${link.substringAfter("/data")}"
+    }
+
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
         val home =
-            app.get(request.data + page, referer = "$mainUrl/")
+            app.get("$mainAPI/${request.data}&page=$page", referer = "$mainUrl/")
                 .parsedSafe<MediaResponse>()?.movies?.mapNotNull { res ->
                     res.toSearchResponse()
                 } ?: throw ErrorLoadingException()
@@ -48,11 +53,11 @@ class XCine : MainAPI() {
         return newAnimeSearchResponse(
             title ?: original_title ?: return null,
 //            Data(_id).toJson(),
-            "$_id",
+            Link(id=_id).toJson(),
             TvType.TvSeries,
             false
         ) {
-            this.posterUrl = getImageUrl(poster_path ?: backdrop_path)
+            this.posterUrl = getImageUrl(poster_path ?: backdrop_path) ?: getBackupImageUrl(img)
             addDub(last_updated_epi?.toIntOrNull())
             addSub(totalEpisodes?.toIntOrNull())
         }
@@ -61,16 +66,14 @@ class XCine : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun search(query: String): List<SearchResponse> {
-        return app.get(
-            "$mainAPI/data/browse/?lang=2&keyword=$query&year=&rating=&votes=&genre=&country=&cast=&directors=&type=&order_by=&page=1",
-            referer = "$mainUrl/"
-        ).parsedSafe<MediaResponse>()?.movies?.mapNotNull { res ->
-            res.toSearchResponse()
+        val res = app.get("$mainAPI/data/search/?lang=2&keyword=$query", referer = "$mainUrl/").text
+        return tryParseJson<ArrayList<Media>>(res)?.mapNotNull {
+            it.toSearchResponse()
         } ?: throw ErrorLoadingException()
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val id = url.replace("$mainUrl/", "")
+        val id = parseJson<Link>(url).id
 
         val res = app.get("$mainAPI/data/watch/?_id=$id", referer = "$mainUrl/")
             .parsedSafe<MediaDetail>() ?: throw ErrorLoadingException()
@@ -84,20 +87,13 @@ class XCine : MainAPI() {
             }
 
         return if (type == "tv") {
-            val episodes = mutableListOf<Episode>()
-            val json =
-                app.get("$mainAPI/data/seasons/?lang=2&original_title=${res.original_title}").text.let {
-                    tryParseJson<List<Season>>(it)
-                }
-            json?.map { season ->
-                season.streams?.distinctBy { it.e }?.map { eps ->
-                    episodes.add(Episode(data = season.streams.filter { it.e == eps.e }
-                        .map { Link(it.stream) }
-                        .toJson(), episode = eps.e, season = season.s))
-                }
-            }
+            val episodes = res.streams?.groupBy { it.e.toString().toIntOrNull() }?.mapNotNull { eps ->
+                val epsNum = eps.key
+                val epsLink = eps.value.map { it.stream }.toJson()
+                Episode(epsLink, episode = epsNum)
+            } ?: emptyList()
             newTvSeriesLoadResponse(
-                res.original_title ?: res.title ?: return null,
+                res.title ?: res.original_title ?: return null,
                 url,
                 TvType.TvSeries,
                 episodes
@@ -135,7 +131,7 @@ class XCine : MainAPI() {
         val loadData = parseJson<List<Link>>(data)
         loadData.apmap {
             val link = fixUrlNull(it.link) ?: return@apmap null
-            if(link.startsWith("https://dl.streamcloud")) {
+            if (link.startsWith("https://dl.streamcloud")) {
                 callback.invoke(
                     ExtractorLink(
                         this.name,
@@ -159,7 +155,8 @@ class XCine : MainAPI() {
     }
 
     data class Link(
-        val link: String?,
+        val link: String? = null,
+        val id: String? = null,
     )
 
     data class Season(
@@ -173,7 +170,7 @@ class XCine : MainAPI() {
     data class Streams(
         @JsonProperty("_id") val _id: String? = null,
         @JsonProperty("stream") val stream: String? = null,
-        @JsonProperty("e") val e: Int? = null,
+        @JsonProperty("e") val e: Any? = null,
         @JsonProperty("e_title") val e_title: String? = null,
     )
 
@@ -199,6 +196,7 @@ class XCine : MainAPI() {
         @JsonProperty("title") val title: String? = null,
         @JsonProperty("poster_path") val poster_path: String? = null,
         @JsonProperty("backdrop_path") val backdrop_path: String? = null,
+        @JsonProperty("img") val img: String? = null,
         @JsonProperty("imdb_id") val imdb_id: String? = null,
         @JsonProperty("totalEpisodes") val totalEpisodes: String? = null,
         @JsonProperty("last_updated_epi") val last_updated_epi: String? = null,

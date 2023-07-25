@@ -13,12 +13,11 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.URI
 
-class Aniworld : MainAPI() {
+open class Aniworld : MainAPI() {
     override var mainUrl = "https://aniworld.to"
     override var name = "Aniworld"
     override val hasMainPage = true
     override var lang = "de"
-    override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
         TvType.Anime,

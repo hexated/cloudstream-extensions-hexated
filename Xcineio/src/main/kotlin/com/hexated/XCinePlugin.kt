@@ -10,6 +10,7 @@ class XCinePlugin: Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(XCine())
+        registerMainAPI(Movie4k())
         registerExtractorAPI(StreamTapeAdblockuser())
         registerExtractorAPI(StreamTapeTo())
         registerExtractorAPI(Mixdrp())
