@@ -27,15 +27,6 @@ open class Mitedrive : ExtractorApi() {
             )
         ).parsedSafe<Responses>()?.data?.url
 
-        val headers = mapOf(
-            "Accept" to "*/*",
-            "Connection" to "keep-alive",
-            "Sec-Fetch-Dest" to "empty",
-            "Sec-Fetch-Mode" to "cors",
-            "Sec-Fetch-Site" to "cross-site",
-            "Origin" to mainUrl,
-        )
-
         callback.invoke(
             ExtractorLink(
                 this.name,
@@ -43,7 +34,11 @@ open class Mitedrive : ExtractorApi() {
                 video ?: return,
                 "$mainUrl/",
                 Qualities.Unknown.value,
-                headers = headers
+                headers = mapOf(
+                    "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                    "Sec-Fetch-Dest" to "video",
+                    "Sec-Fetch-Mode" to "no-cors",
+                )
             )
         )
 

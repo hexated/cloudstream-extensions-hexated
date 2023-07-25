@@ -23,7 +23,7 @@ class Nimegami : MainAPI() {
     companion object {
         fun getType(t: String): TvType {
             return when {
-                t.contains("Tv", true) -> TvType.AnimeMovie
+                t.contains("Tv", true) -> TvType.Anime
                 t.contains("Movie", true) -> TvType.AnimeMovie
                 t.contains("OVA", true) || t.contains("Special", true) -> TvType.OVA
                 else -> TvType.Anime
