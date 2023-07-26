@@ -29,6 +29,7 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeFourCartoon
+import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -308,6 +309,9 @@ class SoraStreamLite : SoraStream() {
                     res.episode,
                     callback
                 )
+            },
+            {
+                invokeMultimovies(res.title,res.season,res.episode,subtitleCallback,callback)
             }
         )
 

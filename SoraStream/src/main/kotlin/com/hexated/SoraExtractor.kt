@@ -6,6 +6,8 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.hexated.RabbitStream.extractRabbitStream
+import com.lagradost.cloudstream3.extractors.Filesim
+import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
@@ -430,6 +432,41 @@ object SoraExtractor : SoraStream() {
                     "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
                 ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = url
             ).parsed<ResponseHash>().embed_url
+
+            if (!source.contains("youtube")) {
+                loadExtractor(source, "$referer/", subtitleCallback, callback)
+            }
+        }
+    }
+
+    suspend fun invokeMultimovies(
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.createSlug()
+        val url = if (season == null) {
+            "$multimoviesAPI/movies/$fixTitle"
+        } else {
+            "$multimoviesAPI/episodes/$fixTitle-${season}x${episode}"
+        }
+
+        val res = app.get(url)
+        val referer = getBaseUrl(res.url)
+        val document = res.document
+        val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
+        val type = if (url.contains("/movies/")) "movie" else "tv"
+
+        document.select("ul#playeroptionsul > li").map {
+            it.attr("data-nume")
+        }.apmap { nume ->
+            val source = app.post(
+                url = "$referer/wp-admin/admin-ajax.php", data = mapOf(
+                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
+                ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = url
+            ).parsed<ResponseHash>().embed_url.let { Jsoup.parse(it).select("IFRAME").attr("SRC") }
 
             if (!source.contains("youtube")) {
                 loadExtractor(source, "$referer/", subtitleCallback, callback)
@@ -2029,7 +2066,7 @@ object SoraExtractor : SoraStream() {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
-                it.first.contains("/ffix") && !isAnime -> {
+                it.first.contains("/fix.php") && !isAnime -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
                 it.first.contains("/gtop") -> {
@@ -2043,6 +2080,9 @@ object SoraExtractor : SoraStream() {
                 }
                 it.first.contains("/im.php") && !isAnime -> {
                     invokeSmashyIm(it.second, it.first, subtitleCallback, callback)
+                }
+                it.first.contains("/rw.php") && !isAnime -> {
+                    invokeSmashyRw(it.second, it.first, subtitleCallback, callback)
                 }
                 else -> return@apmap
             }
@@ -3223,5 +3263,20 @@ object SoraExtractor : SoraStream() {
     }
 
 
+}
+
+class Animefever : Filesim() {
+    override val name = "Animefever"
+    override var mainUrl = "https://animefever.fun"
+}
+
+class Multimovies : Filesim() {
+    override val name = "Multimovies"
+    override var mainUrl = "https://multimovies.cloud"
+}
+
+class MultimoviesSB : StreamSB() {
+    override var name = "Multimovies"
+    override var mainUrl = "https://multimovies.website"
 }
 

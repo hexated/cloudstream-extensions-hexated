@@ -597,6 +597,32 @@ suspend fun invokeSmashyIm(
 
 }
 
+suspend fun invokeSmashyRw(
+    name: String,
+    url: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val res = app.get(url).document
+    val video = res.selectFirst("media-player")?.attr("src")
+
+    M3u8Helper.generateM3u8(
+        "Smashy [$name]",
+        video ?: return,
+        ""
+    ).forEach(callback)
+
+    res.select("track").map { track ->
+        subtitleCallback.invoke(
+            SubtitleFile(
+                track.attr("label"),
+                track.attr("src"),
+            )
+        )
+    }
+
+}
+
 suspend fun getDumpIdAndType(title: String?, year: Int?, season: Int?): Pair<String?, Int?> {
     val res = tryParseJson<DumpQuickSearchData>(
         queryApi(

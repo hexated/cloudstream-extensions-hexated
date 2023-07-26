@@ -50,6 +50,7 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeFourCartoon
+import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
@@ -98,7 +99,6 @@ open class SoraStream : TmdbProvider() {
         const val uniqueStreamAPI = "https://uniquestream.net"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
-        const val xMovieAPI = "https://xemovies.to"
         const val aniwatchAPI = "https://aniwatch.to"
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
@@ -114,7 +114,6 @@ open class SoraStream : TmdbProvider() {
         const val moviesbayAPI = "https://moviesbay.live"
         const val rStreamAPI = "https://remotestre.am"
         const val flixonAPI = "https://flixon.lol"
-        const val animeKaizokuAPI = "https://animekaizoku.com"
         const val movie123NetAPI = "https://ww8.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
@@ -132,6 +131,7 @@ open class SoraStream : TmdbProvider() {
         const val emoviesAPI = "https://emovies.si"
         const val pobmoviesAPI = "https://pobmovies.cam"
         const val fourCartoonAPI = "https://4cartoon.net"
+        const val multimoviesAPI = "https://multimovies.xyz"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -157,6 +157,8 @@ open class SoraStream : TmdbProvider() {
         const val baymoviesAPI = "https://opengatewayindex.pages.dev"
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
+        const val animeKaizokuAPI = "https://animekaizoku.com"
+        const val xMovieAPI = "https://xemovies.to"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -815,6 +817,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if(!res.isAnime) invokeFourCartoon(res.title, res.year, res.season, res.episode, callback)
+            },
+            {
+                invokeMultimovies(res.title,res.season,res.episode,subtitleCallback,callback)
             }
         )
 
