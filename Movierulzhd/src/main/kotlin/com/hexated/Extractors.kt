@@ -112,6 +112,34 @@ open class Sbflix : ExtractorApi() {
 
 }
 
+open class Akamaicdn : ExtractorApi() {
+    override val name = "Akamaicdn"
+    override val mainUrl = "https://akamaicdn.life"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get(url, referer = referer).document
+        val mapper = res.select("script:containsData(sniff)").last()?.data()?.substringAfter("sniff(")
+            ?.substringBefore(");")?.split(",")?.map { it.replace("\"", "").trim() } ?: return
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                "$mainUrl/m3u8/${mapper[1]}/${mapper[2]}/master.txt?s=1&cache=1",
+                url,
+                Qualities.Unknown.value,
+                isM3u8 = true,
+            )
+        )
+    }
+
+}
+
 suspend fun invokeTwoEmbed(
     url: String? = null,
     subtitleCallback: (SubtitleFile) -> Unit,
