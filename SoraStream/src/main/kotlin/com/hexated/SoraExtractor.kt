@@ -416,27 +416,7 @@ object SoraExtractor : SoraStream() {
         } else {
             "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
         }
-
-        val res = app.get(url)
-        if (!res.isSuccessful) return
-        val referer = getBaseUrl(res.url)
-        val document = res.document
-        val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
-        val type = if (url.contains("/movie/")) "movie" else "tv"
-
-        document.select("ul#playeroptionsul > li").map {
-            it.attr("data-nume")
-        }.apmap { nume ->
-            val source = app.post(
-                url = "$referer/wp-admin/admin-ajax.php", data = mapOf(
-                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
-                ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = url
-            ).parsed<ResponseHash>().embed_url
-
-            if (!source.contains("youtube")) {
-                loadExtractor(source, "$referer/", subtitleCallback, callback)
-            }
-        }
+        invokeWpmovies(url,subtitleCallback, callback)
     }
 
     suspend fun invokeMultimovies(
@@ -452,22 +432,47 @@ object SoraExtractor : SoraStream() {
         } else {
             "$multimoviesAPI/episodes/$fixTitle-${season}x${episode}"
         }
+        invokeWpmovies(url,subtitleCallback, callback,true)
+    }
 
-        val res = app.get(url)
+    suspend fun invokeNetmovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.createSlug()
+        val url = if (season == null) {
+            "$netmoviesAPI/movies/$fixTitle-$year"
+        } else {
+            "$netmoviesAPI/episodes/$fixTitle-${season}x${episode}"
+        }
+        invokeWpmovies(url,subtitleCallback, callback)
+    }
+
+    private suspend fun invokeWpmovies(
+        url: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        fixIframe: Boolean = false,
+    ) {
+        val res = app.get(url ?: return)
         val referer = getBaseUrl(res.url)
         val document = res.document
-        val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
-        val type = if (url.contains("/movies/")) "movie" else "tv"
-
         document.select("ul#playeroptionsul > li").map {
-            it.attr("data-nume")
-        }.apmap { nume ->
+            Triple(
+                it.attr("data-post"),
+                it.attr("data-nume"),
+                it.attr("data-type")
+            )
+        }.apmap { (id, nume, type) ->
             val source = app.post(
                 url = "$referer/wp-admin/admin-ajax.php", data = mapOf(
                     "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
                 ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = url
-            ).parsed<ResponseHash>().embed_url.let { Jsoup.parse(it).select("IFRAME").attr("SRC") }
-
+            ).parsed<ResponseHash>().embed_url.let { if(fixIframe) Jsoup.parse(it).select("IFRAME").attr("SRC") else it }
             if (!source.contains("youtube")) {
                 loadExtractor(source, "$referer/", subtitleCallback, callback)
             }
