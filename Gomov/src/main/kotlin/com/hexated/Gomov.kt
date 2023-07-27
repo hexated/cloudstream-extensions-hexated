@@ -79,7 +79,7 @@ open class Gomov : MainAPI() {
         val document = app.get(url).document
 
         val title =
-            document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.trim()
+            document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.substringBefore("Episode")?.trim()
                 .toString()
         val poster =
             fixUrlNull(document.selectFirst("figure.pull-left > img")?.attr("src"))?.fixImageQuality()
