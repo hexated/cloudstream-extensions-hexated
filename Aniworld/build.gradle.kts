@@ -6,7 +6,7 @@ cloudstream {
     language = "de"
     // All of these properties are optional, you can safely remove them
 
-    description = "Included: Serienstream"
+    description = "Include: Serienstream"
     authors = listOf("Hexated")
 
     /**
