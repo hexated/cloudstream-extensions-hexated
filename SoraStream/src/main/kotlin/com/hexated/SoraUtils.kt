@@ -107,8 +107,8 @@ val mimeType = arrayOf(
 
 data class FilmxyCookies(
     val phpsessid: String? = null,
-    val wLog: String? = null,
-    val wSec: String? = null,
+    val wpSec: String? = null,
+    val wpGuest: String? = null,
 )
 
 fun String.filterIframe(
@@ -901,7 +901,7 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
     }
 }
 
-suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies {
+suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
 
     val url = if (season == null) {
         "${filmxyAPI}/movie/$imdbId"
@@ -941,11 +941,10 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Filmx
 
     val cookieJar = session.baseClient.cookieJar.loadForRequest(cookieUrl.toHttpUrl())
     phpsessid = cookieJar.first { it.name == "PHPSESSID" }.value
-    val wLog =
-        cookieJar.first { it.name == "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" }.value
-    val wSec = cookieJar.first { it.name == "wordpress_sec_8bf9d5433ac88cc9a3a396d6b154cd01" }.value
+    val wpSec = cookieJar.first { it.name == "wp-secure-id" }.value
+    val wpGuest = cookieJar.first { it.name == "wp-guest-token" }.value
 
-    return FilmxyCookies(phpsessid, wLog, wSec)
+    return FilmxyCookies(phpsessid, wpSec, wpGuest)
 }
 
 fun Document.findTvMoviesIframe(): String? {

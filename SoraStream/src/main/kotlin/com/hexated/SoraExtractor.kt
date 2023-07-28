@@ -596,16 +596,16 @@ object SoraExtractor : SoraStream() {
         } else {
             "${filmxyAPI}/tv/$imdbId"
         }
-        val filmxyCookies = getFilmxyCookies(imdbId, season)
+        val filmxyCookies = getFilmxyCookies(imdbId, season) ?: return
 
-        val cookiesDoc = mapOf(
+        val cookies = mapOf(
             "G_ENABLED_IDPS" to "google",
-            "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" to (filmxyCookies.wLog
-                ?: return),
-            "PHPSESSID" to (filmxyCookies.phpsessid ?: return)
+            "wp-secure-id" to "${filmxyCookies.wpSec}",
+            "wp-guest-token" to "${filmxyCookies.wpGuest}",
+            "PHPSESSID" to "${filmxyCookies.phpsessid}"
         )
 
-        val doc = session.get(url, cookies = cookiesDoc).document
+        val doc = session.get(url, cookies = cookies).document
         val script = doc.selectFirst("script:containsData(var isSingle)")?.data() ?: return
 
         val sourcesData =
@@ -644,16 +644,9 @@ object SoraExtractor : SoraStream() {
             "&linkIDs%5B%5D=$it"
         }?.replace("\"", "")
 
-        val body = "action=get_vid_links$linkIDs&user_id=$userId&nonce=$userNonce".toRequestBody()
-        val cookiesJson = mapOf(
-            "G_ENABLED_IDPS" to "google",
-            "PHPSESSID" to "${filmxyCookies.phpsessid}",
-            "wordpress_logged_in_8bf9d5433ac88cc9a3a396d6b154cd01" to "${filmxyCookies.wLog}",
-            "wordpress_sec_8bf9d5433ac88cc9a3a396d6b154cd01" to "${filmxyCookies.wSec}"
-        )
         val json = app.post(
             "$filmxyAPI/wp-admin/admin-ajax.php",
-            requestBody = body,
+            requestBody = "action=get_vid_links$linkIDs&user_id=$userId&nonce=$userNonce".toRequestBody(),
             referer = url,
             headers = mapOf(
                 "Accept" to "*/*",
@@ -662,7 +655,7 @@ object SoraExtractor : SoraStream() {
                 "Origin" to filmxyAPI,
                 "X-Requested-With" to "XMLHttpRequest",
             ),
-            cookies = cookiesJson
+            cookies = cookies
         ).text.let { tryParseJson<HashMap<String, String>>(it) }
 
         sources?.map { source ->
