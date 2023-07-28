@@ -2064,7 +2064,7 @@ object SoraExtractor : SoraStream() {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
-                it.second.equals("Player F", true) || it.second.equals("Player N", true) && !isAnime -> {
+                (it.second.equals("Player F", true) || it.second.equals("Player N", true)) && !isAnime -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
                 it.first.contains("/gtop") -> {
