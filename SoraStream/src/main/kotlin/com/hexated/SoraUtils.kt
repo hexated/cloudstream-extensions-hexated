@@ -105,12 +105,6 @@ val mimeType = arrayOf(
     "video/x-msvideo"
 )
 
-data class FilmxyCookies(
-    val phpsessid: String? = null,
-    val wpSec: String? = null,
-    val wpGuest: String? = null,
-)
-
 fun String.filterIframe(
     seasonNum: Int? = null,
     lastSeason: Int? = null,
@@ -901,7 +895,7 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
     }
 }
 
-suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): FilmxyCookies? {
+suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Map<String,String> {
 
     val url = if (season == null) {
         "${filmxyAPI}/movie/$imdbId"
@@ -917,7 +911,7 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Filmx
         ),
     )
 
-    if (!res.isSuccessful) return FilmxyCookies()
+    if (!res.isSuccessful) return emptyMap()
 
     val userNonce =
         res.document.select("script").find { it.data().contains("var userNonce") }?.data()?.let {
@@ -938,13 +932,8 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Filmx
             "X-Requested-With" to "XMLHttpRequest",
         )
     )
-
-    val cookieJar = session.baseClient.cookieJar.loadForRequest(cookieUrl.toHttpUrl())
-    phpsessid = cookieJar.first { it.name == "PHPSESSID" }.value
-    val wpSec = cookieJar.first { it.name == "wp-secure-id" }.value
-    val wpGuest = cookieJar.first { it.name == "wp-guest-token" }.value
-
-    return FilmxyCookies(phpsessid, wpSec, wpGuest)
+    val cookieJar = session.baseClient.cookieJar.loadForRequest(cookieUrl.toHttpUrl()).associate { it.name to it.value }.toMutableMap()
+    return cookieJar.plus(mapOf("G_ENABLED_IDPS" to "google"))
 }
 
 fun Document.findTvMoviesIframe(): String? {

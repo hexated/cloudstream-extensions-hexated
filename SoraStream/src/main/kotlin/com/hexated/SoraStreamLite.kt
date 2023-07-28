@@ -29,6 +29,7 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeFourCartoon
+import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -345,7 +346,10 @@ class SoraStreamLite : SoraStream() {
                     subtitleCallback,
                     callback
                 )
-            }
+            },
+            {
+                invokeMoment(res.imdbId, res.season, res.episode, callback)
+            },
         )
 
         return true

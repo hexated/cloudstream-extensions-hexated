@@ -50,6 +50,7 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeFourCartoon
+import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
@@ -135,6 +136,7 @@ open class SoraStream : TmdbProvider() {
         const val fourCartoonAPI = "https://4cartoon.net"
         const val multimoviesAPI = "https://multimovies.xyz"
         const val netmoviesAPI = "https://netmovies.to"
+        const val momentAPI = "https://moment-explanation-i-244.site"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -834,6 +836,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)
+            },
+            {
+                invokeMoment(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeEmovies(

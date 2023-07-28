@@ -596,16 +596,8 @@ object SoraExtractor : SoraStream() {
         } else {
             "${filmxyAPI}/tv/$imdbId"
         }
-        val filmxyCookies = getFilmxyCookies(imdbId, season) ?: return
-
-        val cookies = mapOf(
-            "G_ENABLED_IDPS" to "google",
-            "wp-secure-id" to "${filmxyCookies.wpSec}",
-            "wp-guest-token" to "${filmxyCookies.wpGuest}",
-            "PHPSESSID" to "${filmxyCookies.phpsessid}"
-        )
-
-        val doc = session.get(url, cookies = cookies).document
+        val filmxyCookies = getFilmxyCookies(imdbId, season)
+        val doc = session.get(url, cookies = filmxyCookies).document
         val script = doc.selectFirst("script:containsData(var isSingle)")?.data() ?: return
 
         val sourcesData =
@@ -655,7 +647,7 @@ object SoraExtractor : SoraStream() {
                 "Origin" to filmxyAPI,
                 "X-Requested-With" to "XMLHttpRequest",
             ),
-            cookies = cookies
+            cookies = filmxyCookies
         ).text.let { tryParseJson<HashMap<String, String>>(it) }
 
         sources?.map { source ->
@@ -3110,17 +3102,38 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
+        invokeHindi(navyAPI, navyAPI, imdbId, season, episode, callback)
+    }
+
+    suspend fun invokeMoment(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeHindi(momentAPI, "https://hdmovies4u.green", imdbId, season, episode, callback)
+    }
+
+    private suspend fun invokeHindi(
+        host: String? = null,
+        referer: String? = null,
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
         val res = app.get(
-            "$navyAPI/play/$imdbId",
-            referer = "$navyAPI/"
+            "$host/play/$imdbId",
+            referer = "$referer/"
         ).document.selectFirst("script:containsData(player =)")?.data()?.substringAfter("{")
             ?.substringBefore(";")?.substringBefore(")")
         val json = tryParseJson<NavyPlaylist>("{${res ?: return}")
         val headers = mapOf(
             "X-CSRF-TOKEN" to "${json?.key}"
         )
+
         val serverRes = app.get(
-            fixUrl(json?.file ?: return, navyAPI), headers = headers, referer = "$navyAPI/"
+            fixUrl(json?.file ?: return, navyAPI), headers = headers, referer = "$referer/"
         ).text.replace(Regex(""",\s*\[]"""), "")
         val server = tryParseJson<ArrayList<NavyServer>>(serverRes).let { server ->
             if (season == null) {
@@ -3135,15 +3148,15 @@ object SoraExtractor : SoraStream() {
         }
 
         val path = app.post(
-            "${navyAPI}/playlist/${server ?: return}.txt",
+            "${host}/playlist/${server ?: return}.txt",
             headers = headers,
-            referer = "$navyAPI/"
+            referer = "$referer/"
         ).text
 
         M3u8Helper.generateM3u8(
-            "Navy",
+            if(host == navyAPI) "Navy" else "Moment",
             path,
-            "${navyAPI}/"
+            "${referer}/"
         ).forEach(callback)
 
     }
