@@ -918,7 +918,7 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Map<S
             Regex("var\\suserNonce.*?\"(\\S+?)\";").find(it)?.groupValues?.get(1)
         }
 
-    var phpsessid = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
+    val phpsessid = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
         .first { it.name == "PHPSESSID" }.value
 
     session.post(

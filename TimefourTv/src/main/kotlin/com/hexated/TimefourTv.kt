@@ -1,15 +1,16 @@
 package com.hexated
 
+import com.hexated.TimefourTvExtractor.getBaseUrl
 import com.hexated.TimefourTvExtractor.getLink
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-import java.net.URI
 
 open class TimefourTv : MainAPI() {
     final override var mainUrl = "https://time4tv.stream"
+    var daddyUrl = "https://daddylivehd.com"
     override var name = "Time4tv"
     override val hasDownloadSupport = false
     override val hasMainPage = true
@@ -17,14 +18,6 @@ open class TimefourTv : MainAPI() {
     override val supportedTypes = setOf(
         TvType.Live
     )
-
-    companion object {
-        const val daddyUrl = "https://daddylivehd.com"
-        val daddyHost: String = daddyUrl.getHost()
-        private fun String.getHost(): String {
-            return URI(this).host.substringBeforeLast(".").substringAfterLast(".")
-        }
-    }
 
     override val mainPage = mainPageOf(
         "$mainUrl/tv-channels" to "All Channels",
@@ -145,6 +138,7 @@ open class TimefourTv : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
 
         val res = app.get(url)
+        daddyUrl = getBaseUrl(res.url)
         if (!res.isSuccessful) return loadSchedule(url)
 
         val document = res.document
@@ -177,9 +171,11 @@ open class TimefourTv : MainAPI() {
                     }
                 }
             } ?: listOf(
-            Episode(
-                document.selectFirst("div#content iframe")?.attr("src") ?: return null, title
-            )
+            newEpisode(
+                document.selectFirst("div#content iframe#thatframe")?.attr("src") ?: return null
+            ) {
+                this.name = title
+            }
         ) ?: throw ErrorLoadingException("Refresh page")
         return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster

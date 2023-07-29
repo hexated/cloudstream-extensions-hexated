@@ -10,7 +10,7 @@ var mainServer: String? = null
 
 object TimefourTvExtractor : TimefourTv() {
 
-    private fun getBaseUrl(url: String): String {
+    fun getBaseUrl(url: String): String {
         return URI(url).let {
             "${it.scheme}://${it.host}"
         }
@@ -72,7 +72,7 @@ object TimefourTvExtractor : TimefourTv() {
             return getSportLink(url)
         }
 
-        if(url.contains(daddyHost, true)) {
+        if(url.contains(daddyUrl.getHost(), true)) {
             mainServer = getBaseUrl(url)
             return getFinalLink(app.get(url, referer = daddyUrl))
         }
@@ -126,4 +126,9 @@ object TimefourTvExtractor : TimefourTv() {
                 ?.joinToString("")
         }
     }
+
+    private fun String.getHost(): String {
+        return URI(this).host.substringBeforeLast(".").substringAfterLast(".")
+    }
+
 }
