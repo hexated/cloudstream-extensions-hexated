@@ -20,6 +20,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invokeDahmerMovies
+import com.hexated.SoraExtractor.invokeDoomovies
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeEdithxmovies
 import com.hexated.SoraExtractor.invokeFDMovies
@@ -34,7 +35,6 @@ import com.hexated.SoraExtractor.invokeJmdkhMovies
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
-import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMoviesbay
 import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeNavy
@@ -116,7 +116,6 @@ open class SoraStream : TmdbProvider() {
         const val moviesbayAPI = "https://moviesbay.live"
         const val rStreamAPI = "https://remotestre.am"
         const val flixonAPI = "https://flixon.lol"
-        const val movie123NetAPI = "https://ww8.0123movie.net"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         val gomoviesAPI =
@@ -137,6 +136,7 @@ open class SoraStream : TmdbProvider() {
         const val multimoviesAPI = "https://multimovies.xyz"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
+        const val doomoviesAPI = "https://doomovies.net"
 
         // INDEX SITE
         const val blackMoviesAPI = "https://dl.blacklistedbois.workers.dev/0:"
@@ -162,7 +162,6 @@ open class SoraStream : TmdbProvider() {
         const val baymoviesAPI = "https://opengatewayindex.pages.dev"
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
-        const val animeKaizokuAPI = "https://animekaizoku.com"
         const val xMovieAPI = "https://xemovies.to"
 
         fun getType(t: String?): TvType {
@@ -644,9 +643,6 @@ open class SoraStream : TmdbProvider() {
                 invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokeMovie123Net(res.title, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
                 invokeSmashyStream(
                     res.imdbId,
                     res.season,
@@ -878,7 +874,14 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
-            }
+            },
+            {
+                if (!res.isAnime && res.season == null) invokeDoomovies(
+                    res.title,
+                    subtitleCallback,
+                    callback
+                )
+            },
         )
 
         return true
@@ -1031,13 +1034,6 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("credits") val credits: Credits? = null,
         @JsonProperty("recommendations") val recommendations: ResultsRecommendations? = null,
         @JsonProperty("alternative_titles") val alternative_titles: ResultsAltTitles? = null,
-    )
-
-    data class EmbedJson(
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("link") val link: String? = null,
-        @JsonProperty("sources") val sources: List<String?> = arrayListOf(),
-        @JsonProperty("tracks") val tracks: List<String>? = null,
     )
 
     data class MovieHabData(

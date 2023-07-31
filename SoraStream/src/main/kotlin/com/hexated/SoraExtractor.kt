@@ -8,6 +8,7 @@ import com.lagradost.nicehttp.Session
 import com.hexated.RabbitStream.extractRabbitStream
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.StreamSB
+import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
@@ -42,18 +43,18 @@ object SoraExtractor : SoraStream() {
         val media = app.get(
             "$gokuAPI/ajax/movie/search?keyword=$title", headers = headers
         ).document.select("div.item").find { ele ->
-            val url = ele.selectFirst("a")?.attr("href")
+            val url = ele.selectFirst("a.movie-link")?.attr("href")
             val titleMedia = ele.select("h3.movie-name").text()
-            val yearMedia =
-                ele.select("div.info-split > div:first-child").text().toIntOrNull()
-            val lastSeasonMedia =
-                ele.select("div.info-split > div:nth-child(2)").text().substringAfter("SS")
-                    .substringBefore("/").trim().toIntOrNull()
-            (titleMedia.equals(title, true) || titleMedia.createSlug().equals(title.createSlug())) &&
+            val titleSlug = title.createSlug()
+            val yearMedia = ele.select("div.info-split > div:first-child").text().toIntOrNull()
+            val lastSeasonMedia = ele.select("div.info-split > div:nth-child(2)").text().substringAfter("SS")
+                .substringBefore("/").trim().toIntOrNull()
+            (titleMedia.equals(title, true) || titleMedia.createSlug()
+                .equals(titleSlug) || url?.contains("$titleSlug-") == true) &&
                     (if (season == null) {
-                        yearMedia == year && url?.contains("/watch-movie/") == true
+                        yearMedia == year && url?.contains("/movie/") == true
                     } else {
-                        lastSeasonMedia == lastSeason && url?.contains("/watch-series/") == true
+                        lastSeasonMedia == lastSeason && url?.contains("/series/") == true
                     })
         } ?: return
 
@@ -477,6 +478,34 @@ object SoraExtractor : SoraStream() {
                 loadExtractor(source, "$referer/", subtitleCallback, callback)
             }
         }
+    }
+
+    suspend fun invokeDoomovies(
+        title: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get("$doomoviesAPI/movies/${title.createSlug()}/")
+        val host = getBaseUrl(res.url)
+        val document = res.document
+        document.select("ul#playeroptionsul > li")
+            .filter { element -> element.select("span.flag img").attr("src").contains("/en.") }
+            .map {
+                Triple(
+                    it.attr("data-post"),
+                    it.attr("data-nume"),
+                    it.attr("data-type")
+                )
+            }.apmap { (id, nume, type) ->
+                val source = app.get(
+                    "$host/wp-json/dooplayer/v2/${id}/${type}/${nume}",
+                    headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
+                    referer = "$host/"
+                ).parsed<ResponseHash>().embed_url
+                if (!source.contains("youtube")) {
+                    loadExtractor(source, "$host/", subtitleCallback, callback)
+                }
+            }
     }
 
     suspend fun invokeUniqueStream(
@@ -1078,70 +1107,6 @@ object SoraExtractor : SoraStream() {
         }
 
 
-    }
-
-    private suspend fun invokeAnimeKaizoku(
-        malId: Int? = null,
-        epsTitle: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val search = app.get("$animeKaizokuAPI/?s=${malId ?: return}").document
-        val detailHref =
-            search.select("ul#posts-container li").map { it.selectFirst("a")?.attr("href") }
-                .find {
-                    it?.contains("$malId") == true
-                }?.let { fixUrl(it, animeKaizokuAPI) }
-
-        val detail = app.get(detailHref ?: return).document
-        val postId =
-            detail.selectFirst("link[rel=shortlink]")?.attr("href")?.substringAfter("?p=") ?: return
-        val script = detail.selectFirst("script:containsData(DDL)")?.data()?.splitData() ?: return
-
-        val media = fetchingKaizoku(animeKaizokuAPI, postId, script, detailHref).document
-        val iframe = media.select("tbody td[colspan=2]").map { it.attr("onclick") to it.text() }
-            .filter { it.second.contains("1080p", true) }
-
-        val eps = if (season == null) {
-            null
-        } else {
-            if (episode!! < 10) "0$episode" else episode
-        }
-
-        iframe.apmap { (data, name) ->
-            val worker =
-                fetchingKaizoku(animeKaizokuAPI, postId, data.splitData(), detailHref).document
-                    .select("tbody td")
-                    .map { Triple(it.attr("onclick"), it.text(), it.nextElementSibling()?.text()) }
-
-            val episodeData = worker.let { list ->
-                if (season == null) list.firstOrNull() else list.find {
-                    it.second.contains(
-                        Regex("($eps\\.)|(-\\s$eps)")
-                    ) || it.second.contains("$epsTitle", true)
-                }
-            } ?: return@apmap null
-
-            val ouo = fetchingKaizoku(
-                animeKaizokuAPI,
-                postId,
-                episodeData.first.splitData(),
-                detailHref
-            ).text.substringAfter("openInNewTab(\"")
-                .substringBefore("\")").let { base64Decode(it) }
-
-            if (!ouo.startsWith("https://ouo")) return@apmap null
-            callback.invoke(
-                ExtractorLink(
-                    "AnimeKaizoku",
-                    "AnimeKaizoku [${episodeData.third}]",
-                    bypassOuo(ouo) ?: return@apmap null,
-                    "$animeKaizokuAPI/",
-                    Qualities.P1080.value,
-                )
-            )
-        }
     }
 
     suspend fun invokeLing(
@@ -1957,81 +1922,6 @@ object SoraExtractor : SoraStream() {
                 link.contains(".m3u8")
             )
         )
-
-    }
-
-    suspend fun invokeMovie123Net(
-        title: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val server = "https://vidcloud9.org"
-        val fixTitle = title.createSlug()
-        val m = app.get("$movie123NetAPI/searching?q=$title&limit=40")
-            .parsedSafe<Movie123Search>()?.data?.find {
-                if (season == null) {
-                    (it.t.equals(title, true) || it.t.createSlug()
-                        .equals(fixTitle)) && it.t?.contains("season", true) == false
-                } else {
-                    it.t?.equals(
-                        "$title - Season $season",
-                        true
-                    ) == true || it.s?.contains("$fixTitle-season-$season-", true) == true
-                }
-            }?.s?.substringAfterLast("-") ?: return
-
-        listOf(
-            "1",
-            "2"
-        ).apmap { serverNum ->
-            val media = app.post(
-                "$movie123NetAPI/datas",
-                requestBody = """{"m":$m,"e":${episode ?: 1},"s":$serverNum}""".toRequestBody(
-                    RequestBodyTypes.JSON.toMediaTypeOrNull()
-                )
-            ).parsedSafe<Movie123Media>()?.url ?: return@apmap null
-
-            val serverUrl = "$server/watch?v=$media"
-            val token =
-                app.get(serverUrl).document.selectFirst("script:containsData(setRequestHeader)")
-                    ?.data()?.let {
-                        Regex("\\('0x1f2'\\),'(\\S+?)'\\)").find(it)?.groupValues?.getOrNull(1)
-                    } ?: return@apmap null
-
-            val videoUrl = app.post(
-                "$server/data",
-                requestBody = """{"doc":"$media"}""".toRequestBody(
-                    RequestBodyTypes.JSON.toMediaTypeOrNull()
-                ),
-                headers = mapOf(
-                    "x-csrf-token" to token
-                ),
-            ).parsedSafe<Movie123Media>()?.url ?: return@apmap null
-
-            if (videoUrl.startsWith("https")) {
-                loadExtractor(videoUrl, movie123NetAPI, subtitleCallback, callback)
-            } else {
-                callback.invoke(
-                    ExtractorLink(
-                        "123Movies",
-                        "123Movies",
-                        fixUrl(base64Decode(videoUrl), server),
-                        serverUrl,
-                        Qualities.P720.value,
-                        true
-                    )
-                )
-
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        "English",
-                        "https://sub.vxdn.net/sub/$m-${episode ?: 1}.vtt"
-                    )
-                )
-            }
-        }
 
     }
 
@@ -3289,5 +3179,10 @@ class Multimovies : Filesim() {
 class MultimoviesSB : StreamSB() {
     override var name = "Multimovies"
     override var mainUrl = "https://multimovies.website"
+}
+
+class Yipsu : Voe() {
+    override val name = "Yipsu"
+    override var mainUrl = "https://yip.su"
 }
 

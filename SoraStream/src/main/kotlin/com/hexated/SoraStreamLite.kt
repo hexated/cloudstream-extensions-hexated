@@ -3,6 +3,7 @@ package com.hexated
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeDbgo
+import com.hexated.SoraExtractor.invokeDoomovies
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixon
@@ -16,7 +17,6 @@ import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
-import com.hexated.SoraExtractor.invokeMovie123Net
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
@@ -35,7 +35,6 @@ import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
-import com.hexated.SoraExtractor.invokeXmovies
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.argamap
 import com.lagradost.cloudstream3.utils.AppUtils
@@ -106,15 +105,6 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
-                invokeMovie123Net(
-                    res.title,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
             },
             {
                 invokeMovieHab(res.imdbId, res.season, res.episode, subtitleCallback, callback)
@@ -349,6 +339,13 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 invokeMoment(res.imdbId, res.season, res.episode, callback)
+            },
+            {
+                if (!res.isAnime && res.season == null) invokeDoomovies(
+                    res.title,
+                    subtitleCallback,
+                    callback
+                )
             },
         )
 

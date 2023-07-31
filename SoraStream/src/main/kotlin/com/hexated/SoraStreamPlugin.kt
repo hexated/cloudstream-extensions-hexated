@@ -14,5 +14,6 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Animefever())
         registerExtractorAPI(Multimovies())
         registerExtractorAPI(MultimoviesSB())
+        registerExtractorAPI(Yipsu())
     }
 }
