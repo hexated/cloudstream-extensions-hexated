@@ -3,7 +3,6 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.net.URLDecoder
@@ -21,15 +20,6 @@ class Minioppai : MainAPI() {
     )
 
     companion object {
-        const val libPaistream = "https://lb.paistream.my.id"
-        const val paistream = "https://paistream.my.id"
-
-        fun getType(t: String): TvType {
-            return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
-            else if (t.contains("Movie", true)) TvType.AnimeMovie
-            else TvType.Anime
-        }
-
         fun getStatus(t: String?): ShowStatus {
             return when (t) {
                 "Completed" -> ShowStatus.Completed
@@ -37,7 +27,6 @@ class Minioppai : MainAPI() {
                 else -> ShowStatus.Completed
             }
         }
-
     }
 
     override val mainPage = mainPageOf(
@@ -138,92 +127,22 @@ class Minioppai : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-
         val document = app.get(data).document
         document.select("div.server ul.mirror li a").mapNotNull {
-            fixUrl(
-                Jsoup.parse(base64Decode(it.attr("data-em"))).select("iframe").attr("src")
-            ) to it.text()
-        }.apmap { (link, server) ->
-            if (link.startsWith(paistream)) {
-                invokeLocal(link, server, subtitleCallback, callback)
-            } else {
-                loadExtractor(fixUrl(decode(link.substringAfter("data="))), mainUrl, subtitleCallback, callback)
-            }
+            Jsoup.parse(base64Decode(it.attr("data-em"))).select("iframe").attr("src")
+        }.apmap { link ->
+            loadExtractor(
+                fixUrl(decode(link.substringAfter("data="))),
+                mainUrl,
+                subtitleCallback,
+                callback
+            )
         }
 
         return true
     }
 
-    private suspend fun invokeLocal(
-        url: String,
-        server: String,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val script = getAndUnpack(app.get(url, referer="$mainUrl/").text)
-        val sources = script.substringAfter("sources:[").substringBefore("]").replace("'", "\"")
-        val subtitles = script.substringAfter("\"tracks\":[").substringBefore("]")
-
-        tryParseJson<List<Sources>>("[$sources]")?.map { source ->
-            val pStream = fixLink(source.file ?: return@map, paistream).takeIf {
-                app.get(
-                    it,
-                    referer = "$paistream/"
-                ).isSuccessful
-            }
-            callback.invoke(
-                ExtractorLink(
-                    server,
-                    server,
-                    pStream ?: fixLink(source.file ?: return@map, libPaistream),
-                    "$paistream/",
-                    getQualityFromName(source.label)
-                )
-            )
-        }
-
-        tryParseJson<List<Subtitles>>("[$subtitles]")?.map {
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    it.label ?: "",
-                    fixLink(it.file ?: return@map, paistream)
-                )
-            )
-        }
-
-    }
-
     private fun decode(input: String): String = URLDecoder.decode(input, "utf-8")
-
-    private fun fixLink(url: String, domain: String): String {
-        if (url.startsWith("http")) {
-            return url
-        }
-        if (url.isEmpty()) {
-            return ""
-        }
-
-        val startsWithNoHttp = url.startsWith("//")
-        if (startsWithNoHttp) {
-            return "https:$url"
-        } else {
-            if (url.startsWith('/')) {
-                return domain + url
-            }
-            return "$domain/$url"
-        }
-    }
-
-    data class Subtitles(
-        @JsonProperty("file") var file: String? = null,
-        @JsonProperty("label") var label: String? = null,
-    )
-
-    data class Sources(
-        @JsonProperty("label") var label: String? = null,
-        @JsonProperty("file") var file: String? = null,
-    )
 
     data class SearchResponses(
         @JsonProperty("post") var post: ArrayList<Post> = arrayListOf()
