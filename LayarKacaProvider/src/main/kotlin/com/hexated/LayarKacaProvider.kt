@@ -3,26 +3,22 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.net.URLDecoder
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://tv.lk21official.pro"
+    override var mainUrl = "https://tv1.lk21official.pro"
     private var seriesUrl = "https://tv1.nontondrama.click"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
-    override val hasDownloadSupport = true
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
         TvType.AsianDrama
     )
-
-    companion object {
-        const val bananalicious = "https://bananalicious.xyz"
-    }
 
     override val mainPage = mainPageOf(
         "$mainUrl/populer/page/" to "Film Terplopuler",
@@ -166,19 +162,14 @@ class LayarKacaProvider : MainAPI() {
         document.select("ul#loadProviders > li").map {
             fixUrl(it.select("a").attr("href"))
         }.apmap {
-            val link = when {
-                it.startsWith("https://layarkacaxxi.icu") -> {
-                    it.substringBeforeLast("/")
-                }
-                it.startsWith(bananalicious) -> decode(it.substringAfter("url="))
-                else -> {
-                    it
-                }
-            }
-            loadExtractor(link, bananalicious, subtitleCallback, callback)
+            loadExtractor(it.getIframe(), "https://nganunganu.sbs", subtitleCallback, callback)
         }
 
         return true
+    }
+
+    private suspend fun String.getIframe() : String {
+        return app.get(this, referer = "$seriesUrl/").document.select("div.embed iframe").attr("src")
     }
 
     private fun decode(input: String): String = URLDecoder.decode(input, "utf-8").replace(" ", "%20")
@@ -205,4 +196,9 @@ open class Emturbovid : ExtractorApi() {
         ).forEach(callback)
     }
 
+}
+
+class Furher : Filesim() {
+    override val name = "Furher"
+    override var mainUrl = "https://furher.in"
 }
