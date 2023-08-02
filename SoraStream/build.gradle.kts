@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
 // use an integer for version numbers
-version = 152
+version = 153
 
 android {
     defaultConfig {
@@ -14,6 +14,7 @@ android {
         buildConfigField("String", "SORATED", "\"${properties.getProperty("SORATED")}\"")
         buildConfigField("String", "DUMP_API", "\"${properties.getProperty("DUMP_API")}\"")
         buildConfigField("String", "DUMP_KEY", "\"${properties.getProperty("DUMP_KEY")}\"")
+        buildConfigField("String", "GOMOVIES_KEY", "\"${properties.getProperty("GOMOVIES_KEY")}\"")
         buildConfigField("String", "CRUNCHYROLL_BASIC_TOKEN", "\"${properties.getProperty("CRUNCHYROLL_BASIC_TOKEN")}\"")
         buildConfigField("String", "CRUNCHYROLL_REFRESH_TOKEN", "\"${properties.getProperty("CRUNCHYROLL_REFRESH_TOKEN")}\"")
 

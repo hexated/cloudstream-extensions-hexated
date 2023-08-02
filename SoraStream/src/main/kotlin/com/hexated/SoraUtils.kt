@@ -1286,7 +1286,7 @@ fun decodeIndexJson(json: String): String {
     return base64Decode(slug.substring(0, slug.length - 20))
 }
 
-fun String.decryptGomoviesJson(key: String = "123"): String {
+fun String.decryptGomoviesJson(key: String = BuildConfig.GOMOVIES_KEY): String {
     val sb = StringBuilder()
     var i = 0
     while (i < this.length) {
