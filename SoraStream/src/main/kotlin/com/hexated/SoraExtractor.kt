@@ -2455,13 +2455,8 @@ object SoraExtractor : SoraStream() {
 
         val request = app.get(url)
         if (!request.isSuccessful) return
-
-        val paths = request.document.select("tr.file").map {
-            Triple(
-                it.select("a").text(),
-                it.select("a").attr("href"),
-                it.select("size").text(),
-            )
+        val paths = request.document.select("a").map {
+            it.text() to it.attr("href")
         }.filter {
             if (season == null) {
                 it.first.contains(Regex("(?i)(1080p|2160p)"))
@@ -2474,11 +2469,10 @@ object SoraExtractor : SoraStream() {
         paths.map {
             val quality = getIndexQuality(it.first)
             val tags = getIndexQualityTags(it.first)
-            val size = "%.2f GB".format(bytesToGigaBytes(it.third.toDouble()))
             callback.invoke(
                 ExtractorLink(
                     "DahmerMovies",
-                    "DahmerMovies $tags [$size]",
+                    "DahmerMovies $tags",
                     (url + it.second).encodeUrl(),
                     "",
                     quality,
