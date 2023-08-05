@@ -46,7 +46,9 @@ open class Gomov : MainAPI() {
         val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("src"))?.fixImageQuality()
         val quality = this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")
         return if (quality.isEmpty()) {
-            val episode = this.select("div.gmr-numbeps > span").text().toIntOrNull()
+            val episode =
+                Regex("Episode\\s?([0-9]+)").find(title)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                    ?: this.select("div.gmr-numbeps > span").text().toIntOrNull()
             newAnimeSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
                 addSub(episode)

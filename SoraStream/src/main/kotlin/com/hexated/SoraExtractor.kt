@@ -332,21 +332,14 @@ object SoraExtractor : SoraStream() {
         }
 
         val iframe = app.get(url).document.selectFirst("iframe.Moly")?.attr("data-src")
-        loadExtractor(iframe ?: return, "$dreamfilmAPI/", subtitleCallback) { link ->
-            callback.invoke(
-                ExtractorLink(
-                    link.name,
-                    link.name,
-                    link.url,
-                    link.referer,
-                    Qualities.P1080.value,
-                    link.isM3u8,
-                    link.headers,
-                    link.extractorData
-                )
-            )
-        }
-
+        loadCustomExtractor(
+            null,
+            iframe ?: return,
+            "$dreamfilmAPI/",
+            subtitleCallback,
+            callback,
+            Qualities.P1080.value
+        )
     }
 
     suspend fun invokeSeries9(

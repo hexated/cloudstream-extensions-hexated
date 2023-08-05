@@ -118,10 +118,10 @@ open class Movierulzhd : MainAPI() {
             document.select("span.date").text().trim()
         )?.groupValues?.get(1).toString().toIntOrNull()
         val tvType = if (document.select("ul#section > li:nth-child(1)").text()
-                .contains("Episodes") || document.selectFirst("ul#playeroptionsul li span.title")
-                ?.text()?.contains(
+                .contains("Episodes") || document.select("ul#playeroptionsul li span.title")
+                .text().contains(
                     Regex("Episode\\s+\\d+|EP\\d+|PE\\d+")
-                ) == true
+                )
         ) TvType.TvSeries else TvType.Movie
         val description = document.select("div.wp-content > p").text().trim()
         val trailer = document.selectFirst("div.embed iframe")?.attr("src")

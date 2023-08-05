@@ -35,7 +35,7 @@ class Nodrakorid : DutaMovie() {
                             ele.ownText().filter { it.isDigit() }.toIntOrNull() to ele.select("a")
                                 .map { it.attr("href") to it.text() }
                         }.filter { it.first != null }
-                        Episode(siblings.toJson(), episode = num.filter { it.isDigit() }.toIntOrNull())
+                        Episode(siblings.toJson(), episode = Regex("Episode\\s?([0-9]+)").find(num)?.groupValues?.getOrNull(1)?.toIntOrNull())
                     }
                 }
             }

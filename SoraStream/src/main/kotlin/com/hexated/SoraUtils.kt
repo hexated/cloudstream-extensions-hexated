@@ -1154,7 +1154,7 @@ suspend fun tmdbToAnimeId(title: String?, year: Int?, season: String?, type: TvT
 }
 
 suspend fun loadCustomExtractor(
-    name: String,
+    name: String? = null,
     url: String,
     referer: String? = null,
     subtitleCallback: (SubtitleFile) -> Unit,
@@ -1164,8 +1164,8 @@ suspend fun loadCustomExtractor(
     loadExtractor(url, referer, subtitleCallback) { link ->
         callback.invoke(
             ExtractorLink(
-                name,
-                name,
+                name ?: link.source,
+                name ?: link.name,
                 link.url,
                 link.referer,
                 when {
