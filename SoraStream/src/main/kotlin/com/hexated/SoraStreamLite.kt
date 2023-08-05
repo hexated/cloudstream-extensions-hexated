@@ -276,7 +276,6 @@ class SoraStreamLite : SoraStream() {
                     res.year,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },

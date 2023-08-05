@@ -159,7 +159,6 @@ open class SoraStream : TmdbProvider() {
         const val jsMoviesAPI = "https://jsupload.jnsbot.workers.dev/0:"
         const val xtremeMoviesAPI = "https://kartik19.xtrememirror0.workers.dev/0:"
         const val tgarMovieAPI = "https://tgarchive.eu.org"
-        const val baymoviesAPI = "https://opengatewayindex.pages.dev"
         const val papaonMovies1API = "https://m.papaonwork.workers.dev/0:"
         const val papaonMovies2API = "https://m.papaonwork.workers.dev/1:"
         const val xMovieAPI = "https://xemovies.to"
@@ -789,7 +788,6 @@ open class SoraStream : TmdbProvider() {
                     res.year,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },
@@ -819,7 +817,6 @@ open class SoraStream : TmdbProvider() {
                     res.imdbId,
                     res.title,
                     res.year,
-                    res.season,
                     res.episode,
                     callback
                 )

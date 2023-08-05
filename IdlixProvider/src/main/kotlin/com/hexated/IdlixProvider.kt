@@ -6,6 +6,9 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.nicehttp.Requests
+import com.lagradost.nicehttp.Session
 import org.jsoup.nodes.Element
 import java.net.URI
 
@@ -16,6 +19,7 @@ class IdlixProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
+    private val session = Session(Requests().baseClient)
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -47,9 +51,9 @@ class IdlixProvider : MainAPI() {
         val url = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1
         val req = if (nonPaged) {
-            app.get(request.data)
+            session.get(request.data)
         } else {
-            app.get("${url.first()}$page/?${url.lastOrNull()}")
+            session.get("${url.first()}$page/?${url.lastOrNull()}")
         }
         mainUrl = getBaseUrl(req.url)
         val document = req.document
@@ -94,7 +98,7 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val req = app.get("$mainUrl/search/$query")
+        val req = session.get("$mainUrl/search/$query")
         mainUrl = getBaseUrl(req.url)
         val document = req.document
         return document.select("div.result-item").map {
@@ -109,7 +113,7 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val request = app.get(url)
+        val request = session.get(url)
         directUrl = getBaseUrl(request.url)
         val document = request.document
         val title =
@@ -189,7 +193,7 @@ class IdlixProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data).document
+        val document = session.get(data).document
         val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
         val type = if (data.contains("/movie/")) "movie" else "tv"
 
@@ -197,7 +201,7 @@ class IdlixProvider : MainAPI() {
             it.attr("data-nume")
         }.apmap { nume ->
             safeApiCall {
-                var source = app.post(
+                var source = session.post(
                     url = "$directUrl/wp-admin/admin-ajax.php",
                     data = mapOf(
                         "action" to "doo_player_ajax",
@@ -207,7 +211,7 @@ class IdlixProvider : MainAPI() {
                     ),
                     headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
                     referer = data
-                ).parsed<ResponseHash>().embed_url
+                ).let { tryParseJson<ResponseHash>(it.text) }?.embed_url ?: return@safeApiCall
 
                 if (source.startsWith("https://uservideo.xyz")) {
                     source = app.get(source).document.select("iframe").attr("src")

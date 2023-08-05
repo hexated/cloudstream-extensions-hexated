@@ -1,11 +1,9 @@
 package com.hexated
 
 import android.util.Base64
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.DumpUtils.queryApi
 import com.hexated.SoraStream.Companion.anilistAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
-import com.hexated.SoraStream.Companion.baymoviesAPI
 import com.hexated.SoraStream.Companion.consumetHelper
 import com.hexated.SoraStream.Companion.crunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
@@ -19,12 +17,9 @@ import com.hexated.SoraStream.Companion.watchOnlineAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
-import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.requestCreator
@@ -37,7 +32,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.nodes.Document
 import java.math.BigInteger
 import java.net.*
-import java.nio.charset.StandardCharsets
 import java.security.*
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -52,12 +46,6 @@ import kotlin.math.min
 val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
 const val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 const val otakuzBaseUrl = "https://otakuz.live/"
-val soraHeaders = mapOf(
-    "lang" to "en",
-    "versioncode" to "33",
-    "clienttype" to "android_Official",
-    "deviceid" to getDeviceId(),
-)
 val encodedIndex = arrayOf(
     "GamMovies",
     "JSMovies",
@@ -1165,6 +1153,33 @@ suspend fun tmdbToAnimeId(title: String?, year: Int?, season: String?, type: TvT
 
 }
 
+suspend fun loadCustomExtractor(
+    name: String,
+    url: String,
+    referer: String? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+    quality: Int? = null,
+) {
+    loadExtractor(url, referer, subtitleCallback) { link ->
+        callback.invoke(
+            ExtractorLink(
+                name,
+                name,
+                link.url,
+                link.referer,
+                when {
+                    link.isM3u8 -> link.quality
+                    else -> quality ?: link.quality
+                },
+                link.isM3u8,
+                link.headers,
+                link.extractorData
+            )
+        )
+    }
+}
+
 fun getSeason(month: Int?): String? {
     val seasons = arrayOf(
         "Winter", "Winter", "Spring", "Spring", "Spring", "Summer",
@@ -1181,7 +1196,6 @@ fun getPutlockerQuality(quality: String): Int {
         else -> Qualities.P480.value
     }
 }
-
 
 fun getEpisodeSlug(
     season: Int? = null,
@@ -1262,23 +1276,6 @@ fun matchingIndex(
     }) && mediaName?.contains(
         if (include720) Regex("(?i)(2160p|1080p|720p)") else Regex("(?i)(2160p|1080p)")
     ) == true && ((mediaMimeType in mimeType) || mediaName.contains(Regex("\\.mkv|\\.mp4|\\.avi")))
-}
-
-suspend fun getConfig(): BaymoviesConfig {
-    val regex = """const country = "(.*?)";
-const downloadtime = "(.*?)";
-var arrayofworkers = (.*)""".toRegex()
-    val js = app.get(
-        "https://geolocation.zindex.eu.org/api.js",
-        referer = "$baymoviesAPI/",
-    ).text
-    val match = regex.find(js) ?: throw ErrorLoadingException()
-    val country = match.groupValues[1]
-    val downloadTime = match.groupValues[2]
-    val workers = tryParseJson<List<String>>(match.groupValues[3])
-        ?: throw ErrorLoadingException()
-
-    return BaymoviesConfig(country, downloadTime, workers)
 }
 
 fun decodeIndexJson(json: String): String {
@@ -1787,312 +1784,6 @@ object CryptoAES {
         val password: String,
         val salt: String,
         val iv: String
-    )
-
-}
-
-object RabbitStream {
-
-    suspend fun MainAPI.extractRabbitStream(
-        server: String,
-        url: String,
-        ref: String,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-        useSidAuthentication: Boolean,
-        /** Used for extractorLink name, input: Source name */
-        extractorData: String? = null,
-        decryptKey: String? = null,
-        nameTransformer: (String) -> String,
-    ) = suspendSafeApiCall {
-        // https://rapid-cloud.ru/embed-6/dcPOVRE57YOT?z= -> https://rapid-cloud.ru/embed-6
-        val mainIframeUrl =
-            url.substringBeforeLast("/")
-        val mainIframeId = url.substringAfterLast("/")
-            .substringBefore("?") // https://rapid-cloud.ru/embed-6/dcPOVRE57YOT?z= -> dcPOVRE57YOT
-        var sid: String? = null
-        if (useSidAuthentication && extractorData != null) {
-            negotiateNewSid(extractorData)?.also { pollingData ->
-                app.post(
-                    "$extractorData&t=${generateTimeStamp()}&sid=${pollingData.sid}",
-                    requestBody = "40".toRequestBody(),
-                    timeout = 60
-                )
-                val text = app.get(
-                    "$extractorData&t=${generateTimeStamp()}&sid=${pollingData.sid}",
-                    timeout = 60
-                ).text.replaceBefore("{", "")
-
-                sid = AppUtils.parseJson<PollingData>(text).sid
-                ioSafe { app.get("$extractorData&t=${generateTimeStamp()}&sid=${pollingData.sid}") }
-            }
-        }
-        val mainIframeAjax = mainIframeUrl.let {
-            if(it.contains("/embed-2/e-1")) it.replace(
-                "/embed-2/e-1",
-                "/embed-2/ajax/e-1"
-            ) else it.replace(
-                "/embed",
-                "/ajax/embed"
-            )
-        }
-        val getSourcesUrl = "$mainIframeAjax/getSources?id=$mainIframeId${sid?.let { "$&sId=$it" } ?: ""}"
-        val response = app.get(
-            getSourcesUrl,
-            referer = mainUrl,
-            headers = mapOf(
-                "X-Requested-With" to "XMLHttpRequest",
-                "Accept" to "*/*",
-                "Accept-Language" to "en-US,en;q=0.5",
-                "Connection" to "keep-alive",
-                "TE" to "trailers"
-            )
-        )
-
-        val sourceObject = if (decryptKey != null) {
-            val encryptedMap = response.parsedSafe<SourceObjectEncrypted>()
-            val sources = encryptedMap?.sources
-            if (sources == null || encryptedMap.encrypted == false) {
-                response.parsedSafe()
-            } else {
-                val (realKey, encData) = extractRealKey(sources, decryptKey)
-                val decrypted = decryptMapped<List<Sources>>(encData, realKey)
-                SourceObject(
-                    sources = decrypted,
-                    tracks = encryptedMap.tracks
-                )
-            }
-        } else {
-            response.parsedSafe()
-        } ?: return@suspendSafeApiCall
-
-        sourceObject.tracks?.forEach { track ->
-            track?.toSubtitleFile()?.let { subtitleFile ->
-                subtitleCallback.invoke(subtitleFile)
-            }
-        }
-
-        val list = listOf(
-            sourceObject.sources to "source 1",
-            sourceObject.sources1 to "source 2",
-            sourceObject.sources2 to "source 3",
-            sourceObject.sourcesBackup to "source backup"
-        )
-
-        list.forEach { subList ->
-            subList.first?.forEach { source ->
-                source?.toExtractorLink(
-                    server,
-                    ref,
-                    extractorData,
-                )
-                    ?.forEach {
-                        // Sets Zoro SID used for video loading
-//                            (this as? ZoroProvider)?.sid?.set(it.url.hashCode(), sid)
-                        callback(it)
-                    }
-            }
-        }
-    }
-
-    private suspend fun Sources.toExtractorLink(
-        name: String,
-        referer: String,
-        extractorData: String? = null,
-    ): List<ExtractorLink>? {
-        return this.file?.let { file ->
-            //println("FILE::: $file")
-            val isM3u8 = URI(this.file).path.endsWith(".m3u8") || this.type.equals(
-                "hls",
-                ignoreCase = true
-            )
-            return if (isM3u8) {
-                suspendSafeApiCall {
-                    M3u8Helper().m3u8Generation(
-                        M3u8Helper.M3u8Stream(
-                            this.file,
-                            null,
-                            mapOf("Referer" to "https://mzzcloud.life/")
-                        ), false
-                    )
-                        .map { stream ->
-                            ExtractorLink(
-                                name,
-                                name,
-                                stream.streamUrl,
-                                referer,
-                                getQualityFromName(stream.quality?.toString()),
-                                true,
-                                extractorData = extractorData
-                            )
-                        }
-                }.takeIf { !it.isNullOrEmpty() } ?: listOf(
-                    // Fallback if m3u8 extractor fails
-                    ExtractorLink(
-                        name,
-                        name,
-                        this.file,
-                        referer,
-                        getQualityFromName(this.label),
-                        isM3u8,
-                        extractorData = extractorData
-                    )
-                )
-            } else {
-                listOf(
-                    ExtractorLink(
-                        name,
-                        name,
-                        file,
-                        referer,
-                        getQualityFromName(this.label),
-                        false,
-                        extractorData = extractorData
-                    )
-                )
-            }
-        }
-    }
-
-    private fun Tracks.toSubtitleFile(): SubtitleFile? {
-        return this.file?.let {
-            SubtitleFile(
-                this.label ?: "Unknown",
-                it
-            )
-        }
-    }
-
-    /**
-     * Generates a session
-     * 1 Get request.
-     * */
-    private suspend fun negotiateNewSid(baseUrl: String): PollingData? {
-        // Tries multiple times
-        for (i in 1..5) {
-            val jsonText =
-                app.get("$baseUrl&t=${generateTimeStamp()}").text.replaceBefore(
-                    "{",
-                    ""
-                )
-//            println("Negotiated sid $jsonText")
-            AppUtils.parseJson<PollingData?>(jsonText)?.let { return it }
-            delay(1000L * i)
-        }
-        return null
-    }
-
-    private fun generateTimeStamp(): String {
-        val chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
-        var code = ""
-        var time = APIHolder.unixTimeMS
-        while (time > 0) {
-            code += chars[(time % (chars.length)).toInt()]
-            time /= chars.length
-        }
-        return code.reversed()
-    }
-
-    suspend fun getKey(): String {
-        return app.get("https://raw.githubusercontent.com/enimax-anime/key/e4/key.txt")
-            .text
-    }
-
-    suspend fun getZoroKey(): String {
-        return app.get("https://raw.githubusercontent.com/enimax-anime/key/e6/key.txt").text
-    }
-
-    private fun extractRealKey(originalString: String?, stops: String) : Pair<String,String> {
-        val table = parseJson<List<List<Int>>>(stops)
-        val decryptedKey = StringBuilder()
-        var offset = 0
-        var encryptedString = originalString
-
-        table.forEach { (start, end) ->
-            decryptedKey.append(encryptedString?.substring(start - offset, end - offset))
-            encryptedString = encryptedString?.substring(0, start - offset) + encryptedString?.substring(end - offset)
-            offset += end - start
-        }
-        return decryptedKey.toString() to encryptedString.toString()
-    }
-
-    private inline fun <reified T> decryptMapped(input: String, key: String): T? {
-        return tryParseJson(decrypt(input, key))
-    }
-
-    private fun decrypt(input: String, key: String): String {
-        return decryptSourceUrl(
-            generateKey(
-                base64DecodeArray(input).copyOfRange(8, 16),
-                key.toByteArray()
-            ), input
-        )
-    }
-
-    private fun generateKey(salt: ByteArray, secret: ByteArray): ByteArray {
-        var key = md5(secret + salt)
-        var currentKey = key
-        while (currentKey.size < 48) {
-            key = md5(key + secret + salt)
-            currentKey += key
-        }
-        return currentKey
-    }
-
-    private fun md5(input: ByteArray): ByteArray {
-        return MessageDigest.getInstance("MD5").digest(input)
-    }
-
-    private fun decryptSourceUrl(decryptionKey: ByteArray, sourceUrl: String): String {
-        val cipherData = base64DecodeArray(sourceUrl)
-        val encrypted = cipherData.copyOfRange(16, cipherData.size)
-        val aesCBC = Cipher.getInstance("AES/CBC/PKCS5Padding")
-
-        Objects.requireNonNull(aesCBC).init(
-            Cipher.DECRYPT_MODE, SecretKeySpec(
-                decryptionKey.copyOfRange(0, 32),
-                "AES"
-            ),
-            IvParameterSpec(decryptionKey.copyOfRange(32, decryptionKey.size))
-        )
-        val decryptedData = aesCBC!!.doFinal(encrypted)
-        return String(decryptedData, StandardCharsets.UTF_8)
-    }
-
-    data class PollingData(
-        @JsonProperty("sid") val sid: String? = null,
-        @JsonProperty("upgrades") val upgrades: ArrayList<String> = arrayListOf(),
-        @JsonProperty("pingInterval") val pingInterval: Int? = null,
-        @JsonProperty("pingTimeout") val pingTimeout: Int? = null
-    )
-
-    data class Tracks(
-        @JsonProperty("file") val file: String?,
-        @JsonProperty("label") val label: String?,
-        @JsonProperty("kind") val kind: String?
-    )
-
-    data class Sources(
-        @JsonProperty("file") val file: String?,
-        @JsonProperty("type") val type: String?,
-        @JsonProperty("label") val label: String?
-    )
-
-    data class SourceObject(
-        @JsonProperty("sources") val sources: List<Sources?>? = null,
-        @JsonProperty("sources_1") val sources1: List<Sources?>? = null,
-        @JsonProperty("sources_2") val sources2: List<Sources?>? = null,
-        @JsonProperty("sourcesBackup") val sourcesBackup: List<Sources?>? = null,
-        @JsonProperty("tracks") val tracks: List<Tracks?>? = null
-    )
-
-    data class SourceObjectEncrypted(
-        @JsonProperty("sources") val sources: String?,
-        @JsonProperty("encrypted") val encrypted: Boolean?,
-        @JsonProperty("sources_1") val sources1: String?,
-        @JsonProperty("sources_2") val sources2: String?,
-        @JsonProperty("sourcesBackup") val sourcesBackup: String?,
-        @JsonProperty("tracks") val tracks: List<Tracks?>?
     )
 
 }
