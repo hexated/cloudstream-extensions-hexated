@@ -441,7 +441,7 @@ suspend fun invokeSmashyFfix(
             ExtractorLink(
                 "Smashy [$name]",
                 "Smashy [$name]",
-                link,
+                decode(link).replace("\\/", "/"),
                 smashyStreamAPI,
                 quality?.toIntOrNull() ?: return@map,
                 isM3u8 = link.contains(".m3u8"),
