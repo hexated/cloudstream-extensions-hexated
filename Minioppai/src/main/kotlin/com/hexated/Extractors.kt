@@ -11,6 +11,11 @@ import com.lagradost.cloudstream3.utils.fixUrl
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.getQualityFromName
 
+class Paistream : Streampai() {
+    override val name = "Paistream"
+    override val mainUrl = "https://paistream.my.id"
+}
+
 open class Streampai : ExtractorApi() {
     override val name = "Streampai"
     override val mainUrl = "https://streampai.my.id"

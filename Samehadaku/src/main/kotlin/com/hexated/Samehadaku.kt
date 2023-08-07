@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class Samehadaku : MainAPI() {
-    override var mainUrl = "https://samehadaku.day"
+    override var mainUrl = "https://samehadaku.lat"
     override var name = "Samehadaku"
     override val hasMainPage = true
     override var lang = "id"
@@ -51,7 +51,7 @@ class Samehadaku : MainAPI() {
 
         if (request.name != "Episode Terbaru" && page <= 1) {
             val doc = app.get(request.data).document
-            doc.select("div.widget_senction").forEach { block ->
+            doc.select("div.widget_senction:not(:contains(Baca Komik))").forEach { block ->
                 val header = block.selectFirst("div.widget-title h3")?.ownText() ?: return@forEach
                 val home = block.select("div.animepost").mapNotNull {
                     it.toSearchResult()

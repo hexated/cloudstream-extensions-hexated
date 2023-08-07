@@ -15,5 +15,7 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Multimovies())
         registerExtractorAPI(MultimoviesSB())
         registerExtractorAPI(Yipsu())
+        registerExtractorAPI(Mwish())
+        registerExtractorAPI(TravelR())
     }
 }

@@ -10,5 +10,6 @@ class MinioppaiPlugin: Plugin() {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(Minioppai())
         registerExtractorAPI(Streampai())
+        registerExtractorAPI(Paistream())
     }
 }

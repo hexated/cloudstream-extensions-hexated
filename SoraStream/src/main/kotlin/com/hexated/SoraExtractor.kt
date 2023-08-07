@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.lagradost.cloudstream3.extractors.Filesim
+import com.lagradost.cloudstream3.extractors.GMPlayer
 import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.helper.GogoHelper
@@ -331,15 +332,19 @@ object SoraExtractor : SoraStream() {
             "$dreamfilmAPI/series/$fixTitle/season-$season/episode-$episode"
         }
 
-        val iframe = app.get(url).document.selectFirst("iframe.Moly")?.attr("data-src")
-        loadCustomExtractor(
-            null,
-            iframe ?: return,
-            "$dreamfilmAPI/",
-            subtitleCallback,
-            callback,
-            Qualities.P1080.value
-        )
+        val doc = app.get(url).document
+        doc.select("div#videosen a").apmap {
+            val iframe = app.get(it.attr("href")).document.selectFirst("div.card-video iframe")
+                ?.attr("data-src")
+            loadCustomExtractor(
+                null,
+                iframe ?: return@apmap,
+                "$dreamfilmAPI/",
+                subtitleCallback,
+                callback,
+                Qualities.P1080.value
+            )
+        }
     }
 
     suspend fun invokeSeries9(
@@ -3102,6 +3107,16 @@ object SoraExtractor : SoraStream() {
     }
 
 
+}
+
+class TravelR : GMPlayer() {
+    override val name = "TravelR"
+    override val mainUrl = "https://travel-russia.xyz"
+}
+
+class Mwish : Filesim() {
+    override val name = "Mwish"
+    override var mainUrl = "https://mwish.pro"
 }
 
 class Animefever : Filesim() {
