@@ -3,23 +3,27 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.mvvm.safeApiCall
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.net.URI
+import java.security.DigestException
+import java.security.MessageDigest
 import java.util.ArrayList
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 class KuronimeProvider : MainAPI() {
-    override var mainUrl = "https://kuronime.top"
+    override var mainUrl = "https://45.12.2.26"
+    private var animekuUrl = "https://animeku.org"
     override var name = "Kuronime"
     override val hasQuickSearch = true
     override val hasMainPage = true
     override var lang = "id"
-    override val hasDownloadSupport = true
-
     override val supportedTypes = setOf(
         TvType.Anime,
         TvType.AnimeMovie,
@@ -27,6 +31,7 @@ class KuronimeProvider : MainAPI() {
     )
 
     companion object {
+        const val KEY = "3&!Z0M,VIZ;dZW=="
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -72,9 +77,11 @@ class KuronimeProvider : MainAPI() {
                 (title.contains("-episode")) && !(title.contains("-movie")) -> Regex("nonton-(.+)-episode").find(
                     title
                 )?.groupValues?.get(1).toString()
+
                 (title.contains("-movie")) -> Regex("nonton-(.+)-movie").find(title)?.groupValues?.get(
                     1
                 ).toString()
+
                 else -> title
             }
 
@@ -109,7 +116,11 @@ class KuronimeProvider : MainAPI() {
                 "search" to "false"
             ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsedSafe<Search>()?.anime?.firstOrNull()?.all?.mapNotNull {
-            newAnimeSearchResponse(it.postTitle ?: "", it.postLink ?: return@mapNotNull null, TvType.Anime) {
+            newAnimeSearchResponse(
+                it.postTitle ?: "",
+                it.postLink ?: return@mapNotNull null,
+                TvType.Anime
+            ) {
                 this.posterUrl = it.postImage
                 addSub(it.postLatest?.toIntOrNull())
             }
@@ -156,57 +167,94 @@ class KuronimeProvider : MainAPI() {
         }
     }
 
-    private suspend fun invokeKuroSource(
-        url: String,
-        sourceCallback: (ExtractorLink) -> Unit
-    ) {
-        val doc = app.get(url, referer = "${mainUrl}/").document
-
-        doc.select("script").map { script ->
-            if (script.data().contains("function jalankan_jwp() {")) {
-                val data = script.data()
-                val doma = data.substringAfter("var doma = \"").substringBefore("\";")
-                val token = data.substringAfter("var token = \"").substringBefore("\";")
-                val pat = data.substringAfter("var pat = \"").substringBefore("\";")
-                val link = "$doma$token$pat/index.m3u8"
-                val quality =
-                    Regex("\\d{3,4}p").find(doc.select("title").text())?.groupValues?.get(0)
-
-                sourceCallback.invoke(
-                    ExtractorLink(
-                        this.name,
-                        this.name,
-                        link,
-                        referer = "https://animeku.org/",
-                        quality = getQualityFromName(quality),
-                        headers = mapOf("Origin" to "https://animeku.org"),
-                        isM3u8 = true
-                    )
-                )
-            }
-        }
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
-        val sources = document.select(".mobius > .mirror > option").mapNotNull {
-            fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("data-src"))
-        }
 
-        sources.apmap {
-            safeApiCall {
-                when {
-                    it.startsWith("https://animeku.org") -> invokeKuroSource(it, callback)
-                    else -> loadExtractor(it, mainUrl, subtitleCallback, callback)
+        val document = app.get(data).document
+        val id = document.selectFirst("div#content script:containsData(is_singular)")?.data()
+            ?.substringAfter("\"")?.substringBefore("\";")
+            ?: throw ErrorLoadingException("No id found")
+        val servers = app.post(
+            "$animekuUrl/afi.php", data = mapOf(
+                "id" to id
+            ), referer = "$mainUrl/"
+        ).parsedSafe<Servers>()
+
+        argamap(
+            {
+                val decrypt = cryptoAES(
+                    servers?.src ?: return@argamap,
+                    KEY.toByteArray(),
+                    false
+                )
+                val source =
+                    tryParseJson<Sources>(decrypt?.toJsonFormat())?.src?.replace("\\", "")
+                callback.invoke(
+                    ExtractorLink(
+                        this.name,
+                        this.name,
+                        source ?: return@argamap,
+                        "$animekuUrl/",
+                        Qualities.P1080.value,
+                        true,
+                        headers = mapOf("Origin" to animekuUrl)
+                    )
+                )
+            },
+            {
+                val decrypt = cryptoAES(
+                    servers?.mirror ?: return@argamap,
+                    KEY.toByteArray(),
+                    false
+                )
+                tryParseJson<Mirrors>(decrypt)?.embed?.map { embed ->
+                    embed.value.apmap {
+                        loadFixedExtractor(
+                            it.value,
+                            embed.key.removePrefix("v"),
+                            "$mainUrl/",
+                            subtitleCallback,
+                            callback
+                        )
+                    }
                 }
+
             }
-        }
+        )
+
         return true
+    }
+
+    private fun String.toJsonFormat(): String {
+        return if (this.startsWith("\"")) this.substringAfter("\"").substringBeforeLast("\"")
+            .replace("\\\"", "\"") else this
+    }
+
+    private suspend fun loadFixedExtractor(
+        url: String? = null,
+        quality: String? = null,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        loadExtractor(url ?: return, referer, subtitleCallback) { link ->
+            callback.invoke(
+                ExtractorLink(
+                    link.name,
+                    link.name,
+                    link.url,
+                    link.referer,
+                    getQualityFromName(quality),
+                    link.isM3u8,
+                    link.headers,
+                    link.extractorData
+                )
+            )
+        }
     }
 
     private fun getBaseUrl(url: String): String {
@@ -214,6 +262,99 @@ class KuronimeProvider : MainAPI() {
             "${it.scheme}://${it.host}"
         }
     }
+
+    // https://stackoverflow.com/a/41434590/8166854
+    private fun generateKeyAndIv(
+        password: ByteArray,
+        salt: ByteArray,
+        hashAlgorithm: String = "MD5",
+        keyLength: Int = 32,
+        ivLength: Int = 16,
+        iterations: Int = 1
+    ): List<ByteArray>? {
+
+        val md = MessageDigest.getInstance(hashAlgorithm)
+        val digestLength = md.digestLength
+        val targetKeySize = keyLength + ivLength
+        val requiredLength = (targetKeySize + digestLength - 1) / digestLength * digestLength
+        val generatedData = ByteArray(requiredLength)
+        var generatedLength = 0
+
+        try {
+            md.reset()
+
+            while (generatedLength < targetKeySize) {
+                if (generatedLength > 0)
+                    md.update(
+                        generatedData,
+                        generatedLength - digestLength,
+                        digestLength
+                    )
+
+                md.update(password)
+                md.update(salt, 0, 8)
+                md.digest(generatedData, generatedLength, digestLength)
+
+                for (i in 1 until iterations) {
+                    md.update(generatedData, generatedLength, digestLength)
+                    md.digest(generatedData, generatedLength, digestLength)
+                }
+
+                generatedLength += digestLength
+            }
+            return listOf(
+                generatedData.copyOfRange(0, keyLength),
+                generatedData.copyOfRange(keyLength, targetKeySize)
+            )
+        } catch (e: DigestException) {
+            return null
+        }
+    }
+
+    private fun String.decodeHex(): ByteArray {
+        check(length % 2 == 0) { "Must have an even length" }
+        return chunked(2)
+            .map { it.toInt(16).toByte() }
+            .toByteArray()
+    }
+
+    private fun cryptoAES(
+        data: String,
+        pass: ByteArray,
+        encrypt: Boolean = true
+    ): String? {
+        val json = tryParseJson<AesData>(base64Decode(data))
+            ?: throw ErrorLoadingException("No Data Found")
+        val (key, iv) = generateKeyAndIv(pass, json.s.decodeHex()) ?: return null
+        val cipher = Cipher.getInstance("AES/CBC/NoPadding")
+        return if (!encrypt) {
+            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
+            String(cipher.doFinal(base64DecodeArray(json.ct)))
+        } else {
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
+            base64Encode(cipher.doFinal(json.ct.toByteArray()))
+
+        }
+    }
+
+    data class AesData(
+        @JsonProperty("ct") val ct: String,
+        @JsonProperty("iv") val iv: String,
+        @JsonProperty("s") val s: String
+    )
+
+    data class Mirrors(
+        @JsonProperty("embed") val embed: Map<String, Map<String, String>> = emptyMap(),
+    )
+
+    data class Sources(
+        @JsonProperty("src") var src: String? = null,
+    )
+
+    data class Servers(
+        @JsonProperty("src") var src: String? = null,
+        @JsonProperty("mirror") var mirror: String? = null,
+    )
 
     data class All(
         @JsonProperty("post_image") var postImage: String? = null,
