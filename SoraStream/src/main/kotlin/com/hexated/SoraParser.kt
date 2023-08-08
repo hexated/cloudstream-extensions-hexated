@@ -202,18 +202,6 @@ data class IndexSearch(
     @JsonProperty("data") val data: IndexData? = null,
 )
 
-data class TgarMedia(
-    @JsonProperty("_id") val _id: Int? = null,
-    @JsonProperty("name") val name: String? = null,
-    @JsonProperty("size") val size: Double? = null,
-    @JsonProperty("file_unique_id") val file_unique_id: String? = null,
-    @JsonProperty("mime_type") val mime_type: String? = null,
-)
-
-data class TgarData(
-    @JsonProperty("documents") val documents: ArrayList<TgarMedia>? = arrayListOf(),
-)
-
 data class SorastreamResponse(
     @JsonProperty("data") val data: SorastreamVideos? = null,
 )
@@ -283,14 +271,6 @@ data class PutlockerSources(
 data class PutlockerResponses(
     @JsonProperty("sources") val sources: ArrayList<PutlockerSources>? = arrayListOf(),
     @JsonProperty("backupLink") val backupLink: String? = null,
-)
-
-data class ShivamhwSources(
-    @JsonProperty("id") val id: String? = null,
-    @JsonProperty("stream_link") val stream_link: String? = null,
-    @JsonProperty("process_link") val process_link: String? = null,
-    @JsonProperty("name") val name: String,
-    @JsonProperty("size") val size: String,
 )
 
 data class CryMoviesProxyHeaders(

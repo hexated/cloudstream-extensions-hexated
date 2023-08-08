@@ -507,70 +507,6 @@ object SoraExtractor : SoraStream() {
             }
     }
 
-    suspend fun invokeUniqueStream(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title.createSlug()
-        val url = if (season == null) {
-            "$uniqueStreamAPI/movies/$fixTitle-$year"
-        } else {
-            "$uniqueStreamAPI/episodes/$fixTitle-season-$season-episode-$episode"
-        }
-
-        val res = app.get(url)
-        if (!res.isSuccessful) return
-        val baseApi = getBaseUrl(res.url)
-
-        val document = res.document
-        val type = if (url.contains("/movies/")) "movie" else "tv"
-        document.select("ul#playeroptionsul > li").apmap { el ->
-            val id = el.attr("data-post")
-            val nume = el.attr("data-nume")
-            val source = app.post(
-                url = "$baseApi/wp-admin/admin-ajax.php", data = mapOf(
-                    "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
-                ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = url
-            ).parsed<ResponseHash>().embed_url.let { fixUrl(it) }
-
-            when {
-                source.contains("uniquestream") -> {
-                    val resDoc = app.get(
-                        source, referer = "$baseApi/", headers = mapOf(
-                            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-                        )
-                    ).document
-                    val srcm3u8 =
-                        resDoc.selectFirst("script:containsData(let url =)")?.data()?.let {
-                            Regex("['|\"](.*?.m3u8)['|\"]").find(it)?.groupValues?.getOrNull(1)
-                        }
-                    callback.invoke(
-                        ExtractorLink(
-                            "UniqueStream",
-                            "UniqueStream",
-                            srcm3u8 ?: return@apmap null,
-                            source,
-                            Qualities.P1080.value,
-                            true,
-                        )
-                    )
-                }
-
-                !source.contains("youtube") -> loadExtractor(
-                    source, "$uniqueStreamAPI/", subtitleCallback, callback
-                )
-
-                else -> {
-                    // pass
-                }
-            }
-        }
-    }
-
     suspend fun invokeNoverse(
         title: String? = null,
         season: Int? = null,
@@ -763,59 +699,6 @@ object SoraExtractor : SoraStream() {
                 )
             )
         }
-    }
-
-    suspend fun invokeXmovies(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title.createSlug()
-        val doc = if (season == null) {
-            val res = app.get("$xMovieAPI/movies/$fixTitle/watch")
-            if (res.url == "$xMovieAPI/") app.get("$xMovieAPI/movies/$fixTitle-$year/watch").document else res.document
-        } else {
-            app.get("$xMovieAPI/series/$fixTitle-season-$season-episode-$episode/watch").document
-        }
-
-        val script = doc.selectFirst("script:containsData(const player =)")?.data() ?: return
-        val link =
-            Regex("[\"|']file[\"|']:\\s?[\"|'](http.*?.(mp4|m3u8))[\"|'],").find(script)?.groupValues?.getOrNull(
-                1
-            ) ?: return
-
-        if (link.contains(".m3u8")) {
-            M3u8Helper.generateM3u8(
-                "Xmovie",
-                link,
-                "",
-            ).forEach(callback)
-        } else {
-            callback.invoke(
-                ExtractorLink(
-                    "Xmovie",
-                    "Xmovie",
-                    link,
-                    "",
-                    Qualities.P720.value,
-                )
-            )
-        }
-
-        Regex(""""file":\s+?"(\S+\.(vtt|srt))""").find(script)?.groupValues?.getOrNull(1)
-            ?.let { sub ->
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        "English",
-                        sub,
-                    )
-                )
-            }
-
-
     }
 
     suspend fun invokeFmovies(
@@ -2035,131 +1918,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeBlackmovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
-    suspend fun invokeCodexmovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-        password: String = "",
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-            password,
-        )
-    }
-
-    suspend fun invokeEdithxmovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-        password: String = "",
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-            password,
-        )
-    }
-
-    suspend fun invokeJmdkhMovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
-    suspend fun invokeRubyMovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
     suspend fun invokeShinobiMovies(
-        apiUrl: String,
-        api: String,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeIndex(
-            apiUrl,
-            api,
-            title,
-            year,
-            season,
-            episode,
-            callback,
-        )
-    }
-
-    suspend fun invokeVitoenMovies(
         apiUrl: String,
         api: String,
         title: String? = null,
@@ -2265,9 +2024,6 @@ object SoraExtractor : SoraStream() {
                 }
             }.encodeUrl()
 
-//            removed due to rate limit
-//            if (!app.get(path).isSuccessful) return@apmap null
-
             val size =
                 "%.2f GB".format(bytesToGigaBytes(file.size?.toDouble() ?: return@apmap null))
             val quality = getIndexQuality(file.name)
@@ -2283,48 +2039,6 @@ object SoraExtractor : SoraStream() {
                 )
             )
 
-        }
-
-    }
-
-    suspend fun invokeTgarMovies(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val query = getIndexQuery(title, year, season, episode)
-
-        val files = app.get(
-            "https://api.tgarchive.superfastsearch.zindex.eu.org/search?name=${encode(query)}&page=1",
-            referer = tgarMovieAPI,
-            timeout = 600L
-        ).parsedSafe<TgarData>()?.documents?.filter { media ->
-            matchingIndex(
-                media.name,
-                media.mime_type,
-                title,
-                year,
-                season,
-                episode,
-                true
-            ) && media.name?.contains("XXX") == false
-        }
-
-        files?.map { file ->
-            val size = "%.2f GB".format(bytesToGigaBytes(file.size ?: return@map null))
-            val quality = getIndexQuality(file.name)
-            val tags = getIndexQualityTags(file.name)
-            callback.invoke(
-                ExtractorLink(
-                    "TgarMovies",
-                    "TgarMovies $tags [$size]",
-                    "https://api.southkoreacdn.workers.dev/telegram/${file._id}",
-                    "$tgarMovieAPI/",
-                    quality,
-                )
-            )
         }
 
     }
@@ -2769,73 +2483,6 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeShivamhw(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-        val url = if (season == null) {
-            "$shivamhwAPI/search?search_box=$title&release_year=$year"
-        } else {
-            "$shivamhwAPI/api/series_search?search_box=$title&sess_nm=$seasonSlug&epi_nm=$episodeSlug"
-        }
-
-        val res = app.get(url)
-
-        val media = if (season == null) {
-            res.document.select("table.rwd-table tr").map {
-                Triple(
-                    it.select("td[data-th=File Name]").text(),
-                    it.select("td[data-th=Size]").text(),
-                    it.selectFirst("div.download_button.pls_wait > a")?.attr("href")
-                )
-            }
-        } else {
-            tryParseJson<ArrayList<ShivamhwSources>>(res.text)?.map {
-                Triple(
-                    it.name,
-                    it.size,
-                    it.stream_link,
-                )
-            }
-        }
-
-        media?.filter {
-            matchingIndex(
-                it.first,
-                null,
-                title,
-                year,
-                season,
-                episode,
-                false
-            )
-        }?.sortedByDescending {
-            it.second.getFileSize()
-        }?.apmap { source ->
-            val quality = getIndexQuality(source.first)
-            val tags = getIndexQualityTags(source.first)
-            val video = source.third
-            if (!app.get(
-                    video ?: return@apmap,
-                    referer = "$shivamhwAPI/"
-                ).isSuccessful
-            ) return@apmap
-            callback.invoke(
-                ExtractorLink(
-                    "Shivamhw",
-                    "Shivamhw $tags [${source.second}]",
-                    video,
-                    "$shivamhwAPI/",
-                    quality,
-                )
-            )
-        }
-    }
-
     suspend fun invokeCryMovies(
         imdbId: String? = null,
         title: String? = null,
@@ -2887,9 +2534,8 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val referer = "https://2now.tv/"
-        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-        val url =
-            if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${episodeSlug}.mp4"
+        val slug = getEpisodeSlug(season, episode)
+        val url = if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${slug.second}.mp4"
         if (!app.get(url, referer = referer).isSuccessful) return
         callback.invoke(
             ExtractorLink(
