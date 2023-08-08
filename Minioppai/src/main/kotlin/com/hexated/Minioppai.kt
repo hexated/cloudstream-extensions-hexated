@@ -84,6 +84,7 @@ class Minioppai : MainAPI() {
         return newAnimeSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
             addSub(epNum)
+            posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
         }
 
     }
@@ -104,6 +105,7 @@ class Minioppai : MainAPI() {
                 TvType.NSFW
             ) {
                 this.posterUrl = item.postImage
+                posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
             }
         }
     }
@@ -135,6 +137,7 @@ class Minioppai : MainAPI() {
             showStatus = status
             plot = description
             this.tags = tags
+            posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
         }
     }
 
