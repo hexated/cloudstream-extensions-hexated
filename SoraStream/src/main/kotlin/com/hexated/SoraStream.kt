@@ -11,7 +11,6 @@ import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeMovieHab
-import com.hexated.SoraExtractor.invokeNoverse
 import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.lagradost.cloudstream3.*
@@ -25,7 +24,6 @@ import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFmovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
-import com.hexated.SoraExtractor.invokeGdbotMovies
 import com.hexated.SoraExtractor.invokeGoku
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeKisskh

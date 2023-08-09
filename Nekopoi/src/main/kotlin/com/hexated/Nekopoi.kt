@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
+import kotlinx.coroutines.delay
 import org.jsoup.nodes.Element
 import java.net.URI
 
@@ -24,7 +25,6 @@ class Nekopoi : MainAPI() {
             "DropApk",
             "Racaty",
             "ZippyShare",
-            "ZippySha",
             "VideobinCo",
             "DropApk",
             "SendCm",
@@ -227,16 +227,15 @@ class Nekopoi : MainAPI() {
     }
 
     private suspend fun bypassMirrored(url: String?): List<String?> {
-        val request = app.get(url ?: return emptyList())
-        var nextUrl = request.document.selectFirst("div.row div.centered a")?.attr("href")
-        nextUrl = app.get(nextUrl ?: return emptyList()).text.substringAfter("\"GET\", \"")
-            .substringBefore("\"")
-        return app.get(fixUrl(nextUrl, mirroredHost)).document.select("table.hoverable tbody tr")
+        val request = session.get(url ?: return emptyList())
+        delay(2000)
+        val nextUrl = request.text.substringAfter("\"GET\", \"").substringBefore("\"")
+        return session.get(fixUrl(nextUrl, mirroredHost)).document.select("table.hoverable tbody tr")
             .filter { mirror ->
                 !mirrorIsBlackList(mirror.selectFirst("img")?.attr("alt"))
             }.apmap {
                 val fileLink = it.selectFirst("a")?.attr("href")
-                app.get(
+                session.get(
                     fixUrl(
                         fileLink ?: return@apmap null,
                         mirroredHost
@@ -269,8 +268,10 @@ class Nekopoi : MainAPI() {
     }
 
     private fun getIndexQuality(str: String?): Int {
-        return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
-            ?: Qualities.Unknown.value
+        return when (val quality = Regex("""(?i)\[(\d+[pk])]""").find(str ?: "")?.groupValues?.getOrNull(1)?.lowercase()) {
+            "2k" -> Qualities.P1440.value
+            else -> getQualityFromName(quality)
+        }
     }
 
 }
