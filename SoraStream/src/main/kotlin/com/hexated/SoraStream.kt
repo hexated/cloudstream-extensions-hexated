@@ -50,7 +50,10 @@ import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import com.lagradost.cloudstream3.extractors.VidSrcExtractor
+import com.lagradost.cloudstream3.syncproviders.SyncIdName
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -112,7 +115,7 @@ open class SoraStream : TmdbProvider() {
         const val ask4MoviesAPI = "https://ask4movie.nl"
         const val biliBiliAPI = "https://api-vn.otakuz.live/server"
         const val watchOnlineAPI = "https://watchonline.ag"
-        const val nineTvAPI = "https://api.9animetv.live"
+        const val nineTvAPI = "https://moviesapi.club"
         const val putlockerAPI = "https://ww7.putlocker.vip"
         const val fmoviesAPI = "https://fmovies.to"
         const val nowTvAPI = "https://myfilestorage.xyz"
@@ -310,6 +313,8 @@ open class SoraStream : TmdbProvider() {
                 this.recommendations = recommendations
                 this.actors = actors
                 addTrailer(trailer)
+                addTMDbId(data.id.toString())
+                addImdbId(res.external_ids?.imdb_id)
             }
         } else {
             newMovieLoadResponse(
@@ -339,6 +344,8 @@ open class SoraStream : TmdbProvider() {
                 this.recommendations = recommendations
                 this.actors = actors
                 addTrailer(trailer)
+                addTMDbId(data.id.toString())
+                addImdbId(res.external_ids?.imdb_id)
             }
         }
     }
