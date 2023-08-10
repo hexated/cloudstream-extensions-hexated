@@ -13,7 +13,7 @@ class Nekopoi : MainAPI() {
     override var name = "Nekopoi"
     override val hasMainPage = true
     override var lang = "id"
-
+    private val fetch by lazy { Session(app.baseClient) }
     override val supportedTypes = setOf(
         TvType.NSFW,
     )
@@ -53,7 +53,7 @@ class Nekopoi : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get("${request.data}/page/$page").document
+        val document = fetch.get("${request.data}/page/$page").document
         val home = document.select("div.result ul li").mapNotNull {
             it.toSearchResult()
         }
@@ -90,14 +90,14 @@ class Nekopoi : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        return app.get("$mainUrl/search/$query").document.select("div.result ul li")
+        return fetch.get("$mainUrl/search/$query").document.select("div.result ul li")
             .mapNotNull {
                 it.toSearchResult()
             }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val document = fetch.get(url).document
 
         val title = document.selectFirst("span.desc b, div.eroinfo h1")?.text()?.trim() ?: ""
         val poster = fixUrlNull(document.selectFirst("div.imgdesc img, div.thm img")?.attr("src"))
@@ -141,7 +141,7 @@ class Nekopoi : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val res = app.get(data).document
+        val res = fetch.get(data).document
 
         argamap(
             {
