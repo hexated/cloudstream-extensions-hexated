@@ -1,13 +1,14 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
-class Kissasian : MainAPI() {
+open class Kissasian : MainAPI() {
     override var mainUrl = "https://kissasian.pe"
     override var name = "Kissasian"
     override val hasMainPage = true
@@ -44,8 +45,7 @@ class Kissasian : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
         val title = this.selectFirst("span.title")?.text()?.trim() ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("div.pic img")?.attr("src"))
-
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
         return newTvSeriesSearchResponse(title, href, TvType.AsianDrama) {
             this.posterUrl = posterUrl
         }
@@ -58,18 +58,19 @@ class Kissasian : MainAPI() {
         }
     }
 
+    open val contentInfoClass = "barContentInfo"
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
-        val title = document.selectFirst("div.barContentInfo a")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(document.selectFirst("div.barContentInfo img")?.attr("src"))
-        val tags = document.select("div.barContentInfo p:contains(Genres:) a").map { it.text().removePrefix(",").trim() }
+        val title = document.selectFirst("div.$contentInfoClass a")?.text()?.trim() ?: return null
+        val poster = fixUrlNull(document.select("div.$contentInfoClass img").last()?.attr("src"))
+        val tags = document.select("div.$contentInfoClass p:contains(Genres:) a").map { it.text().removePrefix(",").trim() }
 
-        val year = document.selectFirst("div.barContentInfo p.type.Releasea")?.text()?.trim()?.toIntOrNull()
-        val status = getStatus(document.selectFirst("div.barContentInfo p:contains(Status:)")?.ownText()?.trim())
-        val description = document.selectFirst("div.barContentInfo p.des")?.nextElementSiblings()?.select("p")?.text()
+        val year = document.selectFirst("div.$contentInfoClass p.type.Releasea")?.text()?.trim()?.toIntOrNull()
+        val status = getStatus(document.selectFirst("div.$contentInfoClass p:contains(Status:)")?.ownText()?.trim())
+        val description = document.selectFirst("div.$contentInfoClass p.des, div.$contentInfoClass p:last-child")?.nextElementSiblings()?.select("p")?.text()
 
-        val episodes = document.select("ul.listing li").map {
+        val episodes = document.select("ul.listing li, table.listing td.episodeSub").map {
             val name = it.selectFirst("a")?.attr("title")
             val link = fixUrlNull(it.selectFirst("a")?.attr("href"))
             val epNum = Regex("Episode\\s(\\d+)").find("$name")?.groupValues?.getOrNull(1)?.toIntOrNull()
@@ -137,4 +138,9 @@ class Kissasian : MainAPI() {
         return true
     }
 
+}
+
+class Kswplayer : Filesim() {
+    override val name = "Kswplayer"
+    override var mainUrl = "https://kswplayer.info"
 }
