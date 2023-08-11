@@ -1,9 +1,12 @@
 package com.hexated
 
+import com.lagradost.cloudstream3.APIHolder
 import com.lagradost.nicehttp.Requests.Companion.await
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 const val defaultTimeOut = 30L
@@ -52,6 +55,13 @@ fun getEpisodeSlug(
     } else {
         (if (season!! < 10) "0$season" else "$season") to (if (episode!! < 10) "0$episode" else "$episode")
     }
+}
+
+fun isUpcoming(dateString: String?): Boolean {
+    if (dateString == null) return false
+    val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val dateTime = format.parse(dateString)?.time ?: return false
+    return APIHolder.unixTimeMS < dateTime
 }
 
 fun fixUrl(url: String, domain: String): String {

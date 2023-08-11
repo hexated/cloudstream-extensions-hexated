@@ -5,6 +5,7 @@ import com.hexated.SubsExtractors.invokeOpenSubs
 import com.hexated.SubsExtractors.invokeWatchsomuch
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -27,7 +28,7 @@ class StremioC : MainAPI() {
         val res = tryParseJson<Manifest>(request("${mainUrl}/manifest.json").body.string()) ?: return null
         val lists = mutableListOf<HomePageList>()
         res.catalogs.apmap { catalog ->
-            catalog.toHomePageList(this)?.let {
+            catalog.toHomePageList(this).let {
                 if (it.list.isNotEmpty()) lists.add(it)
             }
         }
@@ -47,7 +48,7 @@ class StremioC : MainAPI() {
         return list.distinct()
     }
 
-    override suspend fun load(url: String): LoadResponse? {
+    override suspend fun load(url: String): LoadResponse {
         val res = parseJson<CatalogEntry>(url)
         mainUrl =
             if ((res.type == "movie" || res.type == "series") && isImdborTmdb(res.id)) cinemataUrl else mainUrl
@@ -161,7 +162,7 @@ class StremioC : MainAPI() {
             return entries
         }
 
-        suspend fun toHomePageList(provider: StremioC): HomePageList? {
+        suspend fun toHomePageList(provider: StremioC): HomePageList {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
                 val json = request("${provider.mainUrl}/catalog/${type}/${id}.json").body.string()
@@ -211,7 +212,7 @@ class StremioC : MainAPI() {
         }
 
         suspend fun toLoadResponse(provider: StremioC, imdbId: String?): LoadResponse {
-            if (videos == null || videos.isEmpty()) {
+            if (videos.isNullOrEmpty()) {
                 return provider.newMovieLoadResponse(
                     name,
                     "${provider.mainUrl}/meta/${type}/${id}.json",
@@ -226,6 +227,7 @@ class StremioC : MainAPI() {
                     tags = genre ?: genres
                     addActors(cast)
                     addTrailer(trailersSources?.map { "https://www.youtube.com/watch?v=${it.source}" }?.randomOrNull())
+                    addImdbId(imdbId)
                 }
             } else {
                 return provider.newTvSeriesLoadResponse(
@@ -244,6 +246,7 @@ class StremioC : MainAPI() {
                     tags = genre ?: genres
                     addActors(cast)
                     addTrailer(trailersSources?.map { "https://www.youtube.com/watch?v=${it.source}" }?.randomOrNull())
+                    addImdbId(imdbId)
                 }
             }
 
@@ -337,7 +340,7 @@ class StremioC : MainAPI() {
                 val resp = app.get(TRACKER_LIST_URL).text
                 val otherTrackers = resp
                     .split("\n")
-                    .filterIndexed { i, s -> i % 2 == 0 }
+                    .filterIndexed { i, _ -> i % 2 == 0 }
                     .filter { s -> s.isNotEmpty() }.joinToString("") { "&tr=$it" }
 
                 val sourceTrackers = sources

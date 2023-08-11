@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SubsExtractors.invokeOpenSubs
 import com.hexated.SubsExtractors.invokeWatchsomuch
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -123,7 +125,8 @@ open class StremioX : MainAPI() {
         val title = res.title ?: res.name ?: return null
         val poster = getOriImageUrl(res.posterPath)
         val bgPoster = getOriImageUrl(res.backdropPath)
-        val year = (res.releaseDate ?: res.firstAirDate)?.split("-")?.first()?.toIntOrNull()
+        val releaseDate = res.releaseDate ?: res.firstAirDate
+        val year = releaseDate?.split("-")?.first()?.toIntOrNull()
         val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
         val isAnime =
@@ -155,7 +158,7 @@ open class StremioX : MainAPI() {
                                 eps.seasonNumber,
                                 eps.episodeNumber
                             ).toJson(),
-                            name = eps.name,
+                            name = eps.name + if (isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
                             season = eps.seasonNumber,
                             episode = eps.episodeNumber,
                             posterUrl = getImageUrl(eps.stillPath),
@@ -179,6 +182,8 @@ open class StremioX : MainAPI() {
                 this.recommendations = recommendations
                 this.actors = actors
                 addTrailer(trailer)
+                addTMDbId(data.id.toString())
+                addImdbId(res.external_ids?.imdb_id)
             }
         } else {
             newMovieLoadResponse(
@@ -188,6 +193,7 @@ open class StremioX : MainAPI() {
                 LoadData(res.external_ids?.imdb_id).toJson()
             ) {
                 this.posterUrl = poster
+                this.comingSoon = isUpcoming(releaseDate)
                 this.backgroundPosterUrl = bgPoster
                 this.year = year
                 this.plot = res.overview
@@ -197,6 +203,8 @@ open class StremioX : MainAPI() {
                 this.recommendations = recommendations
                 this.actors = actors
                 addTrailer(trailer)
+                addTMDbId(data.id.toString())
+                addImdbId(res.external_ids?.imdb_id)
             }
         }
     }
