@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.JWPlayer
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
@@ -23,7 +24,12 @@ class OtakudesuProvider : MainAPI() {
     )
 
     companion object {
-        //        private val interceptor = CloudflareKiller()
+        const val acefile = "https://acefile.co"
+        val mirrorBlackList = arrayOf(
+            "Mega",
+            "MegaUp",
+            "Otakufiles",
+        )
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special")) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -48,10 +54,7 @@ class OtakudesuProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get(
-            request.data + page
-//            , interceptor = interceptor
-        ).document
+        val document = app.get(request.data + page).document
         val home = document.select("div.venz > ul > li").mapNotNull {
             it.toSearchResult()
         }
@@ -67,35 +70,25 @@ class OtakudesuProvider : MainAPI() {
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
             addSub(epNum)
-//            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
 
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/?s=$query&post_type=anime"
-        val document = app.get(
-            link
-//            , interceptor = interceptor
-        ).document
-
-        return document.select("ul.chivsrc > li").map {
-            val title = it.selectFirst("h2 > a")!!.ownText().trim()
-            val href = it.selectFirst("h2 > a")!!.attr("href")
-            val posterUrl = it.selectFirst("img")!!.attr("src").toString()
-            newAnimeSearchResponse(title, href, TvType.Anime) {
-                this.posterUrl = posterUrl
-//                posterHeaders = interceptor.getCookieHeaders(url).toMap()
+        return app.get("$mainUrl/?s=$query&post_type=anime").document.select("ul.chivsrc > li")
+            .map {
+                val title = it.selectFirst("h2 > a")!!.ownText().trim()
+                val href = it.selectFirst("h2 > a")!!.attr("href")
+                val posterUrl = it.selectFirst("img")!!.attr("src").toString()
+                newAnimeSearchResponse(title, href, TvType.Anime) {
+                    this.posterUrl = posterUrl
+                }
             }
-        }
     }
 
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(
-            url
-//            , interceptor = interceptor
-        ).document
+        val document = app.get(url).document
 
         val title = document.selectFirst("div.infozingle > p:nth-child(1) > span")?.ownText()
             ?.replace(":", "")?.trim().toString()
@@ -129,7 +122,6 @@ class OtakudesuProvider : MainAPI() {
                 val recPosterUrl = it.selectFirst("a > img")?.attr("src").toString()
                 newAnimeSearchResponse(recName, recHref, TvType.Anime) {
                     this.posterUrl = recPosterUrl
-//                    posterHeaders = interceptor.getCookieHeaders(url).toMap()
                 }
             }
 
@@ -142,7 +134,6 @@ class OtakudesuProvider : MainAPI() {
             plot = description
             this.tags = tags
             this.recommendations = recommendations
-//            posterHeaders = interceptor.getCookieHeaders(url).toMap()
         }
     }
 
@@ -164,54 +155,113 @@ class OtakudesuProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(
-            data
-//            , interceptor = interceptor
-        ).document
-        val scriptData = document.select("script:containsData(action:)").lastOrNull()?.data()
-        val token = scriptData?.substringAfter("{action:\"")?.substringBefore("\"}").toString()
+        val document = app.get(data).document
 
-        val nonce = app.post("$mainUrl/wp-admin/admin-ajax.php", data = mapOf("action" to token))
-            .parsed<ResponseData>().data
-        val action = scriptData?.substringAfter(",action:\"")?.substringBefore("\"}").toString()
+        argamap(
+            {
+                val scriptData =
+                    document.select("script:containsData(action:)").lastOrNull()?.data()
+                val token =
+                    scriptData?.substringAfter("{action:\"")?.substringBefore("\"}").toString()
 
-        val mirrorData = document.select("div.mirrorstream > ul > li").mapNotNull {
-            base64Decode(it.select("a").attr("data-content"))
-        }.toString()
+                val nonce =
+                    app.post("$mainUrl/wp-admin/admin-ajax.php", data = mapOf("action" to token))
+                        .parsed<ResponseData>().data
+                val action =
+                    scriptData?.substringAfter(",action:\"")?.substringBefore("\"}").toString()
 
-        tryParseJson<List<ResponseSources>>(mirrorData)?.apmap { res ->
-            val id = res.id
-            val i = res.i
-            val q = res.q
+                val mirrorData = document.select("div.mirrorstream > ul > li").mapNotNull {
+                    base64Decode(it.select("a").attr("data-content"))
+                }.toString()
 
-            var sources = Jsoup.parse(
-                base64Decode(
-                    app.post(
-                        "${mainUrl}/wp-admin/admin-ajax.php", data = mapOf(
-                            "id" to id,
-                            "i" to i,
-                            "q" to q,
-                            "nonce" to nonce,
-                            "action" to action
+                tryParseJson<List<ResponseSources>>(mirrorData)?.apmap { res ->
+                    val id = res.id
+                    val i = res.i
+                    val q = res.q
+
+                    val sources = Jsoup.parse(
+                        base64Decode(
+                            app.post(
+                                "${mainUrl}/wp-admin/admin-ajax.php", data = mapOf(
+                                    "id" to id,
+                                    "i" to i,
+                                    "q" to q,
+                                    "nonce" to nonce,
+                                    "action" to action
+                                )
+                            ).parsed<ResponseData>().data
                         )
-                    ).parsed<ResponseData>().data
-                )
-            ).select("iframe").attr("src")
+                    ).select("iframe").attr("src")
 
-            if (sources.startsWith("https://desustream.me")) {
-                if (!sources.contains(Regex("/arcg/|/odchan/|/desudrive/|/moedesu/"))) {
-                    sources = app.get(sources).document.select("iframe").attr("src")
+                    loadCustomExtractor(sources, data, subtitleCallback, callback, getQuality(q))
+
                 }
-                if (sources.startsWith("https://yourupload.com")) {
-                    sources = sources.replace("//", "//www.")
+            },
+            {
+                document.select("div.download li").map { ele ->
+                    val quality = getQuality(ele.select("strong").text())
+                    ele.select("a").map {
+                        it.attr("href") to it.text()
+                    }.filter {
+                        !inBlacklist(it.first) && quality != Qualities.P360.value
+                    }.apmap {
+                        val link = app.get(it.first, referer = "$mainUrl/").url
+                        loadCustomExtractor(
+                            fixedIframe(link),
+                            data,
+                            subtitleCallback,
+                            callback,
+                            quality
+                        )
+                    }
                 }
             }
-
-            loadExtractor(sources, data, subtitleCallback, callback)
-
-        }
+        )
 
         return true
+    }
+
+    private suspend fun loadCustomExtractor(
+        url: String,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        quality: Int = Qualities.Unknown.value,
+    ) {
+        loadExtractor(url, referer, subtitleCallback) { link ->
+            callback.invoke(
+                ExtractorLink(
+                    link.name,
+                    link.name,
+                    link.url,
+                    link.referer,
+                    quality,
+                    link.isM3u8,
+                    link.headers,
+                    link.extractorData
+                )
+            )
+        }
+    }
+
+    private fun fixedIframe(url: String): String {
+        return when {
+            url.startsWith(acefile) -> {
+                val id = Regex("""(?:/f/|/file/)(\w+)""").find(url)?.groupValues?.getOrNull(1)
+                "${acefile}/player/$id"
+            }
+
+            else -> fixUrl(url)
+        }
+    }
+
+    private fun inBlacklist(host: String?): Boolean {
+        return mirrorBlackList.any { it.equals(host, true) }
+    }
+
+    private fun getQuality(str: String?): Int {
+        return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
+            ?: Qualities.Unknown.value
     }
 
 }
@@ -219,4 +269,9 @@ class OtakudesuProvider : MainAPI() {
 class Moedesu : JWPlayer() {
     override val name = "Moedesu"
     override val mainUrl = "https://desustream.me/moedesu/"
+}
+
+class DesuBeta : JWPlayer() {
+    override val name = "DesuBeta"
+    override val mainUrl = "https://desustream.me/beta/"
 }
