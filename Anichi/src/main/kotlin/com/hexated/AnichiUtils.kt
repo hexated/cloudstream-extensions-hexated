@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.hexated.Anichi.Companion.anilistApi
 import com.hexated.Anichi.Companion.apiEndPoint
 import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.app
@@ -69,13 +70,21 @@ suspend fun fetchId(title: String?, year: Int?, season: String?, type: String?):
     ).toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
 
     return try {
-        app.post("https://graphql.anilist.co", requestBody = data)
+        app.post(anilistApi, requestBody = data)
             .parsedSafe<AniSearch>()?.data?.Page?.media?.firstOrNull()
     } catch (t: Throwable) {
         logError(t)
         null
     }
 
+}
+
+suspend fun aniToMal(id: String): String? {
+    return app.post(
+        anilistApi, data = mapOf(
+            "query" to "{Media(id:$id,type:ANIME){idMal}}",
+        )
+    ).parsedSafe<DataAni>()?.data?.media?.idMal
 }
 
 fun decode(input: String): String = URLDecoder.decode(input, "utf-8")

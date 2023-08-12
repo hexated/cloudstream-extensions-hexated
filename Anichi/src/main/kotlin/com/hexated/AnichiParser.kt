@@ -9,6 +9,31 @@ data class AnichiLoadData(
     val idMal: Int? = null,
 )
 
+data class JikanData(
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("title_english") val title_english: String? = null,
+    @JsonProperty("title_japanese") val title_japanese: String? = null,
+    @JsonProperty("year") val year: Int? = null,
+    @JsonProperty("season") val season: String? = null,
+    @JsonProperty("type") val type: String? = null,
+)
+
+data class JikanResponse(
+    @JsonProperty("data") val data: JikanData? = null,
+)
+
+data class IdMal(
+    @JsonProperty("idMal") val idMal: String? = null,
+)
+
+data class MediaAni(
+    @JsonProperty("Media") val media: IdMal? = null,
+)
+
+data class DataAni(
+    @JsonProperty("data") val data: MediaAni? = null,
+)
+
 data class CoverImage(
     @JsonProperty("extraLarge") var extraLarge: String? = null,
     @JsonProperty("large") var large: String? = null,

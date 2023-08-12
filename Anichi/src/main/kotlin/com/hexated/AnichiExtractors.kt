@@ -69,7 +69,7 @@ object AnichiExtractors : Anichi() {
                     links.forEach { server ->
                         val host = server.link.getHost()
                         when {
-                            source.sourceName == "Default" -> {
+                            source.sourceName?.contains("Default") == true -> {
                                 if (server.resolutionStr == "SUB" || server.resolutionStr == "Alt vo_SUB") {
                                     getM3u8Qualities(
                                         server.link,
