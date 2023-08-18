@@ -10,7 +10,6 @@ import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFmovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGoku
-import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
@@ -32,6 +31,7 @@ import com.hexated.SoraExtractor.invokeFourCartoon
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
+import com.hexated.SoraExtractor.invokePrimewire
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -268,7 +268,7 @@ class SoraStreamLite : SoraStream() {
                 invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokeGomovies(res.title, res.year, res.season, res.episode, callback)
+                invokePrimewire(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeAsk4Movies(

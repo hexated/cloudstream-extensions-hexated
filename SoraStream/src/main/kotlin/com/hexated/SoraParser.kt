@@ -9,12 +9,6 @@ data class FDMovieIFrame(
     val type: String,
 )
 
-data class BaymoviesConfig(
-    val country: String,
-    val downloadTime: String,
-    val workers: List<String>
-)
-
 data class AniIds(
     var id: Int? = null,
     var idMal: Int? = null
@@ -37,26 +31,7 @@ data class AniSearch(
     @JsonProperty("data") var data: AniData? = AniData()
 )
 
-data class Tmdb2Anilist(
-    @JsonProperty("tmdb_id") val tmdb_id: String? = null,
-    @JsonProperty("anilist_id") val anilist_id: String? = null,
-    @JsonProperty("mal_id") val mal_id: String? = null,
-)
-
-data class Movie123Media(
-    @JsonProperty("url") val url: String? = null,
-)
-
-data class Movie123Data(
-    @JsonProperty("t") val t: String? = null,
-    @JsonProperty("s") val s: String? = null,
-)
-
-data class Movie123Search(
-    @JsonProperty("data") val data: ArrayList<Movie123Data>? = arrayListOf(),
-)
-
-data class GomoviesSources(
+data class PrimewireSources(
     @JsonProperty("src") val src: String,
     @JsonProperty("file") val file: String? = null,
     @JsonProperty("label") val label: Int? = null,
@@ -200,15 +175,6 @@ data class IndexData(
 
 data class IndexSearch(
     @JsonProperty("data") val data: IndexData? = null,
-)
-
-data class SorastreamResponse(
-    @JsonProperty("data") val data: SorastreamVideos? = null,
-)
-
-data class SorastreamVideos(
-    @JsonProperty("mediaUrl") val mediaUrl: String? = null,
-    @JsonProperty("currentDefinition") val currentDefinition: String? = null,
 )
 
 data class BiliBiliEpisodes(

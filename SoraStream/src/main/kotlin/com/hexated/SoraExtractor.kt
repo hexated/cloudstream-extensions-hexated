@@ -1127,13 +1127,19 @@ object SoraExtractor : SoraStream() {
                     link ?: return@apmap
                 )
             val base = getBaseUrl(driveLink ?: return@apmap)
-            val resDoc = app.get(driveLink).document
-            val bitLink = resDoc.selectFirst("a.btn.btn-outline-success")?.attr("href")
-            val downloadLink = if (bitLink.isNullOrEmpty()) {
-                val backupIframe = resDoc.select("a.btn.btn-outline-warning").attr("href")
-                extractBackupUHD(backupIframe ?: return@apmap)
-            } else {
-                extractMirrorUHD(bitLink, base)
+            val driveReq = app.get(driveLink)
+            val driveRes = driveReq.document
+            val bitLink = driveRes.select("a.btn.btn-outline-success").attr("href")
+            val downloadLink = when {
+                driveRes.select("button.btn.btn-success").text()
+                    .contains("Direct Download", true) -> extractDirectUHD(driveLink, driveReq)
+                bitLink.isNullOrEmpty() -> {
+                    val backupIframe = driveRes.select("a.btn.btn-outline-warning").attr("href")
+                    extractBackupUHD(backupIframe ?: return@apmap)
+                }
+                else -> {
+                    extractMirrorUHD(bitLink, base)
+                }
             }
 
             val tags = getUhdTags(quality)
@@ -2138,7 +2144,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeGomovies(
+    suspend fun invokePrimewire(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -2152,9 +2158,9 @@ object SoraExtractor : SoraStream() {
             "$title Season $season"
         }
 
-        val doc = app.get("$gomoviesAPI/search/$query").document
+        val doc = app.get("$primewireAPI/search/$query").document
 
-        val media = doc.select("div._gory div.g_yFsxmKnYLvpKDTrdbizeYMWy").map {
+        val media = doc.select("div.RvnMfoxhgm").map {
             Triple(
                 it.attr("data-filmName"),
                 it.attr("data-year"),
@@ -2183,21 +2189,21 @@ object SoraExtractor : SoraStream() {
             app.get(
                 fixUrl(
                     media.third,
-                    gomoviesAPI
+                    primewireAPI
                 )
-            ).document.selectFirst("div#g_MXOzFGouZrOAUioXjpddqkZK a:contains(Episode ${slug.second})")
+            ).document.selectFirst("div#vvqUtffkId a:contains(Episode ${slug.second})")
                 ?.attr("href")
         } ?: return
 
-        val res = app.get(fixUrl(iframe, gomoviesAPI), verify = false)
+        val res = app.get(fixUrl(iframe, primewireAPI), verify = false)
         val match = "var url = '(/user/servers/.*?\\?ep=.*?)';".toRegex().find(res.text)
         val serverUrl = match?.groupValues?.get(1) ?: return
-        val cookies = res.okhttpResponse.headers.getGomoviesCookies()
+        val cookies = res.okhttpResponse.headers.getPrimewireCookies()
         val url = res.document.select("meta[property=og:url]").attr("content")
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)
         app.get(
-            "$gomoviesAPI$serverUrl",
+            "$primewireAPI$serverUrl",
             cookies = cookies, referer = url, headers = headers
         ).document.select("ul li").amap { el ->
             val server = el.attr("data-value")
@@ -2207,16 +2213,16 @@ object SoraExtractor : SoraStream() {
                 referer = url,
                 headers = headers
             ).text
-            val json = base64Decode(encryptedData).decryptGomoviesJson()
-            val links = tryParseJson<List<GomoviesSources>>(json) ?: return@amap
+            val json = base64Decode(encryptedData).decodePrimewireXor()
+            val links = tryParseJson<List<PrimewireSources>>(json) ?: return@amap
             links.forEach { video ->
                 qualities.filter { it <= video.max.toInt() }.forEach {
                     callback(
                         ExtractorLink(
-                            "Gomovies",
-                            "Gomovies",
+                            "Primewire",
+                            "Primewire",
                             video.src.split("360", limit = 3).joinToString(it.toString()),
-                            "$gomoviesAPI/",
+                            "$primewireAPI/",
                             it,
                         )
                     )
@@ -2535,7 +2541,8 @@ object SoraExtractor : SoraStream() {
     ) {
         val referer = "https://2now.tv/"
         val slug = getEpisodeSlug(season, episode)
-        val url = if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${slug.second}.mp4"
+        val url =
+            if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${slug.second}.mp4"
         if (!app.get(url, referer = referer).isSuccessful) return
         callback.invoke(
             ExtractorLink(

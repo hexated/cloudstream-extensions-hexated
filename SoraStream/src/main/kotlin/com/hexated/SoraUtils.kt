@@ -165,6 +165,34 @@ suspend fun extractMirrorUHD(url: String, ref: String): String? {
     )
 }
 
+suspend fun extractDirectUHD(url: String, niceResponse: NiceResponse): String? {
+    val document = niceResponse.document
+    val script = document.selectFirst("script:containsData(cf_token)")?.data() ?: return null
+    val actionToken = script.substringAfter("\"key\", \"").substringBefore("\");")
+    val cfToken = script.substringAfter("cf_token = \"").substringBefore("\";")
+    val body = FormBody.Builder()
+        .addEncoded("action", "direct")
+        .addEncoded("key", actionToken)
+        .addEncoded("action_token", cfToken)
+        .build()
+    val cookies = mapOf("PHPSESSID" to "${niceResponse.cookies["PHPSESSID"]}")
+    val direct = app.post(
+        url,
+        requestBody = body,
+        cookies = cookies,
+        referer = url,
+        headers = mapOf(
+            "x-token" to "driveleech.org"
+        )
+    ).parsedSafe<Map<String, String>>()?.get("url")
+
+    return app.get(
+        direct ?: return null, cookies = cookies,
+        referer = url
+    ).text.substringAfter("worker_url = '").substringBefore("';")
+
+}
+
 suspend fun extractBackupUHD(url: String): String? {
     val resumeDoc = app.get(url)
 
@@ -425,14 +453,8 @@ suspend fun invokeSmashyFfix(
     ref: String,
     callback: (ExtractorLink) -> Unit,
 ) {
-    val script =
-        app.get(url, referer = ref).document.selectFirst("script:containsData(player =)")?.data()
-            ?: return
-
-    val source =
-        Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(
-            1
-        ) ?: return
+    val res = app.get(url, referer = ref).text
+    val source = Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(res)?.groupValues?.get(1) ?: return
 
     source.split(",").map { links ->
         val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
@@ -1283,7 +1305,7 @@ fun decodeIndexJson(json: String): String {
     return base64Decode(slug.substring(0, slug.length - 20))
 }
 
-fun String.decryptGomoviesJson(key: String = BuildConfig.GOMOVIES_KEY): String {
+fun String.decodePrimewireXor(key: String = BuildConfig.PRIMEWIRE_KEY): String {
     val sb = StringBuilder()
     var i = 0
     while (i < this.length) {
@@ -1297,7 +1319,7 @@ fun String.decryptGomoviesJson(key: String = BuildConfig.GOMOVIES_KEY): String {
     return sb.toString()
 }
 
-fun Headers.getGomoviesCookies(cookieKey: String = "set-cookie"): Map<String, String> {
+fun Headers.getPrimewireCookies(cookieKey: String = "set-cookie"): Map<String, String> {
     val cookieList =
         this.filter { it.first.equals(cookieKey, ignoreCase = true) }.mapNotNull {
             it.second.split(";").firstOrNull()
