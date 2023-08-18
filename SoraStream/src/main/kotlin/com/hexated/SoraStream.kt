@@ -21,7 +21,6 @@ import com.hexated.SoraExtractor.invokeDoomovies
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
-import com.hexated.SoraExtractor.invokeFmovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGoku
@@ -48,6 +47,7 @@ import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokePrimewire
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
+import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
@@ -98,7 +98,7 @@ open class SoraStream : TmdbProvider() {
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.ink"
+        const val uhdmoviesAPI = "https://uhdmovies.actor"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
@@ -129,6 +129,7 @@ open class SoraStream : TmdbProvider() {
         const val momentAPI = "https://moment-explanation-i-244.site"
         const val doomoviesAPI = "https://doomovies.net"
         const val primewireAPI = "https://real-primewire.club"
+        const val vidsrctoAPI = "https://vidsrc.to"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -467,9 +468,8 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeFmovies(
-                    res.title,
-                    res.airedYear ?: res.year,
+                if (!res.isAnime) invokeVidsrcto(
+                    res.imdbId,
                     res.season,
                     res.episode,
                     subtitleCallback,

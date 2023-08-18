@@ -7,7 +7,6 @@ import com.hexated.SoraExtractor.invokeDoomovies
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixon
-import com.hexated.SoraExtractor.invokeFmovies
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGoku
 import com.hexated.SoraExtractor.invokeHDMovieBox
@@ -33,6 +32,7 @@ import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePrimewire
 import com.hexated.SoraExtractor.invokeVidSrc
+import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.lagradost.cloudstream3.SubtitleFile
@@ -218,9 +218,8 @@ class SoraStreamLite : SoraStream() {
 //                )
 //            },
             {
-                if (!res.isAnime) invokeFmovies(
-                    res.title,
-                    res.airedYear ?: res.year,
+                if (!res.isAnime) invokeVidsrcto(
+                    res.imdbId,
                     res.season,
                     res.episode,
                     subtitleCallback,

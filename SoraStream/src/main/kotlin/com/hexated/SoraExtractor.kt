@@ -767,6 +767,33 @@ object SoraExtractor : SoraStream() {
         }
     }
 
+    suspend fun invokeVidsrcto(
+        imdbId: String?,
+        season: Int?,
+        episode: Int?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if(season == null) {
+            "$vidsrctoAPI/embed/movie/$imdbId"
+        } else {
+            "$vidsrctoAPI/embed/tv/$imdbId/$season/$episode"
+        }
+
+        val id = app.get(url).document.selectFirst("ul.episodes li a")?.attr("data-id") ?: return
+
+        val subtitles = app.get("$vidsrctoAPI/ajax/embed/episode/$id/subtitles").text
+        tryParseJson<List<FmoviesSubtitles>>(subtitles)?.map {
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    it.label ?: "",
+                    it.file ?: return@map
+                )
+            )
+        }
+
+    }
+
     suspend fun invokeKisskh(
         title: String? = null,
         season: Int? = null,
