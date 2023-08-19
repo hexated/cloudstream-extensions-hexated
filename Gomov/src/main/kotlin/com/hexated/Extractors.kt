@@ -14,6 +14,11 @@ class Filelions : Filesim() {
     override var mainUrl = "https://filelions.to"
 }
 
+class Embedwish : Filesim() {
+    override val name = "Embedwish"
+    override var mainUrl = "https://embedwish.com"
+}
+
 class Likessb : StreamSB() {
     override var name = "Likessb"
     override var mainUrl = "https://likessb.com"
