@@ -905,31 +905,29 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
     }
 }
 
-suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Map<String,String> {
+var filmxyCookies: Map<String,String>? = null
+suspend fun getFilmxyCookies(url: String) = filmxyCookies ?: fetchFilmxyCookies(url).also { filmxyCookies = it }
+suspend fun fetchFilmxyCookies(url: String): Map<String, String> {
 
-    val url = if (season == null) {
-        "${filmxyAPI}/movie/$imdbId"
-    } else {
-        "${filmxyAPI}/tv/$imdbId"
-    }
-    val cookieUrl = "${filmxyAPI}/wp-admin/admin-ajax.php"
-
-    val res = session.get(
+    val defaultCookies = mutableMapOf("G_ENABLED_IDPS" to "google", "true_checker" to "1", "XID" to "1")
+    session.get(
         url,
         headers = mapOf(
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
         ),
+        cookies = defaultCookies,
     )
-
-    if (!res.isSuccessful) return emptyMap()
-
-    val userNonce =
-        res.document.select("script").find { it.data().contains("var userNonce") }?.data()?.let {
-            Regex("var\\suserNonce.*?\"(\\S+?)\";").find(it)?.groupValues?.get(1)
-        }
-
     val phpsessid = session.baseClient.cookieJar.loadForRequest(url.toHttpUrl())
         .first { it.name == "PHPSESSID" }.value
+    defaultCookies["PHPSESSID"] = phpsessid
+
+    val userNonce =
+        app.get("$filmxyAPI/login/?redirect_to=$filmxyAPI/", cookies = defaultCookies).document.select("script")
+            .find { it.data().contains("var userNonce") }?.data()?.let {
+                Regex("var\\suserNonce.*?\"(\\S+?)\";").find(it)?.groupValues?.get(1)
+            }
+
+    val cookieUrl = "${filmxyAPI}/wp-admin/admin-ajax.php"
 
     session.post(
         cookieUrl,
@@ -938,12 +936,14 @@ suspend fun getFilmxyCookies(imdbId: String? = null, season: Int? = null): Map<S
             "nonce" to "$userNonce",
         ),
         headers = mapOf(
-            "Cookie" to "PHPSESSID=$phpsessid; G_ENABLED_IDPS=google",
             "X-Requested-With" to "XMLHttpRequest",
-        )
+        ),
+        cookies = defaultCookies
     )
-    val cookieJar = session.baseClient.cookieJar.loadForRequest(cookieUrl.toHttpUrl()).associate { it.name to it.value }.toMutableMap()
-    return cookieJar.plus(mapOf("G_ENABLED_IDPS" to "google"))
+    val cookieJar = session.baseClient.cookieJar.loadForRequest(cookieUrl.toHttpUrl())
+        .associate { it.name to it.value }.toMutableMap()
+
+    return cookieJar.plus(defaultCookies)
 }
 
 fun Document.findTvMoviesIframe(): String? {

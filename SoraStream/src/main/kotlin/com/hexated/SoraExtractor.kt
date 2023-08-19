@@ -562,7 +562,7 @@ object SoraExtractor : SoraStream() {
         } else {
             "${filmxyAPI}/tv/$imdbId"
         }
-        val filmxyCookies = getFilmxyCookies(imdbId, season)
+        val filmxyCookies = getFilmxyCookies(url)
         val doc = session.get(url, cookies = filmxyCookies).document
         val script = doc.selectFirst("script:containsData(var isSingle)")?.data() ?: return
 
