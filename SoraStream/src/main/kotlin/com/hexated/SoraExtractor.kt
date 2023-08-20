@@ -644,6 +644,74 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeDramaday(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        fun String.getQuality(): String? =
+            Regex("""\d{3,4}[pP]""").find(this)?.groupValues?.getOrNull(0)
+
+        fun String.getTag(): String? =
+            Regex("""\d{3,4}[pP]\s*(.*)""").find(this)?.groupValues?.getOrNull(1)
+
+        val slug = title.createSlug()
+        val epsSlug = getEpisodeSlug(season, episode)
+        val url = if (season == null) {
+            "$dramadayAPI/$slug-$year/"
+        } else {
+            "$dramadayAPI/$slug/"
+        }
+        val res = app.get(url).document
+
+        val servers = if (season == null) {
+            val player = res.select("div.tabs__pane p a[href*=https://ouo]").attr("href")
+            val ouo = bypassOuo(player)
+            app.get(ouo ?: return).document.select("article p:matches(\\d{3,4}[pP]) + p:has(a)")
+                .flatMap { ele ->
+                    val entry = ele.previousElementSibling()?.text() ?: ""
+                    ele.select("a").map {
+                        Triple(entry.getQuality(), entry.getTag(), it.attr("href"))
+                    }.filter {
+                        it.third.startsWith("https://pixeldrain.com") || it.third.startsWith("https://krakenfiles.com")
+                    }
+                }
+        } else {
+            val data = res.select("tbody tr:has(td[data-order=${epsSlug.second}])")
+            val qualities =
+                data.select("td:nth-child(2)").attr("data-order").split("<br>").map { it }
+            val iframe = data.select("a[href*=https://ouo]").map { it.attr("href") }
+            qualities.zip(iframe).map {
+                Triple(it.first.getQuality(), it.first.getTag(), it.second)
+            }
+        }
+
+        servers.filter { it.first == "720p" || it.first == "1080p" }.apmap {
+            val server = if (it.third.startsWith("https://ouo")) bypassOuo(it.third) else it.third
+            loadExtractor(server ?: return@apmap, "$dramadayAPI/", subtitleCallback) { link ->
+                callback.invoke(
+                    ExtractorLink(
+                        link.source,
+                        "${link.name} ${it.second}",
+                        link.url,
+                        link.referer,
+                        when {
+                            link.isM3u8 -> link.quality
+                            else -> getQualityFromName(it.first)
+                        },
+                        link.isM3u8,
+                        link.headers,
+                        link.extractorData
+                    )
+                )
+            }
+        }
+
+    }
+
     suspend fun invokeKimcartoon(
         title: String? = null,
         season: Int? = null,

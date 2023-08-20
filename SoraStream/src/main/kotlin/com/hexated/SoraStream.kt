@@ -18,6 +18,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invokeDahmerMovies
 import com.hexated.SoraExtractor.invokeDoomovies
+import com.hexated.SoraExtractor.invokeDramaday
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
@@ -130,11 +131,13 @@ open class SoraStream : TmdbProvider() {
         const val doomoviesAPI = "https://doomovies.net"
         const val primewireAPI = "https://real-primewire.club"
         const val vidsrctoAPI = "https://vidsrc.to"
+        const val dramadayAPI = "https://dramaday.me"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
         const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
-        val cryMoviesAPI = base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
+        val cryMoviesAPI =
+            base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -244,8 +247,8 @@ open class SoraStream : TmdbProvider() {
         val year = releaseDate?.split("-")?.first()?.toIntOrNull()
         val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
-        val isAnime =
-            genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
+        val isAnime = genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
+        val isAsian = !isAnime && (res.original_language == "zh" || res.original_language == "ko")
         val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
             .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
 
@@ -286,6 +289,7 @@ open class SoraStream : TmdbProvider() {
                                 jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
                                 date = season.airDate,
                                 airedDate = res.releaseDate ?: res.firstAirDate,
+                                isAsian = isAsian,
                             ).toJson(),
                             name = eps.name + if (isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
                             season = eps.seasonNumber,
@@ -332,6 +336,7 @@ open class SoraStream : TmdbProvider() {
                     isAnime = isAnime,
                     jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
                     airedDate = res.releaseDate ?: res.firstAirDate,
+                    isAsian = isAsian,
                 ).toJson(),
             ) {
                 this.posterUrl = poster
@@ -725,6 +730,16 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
+            {
+                if(res.isAsian) invokeDramaday(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            }
         )
 
         return true
@@ -748,6 +763,7 @@ open class SoraStream : TmdbProvider() {
         val jpTitle: String? = null,
         val date: String? = null,
         val airedDate: String? = null,
+        val isAsian: Boolean = false,
     )
 
     data class Data(
