@@ -177,32 +177,18 @@ data class IndexSearch(
     @JsonProperty("data") val data: IndexData? = null,
 )
 
-data class BiliBiliEpisodes(
-    @JsonProperty("id") val id: Int? = null,
-    @JsonProperty("sourceId") val sourceId: String? = null,
-    @JsonProperty("sourceEpisodeId") val sourceEpisodeId: String? = null,
-    @JsonProperty("sourceMediaId") val sourceMediaId: String? = null,
-    @JsonProperty("episodeNumber") val episodeNumber: Int? = null,
+data class JikanExternal(
+    @JsonProperty("name") val name: String? = null,
+    @JsonProperty("url") val url: String? = null,
 )
 
-data class BiliBiliDetails(
-    @JsonProperty("episodes") val episodes: ArrayList<BiliBiliEpisodes>? = arrayListOf(),
+data class JikanData(
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("external") val external: ArrayList<JikanExternal>? = arrayListOf(),
 )
 
-data class BiliBiliSubtitles(
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("lang") val lang: String? = null,
-    @JsonProperty("language") val language: String? = null,
-)
-
-data class BiliBiliSources(
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("type") val type: String? = null,
-)
-
-data class BiliBiliSourcesResponse(
-    @JsonProperty("sources") val sources: ArrayList<BiliBiliSources>? = arrayListOf(),
-    @JsonProperty("subtitles") val subtitles: ArrayList<BiliBiliSubtitles>? = arrayListOf(),
+data class JikanResponse(
+    @JsonProperty("data") val data: JikanData? = null,
 )
 
 data class WatchOnlineItems(

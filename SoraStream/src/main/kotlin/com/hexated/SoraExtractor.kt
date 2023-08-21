@@ -17,6 +17,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import org.jsoup.select.Elements
 
 val session = Session(Requests().baseClient)
 
@@ -968,10 +969,10 @@ object SoraExtractor : SoraStream() {
 
         argamap(
             {
-                invokeAniwatch(malId, episode, subtitleCallback, callback)
+                invokeAnimetosho(malId, season, episode, subtitleCallback, callback)
             },
             {
-                invokeBiliBili(aniId, episode, subtitleCallback, callback)
+                invokeAniwatch(malId, episode, subtitleCallback, callback)
             },
             {
                 if (season != null) invokeCrunchyroll(
@@ -987,54 +988,55 @@ object SoraExtractor : SoraStream() {
         )
     }
 
-    private suspend fun invokeBiliBili(
-        aniId: Int? = null,
+    private suspend fun invokeAnimetosho(
+        malId: Int? = null,
+        season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get(
-            "$biliBiliAPI/anime/episodes?id=${aniId ?: return}&source_id=bilibili",
-            referer = otakuzBaseUrl
-        )
-            .parsedSafe<BiliBiliDetails>()?.episodes?.find {
-                it.episodeNumber == episode
-            } ?: return
-
-        val sources =
-            app.get(
-                "$biliBiliAPI/source?episode_id=${res.sourceEpisodeId}&source_media_id=${res.sourceMediaId}&source_id=${res.sourceId}",
-                referer = otakuzBaseUrl
-            )
-                .parsedSafe<BiliBiliSourcesResponse>()
-
-        sources?.sources?.apmap { source ->
-            val quality =
-                app.get(
-                    source.file ?: return@apmap null,
-                    referer = otakuzBaseUrl
-                ).document.selectFirst("Representation")
-                    ?.attr("height")
-            callback.invoke(
-                ExtractorLink(
-                    "BiliBili",
-                    "BiliBili",
-                    source.file,
-                    "",
-                    quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                    isDash = true
-                )
-            )
+        fun Elements.getLinks(): List<Triple<String, String, Int>> {
+            return this.flatMap { ele ->
+                ele.select("div.links a:matches(KrakenFiles|GoFile)").map {
+                    Triple(
+                        it.attr("href"),
+                        ele.select("div.size").text(),
+                        getIndexQuality(ele.select("div.link a").text())
+                    )
+                }
+            }
         }
 
-        sources?.subtitles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    SubtitleHelper.fromTwoLettersToLanguage(sub.lang ?: "") ?: sub.language
-                    ?: return@map null,
-                    sub.file ?: return@map null
+        val (seasonSLug, episodeSlug) = getEpisodeSlug(season, episode)
+        val jikan = app.get("$jikanAPI/anime/$malId/full").parsedSafe<JikanResponse>()?.data
+        val aniId = jikan?.external?.find { it.name == "AniDB" }?.url?.substringAfterLast("=")
+        val res = app.get("$animetoshoAPI/series/${jikan?.title?.createSlug()}.$aniId?filter[0][t]=nyaa_class&filter[0][v]=trusted").document
+
+        val servers = if (season == null) {
+            res.select("div.home_list_entry:has(div.links)").getLinks()
+        } else {
+            res.select("div.home_list_entry:has(div.link a:matches([\\.\\s]$episodeSlug[\\.\\s]|S${seasonSLug}E$episodeSlug))")
+                .getLinks()
+        }
+
+        servers.filter { it.third in arrayOf(Qualities.P1080.value,Qualities.P720.value) }.apmap {
+            loadExtractor(it.first, "$animetoshoAPI/", subtitleCallback) { link ->
+                callback.invoke(
+                    ExtractorLink(
+                        link.source,
+                        "${link.name} [${it.second}]",
+                        link.url,
+                        link.referer,
+                        when {
+                            link.isM3u8 -> link.quality
+                            else -> it.third
+                        },
+                        link.isM3u8,
+                        link.headers,
+                        link.extractorData
+                    )
                 )
-            )
+            }
         }
 
     }
@@ -2209,7 +2211,7 @@ object SoraExtractor : SoraStream() {
             "$dahmerMoviesAPI/tvs/${title?.replace(":", " -")}/Season $season/"
         }
 
-        val request = app.get(url)
+        val request = app.get(url, timeout = 120L)
         if (!request.isSuccessful) return
         val paths = request.document.select("a").map {
             it.text() to it.attr("href")
@@ -2236,6 +2238,33 @@ object SoraExtractor : SoraStream() {
             )
 
         }
+
+    }
+
+    suspend fun invoke2embed(
+        imdbId: String?,
+        season: Int?,
+        episode: Int?,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val server = "https://stream.2embed.cc"
+        val url = if(season == null) {
+            "$twoEmbedAPI/embed/$imdbId"
+        } else {
+            "$twoEmbedAPI/embedtv/$imdbId&s=$season&e=$episode"
+        }
+
+        val iframesrc = app.get(url).document.selectFirst("iframe#iframesrc")?.attr("src")
+        val framesrc = app.get(fixUrl(iframesrc ?: return, twoEmbedAPI)).document.selectFirst("iframe#framesrc")?.attr("src")
+        val video = app.get(fixUrl(framesrc ?: return, "$server/e/")).text.let {
+            Regex("file:\\s*\"(.*?m3u8.*?)\"").find(it)?.groupValues?.getOrNull(1)
+        }
+
+        M3u8Helper.generateM3u8(
+            "2embed",
+            video ?: return,
+            "$server/",
+        ).forEach(callback)
 
     }
 

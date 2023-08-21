@@ -1,6 +1,7 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeBollyMaza
@@ -80,11 +81,13 @@ open class SoraStream : TmdbProvider() {
         const val anilistAPI = "https://graphql.anilist.co"
         const val malsyncAPI = "https://api.malsync.moe"
         const val consumetHelper = "https://api.consumet.org/anime/9anime/helper"
+        const val jikanAPI = "https://api.jikan.moe/v4"
 
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
 
         /** ALL SOURCES */
+        const val twoEmbedAPI = "https://www.2embed.cc"
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
         const val movieHabAPI = "https://moviehab.com"
@@ -113,7 +116,6 @@ open class SoraStream : TmdbProvider() {
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         const val ask4MoviesAPI = "https://ask4movie.nl"
-        const val biliBiliAPI = "https://api-vn.otakuz.live/server"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://moviesapi.club"
         const val putlockerAPI = "https://ww7.putlocker.vip"
@@ -132,6 +134,7 @@ open class SoraStream : TmdbProvider() {
         const val primewireAPI = "https://real-primewire.club"
         const val vidsrctoAPI = "https://vidsrc.to"
         const val dramadayAPI = "https://dramaday.me"
+        const val animetoshoAPI = "https://animetosho.org"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -739,7 +742,10 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
-            }
+            },
+            {
+                if(!res.isAnime) invoke2embed(res.imdbId,res.season,res.episode,callback)
+            },
         )
 
         return true

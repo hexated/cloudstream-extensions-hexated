@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeDbgo
@@ -355,7 +356,15 @@ class SoraStreamLite : SoraStream() {
                     subtitleCallback,
                     callback
                 )
-            }
+            },
+            {
+                if(!res.isAnime) invoke2embed(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
         )
 
         return true
