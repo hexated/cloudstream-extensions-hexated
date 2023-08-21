@@ -2320,16 +2320,17 @@ object SoraExtractor : SoraStream() {
         } ?: return
 
         val res = app.get(fixUrl(iframe, primewireAPI), verify = false)
-        val match = "var url = '(/user/servers/.*?\\?ep=.*?)';".toRegex().find(res.text)
-        val serverUrl = match?.groupValues?.get(1) ?: return
+        val serverUrl = "var url = '(/user/servers/.*?\\?ep=.*?)';".toRegex().find(res.text)?.groupValues?.get(1) ?: return
         val cookies = res.okhttpResponse.headers.getPrimewireCookies()
         val url = res.document.select("meta[property=og:url]").attr("content")
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)
-        app.get(
+        val serverRes = app.get(
             "$primewireAPI$serverUrl",
             cookies = cookies, referer = url, headers = headers
-        ).document.select("ul li").amap { el ->
+        )
+        val key = getAndUnpack(serverRes.text).substringAfter("(key=").substringBefore(")")
+        serverRes.document.select("ul li").amap { el ->
             val server = el.attr("data-value")
             val encryptedData = app.get(
                 "$url?server=$server&_=${System.currentTimeMillis()}",
@@ -2337,7 +2338,7 @@ object SoraExtractor : SoraStream() {
                 referer = url,
                 headers = headers
             ).text
-            val json = base64Decode(encryptedData).decodePrimewireXor()
+            val json = base64Decode(encryptedData).decodePrimewireXor(key)
             val links = tryParseJson<List<PrimewireSources>>(json) ?: return@amap
             links.forEach { video ->
                 qualities.filter { it <= video.max.toInt() }.forEach {
