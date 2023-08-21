@@ -7,9 +7,11 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
+import java.net.URI
 
 open class Gomov : MainAPI() {
     override var mainUrl = "https://gomov.bio"
+    private var directUrl: String? = null
     override var name = "Gomov"
     override val hasMainPage = true
     override var lang = "id"
@@ -78,7 +80,9 @@ open class Gomov : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val fetch = app.get(url)
+        directUrl = getBaseUrl(fetch.url)
+        val document = fetch.document
 
         val title =
             document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.substringBefore("Episode")?.trim()
@@ -151,11 +155,11 @@ open class Gomov : MainAPI() {
 
         document.select("div.tab-content-ajax").apmap {
             val server = app.post(
-                "$mainUrl/wp-admin/admin-ajax.php",
+                "$directUrl/wp-admin/admin-ajax.php",
                 data = mapOf("action" to "muvipro_player_content", "tab" to it.attr("id"), "post_id" to id)
             ).document.select("iframe").attr("src")
 
-            loadExtractor(httpsify(server), "$mainUrl/", subtitleCallback, callback)
+            loadExtractor(httpsify(server), "$directUrl/", subtitleCallback, callback)
         }
 
         return true
@@ -167,6 +171,12 @@ open class Gomov : MainAPI() {
         val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues
         if(regex?.isEmpty() == true) return this
         return this.replace(regex?.get(0) ?: return null, "")
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
     }
 
 }
