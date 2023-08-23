@@ -9,9 +9,14 @@ class Dutamovie21 : StreamSB() {
     override var mainUrl = "https://dutamovie21.xyz"
 }
 
-class Filelions : Filesim() {
+class FilelionsTo : Filesim() {
     override val name = "Filelions"
     override var mainUrl = "https://filelions.to"
+}
+
+class Lylxan : Filesim() {
+    override val name = "Lylxan"
+    override var mainUrl = "https://lylxan.com"
 }
 
 class Embedwish : Filesim() {

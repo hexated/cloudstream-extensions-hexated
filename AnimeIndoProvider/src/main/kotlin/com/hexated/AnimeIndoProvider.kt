@@ -48,7 +48,7 @@ class AnimeIndoProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val url = "$mainUrl/pages/${request.data}/page/$page"
+        val url = "$mainUrl/${request.data}/page/$page"
         val document = app.get(url).document
         val home = document.select("main#main div.animposx").mapNotNull {
             it.toSearchResult()

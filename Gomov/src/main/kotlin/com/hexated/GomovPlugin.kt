@@ -13,10 +13,11 @@ class GomovPlugin: Plugin() {
         registerMainAPI(DutaMovie())
         registerMainAPI(Ngefilm())
         registerMainAPI(Nodrakorid())
-        registerExtractorAPI(Filelions())
+        registerExtractorAPI(FilelionsTo())
         registerExtractorAPI(Likessb())
         registerExtractorAPI(DbGdriveplayer())
         registerExtractorAPI(Dutamovie21())
         registerExtractorAPI(Embedwish())
+        registerExtractorAPI(Lylxan())
     }
 }

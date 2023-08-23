@@ -3,7 +3,6 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.XStreamCdn
-import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -197,7 +196,7 @@ open class DramaidProvider : MainAPI() {
                     callback
                 )
 
-                else -> loadExtractor(it, data, subtitleCallback, callback)
+                else -> loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
             }
         }
 
