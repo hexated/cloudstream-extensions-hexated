@@ -13,13 +13,12 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class IdlixProvider : MainAPI() {
-    override var mainUrl = "https://tv.idlixprime.com"
+    override var mainUrl = "https://tv.idlixplus.net"
     private var directUrl = mainUrl
     override var name = "Idlix"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-    private val session = Session(Requests().baseClient)
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -51,9 +50,9 @@ class IdlixProvider : MainAPI() {
         val url = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1
         val req = if (nonPaged) {
-            session.get(request.data)
+            app.get(request.data)
         } else {
-            session.get("${url.first()}$page/?${url.lastOrNull()}")
+            app.get("${url.first()}$page/?${url.lastOrNull()}")
         }
         mainUrl = getBaseUrl(req.url)
         val document = req.document
@@ -98,7 +97,7 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val req = session.get("$mainUrl/search/$query")
+        val req = app.get("$mainUrl/search/$query")
         mainUrl = getBaseUrl(req.url)
         val document = req.document
         return document.select("div.result-item").map {
@@ -113,7 +112,7 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val request = session.get(url)
+        val request = app.get(url)
         directUrl = getBaseUrl(request.url)
         val document = request.document
         val title =
@@ -193,7 +192,7 @@ class IdlixProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = session.get(data).document
+        val document = app.get(data).document
         val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
         val type = if (data.contains("/movie/")) "movie" else "tv"
 
@@ -201,22 +200,18 @@ class IdlixProvider : MainAPI() {
             it.attr("data-nume")
         }.apmap { nume ->
             safeApiCall {
-                var source = session.post(
-                    url = "$directUrl/wp-admin/admin-ajax.php",
-                    data = mapOf(
-                        "action" to "doo_player_ajax",
-                        "post" to id,
-                        "nume" to nume,
-                        "type" to type
-                    ),
+                val source = app.get(
+                    url = "$directUrl/wp-json/dooplayer/v2/$id/$type/$nume",
                     headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
                     referer = data
-                ).let { tryParseJson<ResponseHash>(it.text) }?.embed_url ?: return@safeApiCall
+                ).let { tryParseJson<ResponseHash>(it.text) } ?: return@safeApiCall
 
-                if (source.startsWith("https://uservideo.xyz")) {
-                    source = app.get(source).document.select("iframe").attr("src")
+                var decrypted = AesHelper.cryptoAESHandler(source.embed_url,source.key.toByteArray(), false)?.fixBloat() ?: return@safeApiCall
+
+                if (decrypted.startsWith("https://uservideo.xyz")) {
+                    decrypted = app.get(decrypted).document.select("iframe").attr("src")
                 }
-                loadExtractor(source, directUrl, subtitleCallback, callback)
+                loadExtractor(decrypted, "$directUrl/", subtitleCallback, callback)
 
             }
         }
@@ -224,9 +219,15 @@ class IdlixProvider : MainAPI() {
         return true
     }
 
+    private fun String.fixBloat() : String {
+        return this.replace("\"", "").replace("\\", "")
+    }
+
     data class ResponseHash(
         @JsonProperty("embed_url") val embed_url: String,
+        @JsonProperty("key") val key: String,
         @JsonProperty("type") val type: String?,
     )
+
 
 }

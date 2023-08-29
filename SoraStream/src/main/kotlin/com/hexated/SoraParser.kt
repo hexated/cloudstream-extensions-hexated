@@ -65,6 +65,7 @@ data class HdMovieBoxIframe(
 
 data class ResponseHash(
     @JsonProperty("embed_url") val embed_url: String,
+    @JsonProperty("key") val key: String,
     @JsonProperty("type") val type: String?,
 )
 
@@ -204,25 +205,6 @@ data class WatchOnlineSearch(
 data class WatchOnlineResponse(
     @JsonProperty("streams") val streams: HashMap<String, String>? = null,
     @JsonProperty("subtitles") val subtitles: Any? = null,
-)
-
-data class PutlockerEpisodes(
-    @JsonProperty("html") val html: String? = null,
-)
-
-data class PutlockerEmbed(
-    @JsonProperty("src") val src: String? = null,
-)
-
-data class PutlockerSources(
-    @JsonProperty("file") val file: String,
-    @JsonProperty("label") val label: String? = null,
-    @JsonProperty("type") val type: String? = null,
-)
-
-data class PutlockerResponses(
-    @JsonProperty("sources") val sources: ArrayList<PutlockerSources>? = arrayListOf(),
-    @JsonProperty("backupLink") val backupLink: String? = null,
 )
 
 data class CryMoviesProxyHeaders(

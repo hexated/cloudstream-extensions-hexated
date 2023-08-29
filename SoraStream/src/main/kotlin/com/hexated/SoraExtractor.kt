@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.hexated.AesHelper.cryptoAESHandler
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -414,7 +415,7 @@ object SoraExtractor : SoraStream() {
         } else {
             "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
         }
-        invokeWpmovies(url, subtitleCallback, callback)
+        invokeWpmovies(url, subtitleCallback, callback, encrypt = true)
     }
 
     suspend fun invokeMultimovies(
@@ -455,8 +456,13 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
         fixIframe: Boolean = false,
+        encrypt: Boolean = false,
     ) {
-        val res = session.get(url ?: return)
+        fun String.fixBloat() : String {
+            return this.replace("\"", "").replace("\\", "")
+        }
+        val res = app.get(url ?: return)
+        val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val referer = getBaseUrl(res.url)
         val document = res.document
         document.select("ul#playeroptionsul > li").map {
@@ -466,13 +472,21 @@ object SoraExtractor : SoraStream() {
                 it.attr("data-type")
             )
         }.apmap { (id, nume, type) ->
-            val json = session.post(
+            val json = if(encrypt) app.get(
+                url = "$referer/wp-json/dooplayer/v2/$id/$type/$nume",
+                headers = headers,
+                referer = url
+            ) else app.post(
                 url = "$referer/wp-admin/admin-ajax.php", data = mapOf(
                     "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
-                ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = url
+                ), headers = headers, referer = url
             )
-            val source = tryParseJson<ResponseHash>(json.text)?.embed_url?.let {
-                if (fixIframe) Jsoup.parse(it).select("IFRAME").attr("SRC") else it
+            val source = tryParseJson<ResponseHash>(json.text)?.let {
+                when {
+                    encrypt -> cryptoAESHandler(it.embed_url,it.key.toByteArray(), false)?.fixBloat()
+                    fixIframe -> Jsoup.parse(it.embed_url).select("IFRAME").attr("SRC")
+                    else -> it.embed_url
+                }
             } ?: return@apmap
             if (!source.contains("youtube")) {
                 loadExtractor(source, "$referer/", subtitleCallback, callback)
@@ -2537,80 +2551,6 @@ object SoraExtractor : SoraStream() {
         val iframe = app.get(url, referer = "https://pressplay.top/").document.selectFirst("iframe")
             ?.attr("src") ?: return
         loadExtractor(iframe, "$nineTvAPI/", subtitleCallback, callback)
-
-    }
-
-    suspend fun invokePutlocker(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val query = if (season == null) {
-            title
-        } else {
-            "$title - season $season"
-        }
-
-        val res = app.get("$putlockerAPI/movie/search/$query").document
-        val scripData = res.select("div.movies-list div.ml-item").map {
-            it.selectFirst("h2")?.text() to it.selectFirst("a")?.attr("href")
-        }
-        val script = if (scripData.size == 1) {
-            scripData.first()
-        } else {
-            scripData.find {
-                if (season == null) {
-                    it.first.equals(title, true) || (it.first?.contains(
-                        "$title", true
-                    ) == true && it.first?.contains("$year") == true)
-                } else {
-                    it.first?.contains("$title", true) == true && it.first?.contains(
-                        "Season $season", true
-                    ) == true
-                }
-            }
-        }
-
-        val id = fixUrl(script?.second ?: return).split("-").lastOrNull()?.removeSuffix("/")
-        val iframe = app.get("$putlockerAPI/ajax/movie_episodes/$id")
-            .parsedSafe<PutlockerEpisodes>()?.html?.let { Jsoup.parse(it) }?.let { server ->
-                if (season == null) {
-                    server.select("div.les-content a").map {
-                        it.attr("data-id") to it.attr("data-server")
-                    }
-                } else {
-                    server.select("div.les-content a").map { it }
-                        .filter { it.text().contains("Episode $episode", true) }.map {
-                            it.attr("data-id") to it.attr("data-server")
-                        }
-                }
-            }
-
-        iframe?.apmap {
-            delay(3000)
-            val embedUrl = app.get("$putlockerAPI/ajax/movie_embed/${it.first}")
-                .parsedSafe<PutlockerEmbed>()?.src ?: return@apmap null
-            val sources = extractPutlockerSources(embedUrl)?.parsedSafe<PutlockerResponses>()
-
-            argamap(
-                {
-                    sources?.callback(embedUrl, "Server ${it.second}", callback)
-                },
-                {
-                    if (!sources?.backupLink.isNullOrBlank()) {
-                        extractPutlockerSources(sources?.backupLink)?.parsedSafe<PutlockerResponses>()
-                            ?.callback(
-                                embedUrl, "Backup ${it.second}", callback
-                            )
-                    } else {
-                        return@argamap
-                    }
-                },
-            )
-
-        }
 
     }
 

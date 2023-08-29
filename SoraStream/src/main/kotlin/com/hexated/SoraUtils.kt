@@ -1,6 +1,7 @@
 package com.hexated
 
 import android.util.Base64
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.DumpUtils.queryApi
 import com.hexated.SoraStream.Companion.anilistAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
@@ -10,7 +11,6 @@ import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.fmoviesAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.malsyncAPI
-import com.hexated.SoraStream.Companion.putlockerAPI
 import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.hexated.SoraStream.Companion.watchOnlineAPI
@@ -41,11 +41,9 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
-import kotlin.math.min
 
 val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
 const val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-const val otakuzBaseUrl = "https://otakuz.live/"
 val encodedIndex = arrayOf(
     "GamMovies",
     "JSMovies",
@@ -1055,52 +1053,6 @@ suspend fun getCrunchyrollIdFromMalSync(aniId: String?): String? {
         ?: regex.find("$crunchyroll")?.groupValues?.getOrNull(1)
 }
 
-suspend fun extractPutlockerSources(url: String?): NiceResponse? {
-    val embedHost = url?.substringBefore("/embed-player")
-    val player = app.get(
-        url ?: return null,
-        referer = "${putlockerAPI}/"
-    ).document.select("div#player")
-
-    val text = "\"${player.attr("data-id")}\""
-    val password = player.attr("data-hash")
-    val cipher = CryptoAES.plEncrypt(password, text)
-
-    return app.get(
-        "$embedHost/ajax/getSources/", params = mapOf(
-            "id" to cipher.cipherText,
-            "h" to cipher.password,
-            "a" to cipher.iv,
-            "t" to cipher.salt,
-        ), referer = url
-    )
-}
-
-suspend fun PutlockerResponses?.callback(
-    referer: String,
-    server: String,
-    callback: (ExtractorLink) -> Unit
-) {
-    val ref = getBaseUrl(referer)
-    this?.sources?.map { source ->
-        val request = app.get(source.file, referer = ref)
-        callback.invoke(
-            ExtractorLink(
-                "Putlocker [$server]",
-                "Putlocker [$server]",
-                if (!request.isSuccessful) return@map null else source.file,
-                ref,
-                if (source.file.contains("m3u8")) getPutlockerQuality(request.text) else source.label?.replace(
-                    Regex("[Pp]"),
-                    ""
-                )?.trim()?.toIntOrNull()
-                    ?: Qualities.P720.value,
-                source.file.contains("m3u8")
-            )
-        )
-    }
-}
-
 suspend fun convertTmdbToAnimeId(
     title: String?,
     date: String?,
@@ -1655,161 +1607,6 @@ private enum class Symbol(val decimalValue: Int) {
     }
 }
 
-// code found on https://stackoverflow.com/a/63701411
-
-/**
- * Conforming with CryptoJS AES method
- */
-// see https://gist.github.com/thackerronak/554c985c3001b16810af5fc0eb5c358f
-@Suppress("unused", "FunctionName", "SameParameterValue")
-object CryptoAES {
-
-    private const val KEY_SIZE = 256
-    private const val IV_SIZE = 128
-    private const val HASH_CIPHER = "AES/CBC/PKCS5Padding"
-    private const val AES = "AES"
-    private const val KDF_DIGEST = "MD5"
-
-    // Seriously crypto-js, what's wrong with you?
-    private const val APPEND = "Salted__"
-
-    /**
-     * Encrypt
-     * @param password passphrase
-     * @param plainText plain string
-     */
-    fun encrypt(password: String, plainText: String): String {
-        val saltBytes = generateSalt(8)
-        val key = ByteArray(KEY_SIZE / 8)
-        val iv = ByteArray(IV_SIZE / 8)
-        EvpKDF(password.toByteArray(), KEY_SIZE, IV_SIZE, saltBytes, key, iv)
-        val keyS = SecretKeySpec(key, AES)
-        val cipher = Cipher.getInstance(HASH_CIPHER)
-        val ivSpec = IvParameterSpec(iv)
-        cipher.init(Cipher.ENCRYPT_MODE, keyS, ivSpec)
-        val cipherText = cipher.doFinal(plainText.toByteArray())
-        // Thanks kientux for this: https://gist.github.com/kientux/bb48259c6f2133e628ad
-        // Create CryptoJS-like encrypted!
-        val sBytes = APPEND.toByteArray()
-        val b = ByteArray(sBytes.size + saltBytes.size + cipherText.size)
-        System.arraycopy(sBytes, 0, b, 0, sBytes.size)
-        System.arraycopy(saltBytes, 0, b, sBytes.size, saltBytes.size)
-        System.arraycopy(cipherText, 0, b, sBytes.size + saltBytes.size, cipherText.size)
-        val bEncode = Base64.encode(b, Base64.NO_WRAP)
-        return String(bEncode)
-    }
-
-    fun plEncrypt(password: String, plainText: String): EncryptResult {
-        val saltBytes = generateSalt(8)
-        val key = ByteArray(KEY_SIZE / 8)
-        val iv = ByteArray(IV_SIZE / 8)
-        EvpKDF(password.toByteArray(), KEY_SIZE, IV_SIZE, saltBytes, key, iv)
-        val keyS = SecretKeySpec(key, AES)
-        val cipher = Cipher.getInstance(HASH_CIPHER)
-        val ivSpec = IvParameterSpec(iv)
-        cipher.init(Cipher.ENCRYPT_MODE, keyS, ivSpec)
-        val cipherText = cipher.doFinal(plainText.toByteArray())
-        val bEncode = Base64.encode(cipherText, Base64.NO_WRAP)
-        return EncryptResult(
-            String(bEncode).toHex(),
-            password.toHex(),
-            saltBytes.toHex(),
-            iv.toHex()
-        )
-    }
-
-    /**
-     * Decrypt
-     * Thanks Artjom B. for this: http://stackoverflow.com/a/29152379/4405051
-     * @param password passphrase
-     * @param cipherText encrypted string
-     */
-    fun decrypt(password: String, cipherText: String): String {
-        val ctBytes = Base64.decode(cipherText.toByteArray(), Base64.NO_WRAP)
-        val saltBytes = Arrays.copyOfRange(ctBytes, 8, 16)
-        val cipherTextBytes = Arrays.copyOfRange(ctBytes, 16, ctBytes.size)
-        val key = ByteArray(KEY_SIZE / 8)
-        val iv = ByteArray(IV_SIZE / 8)
-        EvpKDF(password.toByteArray(), KEY_SIZE, IV_SIZE, saltBytes, key, iv)
-        val cipher = Cipher.getInstance(HASH_CIPHER)
-        val keyS = SecretKeySpec(key, AES)
-        cipher.init(Cipher.DECRYPT_MODE, keyS, IvParameterSpec(iv))
-        val plainText = cipher.doFinal(cipherTextBytes)
-        return String(plainText)
-    }
-
-    private fun EvpKDF(
-        password: ByteArray,
-        keySize: Int,
-        ivSize: Int,
-        salt: ByteArray,
-        resultKey: ByteArray,
-        resultIv: ByteArray
-    ): ByteArray {
-        return EvpKDF(password, keySize, ivSize, salt, 1, KDF_DIGEST, resultKey, resultIv)
-    }
-
-    @Suppress("NAME_SHADOWING")
-    private fun EvpKDF(
-        password: ByteArray,
-        keySize: Int,
-        ivSize: Int,
-        salt: ByteArray,
-        iterations: Int,
-        hashAlgorithm: String,
-        resultKey: ByteArray,
-        resultIv: ByteArray
-    ): ByteArray {
-        val keySize = keySize / 32
-        val ivSize = ivSize / 32
-        val targetKeySize = keySize + ivSize
-        val derivedBytes = ByteArray(targetKeySize * 4)
-        var numberOfDerivedWords = 0
-        var block: ByteArray? = null
-        val hash = MessageDigest.getInstance(hashAlgorithm)
-        while (numberOfDerivedWords < targetKeySize) {
-            if (block != null) {
-                hash.update(block)
-            }
-            hash.update(password)
-            block = hash.digest(salt)
-            hash.reset()
-            // Iterations
-            for (i in 1 until iterations) {
-                block = hash.digest(block!!)
-                hash.reset()
-            }
-            System.arraycopy(
-                block!!, 0, derivedBytes, numberOfDerivedWords * 4,
-                min(block.size, (targetKeySize - numberOfDerivedWords) * 4)
-            )
-            numberOfDerivedWords += block.size / 4
-        }
-        System.arraycopy(derivedBytes, 0, resultKey, 0, keySize * 4)
-        System.arraycopy(derivedBytes, keySize * 4, resultIv, 0, ivSize * 4)
-        return derivedBytes // key + iv
-    }
-
-    private fun generateSalt(length: Int): ByteArray {
-        return ByteArray(length).apply {
-            SecureRandom().nextBytes(this)
-        }
-    }
-
-    private fun ByteArray.toHex(): String =
-        joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
-
-    private fun String.toHex(): String = toByteArray().toHex()
-
-    data class EncryptResult(
-        val cipherText: String,
-        val password: String,
-        val salt: String,
-        val iv: String
-    )
-
-}
-
 object DumpUtils {
 
     private val deviceId = getDeviceId()
@@ -1926,4 +1723,87 @@ object RSAEncryptionHelper {
             exception.printStackTrace()
             null
         }
+}
+
+object AesHelper {
+
+    fun cryptoAESHandler(
+        data: String,
+        pass: ByteArray,
+        encrypt: Boolean = true,
+        padding: String = "AES/CBC/PKCS5PADDING",
+    ): String? {
+        val parse = AppUtils.tryParseJson<AesData>(data) ?: return null
+        val (key, iv) = generateKeyAndIv(pass, parse.s.hexToByteArray()) ?: throw ErrorLoadingException("failed to generate key")
+        val cipher = Cipher.getInstance(padding)
+        return if (!encrypt) {
+            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
+            String(cipher.doFinal(base64DecodeArray(parse.ct)))
+        } else {
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
+            base64Encode(cipher.doFinal(parse.ct.toByteArray()))
+        }
+    }
+
+    // https://stackoverflow.com/a/41434590/8166854
+    private fun generateKeyAndIv(
+        password: ByteArray,
+        salt: ByteArray,
+        hashAlgorithm: String = "MD5",
+        keyLength: Int = 32,
+        ivLength: Int = 16,
+        iterations: Int = 1
+    ): List<ByteArray>? {
+
+        val md = MessageDigest.getInstance(hashAlgorithm)
+        val digestLength = md.digestLength
+        val targetKeySize = keyLength + ivLength
+        val requiredLength = (targetKeySize + digestLength - 1) / digestLength * digestLength
+        val generatedData = ByteArray(requiredLength)
+        var generatedLength = 0
+
+        try {
+            md.reset()
+
+            while (generatedLength < targetKeySize) {
+                if (generatedLength > 0)
+                    md.update(
+                        generatedData,
+                        generatedLength - digestLength,
+                        digestLength
+                    )
+
+                md.update(password)
+                md.update(salt, 0, 8)
+                md.digest(generatedData, generatedLength, digestLength)
+
+                for (i in 1 until iterations) {
+                    md.update(generatedData, generatedLength, digestLength)
+                    md.digest(generatedData, generatedLength, digestLength)
+                }
+
+                generatedLength += digestLength
+            }
+            return listOf(
+                generatedData.copyOfRange(0, keyLength),
+                generatedData.copyOfRange(keyLength, targetKeySize)
+            )
+        } catch (e: DigestException) {
+            return null
+        }
+    }
+
+    private fun String.hexToByteArray(): ByteArray {
+        check(length % 2 == 0) { "Must have an even length" }
+        return chunked(2)
+            .map { it.toInt(16).toByte() }
+            .toByteArray()
+    }
+
+    private data class AesData(
+        @JsonProperty("ct") val ct: String,
+        @JsonProperty("iv") val iv: String,
+        @JsonProperty("s") val s: String
+    )
+
 }

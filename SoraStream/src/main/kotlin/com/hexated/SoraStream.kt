@@ -34,7 +34,6 @@ import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
-import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeShinobiMovies
@@ -55,7 +54,6 @@ import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import com.lagradost.cloudstream3.extractors.VidSrcExtractor
-import com.lagradost.cloudstream3.syncproviders.SyncIdName
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -94,7 +92,7 @@ open class SoraStream : TmdbProvider() {
         const val hdMovieBoxAPI = "https://hdmoviebox.net"
         const val dreamfilmAPI = "https://dreamfilmsw.net"
         const val series9API = "https://series9.cx"
-        const val idlixAPI = "https://tv.idlixprime.com"
+        const val idlixAPI = "https://tv.idlixplus.net"
         const val noverseAPI = "https://www.nollyverse.com"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
@@ -102,7 +100,7 @@ open class SoraStream : TmdbProvider() {
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.actor"
+        const val uhdmoviesAPI = "https://uhdmovies.wiki"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
@@ -118,7 +116,6 @@ open class SoraStream : TmdbProvider() {
         const val ask4MoviesAPI = "https://ask4movie.nl"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://moviesapi.club"
-        const val putlockerAPI = "https://ww7.putlocker.vip"
         const val fmoviesAPI = "https://fmovies.to"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
@@ -544,9 +541,6 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
-            },
-            {
-                invokePutlocker(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 invokeTvMovies(res.title, res.season, res.episode, callback)

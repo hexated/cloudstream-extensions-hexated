@@ -21,7 +21,6 @@ import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
-import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSeries9
@@ -55,15 +54,6 @@ class SoraStreamLite : SoraStream() {
         val res = AppUtils.parseJson<LinkData>(data)
 
         argamap(
-            {
-                invokePutlocker(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
             {
                 invokeWatchsomuch(
                     res.imdbId,
