@@ -200,10 +200,10 @@ class IdlixProvider : MainAPI() {
             it.attr("data-nume")
         }.apmap { nume ->
             safeApiCall {
-                val source = app.get(
-                    url = "$directUrl/wp-json/dooplayer/v2/$id/$type/$nume",
-                    headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
-                    referer = data
+                val source = app.post(
+                    url = "$directUrl/wp-admin/admin-ajax.php", data = mapOf(
+                        "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
+                    ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = data
                 ).let { tryParseJson<ResponseHash>(it.text) } ?: return@safeApiCall
 
                 var decrypted = AesHelper.cryptoAESHandler(source.embed_url,source.key.toByteArray(), false)?.fixBloat() ?: return@safeApiCall

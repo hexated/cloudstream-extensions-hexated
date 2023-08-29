@@ -472,11 +472,7 @@ object SoraExtractor : SoraStream() {
                 it.attr("data-type")
             )
         }.apmap { (id, nume, type) ->
-            val json = if(encrypt) app.get(
-                url = "$referer/wp-json/dooplayer/v2/$id/$type/$nume",
-                headers = headers,
-                referer = url
-            ) else app.post(
+            val json = app.post(
                 url = "$referer/wp-admin/admin-ajax.php", data = mapOf(
                     "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
                 ), headers = headers, referer = url
