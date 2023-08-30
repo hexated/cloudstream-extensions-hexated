@@ -88,9 +88,39 @@ data class KisskhDetail(
     @JsonProperty("episodes") val episodes: ArrayList<KisskhEpisodes>? = arrayListOf(),
 )
 
+data class SusflixSrtfiles(
+    @JsonProperty("caption") val caption: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class SusflixQualities(
+    @JsonProperty("path") val path: String? = null,
+    @JsonProperty("quality") val quality: String? = null,
+)
+
+data class SusflixSources(
+    @JsonProperty("Qualities") val qualities: ArrayList<SusflixQualities>? = arrayListOf(),
+    @JsonProperty("Srtfiles") val srtfiles: ArrayList<SusflixSrtfiles>? = arrayListOf(),
+)
+
 data class KisskhResults(
     @JsonProperty("id") val id: Int?,
     @JsonProperty("title") val title: String?,
+)
+
+data class Jump1Episodes(
+    @JsonProperty("id") val id: Any? = null,
+    @JsonProperty("episodeNumber") val episodeNumber: Int? = null,
+    @JsonProperty("videoId") val videoId: String? = null,
+)
+
+data class Jump1Season(
+    @JsonProperty("seasonNumber") val seasonNumber: Int? = null,
+    @JsonProperty("id") val id: String? = null,
+)
+
+data class Jump1Movies(
+    @JsonProperty("movies") val movies: ArrayList<Jump1Episodes>? = arrayListOf(),
 )
 
 data class EpisodesFwatayako(

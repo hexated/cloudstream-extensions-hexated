@@ -2820,6 +2820,80 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeSusflix(
+        tmdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val url = if(season == null) {
+            "$susflixAPI/view/movie/$tmdbId"
+        } else {
+            "$susflixAPI/view/tv/$tmdbId/$season/$episode"
+        }
+
+        val res = app.get(url,cookies = mapOf(
+            "session" to "eyJfZnJlc2giOmZhbHNlLCJwaG9uZV9udW1iZXIiOiJzdXNoZXg5OCJ9.ZO6CsA.XUs6Y5gna8ExAUX55-myMi1QpYU"
+        )).text.substringAfter("response = {").substringBefore("};").replace("\'", "\"")
+
+        val sources = tryParseJson<SusflixSources>("{$res}")
+        sources?.qualities?.map { source ->
+            callback.invoke(
+                ExtractorLink(
+                    "Susflix",
+                    "Susflix",
+                    source.path ?: return@map,
+                    "$susflixAPI/",
+                    getQualityFromName(source.quality)
+                )
+            )
+        }
+
+        sources?.srtfiles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.caption ?: return@map,
+                    sub.url ?: return@map,
+                )
+            )
+        }
+
+    }
+
+    suspend fun invokeJump1(
+        tmdbId: Int? = null,
+        tvdbId: Int? = null,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val referer = "https://jump1.net/"
+        val res = if(season == null) {
+            val body = """{"filters":[{"type":"slug","args":{"slugs":["${title.createSlug()}-$year"]}}],"sort":"addedRecent","skip":0,"limit":100}""".toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
+            app.post("$jump1API/api/movies", requestBody = body, referer = referer)
+        } else {
+            app.get("$jump1API/api/shows/$tvdbId/seasons", referer = referer)
+        }.text
+
+        val source = if(season == null) {
+            tryParseJson<Jump1Movies>(res)?.movies?.find { it.id == tmdbId }?.videoId
+        } else {
+            val jumpSeason = tryParseJson<ArrayList<Jump1Season>>(res)?.find { it.seasonNumber == season }?.id
+            val seasonRes = app.get("$jump1API/api/shows/seasons/${jumpSeason ?: return}/episodes", referer = referer)
+            tryParseJson<ArrayList<Jump1Episodes>>(seasonRes.text)?.find { it.episodeNumber == episode }?.videoId
+        }
+
+        M3u8Helper.generateM3u8(
+            "Jump1",
+            "$jump1API/hls/${source ?: return}/master.m3u8?ts=${APIHolder.unixTimeMS}",
+            referer
+        ).forEach(callback)
+
+    }
+
 
 }
 
