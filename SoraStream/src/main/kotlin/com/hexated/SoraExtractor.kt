@@ -2886,12 +2886,16 @@ object SoraExtractor : SoraStream() {
             tryParseJson<ArrayList<Jump1Episodes>>(seasonRes.text)?.find { it.episodeNumber == episode }?.videoId
         }
 
-        M3u8Helper.generateM3u8(
-            "Jump1",
-            "$jump1API/hls/${source ?: return}/master.m3u8?ts=${APIHolder.unixTimeMS}",
-            referer
-        ).forEach(callback)
-
+        callback.invoke(
+            ExtractorLink(
+                "Jump1",
+                "Jump1",
+                "$jump1API/hls/${source ?: return}/master.m3u8?ts=${APIHolder.unixTimeMS}",
+                referer,
+                Qualities.P1080.value,
+                true
+            )
+        )
     }
 
 
