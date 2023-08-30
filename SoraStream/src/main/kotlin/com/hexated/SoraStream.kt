@@ -746,9 +746,9 @@ open class SoraStream : TmdbProvider() {
             {
                 if(!res.isAnime) invoke2embed(res.imdbId,res.season,res.episode,callback)
             },
-            {
-                invokeSusflix(res.id,res.season,res.episode,subtitleCallback,callback)
-            },
+//            {
+//                invokeSusflix(res.id,res.season,res.episode,subtitleCallback,callback)
+//            },
             {
                 if(!res.isAnime) invokeJump1(
                     res.id,

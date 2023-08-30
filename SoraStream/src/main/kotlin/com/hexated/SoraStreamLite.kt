@@ -59,15 +59,15 @@ class SoraStreamLite : SoraStream() {
             {
                 if(!res.isAnime) invokeJump1(res.id,res.tvdbId,res.title,res.year,res.season,res.episode,callback)
             },
-            {
-                invokeSusflix(
-                    res.id,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
+//            {
+//                invokeSusflix(
+//                    res.id,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 invokeWatchsomuch(
                     res.imdbId,
