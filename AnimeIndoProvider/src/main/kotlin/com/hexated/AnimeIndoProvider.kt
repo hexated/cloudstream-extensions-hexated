@@ -60,22 +60,22 @@ class AnimeIndoProvider : MainAPI() {
         return if (uri.contains("/anime/")) {
             uri
         } else {
-            var title = uri.substringAfter("nonton/")
+            var title = uri.substringAfter("$mainUrl/")
             title = when {
-                (title.contains("-episode")) && !(title.contains("-movie")) -> Regex("(.+)-episode").find(
-                    title
-                )?.groupValues?.get(1).toString()
-                (title.contains("-movie")) -> Regex("(.+)-movie").find(title)?.groupValues?.get(
-                    1
-                ).toString()
+                (title.contains("-episode")) && !(title.contains("-movie")) -> title.substringBefore(
+                    "-episode"
+                )
+
+                (title.contains("-movie")) -> title.substringBefore("-movie")
                 else -> title
             }
+
             "$mainUrl/anime/$title"
         }
     }
 
     private fun Element.toSearchResult(): AnimeSearchResponse {
-        val title = this.selectFirst("div.titlex, h2.entry-title, h4")?.text()?.trim() ?: ""
+        val title = this.selectFirst("div.title, h2.entry-title, h4")?.text()?.trim() ?: ""
         val href = getProperAnimeLink(this.selectFirst("a")!!.attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
         val epNum = this.selectFirst("span.episode")?.ownText()?.replace(Regex("\\D"), "")?.trim()
