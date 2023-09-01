@@ -415,7 +415,7 @@ object SoraExtractor : SoraStream() {
         } else {
             "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
         }
-        invokeWpmovies(url, subtitleCallback, callback, encrypt = true)
+        invokeWpmovies(url, subtitleCallback, callback, encrypt = true, key = "\\x5a\\x6d\\x5a\\x6c\\x4e\\x7a\\x55\\x79\\x4d\\x54\\x56\\x6a\\x5a\\x47\\x52\\x69\\x5a\\x44\\x55\\x30\\x5a\\x6d\\x59\\x35\\x4f\\x57\\x45\\x33\\x4d\\x44\\x4a\\x69\\x4e\\x32\\x4a\\x6c\\x4f\\x54\\x42\\x6c\\x4e\\x7a\\x49\\x3d")
     }
 
     suspend fun invokeMultimovies(
@@ -457,6 +457,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
         fixIframe: Boolean = false,
         encrypt: Boolean = false,
+        key: String? = null,
     ) {
         fun String.fixBloat() : String {
             return this.replace("\"", "").replace("\\", "")
@@ -479,7 +480,7 @@ object SoraExtractor : SoraStream() {
             )
             val source = tryParseJson<ResponseHash>(json.text)?.let {
                 when {
-                    encrypt -> cryptoAESHandler(it.embed_url,it.key.toByteArray(), false)?.fixBloat()
+                    encrypt -> cryptoAESHandler(it.embed_url,(key ?: return@apmap).toByteArray(), false)?.fixBloat()
                     fixIframe -> Jsoup.parse(it.embed_url).select("IFRAME").attr("SRC")
                     else -> it.embed_url
                 }

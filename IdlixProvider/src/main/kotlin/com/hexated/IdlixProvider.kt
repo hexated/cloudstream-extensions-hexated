@@ -7,8 +7,6 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.nicehttp.Requests
-import com.lagradost.nicehttp.Session
 import org.jsoup.nodes.Element
 import java.net.URI
 
@@ -25,6 +23,8 @@ class IdlixProvider : MainAPI() {
         TvType.Anime,
         TvType.AsianDrama
     )
+
+    private val key = "\\x5a\\x6d\\x5a\\x6c\\x4e\\x7a\\x55\\x79\\x4d\\x54\\x56\\x6a\\x5a\\x47\\x52\\x69\\x5a\\x44\\x55\\x30\\x5a\\x6d\\x59\\x35\\x4f\\x57\\x45\\x33\\x4d\\x44\\x4a\\x69\\x4e\\x32\\x4a\\x6c\\x4f\\x54\\x42\\x6c\\x4e\\x7a\\x49\\x3d"
 
     override val mainPage = mainPageOf(
         "$mainUrl/" to "Featured",
@@ -206,7 +206,7 @@ class IdlixProvider : MainAPI() {
                     ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = data
                 ).let { tryParseJson<ResponseHash>(it.text) } ?: return@safeApiCall
 
-                var decrypted = AesHelper.cryptoAESHandler(source.embed_url,source.key.toByteArray(), false)?.fixBloat() ?: return@safeApiCall
+                var decrypted = AesHelper.cryptoAESHandler(source.embed_url,key.toByteArray(), false)?.fixBloat() ?: return@safeApiCall
 
                 if (decrypted.startsWith("https://uservideo.xyz")) {
                     decrypted = app.get(decrypted).document.select("iframe").attr("src")
