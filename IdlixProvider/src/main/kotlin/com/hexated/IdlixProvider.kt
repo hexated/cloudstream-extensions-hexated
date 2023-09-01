@@ -5,8 +5,12 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.safeApiCall
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import okhttp3.Interceptor
+import okhttp3.Response
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.net.URI
 
@@ -17,6 +21,8 @@ class IdlixProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
+    private val cloudflareKiller by lazy { CloudflareKiller() }
+    private val interceptor by lazy { CloudflareInterceptor(cloudflareKiller) }
     override val supportedTypes = setOf(
         TvType.Movie,
         TvType.TvSeries,
@@ -50,9 +56,9 @@ class IdlixProvider : MainAPI() {
         val url = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1
         val req = if (nonPaged) {
-            app.get(request.data)
+            app.get(request.data, interceptor = interceptor)
         } else {
-            app.get("${url.first()}$page/?${url.lastOrNull()}")
+            app.get("${url.first()}$page/?${url.lastOrNull()}", interceptor = interceptor)
         }
         mainUrl = getBaseUrl(req.url)
         val document = req.document
@@ -92,12 +98,13 @@ class IdlixProvider : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = quality
+            posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
         }
 
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val req = app.get("$mainUrl/search/$query")
+        val req = app.get("$mainUrl/search/$query", interceptor = interceptor)
         mainUrl = getBaseUrl(req.url)
         val document = req.document
         return document.select("div.result-item").map {
@@ -107,12 +114,13 @@ class IdlixProvider : MainAPI() {
             val posterUrl = it.selectFirst("img")!!.attr("src").toString()
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
+                posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val request = app.get(url)
+        val request = app.get(url, interceptor = interceptor, referer = "$directUrl/")
         directUrl = getBaseUrl(request.url)
         val document = request.document
         val title =
@@ -141,6 +149,7 @@ class IdlixProvider : MainAPI() {
             val recPosterUrl = it.selectFirst("img")?.attr("src").toString()
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
+                posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
             }
         }
 
@@ -170,6 +179,7 @@ class IdlixProvider : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
+                posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
@@ -181,6 +191,7 @@ class IdlixProvider : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
+                posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
             }
         }
     }
@@ -192,7 +203,7 @@ class IdlixProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val document = app.get(data).document
+        val document = app.get(data, interceptor = interceptor, referer = "$directUrl/").document
         val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
         val type = if (data.contains("/movie/")) "movie" else "tv"
 
@@ -203,15 +214,17 @@ class IdlixProvider : MainAPI() {
                 val source = app.post(
                     url = "$directUrl/wp-admin/admin-ajax.php", data = mapOf(
                         "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
-                    ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = data
+                    ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"), referer = data, interceptor = interceptor
                 ).let { tryParseJson<ResponseHash>(it.text) } ?: return@safeApiCall
 
-                var decrypted = AesHelper.cryptoAESHandler(source.embed_url,key.toByteArray(), false)?.fixBloat() ?: return@safeApiCall
+                val password = if(source.key?.startsWith("\\x") == true) source.key else key
+                var decrypted = AesHelper.cryptoAESHandler(source.embed_url, password.toByteArray(), false)?.fixBloat() ?: return@safeApiCall
 
                 if (decrypted.startsWith("https://uservideo.xyz")) {
                     decrypted = app.get(decrypted).document.select("iframe").attr("src")
                 }
-                loadExtractor(decrypted, "$directUrl/", subtitleCallback, callback)
+
+                getUrl(decrypted, "$directUrl/", subtitleCallback, callback)
 
             }
         }
@@ -219,13 +232,84 @@ class IdlixProvider : MainAPI() {
         return true
     }
 
+    class CloudflareInterceptor(private val cloudflareKiller: CloudflareKiller): Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val request = chain.request()
+            val response = chain.proceed(request)
+            val doc = Jsoup.parse(response.peekBody(1024 * 1024).string())
+            if (doc.select("title").text() == "Just a moment...") {
+                return cloudflareKiller.intercept(chain)
+            }
+            return response
+        }
+    }
+
     private fun String.fixBloat() : String {
         return this.replace("\"", "").replace("\\", "")
     }
 
+    private suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val document = app.get(url, referer = "$mainUrl/").document
+        val hash = url.split("/").last().substringAfter("data=")
+
+        val m3uLink = app.post(
+            url = "$mainUrl/player/index.php?data=$hash&do=getVideo",
+            data = mapOf("hash" to hash, "r" to "$referer"),
+            referer = referer,
+            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsed<ResponseSource>().videoSource
+
+        M3u8Helper.generateM3u8(
+            this.name,
+            m3uLink,
+            "$referer",
+        ).forEach(callback)
+
+
+        document.select("script").map { script ->
+            if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
+                val subData =
+                    getAndUnpack(script.data()).substringAfter("\"tracks\":[").substringBefore("],")
+                tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
+                    subtitleCallback.invoke(
+                        SubtitleFile(
+                            getLanguage(subtitle.label ?: ""),
+                            subtitle.file
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun getLanguage(str: String): String {
+        return when {
+            str.contains("indonesia", true) || str
+                .contains("bahasa", true) -> "Indonesian"
+            else -> str
+        }
+    }
+
+    data class ResponseSource(
+        @JsonProperty("hls") val hls: Boolean,
+        @JsonProperty("videoSource") val videoSource: String,
+        @JsonProperty("securedLink") val securedLink: String?,
+    )
+
+    data class Tracks(
+        @JsonProperty("kind") val kind: String?,
+        @JsonProperty("file") val file: String,
+        @JsonProperty("label") val label: String?,
+    )
+
     data class ResponseHash(
         @JsonProperty("embed_url") val embed_url: String,
-        @JsonProperty("key") val key: String,
+        @JsonProperty("key") val key: String?,
         @JsonProperty("type") val type: String?,
     )
 

@@ -18,6 +18,7 @@ class GomovPlugin: Plugin() {
         registerExtractorAPI(DbGdriveplayer())
         registerExtractorAPI(Dutamovie21())
         registerExtractorAPI(Embedwish())
+        registerExtractorAPI(Doods())
         registerExtractorAPI(Lylxan())
     }
 }
