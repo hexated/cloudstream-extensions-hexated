@@ -254,7 +254,7 @@ class IdlixProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val document = app.get(url, referer = "$mainUrl/").document
+        val document = app.get(url, referer = referer).document
         val hash = url.split("/").last().substringAfter("data=")
 
         val m3uLink = app.post(
