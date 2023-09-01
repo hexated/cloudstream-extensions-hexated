@@ -65,8 +65,8 @@ data class HdMovieBoxIframe(
 
 data class ResponseHash(
     @JsonProperty("embed_url") val embed_url: String,
-    @JsonProperty("key") val key: String,
-    @JsonProperty("type") val type: String?,
+    @JsonProperty("key") val key: String? = null,
+    @JsonProperty("type") val type: String? = null,
 )
 
 data class KisskhSources(
