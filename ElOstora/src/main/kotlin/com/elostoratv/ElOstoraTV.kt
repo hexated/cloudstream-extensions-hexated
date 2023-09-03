@@ -92,6 +92,10 @@ class ElOstoraTV : MainAPI() {
                 ).toJson(),
             )
         } ?: throw ErrorLoadingException("Invalid Json response")
+        if (data.category == "المسلسلات العربية" || data.category == "مسلسلات رمضان 2023" || data.category == "مسرحيات")
+        {
+            channels = channels.reversed()
+        }
         return newTvSeriesLoadResponse(
             name = data.channel_title,
             url = Data(
