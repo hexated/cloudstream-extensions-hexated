@@ -11,5 +11,6 @@ class MinioppaiPlugin: Plugin() {
         registerMainAPI(Minioppai())
         registerExtractorAPI(Streampai())
         registerExtractorAPI(Paistream())
+        registerExtractorAPI(TvMinioppai())
     }
 }

@@ -16,6 +16,11 @@ class Paistream : Streampai() {
     override val mainUrl = "https://paistream.my.id"
 }
 
+class TvMinioppai : Streampai() {
+    override val name = "Tv.Minioppai"
+    override val mainUrl = "https://tv.minioppai.org"
+}
+
 open class Streampai : ExtractorApi() {
     override val name = "Streampai"
     override val mainUrl = "https://streampai.my.id"
