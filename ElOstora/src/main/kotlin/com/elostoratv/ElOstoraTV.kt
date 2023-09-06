@@ -4,9 +4,12 @@ import android.icu.util.Calendar
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.ui.player.RepoLinkGenerator
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.DrmExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.nicehttp.requestCreator
 
@@ -26,7 +29,6 @@ class ElOstoraTV : MainAPI() {
     //override val mainPage = generateHomePage()
     override val mainPage = generateServersHomePage()
     private fun generateServersHomePage() : List<MainPageData> {
-
         val homepage =  mutableListOf<MainPageData>()
         val data = mapOf(
             "main" to "1",
@@ -120,20 +122,50 @@ class ElOstoraTV : MainAPI() {
     ): Boolean {
         Log.d("King", "loadLinks:$data")
         val data = parseJson<Data>(data)
-            callback.invoke(
-                ExtractorLink(
-                    source = data.channel_title,
-                    name = data.channel_title,
-                    url = fixurl(data.channel_url),
-                    referer = "",
-                    quality = Qualities.Unknown.value,
-                    isM3u8 = true,
-                )
+
+        var fullUrl = fixUrl(data.channel_url)
+        var key: String = ""
+        var kid: String = ""
+        val encrypted : Boolean = fullUrl.contains("###")
+
+        Log.d("King", "fullUrl:$fullUrl")
+        if (encrypted)
+        {
+            Log.d("King", "encrypted")
+            val suffix = fullUrl.split("###")[1].split(":")
+            key = suffix[0]
+            kid = suffix[1]
+            fullUrl = fullUrl.split("###")[0]
+            Log.d("King", "fullUrl:$fullUrl")
+            Log.d("King", "key:$key")
+            Log.d("King", "kid:$kid")
+            DrmExtractorLink(
+                source = data.channel_title,
+                name = data.channel_title,
+                url = fullUrl,
+                referer = "",
+                quality = Qualities.Unknown.value,
+                key = key,
+                kid = kid,
+                kty = "oct",
+                type = INFER_TYPE,
             )
+            return true
+        }
+        callback.invoke(
+            ExtractorLink(
+                source = data.channel_title,
+                name = data.channel_title,
+                url = fullUrl,
+                referer = "",
+                quality = Qualities.Unknown.value,
+                type = INFER_TYPE,
+            )
+        )
         return true
     }
 
-    private fun fixurl(url: String): String {
+    private fun fixUrl(url: String): String {
         return url.substring(url.lastIndexOf("http"))
     }
     private fun getDecoded(payload: Map<String, String>): String {
