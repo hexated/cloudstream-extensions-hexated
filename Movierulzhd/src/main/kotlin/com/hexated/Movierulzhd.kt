@@ -11,7 +11,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 open class Movierulzhd : MainAPI() {
-    override var mainUrl = "https://movierulzhd.tools"
+    override var mainUrl = "https://movierulzvid.gold"
     var directUrl = ""
     override var name = "Movierulzhd"
     override val hasMainPage = true
