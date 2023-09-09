@@ -1,8 +1,11 @@
 package com.hexated
 
-import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.extractors.Gdriveplayer
-import com.lagradost.cloudstream3.extractors.StreamSB
+import com.lagradost.cloudstream3.extractors.*
+
+class Doods : DoodLaExtractor() {
+    override var name = "Doods"
+    override var mainUrl = "https://doods.pro"
+}
 
 class Dutamovie21 : StreamSB() {
     override var name = "Dutamovie21"

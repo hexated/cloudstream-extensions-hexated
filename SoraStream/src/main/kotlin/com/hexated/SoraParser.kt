@@ -65,7 +65,8 @@ data class HdMovieBoxIframe(
 
 data class ResponseHash(
     @JsonProperty("embed_url") val embed_url: String,
-    @JsonProperty("type") val type: String?,
+    @JsonProperty("key") val key: String? = null,
+    @JsonProperty("type") val type: String? = null,
 )
 
 data class KisskhSources(
@@ -87,9 +88,39 @@ data class KisskhDetail(
     @JsonProperty("episodes") val episodes: ArrayList<KisskhEpisodes>? = arrayListOf(),
 )
 
+data class SusflixSrtfiles(
+    @JsonProperty("caption") val caption: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class SusflixQualities(
+    @JsonProperty("path") val path: String? = null,
+    @JsonProperty("quality") val quality: String? = null,
+)
+
+data class SusflixSources(
+    @JsonProperty("Qualities") val qualities: ArrayList<SusflixQualities>? = arrayListOf(),
+    @JsonProperty("Srtfiles") val srtfiles: ArrayList<SusflixSrtfiles>? = arrayListOf(),
+)
+
 data class KisskhResults(
     @JsonProperty("id") val id: Int?,
     @JsonProperty("title") val title: String?,
+)
+
+data class Jump1Episodes(
+    @JsonProperty("id") val id: Any? = null,
+    @JsonProperty("episodeNumber") val episodeNumber: Int? = null,
+    @JsonProperty("videoId") val videoId: String? = null,
+)
+
+data class Jump1Season(
+    @JsonProperty("seasonNumber") val seasonNumber: Int? = null,
+    @JsonProperty("id") val id: String? = null,
+)
+
+data class Jump1Movies(
+    @JsonProperty("movies") val movies: ArrayList<Jump1Episodes>? = arrayListOf(),
 )
 
 data class EpisodesFwatayako(
@@ -204,25 +235,6 @@ data class WatchOnlineSearch(
 data class WatchOnlineResponse(
     @JsonProperty("streams") val streams: HashMap<String, String>? = null,
     @JsonProperty("subtitles") val subtitles: Any? = null,
-)
-
-data class PutlockerEpisodes(
-    @JsonProperty("html") val html: String? = null,
-)
-
-data class PutlockerEmbed(
-    @JsonProperty("src") val src: String? = null,
-)
-
-data class PutlockerSources(
-    @JsonProperty("file") val file: String,
-    @JsonProperty("label") val label: String? = null,
-    @JsonProperty("type") val type: String? = null,
-)
-
-data class PutlockerResponses(
-    @JsonProperty("sources") val sources: ArrayList<PutlockerSources>? = arrayListOf(),
-    @JsonProperty("backupLink") val backupLink: String? = null,
 )
 
 data class CryMoviesProxyHeaders(

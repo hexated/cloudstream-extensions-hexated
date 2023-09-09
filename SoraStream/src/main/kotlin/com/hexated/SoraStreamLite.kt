@@ -21,7 +21,6 @@ import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
-import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSeries9
@@ -29,10 +28,12 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeFourCartoon
+import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePrimewire
+import com.hexated.SoraExtractor.invokeSusflix
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
@@ -56,14 +57,17 @@ class SoraStreamLite : SoraStream() {
 
         argamap(
             {
-                invokePutlocker(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
+                if(!res.isAnime) invokeJump1(res.id,res.tvdbId,res.title,res.year,res.season,res.episode,callback)
             },
+//            {
+//                invokeSusflix(
+//                    res.id,
+//                    res.season,
+//                    res.episode,
+//                    subtitleCallback,
+//                    callback
+//                )
+//            },
             {
                 invokeWatchsomuch(
                     res.imdbId,
@@ -253,7 +257,7 @@ class SoraStreamLite : SoraStream() {
                 invokeFwatayako(res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokeM4uhd(
+                if(!res.isAnime) invokeM4uhd(
                     res.title,
                     res.year,
                     res.season,

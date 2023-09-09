@@ -170,8 +170,8 @@ class Nekopoi : MainAPI() {
                                     link.name,
                                     link.url,
                                     link.referer,
-                                    if (link.isM3u8) link.quality else it.first,
-                                    link.isM3u8,
+                                    if (link.type == ExtractorLinkType.M3U8) link.quality else it.first,
+                                    link.type,
                                     link.headers,
                                     link.extractorData
                                 )

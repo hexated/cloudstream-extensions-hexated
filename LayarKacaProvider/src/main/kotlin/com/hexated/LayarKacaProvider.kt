@@ -9,7 +9,7 @@ import org.jsoup.nodes.Element
 import java.net.URLDecoder
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://tv1.lk21official.pro"
+    override var mainUrl = "https://tv3.lk21official.pro"
     private var seriesUrl = "https://tv1.nontondrama.click"
     override var name = "LayarKaca"
     override val hasMainPage = true
@@ -72,11 +72,11 @@ class LayarKacaProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/?s=$query").document
-        return document.select("div.search-item").map {
-            val title = it.selectFirst("h2 > a")!!.text().trim()
-            val href = fixUrl(it.selectFirst("a")!!.attr("href"))
-            val posterUrl = fixUrl(it.selectFirst("img.img-thumbnail")?.attr("src").toString())
+        val document = app.get("$mainUrl/search.php?s=$query").document
+        return document.select("div.search-item").mapNotNull {
+            val title = it.selectFirst("a")?.attr("title") ?: ""
+            val href = fixUrl(it.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
+            val posterUrl = fixUrlNull(it.selectFirst("img.img-thumbnail")?.attr("src"))
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
             }
@@ -171,8 +171,6 @@ class LayarKacaProvider : MainAPI() {
     private suspend fun String.getIframe() : String {
         return app.get(this, referer = "$seriesUrl/").document.select("div.embed iframe").attr("src")
     }
-
-    private fun decode(input: String): String = URLDecoder.decode(input, "utf-8").replace(" ", "%20")
 
 }
 

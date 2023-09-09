@@ -3,6 +3,7 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
@@ -10,12 +11,7 @@ import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 import java.net.URI
-import java.security.DigestException
-import java.security.MessageDigest
 import java.util.ArrayList
-import javax.crypto.Cipher
-import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
 
 class KuronimeProvider : MainAPI() {
     override var mainUrl = "https://45.12.2.26"
@@ -186,10 +182,11 @@ class KuronimeProvider : MainAPI() {
 
         argamap(
             {
-                val decrypt = cryptoAES(
-                    servers?.src ?: return@argamap,
+                val decrypt = AesHelper.cryptoAESHandler(
+                    base64Decode(servers?.src ?: return@argamap),
                     KEY.toByteArray(),
-                    false
+                    false,
+                    "AES/CBC/NoPadding"
                 )
                 val source =
                     tryParseJson<Sources>(decrypt?.toJsonFormat())?.src?.replace("\\", "")
@@ -206,10 +203,11 @@ class KuronimeProvider : MainAPI() {
                 )
             },
             {
-                val decrypt = cryptoAES(
-                    servers?.mirror ?: return@argamap,
+                val decrypt = AesHelper.cryptoAESHandler(
+                    base64Decode(servers?.mirror ?: return@argamap),
                     KEY.toByteArray(),
-                    false
+                    false,
+                    "AES/CBC/NoPadding"
                 )
                 tryParseJson<Mirrors>(decrypt)?.embed?.map { embed ->
                     embed.value.apmap {
@@ -249,7 +247,7 @@ class KuronimeProvider : MainAPI() {
                     link.url,
                     link.referer,
                     getQualityFromName(quality),
-                    link.isM3u8,
+                    link.type,
                     link.headers,
                     link.extractorData
                 )
@@ -262,86 +260,6 @@ class KuronimeProvider : MainAPI() {
             "${it.scheme}://${it.host}"
         }
     }
-
-    // https://stackoverflow.com/a/41434590/8166854
-    private fun generateKeyAndIv(
-        password: ByteArray,
-        salt: ByteArray,
-        hashAlgorithm: String = "MD5",
-        keyLength: Int = 32,
-        ivLength: Int = 16,
-        iterations: Int = 1
-    ): List<ByteArray>? {
-
-        val md = MessageDigest.getInstance(hashAlgorithm)
-        val digestLength = md.digestLength
-        val targetKeySize = keyLength + ivLength
-        val requiredLength = (targetKeySize + digestLength - 1) / digestLength * digestLength
-        val generatedData = ByteArray(requiredLength)
-        var generatedLength = 0
-
-        try {
-            md.reset()
-
-            while (generatedLength < targetKeySize) {
-                if (generatedLength > 0)
-                    md.update(
-                        generatedData,
-                        generatedLength - digestLength,
-                        digestLength
-                    )
-
-                md.update(password)
-                md.update(salt, 0, 8)
-                md.digest(generatedData, generatedLength, digestLength)
-
-                for (i in 1 until iterations) {
-                    md.update(generatedData, generatedLength, digestLength)
-                    md.digest(generatedData, generatedLength, digestLength)
-                }
-
-                generatedLength += digestLength
-            }
-            return listOf(
-                generatedData.copyOfRange(0, keyLength),
-                generatedData.copyOfRange(keyLength, targetKeySize)
-            )
-        } catch (e: DigestException) {
-            return null
-        }
-    }
-
-    private fun String.decodeHex(): ByteArray {
-        check(length % 2 == 0) { "Must have an even length" }
-        return chunked(2)
-            .map { it.toInt(16).toByte() }
-            .toByteArray()
-    }
-
-    private fun cryptoAES(
-        data: String,
-        pass: ByteArray,
-        encrypt: Boolean = true
-    ): String? {
-        val json = tryParseJson<AesData>(base64Decode(data))
-            ?: throw ErrorLoadingException("No Data Found")
-        val (key, iv) = generateKeyAndIv(pass, json.s.decodeHex()) ?: return null
-        val cipher = Cipher.getInstance("AES/CBC/NoPadding")
-        return if (!encrypt) {
-            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
-            String(cipher.doFinal(base64DecodeArray(json.ct)))
-        } else {
-            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
-            base64Encode(cipher.doFinal(json.ct.toByteArray()))
-
-        }
-    }
-
-    data class AesData(
-        @JsonProperty("ct") val ct: String,
-        @JsonProperty("iv") val iv: String,
-        @JsonProperty("s") val s: String
-    )
 
     data class Mirrors(
         @JsonProperty("embed") val embed: Map<String, Map<String, String>> = emptyMap(),

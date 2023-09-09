@@ -34,7 +34,6 @@ import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
-import com.hexated.SoraExtractor.invokePutlocker
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeShinobiMovies
@@ -42,11 +41,13 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeFourCartoon
+import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokePrimewire
+import com.hexated.SoraExtractor.invokeSusflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVidsrcto
@@ -55,7 +56,6 @@ import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import com.lagradost.cloudstream3.extractors.VidSrcExtractor
-import com.lagradost.cloudstream3.syncproviders.SyncIdName
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -94,7 +94,7 @@ open class SoraStream : TmdbProvider() {
         const val hdMovieBoxAPI = "https://hdmoviebox.net"
         const val dreamfilmAPI = "https://dreamfilmsw.net"
         const val series9API = "https://series9.cx"
-        const val idlixAPI = "https://tv.idlixprime.com"
+        const val idlixAPI = "https://tv.idlixplus.net"
         const val noverseAPI = "https://www.nollyverse.com"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
@@ -102,7 +102,7 @@ open class SoraStream : TmdbProvider() {
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.actor"
+        const val uhdmoviesAPI = "https://uhdmovies.wiki"
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
@@ -118,7 +118,6 @@ open class SoraStream : TmdbProvider() {
         const val ask4MoviesAPI = "https://ask4movie.nl"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://moviesapi.club"
-        const val putlockerAPI = "https://ww7.putlocker.vip"
         const val fmoviesAPI = "https://fmovies.to"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
@@ -127,7 +126,7 @@ open class SoraStream : TmdbProvider() {
         const val emoviesAPI = "https://emovies.si"
         const val pobmoviesAPI = "https://pobmovies.cam"
         const val fourCartoonAPI = "https://4cartoon.net"
-        const val multimoviesAPI = "https://multimovies.xyz"
+        const val multimoviesAPI = "https://multi-movies.xyz"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
         const val doomoviesAPI = "https://doomovies.net"
@@ -135,6 +134,8 @@ open class SoraStream : TmdbProvider() {
         const val vidsrctoAPI = "https://vidsrc.to"
         const val dramadayAPI = "https://dramaday.me"
         const val animetoshoAPI = "https://animetosho.org"
+        const val susflixAPI = "https://susflix.tv"
+        const val jump1API = "https://ca.jump1.net"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -279,6 +280,7 @@ open class SoraStream : TmdbProvider() {
                             LinkData(
                                 data.id,
                                 res.external_ids?.imdb_id,
+                                res.external_ids?.tvdb_id,
                                 data.type,
                                 eps.seasonNumber,
                                 eps.episodeNumber,
@@ -332,6 +334,7 @@ open class SoraStream : TmdbProvider() {
                 LinkData(
                     data.id,
                     res.external_ids?.imdb_id,
+                    res.external_ids?.tvdb_id,
                     data.type,
                     title = title,
                     year = year,
@@ -536,7 +539,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeM4uhd(
+                if(!res.isAnime) invokeM4uhd(
                     res.title,
                     res.year,
                     res.season,
@@ -544,9 +547,6 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
-            },
-            {
-                invokePutlocker(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 invokeTvMovies(res.title, res.season, res.episode, callback)
@@ -746,6 +746,20 @@ open class SoraStream : TmdbProvider() {
             {
                 if(!res.isAnime) invoke2embed(res.imdbId,res.season,res.episode,callback)
             },
+//            {
+//                invokeSusflix(res.id,res.season,res.episode,subtitleCallback,callback)
+//            },
+            {
+                if(!res.isAnime) invokeJump1(
+                    res.id,
+                    res.tvdbId,
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            },
         )
 
         return true
@@ -754,6 +768,7 @@ open class SoraStream : TmdbProvider() {
     data class LinkData(
         val id: Int? = null,
         val imdbId: String? = null,
+        val tvdbId: Int? = null,
         val type: String? = null,
         val season: Int? = null,
         val episode: Int? = null,
@@ -858,7 +873,7 @@ open class SoraStream : TmdbProvider() {
 
     data class ExternalIds(
         @JsonProperty("imdb_id") val imdb_id: String? = null,
-        @JsonProperty("tvdb_id") val tvdb_id: String? = null,
+        @JsonProperty("tvdb_id") val tvdb_id: Int? = null,
     )
 
     data class Credits(
