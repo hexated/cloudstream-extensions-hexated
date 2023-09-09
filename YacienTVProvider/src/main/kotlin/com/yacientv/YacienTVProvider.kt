@@ -86,7 +86,7 @@ class YacienTV : MainAPI() {
             logo,
         )
     }
-    private fun Event.toSearchResponse(request: MainPageRequest, type: String? = null): SearchResponse? {
+    private fun Event.toSearchResponse(request: MainPageRequest, type: String? = null): SearchResponse {
         Log.d("King", "SearchResp${request}")
 
         return LiveSearchResponse(
@@ -145,15 +145,14 @@ class YacienTV : MainAPI() {
                 this.plot = "${data.name} livestreams of ${data.category} category."
             }
         }
-        var plotStr = ""
 
-        if (data.category == "Live Events") {
-            plotStr = "Teams: ${data.name}" +
+        val plotStr: String = if (data.category == "Live Events") {
+            "Teams: ${data.name}" +
                     "<br>Time: ${data.start_time}" +
                     "<br>Commentary: ${data.commentary}" +
                     "<br>Channel: ${data.channel}"
         } else {
-            plotStr = "${data.name} channel livestream of ${data.category} category."
+            "${data.name} channel livestream of ${data.category} category."
         }
 
         return LiveStreamLoadResponse(
@@ -176,11 +175,10 @@ class YacienTV : MainAPI() {
         Log.d("King", "loadLinks:$data")
         val linksData = parseJson<LinksData>(data)
 
-        var decodedBody = ""
-        if (linksData.category == "Live Events") {
-            decodedBody = getDecoded("$yacienTVAPI/event/${linksData.id}")
+        val decodedBody = if (linksData.category == "Live Events") {
+            getDecoded("$yacienTVAPI/event/${linksData.id}")
         } else {
-            decodedBody = getDecoded("$yacienTVAPI/channel/${linksData.id}")
+            getDecoded("$yacienTVAPI/channel/${linksData.id}")
         }
 
         parseJson<ChannelResults>(decodedBody).links?.map { element ->

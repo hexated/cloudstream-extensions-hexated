@@ -127,7 +127,7 @@ object SoraExtractor : SoraStream() {
                     if (link.name == "VidSrc") Qualities.P1080.value else link.quality,
                     link.headers,
                     link.extractorData,
-                    type = INFER_TYPE,
+                    link.type,
                 )
             )
         }
