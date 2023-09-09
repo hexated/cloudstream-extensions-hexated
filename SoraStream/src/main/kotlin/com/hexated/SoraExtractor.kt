@@ -1,6 +1,5 @@
 package com.hexated
 
-import com.hexated.AesHelper.cryptoAESHandler
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -10,6 +9,7 @@ import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.GMPlayer
 import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.Voe
+import com.lagradost.cloudstream3.extractors.helper.AesHelper.cryptoAESHandler
 import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
@@ -127,7 +127,7 @@ object SoraExtractor : SoraStream() {
                     link.url,
                     link.referer,
                     if (link.name == "VidSrc") Qualities.P1080.value else link.quality,
-                    link.isM3u8,
+                    link.type,
                     link.headers,
                     link.extractorData
                 )
@@ -273,7 +273,7 @@ object SoraExtractor : SoraStream() {
                         video.url,
                         video.referer,
                         Qualities.P1080.value,
-                        video.isM3u8,
+                        video.type,
                         video.headers,
                         video.extractorData
                     )
@@ -415,7 +415,7 @@ object SoraExtractor : SoraStream() {
         } else {
             "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
         }
-        invokeWpmovies(url, subtitleCallback, callback, encrypt = true, key = "\\x5a\\x6d\\x5a\\x6c\\x4e\\x7a\\x55\\x79\\x4d\\x54\\x56\\x6a\\x5a\\x47\\x52\\x69\\x5a\\x44\\x55\\x30\\x5a\\x6d\\x59\\x35\\x4f\\x57\\x45\\x33\\x4d\\x44\\x4a\\x69\\x4e\\x32\\x4a\\x6c\\x4f\\x54\\x42\\x6c\\x4e\\x7a\\x49\\x3d")
+        invokeWpmovies(url, subtitleCallback, callback, encrypt = true)
     }
 
     suspend fun invokeMultimovies(
@@ -480,7 +480,7 @@ object SoraExtractor : SoraStream() {
             )
             val source = tryParseJson<ResponseHash>(json.text)?.let {
                 when {
-                    encrypt -> cryptoAESHandler(it.embed_url,(key ?: return@apmap).toByteArray(), false)?.fixBloat()
+                    encrypt -> cryptoAESHandler(it.embed_url,(it.key ?: return@apmap).toByteArray(), false)?.fixBloat()
                     fixIframe -> Jsoup.parse(it.embed_url).select("IFRAME").attr("SRC")
                     else -> it.embed_url
                 }
@@ -711,10 +711,10 @@ object SoraExtractor : SoraStream() {
                         link.url,
                         link.referer,
                         when {
-                            link.isM3u8 -> link.quality
+                            link.type == ExtractorLinkType.M3U8 -> link.quality
                             else -> getQualityFromName(it.first)
                         },
-                        link.isM3u8,
+                        link.type,
                         link.headers,
                         link.extractorData
                     )
@@ -1039,10 +1039,10 @@ object SoraExtractor : SoraStream() {
                         link.url,
                         link.referer,
                         when {
-                            link.isM3u8 -> link.quality
+                            link.type == ExtractorLinkType.M3U8 -> link.quality
                             else -> it.third
                         },
-                        link.isM3u8,
+                        link.type,
                         link.headers,
                         link.extractorData
                     )
@@ -1517,7 +1517,9 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get("$m4uhdAPI/search/${title.createSlug()}.html").document
+        val req = app.get("$m4uhdAPI/search/${title.createSlug()}.html")
+        val referer = getBaseUrl(req.url)
+        val res = req.document
         val scriptData = res.select("div.row div.item").map {
             Triple(
                 it.selectFirst("img.imagecover")?.attr("title"),
@@ -1538,7 +1540,7 @@ object SoraExtractor : SoraStream() {
             }
         }
 
-        val link = fixUrl(script?.third ?: return, m4uhdAPI)
+        val link = fixUrl(script?.third ?: return, referer)
         val request = app.get(link)
         var cookiesSet = request.headers.filter { it.first == "set-cookie" }
         var xsrf =
@@ -1558,7 +1560,7 @@ object SoraExtractor : SoraStream() {
                     ?: return
             val idepisode = episodeData.select("button").attr("idepisode") ?: return
             val requestEmbed = app.post(
-                "$m4uhdAPI/ajaxtv", data = mapOf(
+                "$referer/ajaxtv", data = mapOf(
                     "idepisode" to idepisode, "_token" to "$token"
                 ), referer = link, headers = mapOf(
                     "X-Requested-With" to "XMLHttpRequest",
@@ -1572,14 +1574,16 @@ object SoraExtractor : SoraStream() {
                 cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
                     ?.substringBefore(";")
             session =
-                cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
+                cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter(
+                    "laravel_session="
+                )
                     ?.substringBefore(";")
             requestEmbed.document.select("div.le-server span").map { it.attr("data") }
         }
 
         m4uData.apmap { data ->
             val iframe = app.post(
-                "$m4uhdAPI/ajax",
+                "$referer/ajax",
                 data = mapOf(
                     "m4u" to data, "_token" to "$token"
                 ),
@@ -1594,7 +1598,7 @@ object SoraExtractor : SoraStream() {
                 ),
             ).document.select("iframe").attr("src")
 
-            loadExtractor(iframe, m4uhdAPI, subtitleCallback, callback)
+            loadExtractor(iframe, referer, subtitleCallback, callback)
         }
 
     }
@@ -2900,35 +2904,5 @@ object SoraExtractor : SoraStream() {
     }
 
 
-}
-
-class TravelR : GMPlayer() {
-    override val name = "TravelR"
-    override val mainUrl = "https://travel-russia.xyz"
-}
-
-class Mwish : Filesim() {
-    override val name = "Mwish"
-    override var mainUrl = "https://mwish.pro"
-}
-
-class Animefever : Filesim() {
-    override val name = "Animefever"
-    override var mainUrl = "https://animefever.fun"
-}
-
-class Multimovies : Filesim() {
-    override val name = "Multimovies"
-    override var mainUrl = "https://multimovies.cloud"
-}
-
-class MultimoviesSB : StreamSB() {
-    override var name = "Multimovies"
-    override var mainUrl = "https://multimovies.website"
-}
-
-class Yipsu : Voe() {
-    override val name = "Yipsu"
-    override var mainUrl = "https://yip.su"
 }
 

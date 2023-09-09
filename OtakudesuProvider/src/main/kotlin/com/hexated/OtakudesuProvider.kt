@@ -236,7 +236,7 @@ class OtakudesuProvider : MainAPI() {
                     link.url,
                     link.referer,
                     quality,
-                    link.isM3u8,
+                    link.type,
                     link.headers,
                     link.extractorData
                 )

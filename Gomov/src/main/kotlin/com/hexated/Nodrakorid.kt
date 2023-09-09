@@ -121,8 +121,8 @@ class Nodrakorid : DutaMovie() {
                     link.name,
                     link.url,
                     link.referer,
-                    if(link.isM3u8) link.quality else quality ?: Qualities.Unknown.value,
-                    link.isM3u8,
+                    if(link.type == ExtractorLinkType.M3U8) link.quality else quality ?: Qualities.Unknown.value,
+                    link.type,
                     link.headers,
                     link.extractorData
                 )

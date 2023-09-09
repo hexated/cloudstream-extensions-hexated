@@ -17,7 +17,7 @@ class Paistream : Streampai() {
 }
 
 class TvMinioppai : Streampai() {
-    override val name = "Tv.Minioppai"
+    override val name = "Minioppai"
     override val mainUrl = "https://tv.minioppai.org"
 }
 

@@ -126,7 +126,7 @@ open class SoraStream : TmdbProvider() {
         const val emoviesAPI = "https://emovies.si"
         const val pobmoviesAPI = "https://pobmovies.cam"
         const val fourCartoonAPI = "https://4cartoon.net"
-        const val multimoviesAPI = "https://multimovies.xyz"
+        const val multimoviesAPI = "https://multi-movies.xyz"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
         const val doomoviesAPI = "https://doomovies.net"
@@ -539,7 +539,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeM4uhd(
+                if(!res.isAnime) invokeM4uhd(
                     res.title,
                     res.year,
                     res.season,

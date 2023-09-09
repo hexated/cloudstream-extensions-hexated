@@ -164,7 +164,7 @@ class Nimegami : MainAPI() {
                     link.url,
                     link.referer,
                     getQualityFromName(quality),
-                    link.isM3u8,
+                    link.type,
                     link.headers,
                     link.extractorData
                 )

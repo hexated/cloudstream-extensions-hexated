@@ -203,7 +203,7 @@ class Samehadaku : MainAPI() {
                     link.url,
                     link.referer,
                     name.fixQuality(),
-                    link.isM3u8,
+                    link.type,
                     link.headers,
                     link.extractorData
                 )

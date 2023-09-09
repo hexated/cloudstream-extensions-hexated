@@ -47,7 +47,7 @@ class Minioppai : MainAPI() {
 
     override val mainPage = mainPageOf(
         "$mainUrl/watch" to "New Episode",
-        "$mainUrl/popular" to "Popular Hentai",
+        "$mainUrl/populars" to "Popular Hentai",
     )
 
     override suspend fun getMainPage(

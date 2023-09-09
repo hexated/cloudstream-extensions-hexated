@@ -257,7 +257,7 @@ class SoraStreamLite : SoraStream() {
                 invokeFwatayako(res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokeM4uhd(
+                if(!res.isAnime) invokeM4uhd(
                     res.title,
                     res.year,
                     res.season,
