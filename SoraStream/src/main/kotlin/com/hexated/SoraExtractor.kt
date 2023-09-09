@@ -15,6 +15,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okio.ByteString.Companion.encode
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import com.lagradost.cloudstream3.utils.INFER_TYPE
+
 
 val session = Session(Requests().baseClient)
 
@@ -123,9 +125,9 @@ object SoraExtractor : SoraStream() {
                     link.url,
                     link.referer,
                     if (link.name == "VidSrc") Qualities.P1080.value else link.quality,
-                    link.isM3u8,
                     link.headers,
-                    link.extractorData
+                    link.extractorData,
+                    type = INFER_TYPE,
                 )
             )
         }
@@ -269,7 +271,7 @@ object SoraExtractor : SoraStream() {
                         video.url,
                         video.referer,
                         Qualities.P1080.value,
-                        video.isM3u8,
+                        type = INFER_TYPE,
                         video.headers,
                         video.extractorData
                     )
@@ -339,7 +341,7 @@ object SoraExtractor : SoraStream() {
                     link.url,
                     link.referer,
                     Qualities.P1080.value,
-                    link.isM3u8,
+                    type = INFER_TYPE,
                     link.headers,
                     link.extractorData
                 )

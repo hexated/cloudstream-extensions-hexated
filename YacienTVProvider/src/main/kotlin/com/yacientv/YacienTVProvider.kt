@@ -22,10 +22,10 @@ class YacienTV : MainAPI() {
             TvType.Live
         )
     private val yacienTVAPI = "http://ver3.yacinelive.com/api"
-    private val mainkey = "YyF4WmorTjkmR0BFdkB2dw=="
+    private val mainKey = "YyF4WmorTjkmR0BFdkB2dw=="
 
-    private fun decrypt(enc: String, headerstr: String): String {
-        val key = Base64.decode(mainkey, Base64.DEFAULT).toString(charset("UTF-8")) + headerstr
+    private fun decrypt(enc: String, headerStr: String): String {
+        val key = Base64.decode(mainKey, Base64.DEFAULT).toString(charset("UTF-8")) + headerStr
         val decodedBytes = Base64.decode(enc, Base64.DEFAULT)
         val encString = decodedBytes.toString(charset("UTF-8"))
         var result = ""
@@ -36,7 +36,7 @@ class YacienTV : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        //"$yacienTVAPI/events" to "Live Events",
+        "$yacienTVAPI/events" to "Live Events",
         "$yacienTVAPI/categories/4/channels" to "beIN SPORTS (1080P)",
         "$yacienTVAPI/categories/5/channels" to "beIN SPORTS (720P)",
         "$yacienTVAPI/categories/6/channels" to "beIN SPORTS (360P)",
@@ -56,12 +56,24 @@ class YacienTV : MainAPI() {
         val items = mutableListOf<HomePageList>()
         if (page <= 1) {
             //Log.d("King", "request:$request")
-            val decodedbody = getDecoded(request.data)
-            Log.d("King", "decodedbody:$decodedbody")
-            val list = parseJson<Results>(decodedbody).results?.mapNotNull { element ->
-                element.toSearchResponse(request)
-            } ?: throw ErrorLoadingException("Invalid Json response")
-            if (list.isNotEmpty()) items.add(HomePageList(request.name, list, true))
+            val decodedBody = getDecoded(request.data)
+            Log.d("King", "decodedBody:$decodedBody")
+
+            if (request.name == "Live Events") {
+                val parsedData = parseJson<EventsResults>(decodedBody).results
+                Log.d("King", "parsedEventData:$parsedData")
+                val list = parsedData?.mapNotNull { element ->
+                    element.toSearchResponse(request)
+                } ?: throw ErrorLoadingException("Invalid Json response")
+                if (list.isNotEmpty()) items.add(HomePageList(request.name, list, true))
+
+            } else {
+                val parsedData = parseJson<Results>(decodedBody).results
+                val list = parsedData?.mapNotNull { element ->
+                    element.toSearchResponse(request)
+                } ?: throw ErrorLoadingException("Invalid Json response")
+                if (list.isNotEmpty()) items.add(HomePageList(request.name, list, true))
+            }
         }
         return newHomePageResponse(items)
     }
@@ -75,31 +87,51 @@ class YacienTV : MainAPI() {
         )
     }
     private fun Event.toSearchResponse(request: MainPageRequest, type: String? = null): SearchResponse? {
+        Log.d("King", "SearchResp${request}")
+
         return LiveSearchResponse(
-            name ?: return null,
-            Data(id = id, name = name, posterUrl = "logo", category = request.name).toJson(),
+            name = "${team_1["name"].toString()} vs ${team_2["name"].toString()}" ,
+            LinksData(
+                id = id,
+                start_time = start_time,
+                end_time = end_time,
+                champions = champions,
+                channel = channel,
+                team_1 = mapOf(
+                    "name" to team_1["name"].toString(),
+                    "logo" to team_1["logo"].toString()
+                ),
+                team_2 = mapOf(
+                    "name" to team_2["name"].toString(),
+                    "logo" to team_2["logo"].toString()
+                ),
+                category = request.name,
+                name = "${team_1["name"].toString()} vs ${team_2["name"].toString()}",
+                commentary = commentary,
+            ).toJson(),
             this@YacienTV.name,
-            TvType.Live,
-            "logo",
+            type = TvType.Live,
         )
     }
     override suspend fun load(url: String): LoadResponse {
         Log.d("King", "Load:$url")
+
         val data = parseJson<LinksData>(url)
 
-        if (data.category == "ARABIC CHANNELS"){
-            val decodedbody = getDecoded("$yacienTVAPI/categories/${data.id}/channels")
-            //Log.d("King", "Arabicdecodedbody:$decodedbody")
+        if (data.category == "ARABIC CHANNELS") {
+            val decodedBody = getDecoded("$yacienTVAPI/categories/${data.id}/channels")
+            //Log.d("King", "ArabicDecodedBody:decodedBody")
 
-            var channels = parseJson<Results>(decodedbody).results?.map { element ->
+            val channels = parseJson<Results>(decodedBody).results?.map { element ->
                 Episode(
                     name = element.name,
                     posterUrl = element.logo,
                     data = element.id.toString(),
                 )
             } ?: throw ErrorLoadingException("Invalid Json response")
+
             return newTvSeriesLoadResponse(
-                name = data.name,
+                name = data.name.toString(),
                 url = Data(
                     id = data.id,
                     name = data.name,
@@ -113,15 +145,25 @@ class YacienTV : MainAPI() {
                 this.plot = "${data.name} livestreams of ${data.category} category."
             }
         }
+        var plotStr = ""
+
+        if (data.category == "Live Events") {
+            plotStr = "Teams: ${data.name}" +
+                    "<br>Time: ${data.start_time}" +
+                    "<br>Commentary: ${data.commentary}" +
+                    "<br>Channel: ${data.channel}"
+        } else {
+            plotStr = "${data.name} channel livestream of ${data.category} category."
+        }
 
         return LiveStreamLoadResponse(
-            name = data.name,
-            url = Data(id = data.id, name = data.name, posterUrl = data.posterUrl, category = data.category).toJson(),
-            dataUrl = data.id,
+            name = data.name.toString(),
+            url = Data(id = data.id, name = data.name, posterUrl = data.posterUrl, category = data.category.toString()).toJson(),
+            dataUrl = LinksData(id = data.id, name = data.name, posterUrl = data.posterUrl, category = data.category).toJson(),
             apiName = name,
             posterUrl = data.posterUrl,
             type = TvType.Live,
-            plot = "${data.name} channel livestream of ${data.category} category."
+            plot = plotStr,
         )
     }
     override suspend fun loadLinks(
@@ -130,11 +172,18 @@ class YacienTV : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+
         Log.d("King", "loadLinks:$data")
+        val linksData = parseJson<LinksData>(data)
 
-        val decodedbody = getDecoded("$yacienTVAPI/channel/$data")
+        var decodedBody = ""
+        if (linksData.category == "Live Events") {
+            decodedBody = getDecoded("$yacienTVAPI/event/${linksData.id}")
+        } else {
+            decodedBody = getDecoded("$yacienTVAPI/channel/${linksData.id}")
+        }
 
-        parseJson<ChannelResults>(decodedbody).links?.map { element ->
+        parseJson<ChannelResults>(decodedBody).links?.map { element ->
             callback.invoke(
                 ExtractorLink(
                     source = element.name,
@@ -166,17 +215,18 @@ class YacienTV : MainAPI() {
         return decrypt(req.body.string(), req.headers["t"].toString())
     }
     data class Team(
-        @JsonProperty("name") val name: String? = null,
-        @JsonProperty("logo") val logo: String? = null,
+        @JsonProperty("name") val name: String,
+        @JsonProperty("logo") val logo: String,
     )
     data class Event(
-        @JsonProperty("id") val id: String? = null,
-        @JsonProperty("start_time") val start_time: String? = null,
-        @JsonProperty("end_time") val end_time: String? = null,
-        @JsonProperty("champions") val champions: String? = null,
-        @JsonProperty("channel") val channel: String? = null,
-        @JsonProperty("team_1") val team_1: ArrayList<Team>? = arrayListOf(),
-        @JsonProperty("team_2") val team_2: ArrayList<Team>? = arrayListOf(),
+        @JsonProperty("id") val id: String,
+        @JsonProperty("start_time") val start_time: String,
+        @JsonProperty("end_time") val end_time: String,
+        @JsonProperty("champions") val champions: String,
+        @JsonProperty("commentary") val commentary: String,
+        @JsonProperty("channel") val channel: String,
+        @JsonProperty("team_1") val team_1: Map<String, String> = mapOf(),
+        @JsonProperty("team_2") val team_2: Map<String, String> = mapOf(),
     )
     data class EventsResults(
         @JsonProperty("data") val results: ArrayList<Event>? = arrayListOf(),
@@ -201,14 +251,21 @@ class YacienTV : MainAPI() {
     )
     data class Data(
         val id: String? = null,
-        val name: String,
+        val name: String? = null,
         val posterUrl: String? = null,
         val category: String,
     )
     data class LinksData(
-        val id: String,
-        val name: String,
+        val id: String? = null,
+        val name: String? = null,
         val posterUrl: String? = null,
-        val category: String,
+        val category: String? = null,
+        val start_time: String? = null,
+        val end_time: String? = null,
+        val champions: String? = null,
+        val channel: String? = null,
+        val commentary: String? = null,
+        val team_1: Map<String, String>? = null,
+        val team_2: Map<String, String>? = null,
     )
 }

@@ -4,7 +4,6 @@ import android.icu.util.Calendar
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.ui.player.RepoLinkGenerator
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.DrmExtractorLink
@@ -24,7 +23,7 @@ class ElOstoraTV : MainAPI() {
         setOf(
             TvType.Live
         )
-    private val APIurl = "https://z420572.radwan.shop/api/v4_8.php"
+    private val apiUrl = "https://z420572.radwan.shop/api/v4_8.php"
 
     //override val mainPage = generateHomePage()
     override val mainPage = generateServersHomePage()
@@ -34,10 +33,10 @@ class ElOstoraTV : MainAPI() {
             "main" to "1",
             "id" to "",
         )
-        val decodedbody = getDecoded(data)
-        //Log.d("King", "decodedbody:$decodedbody")
+        val decodedBody = getDecoded(data)
+        //Log.d("King", "decodedBody:decodedBody")
 
-        parseJson<Categories>(decodedbody).results?.map { element ->
+        parseJson<Categories>(decodedBody).results?.map { element ->
             homepage.add(mainPage(name = element.category_name, url = element.cid))
         } ?: throw ErrorLoadingException("Invalid Json response")
         //Log.d("King", "homepage:$homepage")
@@ -52,9 +51,9 @@ class ElOstoraTV : MainAPI() {
                 "id" to "",
                 "sub_id" to "0"
             )
-            val decodedbody = getDecoded(data)
-            //Log.d("King", "getMaindecodedbody:$decodedbody")
-            val list = parseJson<Categories>(decodedbody).results?.map { element ->
+            val decodedBody = getDecoded(data)
+            //Log.d("King", "getMainDecodedBody:decodedBody")
+            val list = parseJson<Categories>(decodedBody).results?.map { element ->
                 element.toSearchResponse(request)
             } ?: throw ErrorLoadingException("Invalid Json response")
             if (list.isNotEmpty()) items.add(HomePageList(request.name, list, false))
@@ -75,13 +74,13 @@ class ElOstoraTV : MainAPI() {
         Log.d("King", "Load:$url")
         val data = parseJson<Data>(url)
 
-        val Postdata = mapOf(
+        val postData = mapOf(
             "id" to "",
             "cat_id" to data.id
         )
-        val decodedbody = getDecoded(Postdata)
-        Log.d("King", "decodedbody:$decodedbody")
-        var channels = parseJson<Results>(decodedbody).results?.map { element ->
+        val decodedBody = getDecoded(postData)
+        Log.d("King", "decodedBody:$decodedBody")
+        var channels = parseJson<Results>(decodedBody).results?.map { element ->
             Episode(
                 name = element.channel_title,
                 posterUrl = element.channel_thumbnail,
@@ -121,11 +120,9 @@ class ElOstoraTV : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         Log.d("King", "loadLinks:$data")
-        val data = parseJson<Data>(data)
+        val parsedData = parseJson<Data>(data)
 
-        var fullUrl = fixUrl(data.channel_url)
-        var key: String = ""
-        var kid: String = ""
+        val fullUrl = fixUrl(parsedData.channel_url)
         val encrypted : Boolean = fullUrl.contains("###")
 
         Log.d("King", "fullUrl:$fullUrl")
@@ -133,29 +130,36 @@ class ElOstoraTV : MainAPI() {
         {
             Log.d("King", "encrypted")
             val suffix = fullUrl.split("###")[1].split(":")
-            key = suffix[0]
-            kid = suffix[1]
-            fullUrl = fullUrl.split("###")[0]
-            Log.d("King", "fullUrl:$fullUrl")
+            val key = suffix[0]
+            val kid = suffix[1]
+            val mediaUrl = fullUrl.split("###")[0]
+            Log.d("King", "mediaUrl:$mediaUrl")
             Log.d("King", "key:$key")
             Log.d("King", "kid:$kid")
-            DrmExtractorLink(
-                source = data.channel_title,
-                name = data.channel_title,
-                url = fullUrl,
-                referer = "",
-                quality = Qualities.Unknown.value,
-                key = key,
-                kid = kid,
-                kty = "oct",
-                type = INFER_TYPE,
+            callback.invoke(
+                DrmExtractorLink(
+                    source = parsedData.channel_title,
+                    name = parsedData.channel_title,
+                    url = mediaUrl,
+                    referer = "",
+                    quality = Qualities.Unknown.value,
+                    key = key,
+                    kid = kid,
+                    type = INFER_TYPE,
+                    headers = mapOf(
+                        "Accept-Encoding" to "identity",
+                        "Connection" to "Keep-Alive",
+                        "Host" to "cdxaws-ak.akamaized.net",
+                        "User-Agent" to "Url-Player"
+                    )
+                )
             )
             return true
         }
         callback.invoke(
             ExtractorLink(
-                source = data.channel_title,
-                name = data.channel_title,
+                source = parsedData.channel_title,
+                name = parsedData.channel_title,
                 url = fullUrl,
                 referer = "",
                 quality = Qualities.Unknown.value,
@@ -177,17 +181,16 @@ class ElOstoraTV : MainAPI() {
 
         val request = requestCreator(
             method = "POST",
-            url = APIurl,
+            url = apiUrl,
             headers = mapOf(
-                "user-agent" to "Mozilla/5.0 (Linux; U; Android 10; en; YAL-L41 Api/HUAWEIYAL-L41) AppleWebKit/534.30 (KHTML, like Gecko) Version/5.0 Mobile Safari/534.30",
+                "user-agent" to USER_AGENT,
                 "Time" to t,
             ),
             data = payload,
         )
         val req = client.newCall(request).execute()
-        val decryptedBody = decrypt(req.body.string(), t.toCharArray())
-        //Log.d("King", "decryptedBody:" + decryptedBody)
-        return decryptedBody
+
+        return decrypt(req.body.string(), t.toCharArray())
     }
 
     private fun decrypt(str: String, key: CharArray): String {
