@@ -25,7 +25,6 @@ class ElOstoraTV : MainAPI() {
         )
     private val apiUrl = "https://z420572.radwan.shop/api/v4_8.php"
 
-    //override val mainPage = generateHomePage()
     override val mainPage = generateServersHomePage()
     private fun generateServersHomePage() : List<MainPageData> {
         val homepage =  mutableListOf<MainPageData>()
@@ -34,31 +33,26 @@ class ElOstoraTV : MainAPI() {
             "id" to "",
         )
         val decodedBody = getDecoded(data)
-        //Log.d("King", "decodedBody:decodedBody")
 
         parseJson<Categories>(decodedBody).results?.map { element ->
             homepage.add(mainPage(name = element.category_name, url = element.cid))
         } ?: throw ErrorLoadingException("Invalid Json response")
-        //Log.d("King", "homepage:$homepage")
         return homepage
     }
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val items = mutableListOf<HomePageList>()
         if (page <= 1) {
-            //Log.d("King", "getMainPage:$request")
             val data = mapOf(
                 "main_id" to request.data,
                 "id" to "",
                 "sub_id" to "0"
             )
             val decodedBody = getDecoded(data)
-            //Log.d("King", "getMainDecodedBody:decodedBody")
             val list = parseJson<Categories>(decodedBody).results?.map { element ->
                 element.toSearchResponse(request)
             } ?: throw ErrorLoadingException("Invalid Json response")
             if (list.isNotEmpty()) items.add(HomePageList(request.name, list, false))
         }
-        //Log.d("King", "items:$items")
         return newHomePageResponse(items)
     }
     private fun Category.toSearchResponse(request: MainPageRequest): SearchResponse {
@@ -174,7 +168,7 @@ class ElOstoraTV : MainAPI() {
     }
     private fun getDecoded(payload: Map<String, String>): String {
 
-        val t = Calendar.getInstance().timeInMillis.toString()
+        val t = (Calendar.getInstance().timeInMillis / 1000).toString()
 
         val client = app.baseClient.newBuilder()
             .build()
@@ -183,16 +177,14 @@ class ElOstoraTV : MainAPI() {
             method = "POST",
             url = apiUrl,
             headers = mapOf(
-                "user-agent" to USER_AGENT,
+                "User-Agent" to "Mozilla/5.0 (Linux; U; Android 10; en; YAL-L41 Api/HUAWEIYAL-L41) AppleWebKit/534.30 (KHTML, like Gecko) Version/5.0 Mobile Safari/534.30",
                 "Time" to t,
             ),
             data = payload,
         )
         val req = client.newCall(request).execute()
-
         return decrypt(req.body.string(), t.toCharArray())
     }
-
     private fun decrypt(str: String, key: CharArray): String {
         val sb = java.lang.StringBuilder()
         for (i in str.indices) {
