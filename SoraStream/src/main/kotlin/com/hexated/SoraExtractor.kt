@@ -2000,7 +2000,8 @@ object SoraExtractor : SoraStream() {
                     "${apiUrl}search",
                     data = data,
                     headers = passHeaders,
-                    referer = apiUrl
+                    referer = apiUrl,
+                    timeout = 120L
                 ).text else app.post(
                     "${apiUrl}search",
                     data = data,
@@ -2008,7 +2009,7 @@ object SoraExtractor : SoraStream() {
                 ).text
             )
         } else {
-            app.post("${apiUrl}search", requestBody = body, referer = apiUrl).text
+            app.post("${apiUrl}search", requestBody = body, referer = apiUrl, timeout = 120L).text
         }
         val media = if (api in untrimmedIndex) searchIndex(
             title,
@@ -2031,20 +2032,22 @@ object SoraExtractor : SoraStream() {
                         "${apiUrl}id2path",
                         data = pathData,
                         headers = passHeaders,
-                        referer = apiUrl
+                        referer = apiUrl,
+                        timeout = 120L
                     )
                 } else {
                     app.post(
-                        "${apiUrl}id2path", data = pathData, referer = apiUrl
+                        "${apiUrl}id2path", data = pathData, referer = apiUrl, timeout = 120L
                     )
                 }
             } else {
-                app.post("${apiUrl}id2path", requestBody = pathBody, referer = apiUrl)
+                app.post("${apiUrl}id2path", requestBody = pathBody, referer = apiUrl, timeout = 120L)
             }).text.let { path ->
                 if (api in ddomainIndex) {
                     val worker = app.get(
                         "${fixUrl(path, apiUrl).encodeUrl()}?a=view",
-                        referer = if (api in needRefererIndex) apiUrl else ""
+                        referer = if (api in needRefererIndex) apiUrl else "",
+                        timeout = 120L
                     ).document.selectFirst("script:containsData(downloaddomain)")?.data()
                         ?.substringAfter("\"downloaddomain\":\"")?.substringBefore("\",")?.let {
                             "$it/0:"
