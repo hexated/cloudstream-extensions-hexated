@@ -2206,6 +2206,9 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
+        fun String.decrypt(key: String) : List<PrimewireSources>? {
+            return tryParseJson<List<PrimewireSources>>(base64Decode(this).decodePrimewireXor(key))
+        }
         val slug = getEpisodeSlug(season, episode)
         val query = if (season == null) {
             title
@@ -2260,7 +2263,9 @@ object SoraExtractor : SoraStream() {
             "$primewireAPI$serverUrl",
             cookies = cookies, referer = url, headers = headers
         )
-        val key = getAndUnpack(serverRes.text).substringAfter("(key=").substringBefore(")")
+        val unpack = getAndUnpack(serverRes.text)
+        val key = unpack.substringAfter("(key=").substringBefore(")")
+        val key2 = unpack.substringAfter("<\"").substringBefore("\".")
         serverRes.document.select("ul li").amap { el ->
             val server = el.attr("data-value")
             val encryptedData = app.get(
@@ -2269,8 +2274,7 @@ object SoraExtractor : SoraStream() {
                 referer = url,
                 headers = headers
             ).text
-            val json = base64Decode(encryptedData).decodePrimewireXor(key)
-            val links = tryParseJson<List<PrimewireSources>>(json) ?: return@amap
+            val links = encryptedData.decrypt(key) ?: encryptedData.decrypt(key2) ?: return@amap
             links.forEach { video ->
                 qualities.filter { it <= video.max.toInt() }.forEach {
                     callback(
