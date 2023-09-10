@@ -110,6 +110,13 @@ open class TimefourTv : MainAPI() {
 
     }
 
+    override suspend fun search(query: String): List<SearchResponse> {
+        val document = app.get("$daddyUrl/24-7-channels.php").document
+        return document.select("div.grid-container div.grid-item:contains($query)").mapNotNull {
+            it.toSearchDaddy()
+        }
+    }
+
     private suspend fun loadSchedule(url: String): LoadResponse {
         val name = url.removePrefix("$mainUrl/")
         val doc = app.get("$mainUrl/schedule.php").document
