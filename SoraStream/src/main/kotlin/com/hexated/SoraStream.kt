@@ -8,7 +8,6 @@ import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeCryMovies
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
-import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeMovieHab
@@ -91,7 +90,6 @@ open class SoraStream : TmdbProvider() {
         const val vidSrcAPI = "https://v2.vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
         const val movieHabAPI = "https://moviehab.com"
-        const val hdMovieBoxAPI = "https://hdmoviebox.net"
         const val dreamfilmAPI = "https://dreamfilmsw.net"
         const val series9API = "https://series9.cx"
         const val idlixAPI = "https://tv.idlixplus.net"
@@ -106,7 +104,7 @@ open class SoraStream : TmdbProvider() {
         const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
-        const val m4uhdAPI = "https://m4uhd.tv"
+        const val m4uhdAPI = "https://ww2.m4ufree.com"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
         const val moviezAddAPI = "https://ww2.moviezaddiction.click"
         const val bollyMazaAPI = "https://m.bollymaza.click"
@@ -127,7 +125,7 @@ open class SoraStream : TmdbProvider() {
         const val pobmoviesAPI = "https://pobmovies.cam"
         const val fourCartoonAPI = "https://4cartoon.net"
         const val multimoviesAPI = "https://multi-movies.xyz"
-        const val netmoviesAPI = "https://netmovies.to"
+        const val netmoviesAPI = "https://web.netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
         const val doomoviesAPI = "https://doomovies.net"
         const val primewireAPI = "https://real-primewire.club"
@@ -420,15 +418,6 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeHDMovieBox(
-                    res.title,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
                 if (!res.isAnime) invokeDreamfilm(
                     res.title,
                     res.season,
@@ -541,7 +530,7 @@ open class SoraStream : TmdbProvider() {
             {
                 if(!res.isAnime) invokeM4uhd(
                     res.title,
-                    res.year,
+                    res.airedYear ?: res.year,
                     res.season,
                     res.episode,
                     subtitleCallback,

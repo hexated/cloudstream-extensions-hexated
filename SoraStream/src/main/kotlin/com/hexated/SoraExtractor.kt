@@ -234,92 +234,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeHDMovieBox(
-        title: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title.createSlug()
-        val url = "$hdMovieBoxAPI/watch/$fixTitle"
-        val doc = app.get(url).document
-        val id = if (season == null) {
-            doc.selectFirst("div.player div#not-loaded")?.attr("data-whatwehave")
-        } else {
-            doc.select("div.season-list-column div[data-season=$season] div.list div.item")[episode?.minus(
-                1
-            ) ?: 0].selectFirst("div.ui.checkbox")?.attr("data-episode")
-        } ?: return
-
-        val iframeUrl = app.post(
-            "$hdMovieBoxAPI/ajax/service", data = mapOf(
-                "e_id" to id,
-                "v_lang" to "en",
-                "type" to "get_whatwehave",
-            ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-        ).parsedSafe<HdMovieBoxIframe>()?.apiIframe ?: return
-
-        delay(1000)
-        val iframe = app.get(iframeUrl, referer = url).document.selectFirst("iframe")
-            ?.attr("src").let { httpsify(it ?: return) }
-
-        if (iframe.startsWith("https://vidmoly.to")) {
-            loadExtractor(iframe, "$hdMovieBoxAPI/", subtitleCallback) { video ->
-                callback.invoke(
-                    ExtractorLink(
-                        video.name,
-                        video.name,
-                        video.url,
-                        video.referer,
-                        Qualities.P1080.value,
-                        video.type,
-                        video.headers,
-                        video.extractorData
-                    )
-                )
-            }
-        } else {
-            val base = getBaseUrl(iframe)
-            val script = app.get(
-                httpsify(iframe), referer = "$hdMovieBoxAPI/"
-            ).document.selectFirst("script:containsData(var vhash =)")?.data()
-                ?.substringAfter("vhash, {")?.substringBefore("}, false")
-
-            tryParseJson<HdMovieBoxSource>("{$script}").let { source ->
-                val disk = if (source?.videoDisk == null) {
-                    ""
-                } else {
-                    base64Encode(source.videoDisk.toString().toByteArray())
-                }
-                val link = getBaseUrl(iframe) + source?.videoUrl?.replace(
-                    "\\", ""
-                ) + "?s=${source?.videoServer}&d=$disk"
-                callback.invoke(
-                    ExtractorLink(
-                        "HDMovieBox",
-                        "HDMovieBox",
-                        link,
-                        iframe,
-                        Qualities.P1080.value,
-                        isM3u8 = true,
-                    )
-                )
-
-                source?.tracks?.map { sub ->
-                    subtitleCallback.invoke(
-                        SubtitleFile(
-                            sub.label ?: "",
-                            fixUrl(sub.file ?: return@map null, base),
-                        )
-                    )
-                }
-            }
-        }
-
-
-    }
-
     suspend fun invokeDreamfilm(
         title: String? = null,
         season: Int? = null,
@@ -1517,14 +1431,15 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
         val req = app.get("$m4uhdAPI/search/${title.createSlug()}.html")
         val referer = getBaseUrl(req.url)
         val res = req.document
-        val scriptData = res.select("div.row div.item").map {
+        val scriptData = res.select("div.row div.item").map { ele ->
             Triple(
-                it.selectFirst("img.imagecover")?.attr("title"),
-                it.selectFirst("div.jtip-top div:last-child")?.text(),
-                it.selectFirst("a")?.attr("href")
+                ele.select("div.tiptitle p").text(),
+                ele.select("div.jtip-top div:last-child").text().filter { it.isDigit() },
+                ele.selectFirst("a")?.attr("href")
             )
         }
 
@@ -1532,11 +1447,9 @@ object SoraExtractor : SoraStream() {
             scriptData.firstOrNull()
         } else {
             scriptData.find {
-                it.first?.contains(
-                    "Watch Free ${title?.replace(":", "")}", true
-                ) == true && (it.first?.contains("$year") == true || it.second?.contains(
-                    "$year"
-                ) == true)
+                it.first.contains(
+                    "$title", true
+                ) && it.second == "$year"
             }
         }
 
@@ -1556,7 +1469,7 @@ object SoraExtractor : SoraStream() {
             doc.select("div.le-server span").map { it.attr("data") }
         } else {
             val episodeData =
-                doc.selectFirst("div.col-lg-9.col-xl-9 p:matches((?i)S0?$season-E0?$episode$)")
+                doc.selectFirst("div.col-lg-9.col-xl-9 p:matches((?i)S$seasonSlug-E$episodeSlug)")
                     ?: return
             val idepisode = episodeData.select("button").attr("idepisode") ?: return
             val requestEmbed = app.post(

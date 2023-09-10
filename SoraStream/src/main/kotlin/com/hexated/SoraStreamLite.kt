@@ -11,7 +11,6 @@ import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGoku
-import com.hexated.SoraExtractor.invokeHDMovieBox
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
@@ -33,7 +32,6 @@ import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePrimewire
-import com.hexated.SoraExtractor.invokeSusflix
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
@@ -121,25 +119,6 @@ class SoraStreamLite : SoraStream() {
                     res.epsTitle,
                     res.date,
                     res.airedDate,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-//            {
-//                if (res.season != null && res.isAnime) invokeCrunchyroll(
-//                    res.title,
-//                    res.epsTitle,
-//                    res.season,
-//                    res.episode,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
-            {
-                if (!res.isAnime) invokeHDMovieBox(
-                    res.title,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -259,7 +238,7 @@ class SoraStreamLite : SoraStream() {
             {
                 if(!res.isAnime) invokeM4uhd(
                     res.title,
-                    res.year,
+                    res.airedYear ?: res.year,
                     res.season,
                     res.episode,
                     subtitleCallback,

@@ -47,22 +47,6 @@ data class MoviesbayValues(
     @JsonProperty("values") val values: List<List<String>>? = arrayListOf(),
 )
 
-data class HdMovieBoxTracks(
-    @JsonProperty("label") val label: String? = null,
-    @JsonProperty("file") val file: String? = null,
-)
-
-data class HdMovieBoxSource(
-    @JsonProperty("videoUrl") val videoUrl: String? = null,
-    @JsonProperty("videoServer") val videoServer: String? = null,
-    @JsonProperty("videoDisk") val videoDisk: Any? = null,
-    @JsonProperty("tracks") val tracks: ArrayList<HdMovieBoxTracks>? = arrayListOf(),
-)
-
-data class HdMovieBoxIframe(
-    @JsonProperty("api_iframe") val apiIframe: String? = null,
-)
-
 data class ResponseHash(
     @JsonProperty("embed_url") val embed_url: String,
     @JsonProperty("key") val key: String? = null,
