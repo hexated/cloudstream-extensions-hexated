@@ -1120,30 +1120,30 @@ object SoraExtractor : SoraStream() {
                 }
             }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
 
-        val sources = mutableListOf<Pair<String, String?>>()
-        if (iframeList.any {
-                it.first.contains(
-                    "2160p",
-                    true
-                )
-            }) {
-            sources.addAll(iframeList.filter {
-                it.first.contains(
-                    "2160p",
-                    true
-                )
-            })
-            sources.add(iframeList.first {
-                it.first.contains(
-                    "1080p",
-                    true
-                )
-            })
-        } else {
-            sources.addAll(iframeList.filter { it.first.contains("1080p", true) })
-        }
+//        val sources = mutableListOf<Pair<String, String?>>()
+//        if (iframeList.any {
+//                it.first.contains(
+//                    "2160p",
+//                    true
+//                )
+//            }) {
+//            sources.addAll(iframeList.filter {
+//                it.first.contains(
+//                    "2160p",
+//                    true
+//                )
+//            })
+//            sources.add(iframeList.first {
+//                it.first.contains(
+//                    "1080p",
+//                    true
+//                )
+//            })
+//        } else {
+//            sources.addAll(iframeList.filter { it.first.contains("1080p", true) })
+//        }
 
-        sources.apmap { (quality, link) ->
+        iframeList.apmap { (quality, link) ->
             val driveLink =
                 if (link?.contains("driveleech") == true) bypassDriveleech(link) else bypassTechmny(
                     link ?: return@apmap
