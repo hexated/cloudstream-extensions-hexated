@@ -113,7 +113,6 @@ fun AvailableEpisodesDetail.getEpisode(
     return meta.map { eps ->
         Episode(
             AnichiLoadData(id, lang, eps, malId).toJson(),
-            "Ep $eps",
             episode = eps.toIntOrNull()
         )
     }.reversed()
