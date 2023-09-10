@@ -11,7 +11,9 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 
 class Hdmovie2 : Movierulzhd() {
-    override var mainUrl = "https://hdmovie2.media"
+
+    override var mainUrl = "https://hdmovie2.codes"
+
     override var name = "Hdmovie2"
 
     override val mainPage = mainPageOf(
