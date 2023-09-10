@@ -1,5 +1,6 @@
 package com.yacientv
 
+import android.text.format.DateFormat
 import android.util.Base64
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -89,8 +90,14 @@ class YacienTV : MainAPI() {
     private fun Event.toSearchResponse(request: MainPageRequest, type: String? = null): SearchResponse {
         Log.d("King", "SearchResp${request}")
 
+        val matchTeams = "${team_1["name"].toString()} vs ${team_2["name"].toString()}"
+
+        //val startTime = Date(start_time.toLong()) .toString()
+        val startTime = DateFormat.format("hh:mm", start_time.toLong()).toString()
+        val endTime = end_time
+
         return LiveSearchResponse(
-            name = "${team_1["name"].toString()} vs ${team_2["name"].toString()}" ,
+            name =  "${matchTeams}\n${start_time?.let { DateFormat.format("h:mm a", it.toLong() * 1000).toString() }}",
             LinksData(
                 id = id,
                 start_time = start_time,
@@ -106,7 +113,7 @@ class YacienTV : MainAPI() {
                     "logo" to team_2["logo"].toString()
                 ),
                 category = request.name,
-                name = "${team_1["name"].toString()} vs ${team_2["name"].toString()}",
+                name = "$matchTeams",
                 commentary = commentary,
             ).toJson(),
             this@YacienTV.name,
@@ -145,12 +152,12 @@ class YacienTV : MainAPI() {
                 this.plot = "${data.name} livestreams of ${data.category} category."
             }
         }
-
+        //val startTime = data.start_time?.let { DateFormat.format("hh:mm", it.toLong()).toString() }
         val plotStr: String = if (data.category == "Live Events") {
-            "Teams: ${data.name}" +
-                    "<br>Time: ${data.start_time}" +
-                    "<br>Commentary: ${data.commentary}" +
-                    "<br>Channel: ${data.channel}"
+            "Teams ⚽: ${data.name}" +
+                    "<br>Time  ⏰:  ${data.start_time?.let { DateFormat.format("h:mm a", it.toLong() * 1000).toString() }}" +
+                    "<br>Commentary  \uD83C\uDF99️:  ${data.commentary}" +
+                    "<br>Channel  \uD83D\uDCFA:  ${data.channel}"
         } else {
             "${data.name} channel livestream of ${data.category} category."
         }
