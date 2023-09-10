@@ -2443,7 +2443,6 @@ object SoraExtractor : SoraStream() {
         var res = app.get(url)
         if (res.code == 403) return
         if (!res.isSuccessful) res = searchWatchOnline(title, season, imdbId, tmdbId) ?: return
-
         val doc = res.document
         val episodeId = if (season == null) {
             doc.selectFirst("div.movie__buttons-items a")?.attr("data-watch-list-media-id")
@@ -2452,35 +2451,31 @@ object SoraExtractor : SoraStream() {
                 it.select("div.episodes__number").text().equals("Episode $episode", true)
             }?.attr("data-id-episode")
         } ?: return
-
-        val videoUrl = if (season == null) {
-            "$watchOnlineAPI/api/v1/security/movie-access?id_movie=$episodeId"
-        } else {
-            "$watchOnlineAPI/api/v1/security/episode-access?id=$episodeId"
-        }
-
-        val json = app.get(videoUrl, referer = url).parsedSafe<WatchOnlineResponse>()
-
-        json?.streams?.mapKeys { source ->
-            callback.invoke(
-                ExtractorLink(
-                    "WatchOnline",
-                    "WatchOnline",
-                    source.value,
-                    "$watchOnlineAPI/",
-                    getQualityFromName(source.key),
-                    true
-                )
-            )
-        }
-
         argamap(
             {
-                invokeMonster(
-                    res.url.substringAfterLast("/"), episodeId, season, callback
-                )
+                invokeMonster(res.url.substringAfterLast("/"), episodeId, season, callback)
             },
             {
+                val videoUrl = if (season == null) {
+                    "$watchOnlineAPI/api/v1/security/movie-access?id_movie=$episodeId"
+                } else {
+                    "$watchOnlineAPI/api/v1/security/episode-access?id=$episodeId"
+                }
+
+                val json = app.get(videoUrl, referer = url).parsedSafe<WatchOnlineResponse>()
+
+                json?.streams?.mapKeys { source ->
+                    callback.invoke(
+                        ExtractorLink(
+                            "WatchOnline",
+                            "WatchOnline",
+                            source.value,
+                            "$watchOnlineAPI/",
+                            getQualityFromName(source.key),
+                            true
+                        )
+                    )
+                }
                 val subtitles = json?.subtitles as ArrayList<HashMap<String, String>>
                 subtitles.map { sub ->
                     subtitleCallback.invoke(
@@ -2490,7 +2485,8 @@ object SoraExtractor : SoraStream() {
                         )
                     )
                 }
-            })
+            }
+        )
 
     }
 
@@ -2500,19 +2496,17 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val monsterMainUrl = "https://mobirs.monster"
-        val playSlug = if (season == null) {
-            "movies/play/$urlSlug"
+        val monsterMainUrl = "https://lookmovie.foundation"
+        val viewSlug = if (season == null) {
+            "movies/view/$urlSlug"
         } else {
-            "shows/play/$urlSlug"
+            "shows/view/$urlSlug"
         }
-        val sid = "9k9iupt5sebbnfajrc6ti3ht7l"
-        val sec = "1974bc4a902c4d69fcbab261dcec69094a9b8164"
-        val url =
-            "$monsterMainUrl/$playSlug?mid=1&sid=$sid&sec=$sec&t=${System.currentTimeMillis()}"
-        val res = app.get(url).document
-        val script = res.selectFirst("script:containsData(window['show_storage'])")?.data()
-        val hash = Regex("hash:\\s*['\"](\\S+)['\"],").find(script ?: return)?.groupValues?.get(1)
+        val streamUrl = app.get("$monsterMainUrl/$viewSlug").document.select("a.round-button:first-child").attr("href")
+        val res = app.get(streamUrl).document
+        val script = res.selectFirst("script:containsData(hash:)")?.data()
+        val hash =
+            Regex("hash:\\s*['\"](\\S+)['\"],").find(script ?: return)?.groupValues?.get(1)
         val expires = Regex("expires:\\s*(\\d+),").find(script)?.groupValues?.get(1)
 
         val videoUrl = if (season == null) {
@@ -2521,7 +2515,7 @@ object SoraExtractor : SoraStream() {
             "$monsterMainUrl/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
         }
 
-        app.get(videoUrl, referer = url)
+        app.get(videoUrl, referer = streamUrl)
             .parsedSafe<WatchOnlineResponse>()?.streams?.mapKeys { source ->
                 callback.invoke(
                     ExtractorLink(

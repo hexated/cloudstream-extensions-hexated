@@ -31,10 +31,10 @@ open class Playm4u : ExtractorApi() {
         val pass = passScript.substringAfter("CryptoJS.MD5('").substringBefore("')")
         val amount = passScript.substringAfter(".toString()), ").substringBefore("));").toInt()
 
-        val idFile = "idfile\\s*=\\s*[\"'](\\S+)[\"'];".findIn(script)
-        val idUser = "idUser\\s*=\\s*[\"'](\\S+)[\"'];".findIn(script)
-        val domainApi = "DOMAIN_API\\s*=\\s*[\"'](\\S+)[\"'];".findIn(script)
-        val nameKeyV3 = "NameKeyV3\\s*=\\s*[\"'](\\S+)[\"'];".findIn(script)
+        val idFile = "idfile".findIn(script)
+        val idUser = "idUser".findIn(script)
+        val domainApi = "DOMAIN_API".findIn(script)
+        val nameKeyV3 = "NameKeyV3".findIn(script)
         val dataEnc = caesarShift(
             mahoa(
                 "Win32|$idUser|$idFile|$referer",
@@ -117,7 +117,7 @@ open class Playm4u : ExtractorApi() {
     }
 
     private fun String.findIn(data: String): String {
-        return this.toRegex().find(data)?.groupValues?.get(1) ?: ""
+        return "$this\\s*=\\s*[\"'](\\S+)[\"'];".toRegex().find(data)?.groupValues?.get(1) ?: ""
     }
 
     private fun String.toLanguage() : String {
