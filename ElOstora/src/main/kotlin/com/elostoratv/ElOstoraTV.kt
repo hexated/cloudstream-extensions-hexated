@@ -1,6 +1,5 @@
 package com.elostoratv
 
-import android.icu.util.Calendar
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
@@ -168,7 +167,7 @@ class ElOstoraTV : MainAPI() {
     }
     private fun getDecoded(payload: Map<String, String>): String {
 
-        val t = (Calendar.getInstance().timeInMillis / 1000).toString()
+        val t = (System.currentTimeMillis() / 1000).toString()
 
         val client = app.baseClient.newBuilder()
             .build()
