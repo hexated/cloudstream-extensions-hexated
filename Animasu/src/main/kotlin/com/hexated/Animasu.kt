@@ -1,13 +1,15 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class Animasu : MainAPI() {
-    override var mainUrl = "https://animasu.cc"
+    override var mainUrl = "https://animasu.uno"
     override var name = "Animasu"
     override val hasMainPage = true
     override var lang = "id"
@@ -99,7 +101,7 @@ class Animasu : MainAPI() {
         val poster = document.selectFirst("div.bigcontent img")?.attr("src")?.replace("\n", "")
 
         val table = document.selectFirst("div.infox div.spe")
-        val type = table?.selectFirst("span:contains(Jenis:)")?.ownText()
+        val type = getType(table?.selectFirst("span:contains(Jenis:)")?.ownText())
         val year = table?.selectFirst("span:contains(Rilis:)")?.ownText()?.substringAfterLast(",")?.trim()?.toIntOrNull()
         val status = table?.selectFirst("span:contains(Status:) font")?.text()
         val trailer = document.selectFirst("div.trailer iframe")?.attr("src")
@@ -107,17 +109,22 @@ class Animasu : MainAPI() {
             val link = fixUrl(it.selectFirst("a")!!.attr("href"))
             val name = it.selectFirst("a")?.text() ?: ""
             val episode = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
-            Episode(link, name, episode = episode)
+            Episode(link, episode = episode)
         }.reversed()
 
-        return newAnimeLoadResponse(title, url, getType(type)) {
-            posterUrl = poster
+        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+
+        return newAnimeLoadResponse(title, url, type) {
+            posterUrl = tracker?.image ?: poster
+            backgroundPosterUrl = tracker?.cover
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = getStatus(status)
             plot = document.select("div.sinopsis p").text()
             this.tags = table?.select("span:contains(Genre:) a")?.map { it.text() }
             addTrailer(trailer)
+            addMalId(tracker?.malId)
+            addAniListId(tracker?.aniId?.toIntOrNull())
         }
     }
 

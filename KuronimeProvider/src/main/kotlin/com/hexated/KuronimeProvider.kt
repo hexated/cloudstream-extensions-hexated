@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -130,8 +132,8 @@ class KuronimeProvider : MainAPI() {
         val poster = document.selectFirst("div.l[itemprop=image] > img")?.attr("data-src")
         val tags = document.select(".infodetail > ul > li:nth-child(2) > a").map { it.text() }
         val type =
-            document.selectFirst(".infodetail > ul > li:nth-child(7)")?.ownText()?.removePrefix(":")
-                ?.lowercase()?.trim() ?: "tv"
+            getType(document.selectFirst(".infodetail > ul > li:nth-child(7)")?.ownText()?.removePrefix(":")
+                ?.lowercase()?.trim() ?: "tv")
 
         val trailer = document.selectFirst("div.tply iframe")?.attr("data-src")
         val year = Regex("\\d, (\\d*)").find(
@@ -148,18 +150,23 @@ class KuronimeProvider : MainAPI() {
             val name = it.selectFirst("a")?.text() ?: return@mapNotNull null
             val episode =
                 Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
-            Episode(link, name, episode = episode)
+            Episode(link, episode = episode)
         }.reversed()
 
-        return newAnimeLoadResponse(title, url, getType(type)) {
+        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+
+        return newAnimeLoadResponse(title, url, type) {
             engName = title
-            posterUrl = poster
+            posterUrl = tracker?.image ?: poster
+            backgroundPosterUrl = tracker?.cover
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             plot = description
             addTrailer(trailer)
             this.tags = tags
+            addMalId(tracker?.malId)
+            addAniListId(tracker?.aniId?.toIntOrNull())
         }
     }
 

@@ -1,6 +1,8 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
@@ -106,7 +108,6 @@ class KuramanimeProvider : MainAPI() {
             document.select("div.anime__details__widget > div > div:nth-child(1) > ul > li:nth-child(3)")
                 .text().trim().replace("Status: ", "")
         )
-        val type = document.selectFirst("div.col-lg-6.col-md-6 ul li:contains(Tipe:) a")?.text()?.lowercase() ?: "tv"
         val description = document.select(".anime__details__text > p").text().trim()
 
         val episodes = mutableListOf<Episode>()
@@ -119,31 +120,36 @@ class KuramanimeProvider : MainAPI() {
                     val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)
                         ?.toIntOrNull()
                     val link = it.attr("href")
-                    Episode(link, name, episode = episode)
+                    Episode(link, episode = episode)
                 }
             if(eps.isEmpty()) break else episodes.addAll(eps)
         }
 
+        val type = getType(document.selectFirst("div.col-lg-6.col-md-6 ul li:contains(Tipe:) a")?.text()?.lowercase() ?: "tv", episodes.size)
         val recommendations = document.select("div#randomList > a").mapNotNull {
             val epHref = it.attr("href")
             val epTitle = it.select("h5.sidebar-title-h5.px-2.py-2").text()
             val epPoster = it.select(".product__sidebar__view__item.set-bg").attr("data-setbg")
-
             newAnimeSearchResponse(epTitle, epHref, TvType.Anime) {
                 this.posterUrl = epPoster
                 addDubStatus(dubExist = false, subExist = true)
             }
         }
 
-        return newAnimeLoadResponse(title, url, getType(type, episodes.size)) {
+        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+
+        return newAnimeLoadResponse(title, url, type) {
             engName = title
-            posterUrl = poster
+            posterUrl = tracker?.image ?: poster
+            backgroundPosterUrl = tracker?.cover
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
             plot = description
             this.tags = tags
             this.recommendations = recommendations
+            addMalId(tracker?.malId)
+            addAniListId(tracker?.aniId?.toIntOrNull())
         }
 
     }

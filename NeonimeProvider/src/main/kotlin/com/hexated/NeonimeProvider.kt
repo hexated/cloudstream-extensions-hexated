@@ -1,6 +1,8 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -8,7 +10,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class NeonimeProvider : MainAPI() {
-    override var mainUrl = "https://neonime.fun"
+    override var mainUrl = "https://neonime.ink"
     private var baseUrl = mainUrl
     override var name = "Neonime"
     override val hasQuickSearch = false
@@ -120,13 +122,17 @@ class NeonimeProvider : MainAPI() {
             val mPoster = document.selectFirst(".sbox > .imagen > .fix > img[itemprop = image]")?.attr("data-src")
             val mTrailer = document.selectFirst("div.youtube_id iframe")?.attr("data-wpfc-original-src")?.substringAfterLast("html#")?.let{ "https://www.youtube.com/embed/$it"}
             val year = document.selectFirst("a[href*=release-year]")!!.text().toIntOrNull()
+            val tracker = APIHolder.getTracker(listOf(mTitle),TrackerType.getTypes(TvType.Movie),year,true)
             return newMovieLoadResponse(name = mTitle, url = url, type = TvType.Movie, dataUrl = url) {
-                posterUrl = mPoster
+                posterUrl = tracker?.image ?: mPoster
+                backgroundPosterUrl = tracker?.cover
                 this.year = year
                 plot = document.select("div[itemprop = description]").text().trim()
                 rating = document.select("span[itemprop = ratingValue]").text().toIntOrNull()
                 tags = document.select("p.meta_dd > a").map { it.text() }
                 addTrailer(mTrailer)
+                addMalId(tracker?.malId)
+                addAniListId(tracker?.aniId?.toIntOrNull())
             }
         }
         else {
@@ -138,18 +144,21 @@ class NeonimeProvider : MainAPI() {
                 val link = fixUrl(it.selectFirst(".episodiotitle > a")!!.attr("href"))
                 val name = it.selectFirst(".episodiotitle > a")?.ownText().toString()
                 val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
-                Episode(link, name, episode = episode)
+                Episode(link, episode = episode)
             }.reversed()
-
+            val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(TvType.Anime),year,true)
             return newAnimeLoadResponse(title, url, TvType.Anime) {
                 engName = title
-                posterUrl = poster
+                posterUrl = tracker?.image ?: poster
+                backgroundPosterUrl = tracker?.cover
                 this.year = year
                 addEpisodes(DubStatus.Subbed, episodes)
                 showStatus = getStatus(document.select("div.metadatac > span").last()!!.text().trim())
                 plot = document.select("div[itemprop = description] > p").text().trim()
                 tags = document.select("#info a[href*=\"-genre/\"]").map { it.text() }
                 addTrailer(trailer)
+                addMalId(tracker?.malId)
+                addAniListId(tracker?.aniId?.toIntOrNull())
             }
         }
     }

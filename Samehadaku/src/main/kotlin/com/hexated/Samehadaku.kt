@@ -1,6 +1,8 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
@@ -8,7 +10,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class Samehadaku : MainAPI() {
-    override var mainUrl = "https://samehadaku.world"
+    override var mainUrl = "https://samehadaku.bond"
     override var name = "Samehadaku"
     override val hasMainPage = true
     override var lang = "id"
@@ -111,8 +113,8 @@ class Samehadaku : MainAPI() {
             document.selectFirst("div.spe > span:contains(Status)")?.ownText() ?: return null
         )
         val type =
-            document.selectFirst("div.spe > span:contains(Type)")?.ownText()?.trim()?.lowercase()
-                ?: "tv"
+            getType(document.selectFirst("div.spe > span:contains(Type)")?.ownText()?.trim()?.lowercase()
+                ?: "tv")
         val rating = document.selectFirst("span.ratingValue")?.text()?.trim()?.toRatingInt()
         val description = document.select("div.desc p").text().trim()
         val trailer = document.selectFirst("div.trailer-anime iframe")?.attr("src")
@@ -129,9 +131,12 @@ class Samehadaku : MainAPI() {
             it.toSearchResult()
         }
 
-        return newAnimeLoadResponse(title, url, getType(type)) {
+        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+
+        return newAnimeLoadResponse(title, url, type) {
             engName = title
-            posterUrl = poster
+            posterUrl = tracker?.image ?: poster
+            backgroundPosterUrl = tracker?.cover
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
@@ -140,6 +145,8 @@ class Samehadaku : MainAPI() {
             addTrailer(trailer)
             this.tags = tags
             this.recommendations = recommendations
+            addMalId(tracker?.malId)
+            addAniListId(tracker?.aniId?.toIntOrNull())
         }
 
     }

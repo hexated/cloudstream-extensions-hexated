@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.extractors.Hxfile
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -11,7 +13,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class NontonAnimeIDProvider : MainAPI() {
-    override var mainUrl = "https://nontonanimeid.lol"
+    override var mainUrl = "https://nontonanimeid.top"
     override var name = "NontonAnimeID"
     override val hasQuickSearch = false
     override val hasMainPage = true
@@ -130,7 +132,7 @@ class NontonAnimeIDProvider : MainAPI() {
         val status = getStatus(
             document.select("span.statusseries").text().trim()
         )
-        val type = document.select("span.typeseries").text().trim().lowercase()
+        val type = getType(document.select("span.typeseries").text().trim().lowercase())
         val rating = document.select("span.nilaiseries").text().trim().toIntOrNull()
         val description = document.select(".entry-content.seriesdesc > p").text().trim()
         val trailer = document.selectFirst("a.trailerbutton")?.attr("href")
@@ -167,21 +169,22 @@ class NontonAnimeIDProvider : MainAPI() {
             }.reversed()
         }
 
-
         val recommendations = document.select(".result > li").mapNotNull {
             val epHref = it.selectFirst("a")!!.attr("href")
             val epTitle = it.selectFirst("h3")!!.text()
             val epPoster = it.select(".top > img").attr("data-src")
-
             newAnimeSearchResponse(epTitle, epHref, TvType.Anime) {
                 this.posterUrl = epPoster
                 addDubStatus(dubExist = false, subExist = true)
             }
         }
 
-        return newAnimeLoadResponse(title, url, getType(type)) {
+        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+
+        return newAnimeLoadResponse(title, url, type) {
             engName = title
-            posterUrl = poster
+            posterUrl = tracker?.image ?: poster
+            backgroundPosterUrl = tracker?.cover
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
@@ -190,6 +193,8 @@ class NontonAnimeIDProvider : MainAPI() {
             addTrailer(trailer)
             this.tags = tags
             this.recommendations = recommendations
+            addMalId(tracker?.malId)
+            addAniListId(tracker?.aniId?.toIntOrNull())
         }
 
     }

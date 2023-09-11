@@ -2,6 +2,8 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -96,15 +98,15 @@ class Nimegami : MainAPI() {
 
         val year = table.getContent("Musim / Rilis").text().filter { it.isDigit() }.toIntOrNull()
         val status = getStatus(document.selectFirst("h1[itemprop=headline]")?.text())
-        val type = table.getContent("Type").text()
+        val type = getType(table.getContent("Type").text())
         val description = document.select("div#Sinopsis p").text().trim()
         val trailer = document.selectFirst("div#Trailer iframe")?.attr("src")
 
         val episodes = document.select("div.list_eps_stream li")
             .mapNotNull {
-                val name = it.text()
+                val episode = Regex("Episode\\s?(\\d+)").find(it.text())?.groupValues?.getOrNull(0)?.toIntOrNull()
                 val link = it.attr("data")
-                Episode(link, name)
+                Episode(link, episode = episode)
             }
 
         val recommendations = document.select("div#randomList > a").mapNotNull {
@@ -118,10 +120,12 @@ class Nimegami : MainAPI() {
             }
         }
 
-        return newAnimeLoadResponse(title, url, getType(type)) {
+        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+
+        return newAnimeLoadResponse(title, url, type) {
             engName = title
-            posterUrl = poster
-            backgroundPosterUrl = bgPoster
+            posterUrl = tracker?.image ?: poster
+            backgroundPosterUrl = tracker?.cover ?: bgPoster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus = status
@@ -129,6 +133,8 @@ class Nimegami : MainAPI() {
             this.tags = tags
             this.recommendations = recommendations
             addTrailer(trailer)
+            addMalId(tracker?.malId)
+            addAniListId(tracker?.aniId?.toIntOrNull())
         }
 
     }

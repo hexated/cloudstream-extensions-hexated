@@ -1,6 +1,8 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -108,18 +110,21 @@ class AnimeSailProvider : MainAPI() {
         val title = document.selectFirst("h1.entry-title")?.text().toString()
             .replace("Subtitle Indonesia", "").trim()
         val poster = document.selectFirst("div.entry-content > img")?.attr("src")
-        val type = document.select("tbody th:contains(Tipe)").next().text().lowercase()
+        val type = getType(document.select("tbody th:contains(Tipe)").next().text().lowercase())
         val year = document.select("tbody th:contains(Dirilis)").next().text().trim().toIntOrNull()
 
         val episodes = document.select("ul.daftar > li").map {
             val link = fixUrl(it.select("a").attr("href"))
             val name = it.select("a").text()
             val episode = Regex("Episode\\s?(\\d+)").find(name)?.groupValues?.getOrNull(0)?.toIntOrNull()
-            Episode(link, name, episode = episode)
+            Episode(link, episode = episode)
         }.reversed()
 
-        return newAnimeLoadResponse(title, url, getType(type)) {
-            posterUrl = poster
+        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+
+        return newAnimeLoadResponse(title, url, type) {
+            posterUrl = tracker?.image ?: poster
+            backgroundPosterUrl = tracker?.cover
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             showStatus =
@@ -127,6 +132,8 @@ class AnimeSailProvider : MainAPI() {
             plot = document.selectFirst("div.entry-content > p")?.text()
             this.tags =
                 document.select("tbody th:contains(Genre)").next().select("a").map { it.text() }
+            addMalId(tracker?.malId)
+            addAniListId(tracker?.aniId?.toIntOrNull())
         }
     }
 
