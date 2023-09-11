@@ -163,6 +163,18 @@ suspend fun extractMirrorUHD(url: String, ref: String): String? {
     )
 }
 
+suspend fun extractInstantUHD(url: String): String? {
+    val host = getBaseUrl(url)
+    val body = FormBody.Builder()
+        .addEncoded("keys", url.substringAfter("url="))
+        .build()
+    return app.post(
+        "$host/api", requestBody = body, headers = mapOf(
+            "x-token" to "${url.toUri().host}"
+        ), referer = "$host/"
+    ).parsedSafe<Map<String, String>>()?.get("url")
+}
+
 suspend fun extractDirectUHD(url: String, niceResponse: NiceResponse): String? {
     val document = niceResponse.document
     val script = document.selectFirst("script:containsData(cf_token)")?.data() ?: return null

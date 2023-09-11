@@ -1100,7 +1100,9 @@ object SoraExtractor : SoraStream() {
             val driveReq = app.get(driveLink)
             val driveRes = driveReq.document
             val bitLink = driveRes.select("a.btn.btn-outline-success").attr("href")
+            val insLink = driveRes.select("a.btn.btn-danger:contains(Instant Download)").attr("href")
             val downloadLink = when {
+                insLink.isNotEmpty() -> extractInstantUHD(insLink)
                 driveRes.select("button.btn.btn-success").text()
                     .contains("Direct Download", true) -> extractDirectUHD(driveLink, driveReq)
                 bitLink.isNullOrEmpty() -> {
