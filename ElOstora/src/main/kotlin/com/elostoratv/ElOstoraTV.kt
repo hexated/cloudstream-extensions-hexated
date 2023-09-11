@@ -1,5 +1,6 @@
 package com.elostoratv
 
+import android.util.Base64
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
@@ -22,7 +23,7 @@ class ElOstoraTV : MainAPI() {
         setOf(
             TvType.Live
         )
-    private val apiUrl = "https://z420572.radwan.shop/api/v4_8.php"
+    private val apiUrl = "aHR0cHM6Ly96NDIwNTcyLnJhZHdhbi5zaG9wL2FwaS92NF84LnBocA=="
 
     override val mainPage = generateServersHomePage()
     private fun generateServersHomePage() : List<MainPageData> {
@@ -167,6 +168,7 @@ class ElOstoraTV : MainAPI() {
     }
     private fun getDecoded(payload: Map<String, String>): String {
 
+        val api = Base64.decode(apiUrl, Base64.DEFAULT).toString(charset("UTF-8"))
         val t = (System.currentTimeMillis() / 1000).toString()
 
         val client = app.baseClient.newBuilder()
@@ -174,7 +176,7 @@ class ElOstoraTV : MainAPI() {
 
         val request = requestCreator(
             method = "POST",
-            url = apiUrl,
+            url = api,
             headers = mapOf(
                 "User-Agent" to "Mozilla/5.0 (Linux; U; Android 10; en; YAL-L41 Api/HUAWEIYAL-L41) AppleWebKit/534.30 (KHTML, like Gecko) Version/5.0 Mobile Safari/534.30",
                 "Time" to t,
