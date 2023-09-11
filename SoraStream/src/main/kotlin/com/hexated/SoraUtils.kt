@@ -170,7 +170,7 @@ suspend fun extractInstantUHD(url: String): String? {
         .build()
     return app.post(
         "$host/api", requestBody = body, headers = mapOf(
-            "x-token" to "${url.toUri().host}"
+            "x-token" to URI(url).host
         ), referer = "$host/"
     ).parsedSafe<Map<String, String>>()?.get("url")
 }
