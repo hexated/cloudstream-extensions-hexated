@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class WcofunProvider : MainAPI() {
-    override var mainUrl = "https://www.wcofun.net"
+    override var mainUrl = "https://www.wcofun.org"
     override var name = "WCO Fun"
     override val hasMainPage = true
     override val hasDownloadSupport = true
