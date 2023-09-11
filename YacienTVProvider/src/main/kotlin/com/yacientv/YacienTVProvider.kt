@@ -22,11 +22,14 @@ class YacienTV : MainAPI() {
         setOf(
             TvType.Live
         )
-    private val yacienTVAPI = "http://ver3.yacinelive.com/api"
+    private val yacienTVAPI = b64("aHR0cDovL3ZlcjMueWFjaW5lbGl2ZS5jb20vYXBp")
     private val mainKey = "YyF4WmorTjkmR0BFdkB2dw=="
 
+    private fun b64(str: String): String{
+        return Base64.decode(str, Base64.DEFAULT).toString(charset("UTF-8"))
+    }
     private fun decrypt(enc: String, headerStr: String): String {
-        val key = Base64.decode(mainKey, Base64.DEFAULT).toString(charset("UTF-8")) + headerStr
+        val key =  b64(mainKey) + headerStr
         val decodedBytes = Base64.decode(enc, Base64.DEFAULT)
         val encString = decodedBytes.toString(charset("UTF-8"))
         var result = ""
@@ -63,7 +66,7 @@ class YacienTV : MainAPI() {
             if (request.name == "Live Events") {
                 val parsedData = parseJson<EventsResults>(decodedBody).results
                 Log.d("King", "parsedEventData:$parsedData")
-                val list = parsedData?.mapNotNull { element ->
+                val list = parsedData?.map { element ->
                     element.toSearchResponse(request)
                 } ?: throw ErrorLoadingException("Invalid Json response")
                 if (list.isNotEmpty()) items.add(HomePageList(request.name, list, true))
@@ -92,12 +95,8 @@ class YacienTV : MainAPI() {
 
         val matchTeams = "${team_1["name"].toString()} vs ${team_2["name"].toString()}"
 
-        //val startTime = Date(start_time.toLong()) .toString()
-        val startTime = DateFormat.format("hh:mm", start_time.toLong()).toString()
-        val endTime = end_time
-
         return LiveSearchResponse(
-            name =  "${matchTeams}\n${start_time?.let { DateFormat.format("h:mm a", it.toLong() * 1000).toString() }}",
+            name =  "${matchTeams}\n${start_time.let { DateFormat.format("h:mm a", it.toLong() * 1000).toString() }}",
             LinksData(
                 id = id,
                 start_time = start_time,
@@ -113,7 +112,7 @@ class YacienTV : MainAPI() {
                     "logo" to team_2["logo"].toString()
                 ),
                 category = request.name,
-                name = "$matchTeams",
+                name = matchTeams,
                 commentary = commentary,
             ).toJson(),
             this@YacienTV.name,
