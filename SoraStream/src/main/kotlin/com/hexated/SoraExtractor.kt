@@ -263,58 +263,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeSeries9(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title.createSlug()
-        val doc = if (season == null) {
-            val res = app.get("$series9API/film/$fixTitle/watching.html")
-            if (!res.isSuccessful) app.get("$series9API/film/$fixTitle-$year/watching.html").document else res.document
-        } else {
-            app.get("$series9API/film/$fixTitle-season-$season/watching.html").document
-        }
-
-        val server = doc.select("div#list-eps div.le-server").map { ele ->
-            if (season == null) {
-                ele.select("a").attr("player-data")
-            } else {
-                ele.select("a[episode-data=$episode]").attr("player-data")
-            }
-        }.find { it.contains(Regex("movembed|membed")) }
-
-        val iframe = app.get(httpsify(server ?: return))
-        val iframeDoc = iframe.document
-
-        argamap({
-            iframeDoc.select(".list-server-items > .linkserver")
-                .forEach { element ->
-                    val status = element.attr("data-status") ?: return@forEach
-                    if (status != "1") return@forEach
-                    val extractorData = element.attr("data-video") ?: return@forEach
-                    loadExtractor(extractorData, iframe.url, subtitleCallback, callback)
-                }
-        }, {
-            val iv = "9225679083961858"
-            val secretKey = "25742532592138496744665879883281"
-            GogoHelper.extractVidstream(
-                iframe.url,
-                "Vidstream",
-                callback,
-                iv,
-                secretKey,
-                secretKey,
-                isUsingAdaptiveKeys = false,
-                isUsingAdaptiveData = true,
-                iframeDocument = iframeDoc
-            )
-        })
-    }
-
     suspend fun invokeIdlix(
         title: String? = null,
         year: Int? = null,
@@ -2290,6 +2238,27 @@ object SoraExtractor : SoraStream() {
             }
         }
 
+    }
+
+    suspend fun invokeOmega(
+        tmdbId: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        app.get("$omegaAPI/v3/movie/sources/$tmdbId")
+            .parsedSafe<OmegaResponse>()?.sources?.filter { it.label != "2" }?.map { sources ->
+                sources.sources?.map source@{  source ->
+                    callback.invoke(
+                        ExtractorLink(
+                            "Omega ${sources.label}",
+                            "Omega ${sources.label}",
+                            source.url ?: return@source,
+                            "",
+                            getQualityFromName(source.quality),
+                            INFER_TYPE
+                        )
+                    )
+                }
+            }
     }
 
     suspend fun invokeAsk4Movies(

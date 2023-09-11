@@ -22,7 +22,6 @@ import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRidomovies
-import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
@@ -31,6 +30,7 @@ import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
+import com.hexated.SoraExtractor.invokeOmega
 import com.hexated.SoraExtractor.invokePrimewire
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
@@ -135,16 +135,6 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeSeries9(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
                 invokeIdlix(
                     res.title,
                     res.year,
@@ -242,6 +232,12 @@ class SoraStreamLite : SoraStream() {
                     res.season,
                     res.episode,
                     subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime && res.season == null) invokeOmega(
+                    res.id,
                     callback
                 )
             },

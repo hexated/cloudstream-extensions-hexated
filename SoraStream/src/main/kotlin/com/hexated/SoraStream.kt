@@ -11,7 +11,6 @@ import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeMovieHab
-import com.hexated.SoraExtractor.invokeSeries9
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
@@ -44,9 +43,9 @@ import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
+import com.hexated.SoraExtractor.invokeOmega
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokePrimewire
-import com.hexated.SoraExtractor.invokeSusflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVidsrcto
@@ -91,7 +90,6 @@ open class SoraStream : TmdbProvider() {
         const val dbgoAPI = "https://dbgo.fun"
         const val movieHabAPI = "https://moviehab.com"
         const val dreamfilmAPI = "https://dreamfilmsw.net"
-        const val series9API = "https://series9.cx"
         const val idlixAPI = "https://tv.idlixplus.net"
         const val noverseAPI = "https://www.nollyverse.com"
         const val filmxyAPI = "https://www.filmxy.vip"
@@ -134,6 +132,7 @@ open class SoraStream : TmdbProvider() {
         const val animetoshoAPI = "https://animetosho.org"
         const val susflixAPI = "https://susflix.tv"
         const val jump1API = "https://ca.jump1.net"
+        const val omegaAPI = "https://prod.omega.themoviearchive.site"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -249,7 +248,8 @@ open class SoraStream : TmdbProvider() {
         val year = releaseDate?.split("-")?.first()?.toIntOrNull()
         val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
-        val isAnime = genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
+        val isAnime =
+            genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
         val isAsian = !isAnime && (res.original_language == "zh" || res.original_language == "ko")
         val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
             .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
@@ -427,16 +427,6 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeSeries9(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
                 invokeIdlix(
                     res.title,
                     res.year,
@@ -528,7 +518,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if(!res.isAnime) invokeM4uhd(
+                if (!res.isAnime) invokeM4uhd(
                     res.title,
                     res.airedYear ?: res.year,
                     res.season,
@@ -723,7 +713,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if(res.isAsian) invokeDramaday(
+                if (res.isAsian) invokeDramaday(
                     res.title,
                     res.year,
                     res.season,
@@ -733,19 +723,25 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if(!res.isAnime) invoke2embed(res.imdbId,res.season,res.episode,callback)
+                if (!res.isAnime) invoke2embed(res.imdbId, res.season, res.episode, callback)
             },
 //            {
 //                invokeSusflix(res.id,res.season,res.episode,subtitleCallback,callback)
 //            },
             {
-                if(!res.isAnime) invokeJump1(
+                if (!res.isAnime) invokeJump1(
                     res.id,
                     res.tvdbId,
                     res.title,
                     res.year,
                     res.season,
                     res.episode,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime && res.season == null) invokeOmega(
+                    res.id,
                     callback
                 )
             },
