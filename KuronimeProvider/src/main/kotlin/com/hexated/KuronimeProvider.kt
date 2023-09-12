@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
@@ -197,17 +197,12 @@ class KuronimeProvider : MainAPI() {
                 )
                 val source =
                     tryParseJson<Sources>(decrypt?.toJsonFormat())?.src?.replace("\\", "")
-                callback.invoke(
-                    ExtractorLink(
-                        this.name,
-                        this.name,
-                        source ?: return@argamap,
-                        "$animekuUrl/",
-                        Qualities.P1080.value,
-                        true,
-                        headers = mapOf("Origin" to animekuUrl)
-                    )
-                )
+                M3u8Helper.generateM3u8(
+                    this.name,
+                    source ?: return@argamap,
+                    "$animekuUrl/",
+                    headers = mapOf("Origin" to animekuUrl)
+                ).forEach(callback)
             },
             {
                 val decrypt = AesHelper.cryptoAESHandler(
