@@ -54,6 +54,7 @@ jobs:
           ANICHI_SERVER: ${{ secrets.ANICHI_SERVER }}
           ANICHI_ENDPOINT: ${{ secrets.ANICHI_ENDPOINT }}
           ANICHI_APP: ${{ secrets.ANICHI_APP }}
+          PRIMEWIRE_KEY: ${{ secrets.PRIMEWIRE_KEY }}
         run: |
           cd $GITHUB_WORKSPACE/src
           echo SORA_API=$SORA_API >> local.properties
@@ -68,6 +69,7 @@ jobs:
           echo ANICHI_SERVER=$ANICHI_SERVER >> local.properties
           echo ANICHI_ENDPOINT=$ANICHI_ENDPOINT >> local.properties
           echo ANICHI_APP=$ANICHI_APP >> local.properties
+          echo PRIMEWIRE_KEY=$PRIMEWIRE_KEY >> local.properties
 
       - name: Build Plugins
         run: |
