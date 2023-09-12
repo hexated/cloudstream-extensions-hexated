@@ -90,13 +90,21 @@ class YacienTV : MainAPI() {
             logo,
         )
     }
+    private fun getMatchStatus(start_time: String, end_time: String) : String {
+        val currentTime = System.currentTimeMillis() / 1000L
+        if (end_time.toLong() < currentTime) return "\uD83C\uDFC1" //Match Finished
+        if (end_time.toLong() > currentTime && start_time.toLong() < currentTime) return "\uD83D\uDD25" //Match ongoing
+        return ""
+    }
     private fun Event.toSearchResponse(request: MainPageRequest, type: String? = null): SearchResponse {
         Log.d("King", "SearchResp${request}")
 
         val matchTeams = "${team_1["name"].toString()} vs ${team_2["name"].toString()}"
+        var matchTime = start_time.let { DateFormat.format("h:mm a", it.toLong() * 1000).toString() } + " " +
+                getMatchStatus(start_time, end_time)
 
         return LiveSearchResponse(
-            name =  "${matchTeams}\n${start_time.let { DateFormat.format("h:mm a", it.toLong() * 1000).toString() }}",
+            name =  "$matchTeams\n$matchTime",
             LinksData(
                 id = id,
                 start_time = start_time,
@@ -151,10 +159,15 @@ class YacienTV : MainAPI() {
                 this.plot = "${data.name} livestreams of ${data.category} category."
             }
         }
-        //val startTime = data.start_time?.let { DateFormat.format("hh:mm", it.toLong()).toString() }
+
         val plotStr: String = if (data.category == "Live Events") {
+
+            var matchTime = "${data.start_time?.let {
+                DateFormat.format("h:mm a", it.toLong() * 1000).toString() }} " +
+                    getMatchStatus(data.start_time!!, data.end_time!!)
+
             "Teams ⚽: ${data.name}" +
-                    "<br>Time  ⏰:  ${data.start_time?.let { DateFormat.format("h:mm a", it.toLong() * 1000).toString() }}" +
+                    "<br>Time  ⏰:  $matchTime" +
                     "<br>Commentary  \uD83C\uDF99️:  ${data.commentary}" +
                     "<br>Channel  \uD83D\uDCFA:  ${data.channel}"
         } else {
