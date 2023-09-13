@@ -2,7 +2,6 @@ package com.hexated
 
 import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
-import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeDoomovies
 import com.hexated.SoraExtractor.invokeDramaday
@@ -30,7 +29,6 @@ import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
-import com.hexated.SoraExtractor.invokeOmega
 import com.hexated.SoraExtractor.invokePrimewire
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
@@ -236,12 +234,6 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                if (!res.isAnime && res.season == null) invokeOmega(
-                    res.id,
-                    callback
-                )
-            },
-            {
                 invokeRStream(res.id, res.season, res.episode, callback)
             },
             {
@@ -249,15 +241,6 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 invokePrimewire(res.title, res.year, res.season, res.episode, callback)
-            },
-            {
-                if (!res.isAnime) invokeAsk4Movies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
             },
             {
                 invokeWatchOnline(

@@ -1132,6 +1132,45 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeVegamovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        var res = app.get("$vegaMoviesAPI/search/$title").document
+        val match = if (season == null) "$year" else "Season $season"
+        val media = res.selectFirst("div.blog-items article:has(h3.entry-title:matches((?i)$title.*$match)) a")
+            ?.attr("href")
+
+        res = app.get(media ?: return).document
+        val hTag = if (season == null) "h5" else "h3"
+        val aTag = if (season == null) "Download Now" else "V-Cloud"
+        res.select("div.entry-content > $hTag:matches(1080p|2160p)").apmap {
+            val tags = """(?:1080p|2160p)(.*)""".toRegex().find(it.text())?.groupValues?.get(1)?.trim()
+            val href = it.nextElementSibling()?.select("a:contains($aTag)")?.attr("href")
+            val selector = if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
+            val server = app.get(href ?: return@apmap).document.selectFirst("div.entry-content > $selector")
+                ?.attr("href")
+            loadExtractor(server ?: return@apmap, "$vegaMoviesAPI/", subtitleCallback) { link ->
+                callback.invoke(
+                    ExtractorLink(
+                        link.name,
+                        "${link.name} $tags",
+                        link.url,
+                        link.referer,
+                        getIndexQuality(it.text()),
+                        link.type,
+                        link.headers,
+                    )
+                )
+            }
+        }
+
+    }
+
     suspend fun invokePobmovies(
         title: String? = null,
         year: Int? = null,
@@ -2239,77 +2278,6 @@ object SoraExtractor : SoraStream() {
                 }
             }
         }
-
-    }
-
-    suspend fun invokeOmega(
-        tmdbId: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        app.get("$omegaAPI/v3/movie/sources/$tmdbId")
-            .parsedSafe<OmegaResponse>()?.sources?.filter { it.label != "2" }?.map { sources ->
-                sources.sources?.map source@{  source ->
-                    callback.invoke(
-                        ExtractorLink(
-                            "Omega ${sources.label}",
-                            "Omega ${sources.label}",
-                            source.url ?: return@source,
-                            "",
-                            getQualityFromName(source.quality),
-                            INFER_TYPE
-                        )
-                    )
-                }
-            }
-    }
-
-    suspend fun invokeAsk4Movies(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val query = if (season == null) {
-            title
-        } else {
-            "$title season $season"
-        }
-        val mediaData =
-            app.get("$ask4MoviesAPI/?s=$query").document.select("div#search-content div.item").map {
-                it.selectFirst("div.main-item a")
-            }
-
-        val media = if (mediaData.size == 1) {
-            mediaData.firstOrNull()
-        } else {
-            mediaData.find {
-                if (season == null) {
-                    it?.text().equals("$title ($year)", true)
-                } else {
-                    it?.text().equals("$title (Season $season)", true)
-                }
-            }
-        }
-
-        val epsDoc = app.get(media?.attr("href") ?: return).document
-
-        val iframe = if (season == null) {
-            epsDoc.select("div#player-embed iframe").attr("data-src")
-        } else {
-            epsDoc.select("ul.group-links-list li:nth-child($episode) a").attr("data-embed-src")
-        }
-
-        val iframeDoc = app.get(iframe, referer = "$ask4MoviesAPI/").text
-        val script =
-            Regex("""eval\(function\(p,a,c,k,e,.*\)\)""").findAll(iframeDoc).lastOrNull()?.value
-        val unpacked = getAndUnpack(script ?: return)
-        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(unpacked)?.groupValues?.getOrNull(1)
-        M3u8Helper.generateM3u8(
-            "Ask4movie",
-            m3u8 ?: return,
-            mainUrl
-        ).forEach(callback)
 
     }
 

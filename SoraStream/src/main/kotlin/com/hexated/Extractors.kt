@@ -7,7 +7,10 @@ import com.lagradost.cloudstream3.extractors.Voe
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.SubtitleFile
+import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.base64Decode
+import com.lagradost.cloudstream3.extractors.Pixeldrain
 import com.lagradost.cloudstream3.utils.*
 import java.math.BigInteger
 import java.security.MessageDigest
@@ -129,6 +132,60 @@ open class Playm4u : ExtractorApi() {
         @JsonProperty("sub") val sub: String? = null,
     )
 
+}
+
+open class VCloud : ExtractorApi() {
+    override val name: String = "V-Cloud"
+    override val mainUrl: String = "https://v-cloud.bio"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get(url)
+        val doc = res.document
+        val changedLink = doc.selectFirst("script:containsData(url =)")?.data()?.let {
+            """url\s*=\s*['"](.*)['"];""".toRegex().find(it)?.groupValues?.get(1)
+                ?.substringAfter("r=")
+        }
+        val header = doc.selectFirst("div.card-header")?.text()
+        app.get(
+            base64Decode(changedLink ?: return), cookies = res.cookies, headers = mapOf(
+                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+            )
+        ).document.select("p.text-success ~ a").apmap {
+            val link = it.attr("href")
+            if (it.text().contains(Regex("Server : 1|2"))) {
+                callback.invoke(
+                    ExtractorLink(
+                        this.name,
+                        this.name,
+                        link,
+                        "",
+                        getIndexQuality(header),
+                        INFER_TYPE
+                    )
+                )
+            } else {
+                val direct = if(link.contains("gofile.io")) app.get(link).url else link
+                loadExtractor(direct, referer, subtitleCallback, callback)
+            }
+        }
+
+    }
+
+    private fun getIndexQuality(str: String?): Int {
+        return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
+            ?: Qualities.Unknown.value
+    }
+
+}
+
+class Pixeldra : Pixeldrain() {
+    override val mainUrl = "https://pixeldra.in"
 }
 
 class TravelR : GMPlayer() {

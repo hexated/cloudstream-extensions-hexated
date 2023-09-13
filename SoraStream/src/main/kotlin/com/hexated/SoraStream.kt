@@ -3,7 +3,6 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
-import com.hexated.SoraExtractor.invokeAsk4Movies
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeCryMovies
 import com.hexated.SoraExtractor.invokeDbgo
@@ -43,11 +42,11 @@ import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
-import com.hexated.SoraExtractor.invokeOmega
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokePrimewire
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
+import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -111,7 +110,6 @@ open class SoraStream : TmdbProvider() {
         const val flixonAPI = "https://flixon.lol"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        const val ask4MoviesAPI = "https://ask4movie.nl"
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://moviesapi.club"
         const val fmoviesAPI = "https://fmovies.to"
@@ -132,7 +130,7 @@ open class SoraStream : TmdbProvider() {
         const val animetoshoAPI = "https://animetosho.org"
         const val susflixAPI = "https://susflix.tv"
         const val jump1API = "https://ca.jump1.net"
-        const val omegaAPI = "https://prod.omega.themoviearchive.site"
+        const val vegaMoviesAPI = "https://vegamovies.im"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -625,15 +623,6 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeAsk4Movies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
                 invokeWatchOnline(
                     res.imdbId,
                     res.id,
@@ -668,6 +657,16 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeEmovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeVegamovies(
                     res.title,
                     res.year,
                     res.season,
@@ -736,12 +735,6 @@ open class SoraStream : TmdbProvider() {
                     res.year,
                     res.season,
                     res.episode,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime && res.season == null) invokeOmega(
-                    res.id,
                     callback
                 )
             },

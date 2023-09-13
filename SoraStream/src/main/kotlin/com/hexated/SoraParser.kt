@@ -58,20 +58,6 @@ data class KisskhSources(
     @JsonProperty("ThirdParty") val thirdParty: String?,
 )
 
-data class OmegaSource(
-    @JsonProperty("quality") val quality: String? = null,
-    @JsonProperty("url") val url: String? = null,
-)
-
-data class OmegaSources(
-    @JsonProperty("label") val label: String? = null,
-    @JsonProperty("sources") val sources: ArrayList<OmegaSource>? = arrayListOf(),
-)
-
-data class OmegaResponse(
-    @JsonProperty("sources") val sources: ArrayList<OmegaSources>? = arrayListOf(),
-)
-
 data class KisskhSubtitle(
     @JsonProperty("src") val src: String?,
     @JsonProperty("label") val label: String?,
