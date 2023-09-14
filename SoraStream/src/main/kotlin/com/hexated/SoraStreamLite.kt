@@ -28,6 +28,7 @@ import com.hexated.SoraExtractor.invokeFourCartoon
 import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
+import com.hexated.SoraExtractor.invokeNetflix
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePrimewire
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -327,6 +328,14 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
+            {
+                if (!res.isAnime) invokeNetflix(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            }
         )
 
         return true

@@ -13,6 +13,7 @@ import com.hexated.SoraStream.Companion.malsyncAPI
 import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.hexated.SoraStream.Companion.watchOnlineAPI
+import com.hexated.SoraStream.Companion.watchhubApi
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
@@ -1139,6 +1140,17 @@ suspend fun tmdbToAnimeId(title: String?, year: Int?, season: String?, type: TvT
 
 }
 
+suspend fun imdbToNetflixId(imdbId: String?, season: Int?): String? {
+    val url = if (season == null) {
+        "$watchhubApi/stream/movie/$imdbId.json"
+    } else {
+        "$watchhubApi/stream/series/$imdbId:1:1.json"
+    }
+    return app.get(url)
+        .parsedSafe<WatchhubResponse>()?.streams?.find { it.name == "Netflix" }?.externalUrl
+        ?.substringAfterLast("/")
+}
+
 suspend fun loadCustomExtractor(
     name: String? = null,
     url: String,
@@ -1154,8 +1166,8 @@ suspend fun loadCustomExtractor(
                 name ?: link.name,
                 link.url,
                 link.referer,
-                when {
-                    link.type == ExtractorLinkType.M3U8 -> link.quality
+                when (link.type) {
+                    ExtractorLinkType.M3U8 -> link.quality
                     else -> quality ?: link.quality
                 },
                 link.type,

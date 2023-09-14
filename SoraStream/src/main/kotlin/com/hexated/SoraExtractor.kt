@@ -5,12 +5,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
-import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.extractors.GMPlayer
-import com.lagradost.cloudstream3.extractors.StreamSB
-import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.helper.AesHelper.cryptoAESHandler
-import com.lagradost.cloudstream3.extractors.helper.GogoHelper
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
@@ -319,7 +314,6 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
         fixIframe: Boolean = false,
         encrypt: Boolean = false,
-        key: String? = null,
     ) {
         fun String.fixBloat() : String {
             return this.replace("\"", "").replace("\\", "")
@@ -572,8 +566,8 @@ object SoraExtractor : SoraStream() {
                         "${link.name} ${it.second}",
                         link.url,
                         link.referer,
-                        when {
-                            link.type == ExtractorLinkType.M3U8 -> link.quality
+                        when (link.type) {
+                            ExtractorLinkType.M3U8 -> link.quality
                             else -> getQualityFromName(it.first)
                         },
                         link.type,
@@ -900,8 +894,8 @@ object SoraExtractor : SoraStream() {
                         "${link.name} [${it.second}]",
                         link.url,
                         link.referer,
-                        when {
-                            link.type == ExtractorLinkType.M3U8 -> link.quality
+                        when (link.type) {
+                            ExtractorLinkType.M3U8 -> link.quality
                             else -> it.third
                         },
                         link.type,
@@ -2756,6 +2750,52 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokeNetflix(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val headers = mapOf("X-Requested-With" to "XMLHttpRequest", "Cookie" to "hd=on")
+        val netflixId = imdbToNetflixId(imdbId, season)
+        val (title, id) = app.get(
+            "$netflixAPI/post.php?id=${netflixId ?: return}&t=${APIHolder.unixTime}",
+            headers = headers
+        ).parsedSafe<NetflixResponse>().let { media ->
+            if (season == null) {
+                media?.title to netflixId
+            } else {
+                val seasonId = media?.season?.find { it.s == "$season" }?.id
+                val episodeId =
+                    app.get(
+                        "$netflixAPI/episodes.php?s=${seasonId}&series=$netflixId&t=${APIHolder.unixTime}",
+                        headers = headers
+                    )
+                        .parsedSafe<NetflixResponse>()?.episodes?.find { it.ep == "E$episode" }?.id
+                media?.title to episodeId
+            }
+        }
+
+        app.get(
+            "$netflixAPI/playlist.php?id=${id ?: return}&t=${title ?: return}&tm=${APIHolder.unixTime}",
+            headers = headers
+        ).text.let {
+            tryParseJson<ArrayList<NetflixResponse>>(it)
+        }?.firstOrNull()?.sources?.map {
+            callback.invoke(
+                ExtractorLink(
+                    "Netflix",
+                    "Netflix",
+                    fixUrl(it.file ?: return@map, netflixAPI),
+                    "$netflixAPI/",
+                    getQualityFromName(it.file.substringAfter("q=")),
+                    INFER_TYPE,
+                    headers = mapOf("Cookie" to "hd=on")
+                )
+            )
+        }
+
+    }
 
 }
 

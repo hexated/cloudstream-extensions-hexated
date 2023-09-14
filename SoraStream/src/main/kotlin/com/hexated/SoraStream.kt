@@ -41,6 +41,7 @@ import com.hexated.SoraExtractor.invokeFourCartoon
 import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
+import com.hexated.SoraExtractor.invokeNetflix
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokePrimewire
@@ -79,6 +80,7 @@ open class SoraStream : TmdbProvider() {
         const val malsyncAPI = "https://api.malsync.moe"
         const val consumetHelper = "https://api.consumet.org/anime/9anime/helper"
         const val jikanAPI = "https://api.jikan.moe/v4"
+        const val watchhubApi = "https://watchhub.strem.io"
 
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
@@ -131,6 +133,7 @@ open class SoraStream : TmdbProvider() {
         const val susflixAPI = "https://susflix.tv"
         const val jump1API = "https://ca.jump1.net"
         const val vegaMoviesAPI = "https://vegamovies.im"
+        const val netflixAPI = "https://m.netflixmirror.com"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -738,6 +741,14 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
+            {
+                if (!res.isAnime) invokeNetflix(
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            }
         )
 
         return true

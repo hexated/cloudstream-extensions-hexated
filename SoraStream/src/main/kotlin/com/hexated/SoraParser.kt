@@ -428,3 +428,36 @@ data class EMovieTraks(
 data class FourCartoonSources(
     @JsonProperty("videoSource") val videoSource: String? = null,
 )
+
+data class WatchhubStream(
+    @JsonProperty("name") val name: String? = null,
+    @JsonProperty("externalUrl") val externalUrl: String? = null,
+)
+
+data class WatchhubResponse(
+    @JsonProperty("streams") val streams: ArrayList<WatchhubStream>? = arrayListOf(),
+)
+
+data class NetflixSources(
+    @JsonProperty("file") val file: String? = null,
+    @JsonProperty("label") val label: String? = null,
+)
+
+data class NetflixEpisodes(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("t") val t: String? = null,
+    @JsonProperty("s") val s: String? = null,
+    @JsonProperty("ep") val ep: String? = null,
+)
+
+data class NetflixSeason(
+    @JsonProperty("s") val s: String? = null,
+    @JsonProperty("id") val id: String? = null,
+)
+
+data class NetflixResponse(
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("season") val season: ArrayList<NetflixSeason>? = arrayListOf(),
+    @JsonProperty("episodes") val episodes: ArrayList<NetflixEpisodes>? = arrayListOf(),
+    @JsonProperty("sources") val sources: ArrayList<NetflixSources>? = arrayListOf(),
+)

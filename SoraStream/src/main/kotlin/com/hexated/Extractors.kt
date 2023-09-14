@@ -13,6 +13,7 @@ import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.Pixeldrain
 import com.lagradost.cloudstream3.utils.*
 import java.math.BigInteger
+import java.net.URI
 import java.security.MessageDigest
 
 open class Playm4u : ExtractorApi() {
@@ -150,7 +151,7 @@ open class VCloud : ExtractorApi() {
         val changedLink = doc.selectFirst("script:containsData(url =)")?.data()?.let {
             """url\s*=\s*['"](.*)['"];""".toRegex().find(it)?.groupValues?.get(1)
                 ?.substringAfter("r=")
-        }
+        } ?: doc.selectFirst("div.div.vd.d-none a")?.attr("href")
         val header = doc.selectFirst("div.card-header")?.text()
         app.get(
             base64Decode(changedLink ?: return), cookies = res.cookies, headers = mapOf(
@@ -158,7 +159,8 @@ open class VCloud : ExtractorApi() {
             )
         ).document.select("p.text-success ~ a").apmap {
             val link = it.attr("href")
-            if (it.text().contains(Regex("Server : 1|2"))) {
+            val uri = URI(link)
+            if (uri.path.contains("workers.dev")) {
                 callback.invoke(
                     ExtractorLink(
                         this.name,
@@ -182,6 +184,16 @@ open class VCloud : ExtractorApi() {
             ?: Qualities.Unknown.value
     }
 
+}
+
+class HubcloudLol : VCloud() {
+    override val name = "Hubcloud"
+    override val mainUrl = "https://hubcloud.lol"
+}
+
+class Hubcloud : VCloud() {
+    override val name = "Hubcloud"
+    override val mainUrl = "https://hubcloud.in"
 }
 
 class Pixeldra : Pixeldrain() {

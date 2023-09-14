@@ -20,5 +20,7 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Playm4u())
         registerExtractorAPI(VCloud())
         registerExtractorAPI(Pixeldra())
+        registerExtractorAPI(Hubcloud())
+        registerExtractorAPI(HubcloudLol())
     }
 }

@@ -59,7 +59,7 @@ class NontonAnimeIDProvider : MainAPI() {
 
         document.select("aside#sidebar_right > div.side").forEach { block ->
             val header = block.selectFirst("h3")!!.ownText().trim()
-            val animes = block.select("ul li.fullwdth").mapNotNull {
+            val animes = block.select("div.bor").mapNotNull {
                 it.toSearchResultPopular()
             }
             if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
@@ -71,7 +71,7 @@ class NontonAnimeIDProvider : MainAPI() {
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val title = this.selectFirst("h3.title")?.text() ?: return null
-        val posterUrl = fixUrl(this.select("img").attr("data-src"))
+        val posterUrl = fixUrl(this.select("img").attr("src"))
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
@@ -83,7 +83,7 @@ class NontonAnimeIDProvider : MainAPI() {
     private fun Element.toSearchResultPopular(): AnimeSearchResponse? {
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val title = this.selectFirst("h4")?.text()?.trim() ?: return null
-        val posterUrl = fixUrl(this.select("img").attr("data-src"))
+        val posterUrl = fixUrl(this.select("img").attr("src"))
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
