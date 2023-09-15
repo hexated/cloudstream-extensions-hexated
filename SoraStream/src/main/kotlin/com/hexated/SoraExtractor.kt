@@ -580,6 +580,56 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeWatchflx(
+        tmdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val epsSlug = getEpisodeSlug(season, episode)
+        val cookies = getWatchflxCookies()
+        val url = if (season == null) {
+            "$watchflxAPI/browse/playmovie/$tmdbId/directplay"
+        } else {
+            "$watchflxAPI/Playseries/series/$tmdbId/directplay"
+        }
+        val res = app.get(url, cookies = cookies).document
+
+        val showUrl = if (season == null) {
+            res.selectFirst("iframe.movie_player")?.attr("src")
+        } else {
+            val seasonUrl =
+                res.select("ul.nav.nav-tabs.tabs-left li:matches(Season $season\$) a").attr("href")
+            val episodeUrl = app.get(
+                seasonUrl,
+                cookies = cookies
+            ).document.select("div.thumb-nail-list a:contains(${epsSlug.second}:)").attr("href")
+            app.get(episodeUrl, cookies = cookies).document.selectFirst("iframe.movie_player")
+                ?.attr("src")
+        }
+        val iframe = app.get(
+            showUrl ?: return, referer = "$watchflxAPI/"
+        ).document.selectFirst("div#the_frame iframe")?.attr("src")
+            ?.let { fixUrl(it, getBaseUrl(showUrl)) } ?: return
+
+        val video = app.get(iframe.replace("/loc/", "/pro/"), referer = iframe).text.let {
+            """mp4_url\s*=\s*["'](.*)["'];""".toRegex().find(it)?.groupValues?.getOrNull(1)
+        }
+
+        callback.invoke(
+            ExtractorLink(
+                "Watchflx",
+                "Watchflx",
+                video ?: return,
+                "$watchflxAPI/",
+                Qualities.P1080.value,
+                INFER_TYPE
+            )
+        )
+
+
+    }
+
     suspend fun invokeKimcartoon(
         title: String? = null,
         season: Int? = null,
@@ -1144,7 +1194,13 @@ object SoraExtractor : SoraStream() {
         val aTag = if (season == null) "Download Now" else "V-Cloud"
         res.select("div.entry-content > $hTag:matches(1080p|2160p)").apmap {
             val tags = """(?:1080p|2160p)(.*)""".toRegex().find(it.text())?.groupValues?.get(1)?.trim()
-            val href = it.nextElementSibling()?.select("a:contains($aTag)")?.attr("href")
+            val href = it.nextElementSibling()?.select("a:contains($aTag)")?.attr("href")?.let { url ->
+                app.post(
+                    "${getBaseUrl(url)}/red.php",
+                    data = mapOf("link" to url),
+                    referer = "$vegaMoviesAPI/"
+                ).text.substringAfter("location.href = \"").substringBefore("\"")
+            }
             val selector = if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
             val server = app.get(href ?: return@apmap).document.selectFirst("div.entry-content > $selector")
                 ?.attr("href")
@@ -1231,6 +1287,45 @@ object SoraExtractor : SoraStream() {
 
         }
 
+    }
+
+    suspend fun invokeHdmovies4u(
+        title: String? = null,
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        fun String.decodeLink(): String {
+            return base64Decode(this.substringAfterLast("/"))
+        }
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+        val media = app.get("$hdmovies4uAPI/?s=${if (season == null) imdbId else title}").document
+            .let {
+                val selector = if (season == null) "a" else "a:matches((?i)$title.*Season $season)"
+                it.selectFirst("div.gridxw.gridxe $selector")?.attr("href")
+            }
+        val selector = if (season == null) "1080p|2160p" else "(?i)Episode.*(?:1080p|2160p)"
+        app.get(
+            media ?: return
+        ).document.select("section h4:matches($selector)").apmap { ele ->
+            val (tags, size) = ele.select("span").map {
+                it.text()
+            }.let { it[it.lastIndex - 1] to it.last().substringAfter("-").trim() }
+            val link = ele.nextElementSibling()?.select("a:contains(DriveTOT)")?.attr("href")
+            val iframe = bypassBqrecipes(link?.decodeLink() ?: return@apmap).let {
+                if (it?.contains("/pack/") == true) {
+                    val href =
+                        app.get(it).document.select("table tbody tr:contains(S${seasonSlug}E${episodeSlug}) a")
+                            .attr("href")
+                    bypassBqrecipes(href.decodeLink())
+                } else {
+                    it
+                }
+            }
+            invokeDrivetot(iframe ?: return@apmap, tags, size, subtitleCallback, callback)
+        }
     }
 
     suspend fun invokeFwatayako(
@@ -1859,25 +1954,12 @@ object SoraExtractor : SoraStream() {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
 
-                it.first.contains("/gtop") -> {
-                    invokeSmashyGtop(it.second, it.first, callback)
-                }
-
-                it.first.contains("/dude_tv") -> {
-                    invokeSmashyDude(it.second, it.first, callback)
-                }
-
-                it.first.contains("/rip") -> {
-                    invokeSmashyRip(it.second, it.first, subtitleCallback, callback)
-                }
-
-                it.first.contains("/im.php") && !isAnime -> {
-                    invokeSmashyIm(it.second, it.first, subtitleCallback, callback)
-                }
-
-                it.first.contains("/rw.php") && !isAnime -> {
-                    invokeSmashyRw(it.second, it.first, subtitleCallback, callback)
-                }
+                it.second.equals("Player FM", true) && !isAnime -> invokeSmashyFm(
+                    it.second,
+                    it.first,
+                    url,
+                    callback
+                )
 
                 else -> return@apmap
             }

@@ -34,6 +34,7 @@ import com.hexated.SoraExtractor.invokePrimewire
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
+import com.hexated.SoraExtractor.invokeWatchflx
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.argamap
@@ -317,6 +318,14 @@ class SoraStreamLite : SoraStream() {
                     res.season,
                     res.episode,
                     subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeWatchflx(
+                    res.id,
+                    res.season,
+                    res.episode,
                     callback
                 )
             },

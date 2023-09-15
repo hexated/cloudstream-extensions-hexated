@@ -6,10 +6,9 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
-import java.net.URLDecoder
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://tv3.lk21official.pro"
+    override var mainUrl = "https://tv.lk21official.wiki"
     private var seriesUrl = "https://tv1.nontondrama.click"
     override var name = "LayarKaca"
     override val hasMainPage = true

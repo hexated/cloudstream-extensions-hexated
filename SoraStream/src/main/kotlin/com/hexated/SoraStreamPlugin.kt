@@ -21,6 +21,5 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(VCloud())
         registerExtractorAPI(Pixeldra())
         registerExtractorAPI(Hubcloud())
-        registerExtractorAPI(HubcloudLol())
     }
 }

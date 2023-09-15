@@ -186,11 +186,6 @@ open class VCloud : ExtractorApi() {
 
 }
 
-class HubcloudLol : VCloud() {
-    override val name = "Hubcloud"
-    override val mainUrl = "https://hubcloud.lol"
-}
-
 class Hubcloud : VCloud() {
     override val name = "Hubcloud"
     override val mainUrl = "https://hubcloud.in"

@@ -9,10 +9,12 @@ import com.hexated.SoraStream.Companion.crunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.fmoviesAPI
 import com.hexated.SoraStream.Companion.gdbot
+import com.hexated.SoraStream.Companion.hdmovies4uAPI
 import com.hexated.SoraStream.Companion.malsyncAPI
 import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
 import com.hexated.SoraStream.Companion.watchOnlineAPI
+import com.hexated.SoraStream.Companion.watchflxAPI
 import com.hexated.SoraStream.Companion.watchhubApi
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
@@ -43,6 +45,8 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
 import kotlin.math.min
 
+var watchflxCookies: Map<String, String>? = null
+var filmxyCookies: Map<String,String>? = null
 val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
 const val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 val encodedIndex = arrayOf(
@@ -484,157 +488,28 @@ suspend fun invokeSmashyFfix(
 
 }
 
-suspend fun invokeSmashyGtop(
+suspend fun invokeSmashyFm(
     name: String,
     url: String,
-    callback: (ExtractorLink) -> Unit
-) {
-    val doc = app.get(url).document
-    val script = doc.selectFirst("script:containsData(var secret)")?.data() ?: return
-    val secret =
-        script.substringAfter("secret = \"").substringBefore("\";").let { base64Decode(it) }
-    val key = script.substringAfter("token = \"").substringBefore("\";")
-    val source = app.get(
-        "$secret$key",
-        headers = mapOf(
-            "X-Requested-With" to "XMLHttpRequest"
-        )
-    ).parsedSafe<Smashy1Source>() ?: return
-
-    val videoUrl = base64Decode(source.file ?: return)
-    if (videoUrl.contains("/bug")) return
-    val quality =
-        Regex("(\\d{3,4})[Pp]").find(videoUrl)?.groupValues?.getOrNull(1)?.toIntOrNull()
-            ?: Qualities.P720.value
-    callback.invoke(
-        ExtractorLink(
-            "Smashy [$name]",
-            "Smashy [$name]",
-            videoUrl,
-            "",
-            quality,
-            videoUrl.contains(".m3u8")
-        )
-    )
-}
-
-suspend fun invokeSmashyDude(
-    name: String,
-    url: String,
-    callback: (ExtractorLink) -> Unit
-) {
-    val script =
-        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
-
-    val source = Regex("file:\\s*(\\[.*]),").find(script)?.groupValues?.get(1) ?: return
-
-    tryParseJson<ArrayList<DudetvSources>>(source)?.filter { it.title == "English" }?.map {
-        M3u8Helper.generateM3u8(
-            "Smashy [Player 2]",
-            it.file ?: return@map,
-            ""
-        ).forEach(callback)
-    }
-
-}
-
-suspend fun invokeSmashyRip(
-    name: String,
-    url: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
+    ref: String,
     callback: (ExtractorLink) -> Unit,
 ) {
-    val script =
-        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
-
-    val source = Regex("file:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1)
-    val subtitle = Regex("subtitle:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1)
-
-    source?.split(",")?.map { links ->
-        val quality = Regex("\\[(\\d+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
-        val link = links.removePrefix("[$quality]").substringAfter("dev/").trim()
-        if (link.isEmpty()) return@map
-        callback.invoke(
-            ExtractorLink(
-                "Smashy [$name]",
-                "Smashy [$name]",
-                link,
-                "",
-                quality?.toIntOrNull() ?: return@map,
-                isM3u8 = true,
-            )
-        )
+    fun String.removeProxy(): String {
+        return if (this.contains("proxy")) {
+            "https${this.substringAfterLast("https")}"
+        } else {
+            this
+        }
     }
 
-    subtitle?.replace("<br>", "")?.split(",")?.map { sub ->
-        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim()
-        val link = sub.removePrefix("[$lang]")
-        subtitleCallback.invoke(
-            SubtitleFile(
-                lang.orEmpty().ifEmpty { return@map },
-                link
-            )
-        )
-    }
-
-}
-
-suspend fun invokeSmashyIm(
-    name: String,
-    url: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    val script =
-        app.get(url).document.selectFirst("script:containsData(player =)")?.data() ?: return
-
-    val sources =
-        Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
-    val subtitles =
-        Regex("['\"]?subtitle['\"]?:\\s*\"([^\"]+)").find(script)?.groupValues?.get(1) ?: return
+    val res = app.get(url, referer = ref).text
+    val source = Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(res)?.groupValues?.get(1) ?: return
 
     M3u8Helper.generateM3u8(
         "Smashy [$name]",
-        sources,
-        ""
+        source.removeProxy(),
+        "https://vidstream.pro/"
     ).forEach(callback)
-
-    subtitles.split(",").map { sub ->
-        val lang = Regex("\\[(.*?)]").find(sub)?.groupValues?.getOrNull(1)?.trim()
-        val trimmedSubLink = sub.removePrefix("[$lang]").trim().substringAfter("?url=")
-        subtitleCallback.invoke(
-            SubtitleFile(
-                lang.takeIf { !it.isNullOrEmpty() } ?: return@map,
-                trimmedSubLink
-            )
-        )
-    }
-
-}
-
-suspend fun invokeSmashyRw(
-    name: String,
-    url: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    val res = app.get(url).document
-    val video = res.selectFirst("media-player")?.attr("src")
-
-    M3u8Helper.generateM3u8(
-        "Smashy [$name]",
-        video ?: return,
-        ""
-    ).forEach(callback)
-
-    res.select("track").map { track ->
-        subtitleCallback.invoke(
-            SubtitleFile(
-                track.attr("label"),
-                track.attr("src"),
-            )
-        )
-    }
 
 }
 
@@ -694,6 +569,52 @@ suspend fun fetchDumpEpisodes(id: String, type: String, episode: Int?): EpisodeV
     )?.episodeVo?.find {
         it.seriesNo == (episode ?: 0)
     }
+}
+
+suspend fun invokeDrivetot(
+    url: String,
+    tags: String? = null,
+    size: String? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+) {
+    val res = app.get(url)
+    val data = res.document.select("form input").associate { it.attr("name") to it.attr("value") }
+    app.post(res.url, data = data, cookies = res.cookies).document.select("div.card-body a").apmap { ele ->
+        val href = base64Decode(ele.attr("href").substringAfterLast("/")).let {
+            if(it.contains("hubcloud.lol")) it.replace("hubcloud.lol", "hubcloud.in") else it
+        }
+        loadExtractor(href, "$hdmovies4uAPI/", subtitleCallback) { link ->
+            callback.invoke(
+                ExtractorLink(
+                    link.source,
+                    "${link.name} $tags [$size]",
+                    link.url,
+                    link.referer,
+                    link.quality,
+                    link.type,
+                    link.headers,
+                    link.extractorData
+                )
+            )
+        }
+    }
+}
+
+suspend fun bypassBqrecipes(url: String): String? {
+    var res = app.get(url)
+    var location = res.text.substringAfter(".replace('").substringBefore("');")
+    var cookies = res.cookies
+    res = app.get(location, cookies = cookies)
+    cookies = cookies + res.cookies
+    val document = res.document
+    location = document.select("form#recaptcha").attr("action")
+    val data =
+        document.select("form#recaptcha input").associate { it.attr("name") to it.attr("value") }
+    res = app.post(location, data = data, cookies = cookies)
+    location = res.document.selectFirst("a#messagedown")?.attr("href") ?: return null
+    cookies = (cookies + res.cookies).minus("var")
+    return app.get(location, cookies = cookies, allowRedirects = false).headers["location"]
 }
 
 suspend fun bypassOuo(url: String?): String? {
@@ -915,8 +836,6 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
                     }.lastOrNull()
     }
 }
-
-var filmxyCookies: Map<String,String>? = null
 suspend fun getFilmxyCookies(url: String) = filmxyCookies ?: fetchFilmxyCookies(url).also { filmxyCookies = it }
 suspend fun fetchFilmxyCookies(url: String): Map<String, String> {
 
@@ -955,6 +874,21 @@ suspend fun fetchFilmxyCookies(url: String): Map<String, String> {
         .associate { it.name to it.value }.toMutableMap()
 
     return cookieJar.plus(defaultCookies)
+}
+
+suspend fun getWatchflxCookies() = watchflxCookies ?: fetchWatchflxCookies().also { watchflxCookies = it }
+
+suspend fun fetchWatchflxCookies(): Map<String, String> {
+    session.get(watchflxAPI)
+    val cookies = session.baseClient.cookieJar.loadForRequest(watchflxAPI.toHttpUrl())
+        .associate { it.name to it.value }
+    val loginUrl = "$watchflxAPI/cookie-based-login"
+    session.post(
+        loginUrl, data = mapOf(
+            "continue_as_temp" to "true"
+        ), cookies = cookies, headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+    )
+    return session.baseClient.cookieJar.loadForRequest(loginUrl.toHttpUrl()).associate { it.name to it.value }
 }
 
 fun Document.findTvMoviesIframe(): String? {

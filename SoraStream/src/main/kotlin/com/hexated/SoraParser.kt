@@ -141,16 +141,6 @@ data class FDAds(
     @JsonProperty("linkr") val linkr: String? = null,
 )
 
-data class Smashy1Tracks(
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("label") val label: String? = null,
-)
-
-data class Smashy1Source(
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("tracks") val tracks: ArrayList<Smashy1Tracks>? = arrayListOf(),
-)
-
 data class WatchsomuchTorrents(
     @JsonProperty("id") val id: Int? = null,
     @JsonProperty("movieId") val movieId: Int? = null,
@@ -238,11 +228,6 @@ data class CryMoviesStream(
 
 data class CryMoviesResponse(
     @JsonProperty("streams") val streams: List<CryMoviesStream>? = null,
-)
-
-data class DudetvSources(
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("title") val title: String? = null,
 )
 
 data class FmoviesResponses(
