@@ -2438,7 +2438,7 @@ object SoraExtractor : SoraStream() {
             "shows/view/$urlSlug"
         }
         val streamUrl = app.get("$monsterMainUrl/$viewSlug").document.select("a.round-button:first-child").attr("href")
-        val res = app.get(streamUrl).document
+        val res = app.get(fixUrl(streamUrl, monsterMainUrl)).document
         val script = res.selectFirst("script:containsData(hash:)")?.data()
         val hash =
             Regex("hash:\\s*['\"](\\S+)['\"],").find(script ?: return)?.groupValues?.get(1)
@@ -2450,7 +2450,7 @@ object SoraExtractor : SoraStream() {
             "$monsterMainUrl/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
         }
 
-        app.get(videoUrl, referer = streamUrl)
+        app.get(videoUrl, referer = streamUrl, headers = mapOf("X-Requested-With" to "XMLHttpRequest"))
             .parsedSafe<WatchOnlineResponse>()?.streams?.mapKeys { source ->
                 callback.invoke(
                     ExtractorLink(
