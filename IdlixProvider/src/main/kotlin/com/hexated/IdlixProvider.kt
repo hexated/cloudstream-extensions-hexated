@@ -211,7 +211,7 @@ class IdlixProvider : MainAPI() {
             val decrypted = AesHelper.cryptoAESHandler(json.embed_url, password.toByteArray(), false)?.fixBloat() ?: return@apmap
 
             when {
-                !decrypted.contains("youtube") -> loadExtractor(decrypted, "$directUrl/", subtitleCallback, callback)
+                !decrypted.contains("youtube") -> getUrl(decrypted, "$directUrl/", subtitleCallback, callback)
                 else -> return@apmap
             }
         }
@@ -232,6 +232,65 @@ class IdlixProvider : MainAPI() {
     private fun String.fixBloat(): String {
         return this.replace("\"", "").replace("\\", "")
     }
+
+    private suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val document = app.get(url, referer = referer).document
+        val hash = url.split("/").last().substringAfter("data=")
+
+        val m3uLink = app.post(
+            url = "https://jeniusplay.com/player/index.php?data=$hash&do=getVideo",
+            data = mapOf("hash" to hash, "r" to "$referer"),
+            referer = referer,
+            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsed<ResponseSource>().videoSource
+
+        M3u8Helper.generateM3u8(
+            this.name,
+            m3uLink,
+            "$referer",
+        ).forEach(callback)
+
+
+        document.select("script").map { script ->
+            if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
+                val subData =
+                    getAndUnpack(script.data()).substringAfter("\"tracks\":[").substringBefore("],")
+                AppUtils.tryParseJson<List<Tracks>>("[$subData]")?.map { subtitle ->
+                    subtitleCallback.invoke(
+                        SubtitleFile(
+                            getLanguage(subtitle.label ?: ""),
+                            subtitle.file
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun getLanguage(str: String): String {
+        return when {
+            str.contains("indonesia", true) || str
+                .contains("bahasa", true) -> "Indonesian"
+            else -> str
+        }
+    }
+
+    data class ResponseSource(
+        @JsonProperty("hls") val hls: Boolean,
+        @JsonProperty("videoSource") val videoSource: String,
+        @JsonProperty("securedLink") val securedLink: String?,
+    )
+
+    data class Tracks(
+        @JsonProperty("kind") val kind: String?,
+        @JsonProperty("file") val file: String,
+        @JsonProperty("label") val label: String?,
+    )
 
     data class ResponseHash(
         @JsonProperty("embed_url") val embed_url: String,

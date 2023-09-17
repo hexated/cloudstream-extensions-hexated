@@ -7,11 +7,9 @@ import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import java.net.URI
 
 open class Aniworld : MainAPI() {
     override var mainUrl = "https://aniworld.to"
@@ -24,24 +22,6 @@ open class Aniworld : MainAPI() {
         TvType.AnimeMovie,
         TvType.OVA
     )
-
-    companion object {
-        fun getType(t: String): TvType {
-            return when {
-                t.contains("Anime Ova") -> TvType.OVA
-                t.contains("Anime Movie") -> TvType.AnimeMovie
-                else -> TvType.Anime
-            }
-        }
-
-        fun getStatus(t: String): ShowStatus {
-            return when {
-                t.contains("/complete", true) -> ShowStatus.Completed
-                t.contains("/running", true) -> ShowStatus.Ongoing
-                else -> ShowStatus.Completed
-            }
-        }
-    }
 
     override suspend fun getMainPage(
         page: Int,
@@ -146,11 +126,24 @@ open class Aniworld : MainAPI() {
         }.apmap {
             val redirectUrl = app.get(fixUrl(it.second)).url
             val lang = it.first.getLanguage(document)
+            val name = "${it.third} [${lang}]"
             if (it.third == "VOE") {
-                invokeVoe(redirectUrl, lang, data, callback)
+                Voe().getUrl(redirectUrl, data, subtitleCallback) { link ->
+                    callback.invoke(
+                        ExtractorLink(
+                            name,
+                            name,
+                            link.url,
+                            link.referer,
+                            link.quality,
+                            link.type,
+                            link.headers,
+                            link.extractorData
+                        )
+                    )
+                }
             } else {
                 loadExtractor(redirectUrl, data, subtitleCallback) { link ->
-                    val name = "${link.name} [${lang}]"
                     callback.invoke(
                         ExtractorLink(
                             name,
@@ -170,28 +163,6 @@ open class Aniworld : MainAPI() {
         return true
     }
 
-    private suspend fun invokeVoe(
-        url: String,
-        lang: String?,
-        referer: String,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val name = "Voe [${lang}]"
-        val request = app.get(url, referer = referer)
-        val baseUrl = getBaseUrl(request.url)
-        val res = request.document
-        val script = res.select("script").find { it.data().contains("sources =") }?.data()
-        val link =
-            Regex("[\"']hls[\"']:\\s*[\"'](.*)[\"']").find(script ?: return)?.groupValues?.get(1)
-
-        M3u8Helper.generateM3u8(
-            name,
-            link ?: return,
-            "$baseUrl/",
-            headers = mapOf("Origin" to "$baseUrl/")
-        ).forEach(callback)
-    }
-
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val title = this.selectFirst("h3")?.text() ?: return null
@@ -206,12 +177,6 @@ open class Aniworld : MainAPI() {
             ?.removePrefix("mit")?.trim()
     }
 
-    private fun getBaseUrl(url: String): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
-        }
-    }
-
     private data class AnimeSearch(
         @JsonProperty("link") val link: String,
         @JsonProperty("title") val title: String? = null,
@@ -220,13 +185,5 @@ open class Aniworld : MainAPI() {
 }
 
 class Dooood : DoodLaExtractor() {
-    override var mainUrl = "https://urochsunloath.com"
-}
-
-class Simpulumlamerop : Voe() {
-    override var mainUrl = "https://simpulumlamerop.com"
-}
-
-class Urochsunloath : Voe() {
     override var mainUrl = "https://urochsunloath.com"
 }
