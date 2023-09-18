@@ -1,6 +1,15 @@
-// use an integer for version numbers
-version = 11
+import org.jetbrains.kotlin.konan.properties.Properties
 
+// use an integer for version numbers
+version = 12
+
+android {
+    defaultConfig {
+        val properties = Properties()
+        properties.load(project.rootProject.file("local.properties").inputStream())
+        buildConfigField("String", "ZSHOW_API", "\"${properties.getProperty("ZSHOW_API")}\"")
+    }
+}
 
 cloudstream {
     language = "id"
