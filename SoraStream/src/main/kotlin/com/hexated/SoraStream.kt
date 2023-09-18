@@ -80,7 +80,6 @@ open class SoraStream : TmdbProvider() {
         const val gdbot = "https://gdtot.pro"
         const val anilistAPI = "https://graphql.anilist.co"
         const val malsyncAPI = "https://api.malsync.moe"
-        const val consumetHelper = "https://api.consumet.org/anime/9anime/helper"
         const val jikanAPI = "https://api.jikan.moe/v4"
         const val watchhubApi = "https://watchhub.strem.io"
 
@@ -115,7 +114,6 @@ open class SoraStream : TmdbProvider() {
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         const val watchOnlineAPI = "https://watchonline.ag"
         const val nineTvAPI = "https://moviesapi.club"
-        const val fmoviesAPI = "https://fmovies.to"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
         const val ridomoviesAPI = "https://ridomovies.pw"

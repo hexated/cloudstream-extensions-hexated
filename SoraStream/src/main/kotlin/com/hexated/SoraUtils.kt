@@ -4,10 +4,8 @@ import android.util.Base64
 import com.hexated.DumpUtils.queryApi
 import com.hexated.SoraStream.Companion.anilistAPI
 import com.hexated.SoraStream.Companion.base64DecodeAPI
-import com.hexated.SoraStream.Companion.consumetHelper
 import com.hexated.SoraStream.Companion.crunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
-import com.hexated.SoraStream.Companion.fmoviesAPI
 import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.hdmovies4uAPI
 import com.hexated.SoraStream.Companion.malsyncAPI
@@ -47,8 +45,6 @@ import kotlin.math.min
 
 var watchflxCookies: Map<String, String>? = null
 var filmxyCookies: Map<String,String>? = null
-val bflixChipperKey = base64DecodeAPI("Yjc=ejM=TzA=YTk=WHE=WnU=bXU=RFo=")
-const val bflixKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 val encodedIndex = arrayOf(
     "GamMovies",
     "JSMovies",
@@ -435,33 +431,6 @@ suspend fun getDirectGdrive(url: String): String {
 
 }
 
-suspend fun invokeVizcloud(
-    serverid: String,
-    url: String,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit,
-) {
-    val id = Regex("(?:/embed[-/]|/e/)([^?/]*)").find(url)?.groupValues?.getOrNull(1)
-    app.get("$consumetHelper?query=${id ?: return}&action=vizcloud")
-        .parsedSafe<VizcloudResponses>()?.result?.sources?.map {
-            M3u8Helper.generateM3u8(
-                "Vizcloud",
-                it.file ?: return@map,
-                "${getBaseUrl(url)}/"
-            ).forEach(callback)
-        }
-
-    val sub = app.get("${fmoviesAPI}/ajax/episode/subtitles/$serverid")
-    tryParseJson<List<FmoviesSubtitles>>(sub.text)?.map {
-        subtitleCallback.invoke(
-            SubtitleFile(
-                it.label ?: "",
-                it.file ?: return@map
-            )
-        )
-    }
-}
-
 suspend fun invokeSmashyFfix(
     name: String,
     url: String,
@@ -642,32 +611,6 @@ suspend fun bypassOuo(url: String?): String? {
     }
 
     return res.headers["location"]
-}
-
-suspend fun fetchingKaizoku(
-    domain: String,
-    postId: String,
-    data: List<String>,
-    ref: String
-): NiceResponse {
-    return app.post(
-        "$domain/wp-admin/admin-ajax.php",
-        data = mapOf(
-            "action" to "DDL",
-            "post_id" to postId,
-            "div_id" to data.first(),
-            "tab_id" to data[1],
-            "num" to data[2],
-            "folder" to data.last()
-        ),
-        headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
-        referer = ref
-    )
-}
-
-fun String.splitData(): List<String> {
-    return this.substringAfterLast("DDL(").substringBefore(")").split(",")
-        .map { it.replace("'", "").trim() }
 }
 
 suspend fun bypassFdAds(url: String?): String? {
@@ -1131,14 +1074,6 @@ fun getSeason(month: Int?): String? {
     return seasons[month - 1]
 }
 
-fun getPutlockerQuality(quality: String): Int {
-    return when {
-        quality.contains("NAME=\"1080p\"") || quality.contains("RESOLUTION=1920x1080") -> Qualities.P1080.value
-        quality.contains("NAME=\"720p\"") || quality.contains("RESOLUTION=1280x720") -> Qualities.P720.value
-        else -> Qualities.P480.value
-    }
-}
-
 fun getEpisodeSlug(
     season: Int? = null,
     episode: Int? = null,
@@ -1225,7 +1160,7 @@ fun decodeIndexJson(json: String): String {
     return base64Decode(slug.substring(0, slug.length - 20))
 }
 
-fun String.decodePrimewireXor(key: String = BuildConfig.PRIMEWIRE_KEY): String {
+fun String.decodePrimewireXor(key: String): String {
     val sb = StringBuilder()
     var i = 0
     while (i < this.length) {
@@ -1321,16 +1256,6 @@ fun getGMoviesQuality(str: String): Int {
     }
 }
 
-fun getSoraQuality(quality: String): Int {
-    return when (quality) {
-        "GROOT_FD" -> Qualities.P360.value
-        "GROOT_LD" -> Qualities.P480.value
-        "GROOT_SD" -> Qualities.P720.value
-        "GROOT_HD" -> Qualities.P1080.value
-        else -> Qualities.Unknown.value
-    }
-}
-
 fun getFDoviesQuality(str: String): String {
     return when {
         str.contains("1080P", true) -> "1080P"
@@ -1367,115 +1292,6 @@ fun getDeviceId(length: Int = 16): String {
     return (1..length)
         .map { allowedChars.random() }
         .joinToString("")
-}
-
-suspend fun comsumetEncodeVrf(query: String): String? {
-    return app.get("$consumetHelper?query=$query&action=fmovies-vrf", timeout = 30L)
-        .parsedSafe<Map<String, String>>()?.get("url")
-}
-
-suspend fun comsumetDecodeVrf(query: String): String? {
-    val res = app.get("$consumetHelper?query=$query&action=fmovies-decrypt", timeout = 30L)
-    return tryParseJson<Map<String, String>>(res.text)?.get("url")
-}
-
-fun encodeVrf(query: String): String {
-    return encode(
-        encryptVrf(
-            cipherVrf(bflixChipperKey, encode(query)),
-            bflixKey
-        )
-    )
-}
-
-fun decodeVrf(text: String): String {
-    return decode(cipherVrf(bflixChipperKey, decryptVrf(text, bflixKey)))
-}
-
-@Suppress("SameParameterValue")
-private fun encryptVrf(input: String, key: String): String {
-    if (input.any { it.code > 255 }) throw Exception("illegal characters!")
-    var output = ""
-    for (i in input.indices step 3) {
-        val a = intArrayOf(-1, -1, -1, -1)
-        a[0] = input[i].code shr 2
-        a[1] = (3 and input[i].code) shl 4
-        if (input.length > i + 1) {
-            a[1] = a[1] or (input[i + 1].code shr 4)
-            a[2] = (15 and input[i + 1].code) shl 2
-        }
-        if (input.length > i + 2) {
-            a[2] = a[2] or (input[i + 2].code shr 6)
-            a[3] = 63 and input[i + 2].code
-        }
-        for (n in a) {
-            if (n == -1) output += "="
-            else {
-                if (n in 0..63) output += key[n]
-            }
-        }
-    }
-    return output
-}
-
-@Suppress("SameParameterValue")
-private fun decryptVrf(input: String, key: String): String {
-    val t = if (input.replace("""[\t\n\f\r]""".toRegex(), "").length % 4 == 0) {
-        input.replace("""==?$""".toRegex(), "")
-    } else input
-    if (t.length % 4 == 1 || t.contains("""[^+/\dA-Za-z]""".toRegex())) throw Exception("bad input")
-    var i: Int
-    var r = ""
-    var e = 0
-    var u = 0
-    for (o in t.indices) {
-        e = e shl 6
-        i = key.indexOf(t[o])
-        e = e or i
-        u += 6
-        if (24 == u) {
-            r += ((16711680 and e) shr 16).toChar()
-            r += ((65280 and e) shr 8).toChar()
-            r += (255 and e).toChar()
-            e = 0
-            u = 0
-        }
-    }
-    return if (12 == u) {
-        e = e shr 4
-        r + e.toChar()
-    } else {
-        if (18 == u) {
-            e = e shr 2
-            r += ((65280 and e) shr 8).toChar()
-            r += (255 and e).toChar()
-        }
-        r
-    }
-}
-
-fun cipherVrf(key: String, text: String): String {
-    val arr = IntArray(256) { it }
-
-    var u = 0
-    var r: Int
-    arr.indices.forEach {
-        u = (u + arr[it] + key[it % key.length].code) % 256
-        r = arr[it]
-        arr[it] = arr[u]
-        arr[u] = r
-    }
-    u = 0
-    var c = 0
-
-    return text.indices.map { j ->
-        c = (c + 1) % 256
-        u = (u + arr[c]) % 256
-        r = arr[c]
-        arr[c] = arr[u]
-        arr[u] = r
-        (text[j].code xor arr[(arr[c] + arr[u]) % 256]).toChar()
-    }.joinToString("")
 }
 
 fun String.encodeUrl(): String {

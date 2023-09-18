@@ -36,7 +36,6 @@ data class PrimewireSources(
     @JsonProperty("file") val file: String? = null,
     @JsonProperty("label") val label: Int? = null,
     @JsonProperty("max") val max: String,
-    @JsonProperty("size") val size: String,
 )
 
 data class UHDBackupUrl(
@@ -234,31 +233,9 @@ data class CryMoviesResponse(
     @JsonProperty("streams") val streams: List<CryMoviesStream>? = null,
 )
 
-data class FmoviesResponses(
-    @JsonProperty("result") val result: FmoviesResult? = null,
-)
-
-data class FmoviesResult(
-    @JsonProperty("html") val html: String? = null,
-    @JsonProperty("result") val result: String? = null,
-    @JsonProperty("url") val url: String? = null,
-)
-
 data class FmoviesSubtitles(
     @JsonProperty("label") val label: String? = null,
     @JsonProperty("file") val file: String? = null,
-)
-
-data class VizcloudSources(
-    @JsonProperty("file") val file: String? = null,
-)
-
-data class VizcloudResult(
-    @JsonProperty("sources") val sources: ArrayList<VizcloudSources>? = arrayListOf(),
-)
-
-data class VizcloudResponses(
-    @JsonProperty("result") val result: VizcloudResult? = null,
 )
 
 data class AnilistExternalLinks(

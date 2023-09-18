@@ -1,6 +1,7 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
@@ -694,72 +695,6 @@ object SoraExtractor : SoraStream() {
                     sub.subtitlingUrl ?: return@map
                 )
             )
-        }
-    }
-
-    suspend fun invokeFmovies(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val query = title?.replace(Regex("[^\\w-\\s]"), "")
-        val html =
-            app.get("$fmoviesAPI/ajax/film/search?keyword=$query")
-                .parsedSafe<FmoviesResponses>()?.result?.html
-
-        val mediaId = Jsoup.parse(html ?: return).select("a.item").map {
-            Triple(
-                it.attr("href"),
-                it.select("div.name").text(),
-                it.select("span.dot")[1].text(),
-            )
-        }.find {
-            if (season == null) {
-                it.first.contains("/movie/")
-            } else {
-                it.first.contains("/tv/")
-            } && (it.second.equals(title, true) || it.second.createSlug()
-                .equals(title.createSlug())) && it.third.toInt() == year
-        }?.first
-
-        val watchId =
-            app.get(fixUrl(mediaId ?: return, fmoviesAPI)).document.selectFirst("div.watch")
-                ?.attr("data-id")
-
-        val episodeId = app.get(
-            "$fmoviesAPI/ajax/episode/list/${watchId ?: return}?vrf=${
-                comsumetEncodeVrf(watchId)
-            }"
-        ).parsedSafe<FmoviesResult>()?.result?.let { Jsoup.parse(it) }
-            ?.selectFirst("ul[data-season=${season ?: 1}] li a[data-num=${episode ?: 1}]")
-            ?.attr("data-id")
-
-        val servers =
-            app.get(
-                "$fmoviesAPI/ajax/server/list/${episodeId ?: return}?vrf=${
-                    comsumetEncodeVrf(
-                        episodeId
-                    )
-                }"
-            )
-                .parsedSafe<FmoviesResult>()?.result?.let { Jsoup.parse(it) }
-                ?.select("ul li")?.map { it.attr("data-id") to it.attr("data-link-id") }
-
-        servers?.filter {
-            it.first == "41" || it.first == "45"
-        }?.apmap { (serverid, linkId) ->
-            delay(2000)
-            val decryptServer =
-                app.get("$fmoviesAPI/ajax/server/$linkId?vrf=${comsumetEncodeVrf(linkId)}")
-                    .parsedSafe<FmoviesResponses>()?.result?.url?.let { comsumetDecodeVrf(it) }
-            if (serverid == "41") {
-                invokeVizcloud(serverid, decryptServer ?: return@apmap, subtitleCallback, callback)
-            } else {
-                loadExtractor(decryptServer ?: return@apmap, fmoviesAPI, subtitleCallback, callback)
-            }
         }
     }
 
@@ -2344,7 +2279,7 @@ object SoraExtractor : SoraStream() {
         serverRes.document.select("ul li").amap { el ->
             val server = el.attr("data-value")
             val encryptedData = app.get(
-                "$url?server=$server&_=${System.currentTimeMillis()}",
+                "$url?server=$server&_=${unixTimeMS}",
                 cookies = cookies,
                 referer = url,
                 headers = headers
