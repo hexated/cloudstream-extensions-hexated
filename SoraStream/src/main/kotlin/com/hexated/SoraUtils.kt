@@ -1085,6 +1085,16 @@ suspend fun imdbToNetflixId(imdbId: String?, season: Int?): String? {
         ?.substringAfterLast("/")
 }
 
+fun generateWpKey(r: String, m: String): String {
+    val rList = r.split("\\x").toTypedArray()
+    var n = ""
+    val decodedM = String(base64Decode(m.split("").reversed().joinToString("")).toCharArray())
+    for (s in decodedM.split("|")) {
+        n += "\\x" + rList[Integer.parseInt(s) + 1]
+    }
+    return n
+}
+
 suspend fun loadCustomExtractor(
     name: String? = null,
     url: String,

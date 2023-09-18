@@ -141,6 +141,10 @@ data class FDAds(
     @JsonProperty("linkr") val linkr: String? = null,
 )
 
+data class ZShowEmbed(
+    @JsonProperty("m") val meta: String? = null,
+)
+
 data class WatchsomuchTorrents(
     @JsonProperty("id") val id: Int? = null,
     @JsonProperty("movieId") val movieId: Int? = null,

@@ -10,7 +10,6 @@ import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixon
 import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGoku
-import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
@@ -36,6 +35,7 @@ import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchflx
 import com.hexated.SoraExtractor.invokeWatchsomuch
+import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.argamap
 import com.lagradost.cloudstream3.utils.AppUtils
@@ -128,16 +128,6 @@ class SoraStreamLite : SoraStream() {
             {
                 if (!res.isAnime) invokeDreamfilm(
                     res.title,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
-                invokeIdlix(
-                    res.title,
-                    res.year,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -342,6 +332,16 @@ class SoraStreamLite : SoraStream() {
                     res.imdbId,
                     res.season,
                     res.episode,
+                    callback
+                )
+            },
+            {
+                invokeZshow(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
                     callback
                 )
             }

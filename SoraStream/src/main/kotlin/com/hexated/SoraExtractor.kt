@@ -258,23 +258,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeIdlix(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title.createSlug()
-        val url = if (season == null) {
-            "$idlixAPI/movie/$fixTitle-$year"
-        } else {
-            "$idlixAPI/episode/$fixTitle-season-$season-episode-$episode"
-        }
-        invokeWpmovies(url, subtitleCallback, callback, encrypt = true)
-    }
-
     suspend fun invokeMultimovies(
         title: String? = null,
         season: Int? = null,
@@ -288,7 +271,7 @@ object SoraExtractor : SoraStream() {
         } else {
             "$multimoviesAPI/episodes/$fixTitle-${season}x${episode}"
         }
-        invokeWpmovies(url, subtitleCallback, callback, true)
+        invokeWpmovies(null, url, subtitleCallback, callback, true)
     }
 
     suspend fun invokeNetmovies(
@@ -305,10 +288,29 @@ object SoraExtractor : SoraStream() {
         } else {
             "$netmoviesAPI/episodes/$fixTitle-${season}x${episode}"
         }
-        invokeWpmovies(url, subtitleCallback, callback)
+        invokeWpmovies(null, url, subtitleCallback, callback)
+    }
+
+    suspend fun invokeZshow(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val api = BuildConfig.ZSHOW_API
+        val fixTitle = title.createSlug()
+        val url = if (season == null) {
+            "$api/movie/$fixTitle-$year"
+        } else {
+            "$api/episode/$fixTitle-season-$season-episode-$episode"
+        }
+        invokeWpmovies("ZShow", url, subtitleCallback, callback, encrypt = true)
     }
 
     private suspend fun invokeWpmovies(
+        name: String? = null,
         url: String? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
@@ -319,7 +321,6 @@ object SoraExtractor : SoraStream() {
             return this.replace("\"", "").replace("\\", "")
         }
         val res = app.get(url ?: return)
-        val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val referer = getBaseUrl(res.url)
         val document = res.document
         document.select("ul#playeroptionsul > li").map {
@@ -329,20 +330,29 @@ object SoraExtractor : SoraStream() {
                 it.attr("data-type")
             )
         }.apmap { (id, nume, type) ->
+            delay(1000)
             val json = app.post(
                 url = "$referer/wp-admin/admin-ajax.php", data = mapOf(
                     "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
-                ), headers = headers, referer = url
+                ), headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest"), referer = url
             )
             val source = tryParseJson<ResponseHash>(json.text)?.let {
                 when {
-                    encrypt -> cryptoAESHandler(it.embed_url,(it.key ?: return@apmap).toByteArray(), false)?.fixBloat()
+                    encrypt -> {
+                        val meta = tryParseJson<ZShowEmbed>(it.embed_url)?.meta ?: return@apmap
+                        val key = generateWpKey(it.key ?: return@apmap,meta)
+                        cryptoAESHandler(
+                            it.embed_url,
+                            key.toByteArray(),
+                            false
+                        )?.fixBloat()
+                    }
                     fixIframe -> Jsoup.parse(it.embed_url).select("IFRAME").attr("SRC")
                     else -> it.embed_url
                 }
             } ?: return@apmap
             if (!source.contains("youtube")) {
-                loadExtractor(source, "$referer/", subtitleCallback, callback)
+                loadCustomExtractor(name, source, "$referer/", subtitleCallback, callback)
             }
         }
     }

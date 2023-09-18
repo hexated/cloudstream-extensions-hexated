@@ -1,13 +1,14 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
 // use an integer for version numbers
-version = 170
+version = 171
 
 android {
     defaultConfig {
         val properties = Properties()
         properties.load(project.rootProject.file("local.properties").inputStream())
 
+        buildConfigField("String", "ZSHOW_API", "\"${properties.getProperty("ZSHOW_API")}\"")
         buildConfigField("String", "SORA_API", "\"${properties.getProperty("SORA_API")}\"")
         buildConfigField("String", "SORAHE", "\"${properties.getProperty("SORAHE")}\"")
         buildConfigField("String", "SORAXA", "\"${properties.getProperty("SORAXA")}\"")

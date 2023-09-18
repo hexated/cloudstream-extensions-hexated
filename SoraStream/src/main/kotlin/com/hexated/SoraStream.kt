@@ -7,7 +7,6 @@ import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeCryMovies
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
-import com.hexated.SoraExtractor.invokeIdlix
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -53,6 +52,7 @@ import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
 import com.hexated.SoraExtractor.invokeWatchflx
 import com.hexated.SoraExtractor.invokeWatchsomuch
+import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import com.lagradost.cloudstream3.extractors.VidSrcExtractor
@@ -93,7 +93,6 @@ open class SoraStream : TmdbProvider() {
         const val dbgoAPI = "https://dbgo.fun"
         const val movieHabAPI = "https://moviehab.com"
         const val dreamfilmAPI = "https://dreamfilmsw.net"
-        const val idlixAPI = "https://tv.idlixplus.net"
         const val noverseAPI = "https://www.nollyverse.com"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
@@ -431,16 +430,6 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                invokeIdlix(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
 //            {
 //                invokeNoverse(res.title, res.season, res.episode, callback)
 //            },
@@ -765,6 +754,16 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeWatchflx(res.id, res.season, res.episode, callback)
+            },
+            {
+                invokeZshow(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             }
         )
 
