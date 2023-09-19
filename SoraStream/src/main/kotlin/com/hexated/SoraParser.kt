@@ -42,10 +42,6 @@ data class UHDBackupUrl(
     @JsonProperty("url") val url: String? = null,
 )
 
-data class MoviesbayValues(
-    @JsonProperty("values") val values: List<List<String>>? = arrayListOf(),
-)
-
 data class ResponseHash(
     @JsonProperty("embed_url") val embed_url: String,
     @JsonProperty("key") val key: String? = null,
@@ -389,10 +385,6 @@ data class EMovieSources(
 data class EMovieTraks(
     @JsonProperty("file") val file: String? = null,
     @JsonProperty("label") val label: String? = null,
-)
-
-data class FourCartoonSources(
-    @JsonProperty("videoSource") val videoSource: String? = null,
 )
 
 data class WatchhubStream(

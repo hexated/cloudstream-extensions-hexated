@@ -14,7 +14,6 @@ import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
-import com.hexated.SoraExtractor.invokeMovieHab
 import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
@@ -23,7 +22,6 @@ import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
-import com.hexated.SoraExtractor.invokeFourCartoon
 import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
@@ -109,9 +107,6 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
-                invokeMovieHab(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 if (res.isAnime) invokeAnimes(
@@ -266,15 +261,6 @@ class SoraStreamLite : SoraStream() {
                     res.season,
                     res.episode,
                     subtitleCallback,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeFourCartoon(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
                     callback
                 )
             },

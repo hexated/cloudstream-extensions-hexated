@@ -135,6 +135,55 @@ open class Playm4u : ExtractorApi() {
 
 }
 
+open class M4ufree : ExtractorApi() {
+    override val name = "M4ufree"
+    override val mainUrl = "https://play.playm4u.xyz"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val document = session.get(url, referer = referer).document
+        val script = document.selectFirst("script:containsData(idfile =)")?.data() ?: return
+
+        val idFile = "idfile".findIn(script)
+        val idUser = "idUser".findIn(script)
+
+        val video = session.post(
+            "https://api-plhq.playm4u.xyz/apidatard/$idUser/$idFile",
+            data = mapOf("referrer" to "$referer"),
+            headers = mapOf(
+                "Accept" to "*/*",
+                "X-Requested-With" to "XMLHttpRequest",
+            )
+        ).text.let { AppUtils.tryParseJson<Source>(it) }?.data
+
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                video ?: return,
+                referer ?: "",
+                Qualities.P720.value,
+                INFER_TYPE
+            )
+        )
+
+    }
+
+    private fun String.findIn(data: String): String? {
+        return "$this\\s*=\\s*[\"'](\\S+)[\"'];".toRegex().find(data)?.groupValues?.get(1)
+    }
+
+    data class Source(
+        @JsonProperty("data") val data: String? = null,
+    )
+
+}
+
 open class VCloud : ExtractorApi() {
     override val name: String = "V-Cloud"
     override val mainUrl: String = "https://v-cloud.bio"

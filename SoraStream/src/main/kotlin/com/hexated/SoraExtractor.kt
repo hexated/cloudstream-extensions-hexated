@@ -200,36 +200,6 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeMovieHab(
-        imdbId: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val url = if (season == null) {
-            "$movieHabAPI/embed/movie?imdb=$imdbId"
-        } else {
-            "$movieHabAPI/embed/series?imdb=$imdbId&sea=$season&epi=$episode"
-        }
-
-        val doc = app.get(url, referer = "$movieHabAPI/").document
-        val movieId = doc.selectFirst("div#embed-player")?.attr("data-movie-id") ?: return
-
-        doc.select("div.dropdown-menu a").apmap {
-            val dataId = it.attr("data-id")
-            app.get(
-                "$movieHabAPI/ajax/get_stream_link?id=$dataId&movie=$movieId&is_init=true&captcha=&ref=",
-                referer = url,
-                headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-            ).parsedSafe<MovieHabRes>()?.data?.let { res ->
-                loadExtractor(
-                    res.link ?: return@let null, movieHabAPI, subtitleCallback, callback
-                )
-            }
-        }
-    }
-
     suspend fun invokeDreamfilm(
         title: String? = null,
         season: Int? = null,
@@ -1457,11 +1427,10 @@ object SoraExtractor : SoraStream() {
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
         val req = app.get("$m4uhdAPI/search/${title.createSlug()}.html")
         val referer = getBaseUrl(req.url)
-        val res = req.document
-        val scriptData = res.select("div.row div.item").map { ele ->
+        val scriptData = req.document.select("div.row div.item").map { ele ->
             Triple(
                 ele.select("div.tiptitle p").text(),
-                ele.select("div.jtip-top div:last-child").text().filter { it.isDigit() },
+                ele.select("div.jtip-top div:last-child").text().substringBefore("–").filter { it.isDigit() },
                 ele.selectFirst("a")?.attr("href")
             )
         }
@@ -1478,13 +1447,8 @@ object SoraExtractor : SoraStream() {
 
         val link = fixUrl(script?.third ?: return, referer)
         val request = app.get(link)
-        var cookiesSet = request.headers.filter { it.first == "set-cookie" }
-        var xsrf =
-            cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
-                ?.substringBefore(";")
-        var session =
-            cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter("laravel_session=")
-                ?.substringBefore(";")
+        var cookies = request.cookies
+        val headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest",)
 
         val doc = request.document
         val token = doc.selectFirst("meta[name=csrf-token]")?.attr("content")
@@ -1498,22 +1462,9 @@ object SoraExtractor : SoraStream() {
             val requestEmbed = app.post(
                 "$referer/ajaxtv", data = mapOf(
                     "idepisode" to idepisode, "_token" to "$token"
-                ), referer = link, headers = mapOf(
-                    "X-Requested-With" to "XMLHttpRequest",
-                ), cookies = mapOf(
-                    "laravel_session" to "$session",
-                    "XSRF-TOKEN" to "$xsrf",
-                )
+                ), referer = link, headers = headers, cookies = cookies
             )
-            cookiesSet = requestEmbed.headers.filter { it.first == "set-cookie" }
-            xsrf =
-                cookiesSet.find { it.second.contains("XSRF-TOKEN") }?.second?.substringAfter("XSRF-TOKEN=")
-                    ?.substringBefore(";")
-            session =
-                cookiesSet.find { it.second.contains("laravel_session") }?.second?.substringAfter(
-                    "laravel_session="
-                )
-                    ?.substringBefore(";")
+            cookies = requestEmbed.cookies
             requestEmbed.document.select("div.le-server span").map { it.attr("data") }
         }
 
@@ -1524,14 +1475,8 @@ object SoraExtractor : SoraStream() {
                     "m4u" to data, "_token" to "$token"
                 ),
                 referer = link,
-                headers = mapOf(
-                    "Accept" to "*/*",
-                    "X-Requested-With" to "XMLHttpRequest",
-                ),
-                cookies = mapOf(
-                    "laravel_session" to "$session",
-                    "XSRF-TOKEN" to "$xsrf",
-                ),
+                headers = headers,
+                cookies = cookies,
             ).document.select("iframe").attr("src")
 
             loadExtractor(iframe, referer, subtitleCallback, callback)
@@ -1649,43 +1594,6 @@ object SoraExtractor : SoraStream() {
 
 
         }
-    }
-
-    suspend fun invokeMoviesbay(
-        title: String? = null,
-        year: Int? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val url =
-            "https://sheets.googleapis.com/v4/spreadsheets/12RD3HX3NkSiCyqQJxemyS8W0R9B7J4VBl35uLBa5W0E/values/main?alt=json&key=AIzaSyA_ZY8GYxyUZYlcKGkDIHuku_gmE4z-AHQ"
-        val json = app.get(url, referer = "$moviesbayAPI/")
-            .parsedSafe<MoviesbayValues>()?.values
-
-        val media = json?.find { it.first() == "${title.createSlug()}-$year" }
-
-        media?.filter { it.startsWith("https://drive.google.com") || it.startsWith("https://cdn.moviesbay.live") }
-            ?.apmap {
-                val index = media.indexOf(it)
-                val size = media[index.minus(1)]
-                val quality = media[index.minus(2)]
-                val qualityName = media[index.minus(3)]
-                val link = if (it.startsWith("https://drive.google.com")) {
-                    getDirectGdrive(it)
-                } else {
-                    it.removeSuffix("?a=view")
-                }
-
-                callback.invoke(
-                    ExtractorLink(
-                        "Moviesbay",
-                        "Moviesbay $qualityName [$size]",
-                        link,
-                        "",
-                        getQualityFromName(quality)
-                    )
-                )
-
-            }
     }
 
     suspend fun invokeMoviezAdd(
@@ -2648,54 +2556,6 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-
-    }
-
-    suspend fun invokeFourCartoon(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title.createSlug()
-        val headers = mapOf(
-            "X-Requested-With" to "XMLHttpRequest"
-        )
-        val url = if (season == null) {
-            "$fourCartoonAPI/movies/$fixTitle-$year"
-        } else {
-            "$fourCartoonAPI/episode/$fixTitle-season-$season-episode-$episode"
-        }
-
-        val document = app.get(url).document
-        val id = document.selectFirst("input[name=idpost]")?.attr("value")
-        val server = app.get(
-            "$fourCartoonAPI/ajax-get-link-stream/?server=streamango&filmId=${id ?: return}",
-            headers = headers
-        ).text
-        val hash =
-            getAndUnpack(app.get(server, referer = fourCartoonAPI).text).substringAfter("(\"")
-                .substringBefore("\",")
-        val iframeUrl = getBaseUrl(server)
-        val source = app.post(
-            "$iframeUrl/player/index.php?data=$hash&do=getVideo", data = mapOf(
-                "hast" to hash,
-                "r" to "$fourCartoonAPI/",
-            ),
-            headers = headers
-        ).parsedSafe<FourCartoonSources>()?.videoSource
-
-        callback.invoke(
-            ExtractorLink(
-                "4Cartoon",
-                "4Cartoon",
-                source ?: return,
-                "$iframeUrl/",
-                Qualities.P720.value,
-                true,
-            )
-        )
 
     }
 
