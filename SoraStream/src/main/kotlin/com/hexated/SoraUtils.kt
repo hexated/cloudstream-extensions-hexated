@@ -477,7 +477,7 @@ suspend fun invokeSmashyFm(
     M3u8Helper.generateM3u8(
         "Smashy [$name]",
         source.removeProxy(),
-        "https://vidstream.pro/"
+        "https://vidplay.site/"
     ).forEach(callback)
 
 }
@@ -1036,6 +1036,33 @@ fun generateWpKey(r: String, m: String): String {
         n += "\\x" + rList[Integer.parseInt(s) + 1]
     }
     return n
+}
+
+suspend fun loadCustomTagExtractor(
+    tag: String? = null,
+    url: String,
+    referer: String? = null,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit,
+    quality: Int? = null,
+) {
+    loadExtractor(url, referer, subtitleCallback) { link ->
+        callback.invoke(
+            ExtractorLink(
+                link.source,
+                "${link.name} $tag",
+                link.url,
+                link.referer,
+                when (link.type) {
+                    ExtractorLinkType.M3U8 -> link.quality
+                    else -> quality ?: link.quality
+                },
+                link.type,
+                link.headers,
+                link.extractorData
+            )
+        )
+    }
 }
 
 suspend fun loadCustomExtractor(

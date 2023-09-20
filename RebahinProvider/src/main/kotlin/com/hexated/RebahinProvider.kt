@@ -6,14 +6,14 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.mvvm.safeApiCall
-import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 import java.net.URI
 
 open class RebahinProvider : MainAPI() {
-    override var mainUrl = "http://179.43.163.50"
+    override var mainUrl = "http://179.43.163.51"
+    private var directUrl: String? = null
     override var name = "Rebahin"
     override val hasMainPage = true
     override var lang = "id"
@@ -97,8 +97,9 @@ open class RebahinProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
-
+        val req = app.get(url)
+        directUrl = getBaseUrl(req.url)
+        val document = req.document
         val title = document.selectFirst("h3[itemprop=name]")!!.ownText().trim()
         val poster = document.select(".mvic-desc > div.thumb.mvic-thumb").attr("style")
             .substringAfter("url(").substringBeforeLast(")")
@@ -157,11 +158,29 @@ open class RebahinProvider : MainAPI() {
         }
     }
 
-    private fun getLanguage(str: String): String {
-        return when {
-            str.contains("indonesia", true) || str.contains("bahasa", true) -> "Indonesian"
-            else -> str
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+
+        data.removeSurrounding("[", "]").split(",").map { it.trim() }.apmap { link ->
+            safeApiCall {
+                when {
+                    link.startsWith(mainServer) -> invokeLokalSource(
+                        link,
+                        subtitleCallback,
+                        callback
+                    )
+                    else -> {
+                        loadExtractor(link, "$directUrl/", subtitleCallback, callback)
+                    }
+                }
+            }
         }
+
+        return true
     }
 
     private suspend fun invokeLokalSource(
@@ -172,7 +191,7 @@ open class RebahinProvider : MainAPI() {
         val document = app.get(
             url,
             allowRedirects = false,
-            referer = mainUrl,
+            referer = directUrl,
             headers = mapOf("Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
         ).document
 
@@ -204,110 +223,23 @@ open class RebahinProvider : MainAPI() {
         }
     }
 
-    private suspend fun invokeKotakAjairSource(
-        url: String,
-        subCallback: (SubtitleFile) -> Unit,
-        sourceCallback: (ExtractorLink) -> Unit
-    ) {
-        val domainUrl = "https://kotakajair.xyz"
-        val id = url.trimEnd('/').split("/").last()
-        val sources = app.post(
-            url = "$domainUrl/api/source/$id",
-            data = mapOf("r" to mainUrl, "d" to URI(url).host)
-        ).parsed<ResponseKotakAjair>()
-
-        sources.data?.map {
-            sourceCallback.invoke(
-                ExtractorLink(
-                    name,
-                    "KotakAjair",
-                    fixUrl(it.file),
-                    referer = url,
-                    quality = getQualityFromName(it.label)
-                )
-            )
+    private fun getLanguage(str: String): String {
+        return when {
+            str.contains("indonesia", true) || str.contains("bahasa", true) -> "Indonesian"
+            else -> str
         }
-        val userData = sources.player.poster_file.split("/")[2]
-        sources.captions?.map {
-            subCallback.invoke(
-                SubtitleFile(
-                    getLanguage(it.language),
-                    "$domainUrl/asset/userdata/$userData/caption/${it.hash}/${it.id}.srt"
-                )
-            )
-        }
-
     }
 
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-
-        data.removeSurrounding("[", "]").split(",").map { it.trim() }.apmap { link ->
-            safeApiCall {
-                when {
-                    link.startsWith(mainServer) -> invokeLokalSource(
-                        link,
-                        subtitleCallback,
-                        callback
-                    )
-                    link.startsWith("https://kotakajair.xyz") -> invokeKotakAjairSource(
-                        link,
-                        subtitleCallback,
-                        callback
-                    )
-                    else -> {
-                        loadExtractor(link, "$mainUrl/", subtitleCallback, callback)
-                        if (link.startsWith("https://sbfull.com")) {
-                            val response = app.get(
-                                link, interceptor = WebViewResolver(
-                                    Regex("""\.srt""")
-                                )
-                            )
-                            subtitleCallback.invoke(
-                                SubtitleFile(
-                                    "Indonesian",
-                                    response.url
-                                )
-                            )
-                        }
-                    }
-                }
-            }
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
         }
-
-        return true
     }
 
     private data class Tracks(
         @JsonProperty("file") val file: String? = null,
         @JsonProperty("label") val label: String? = null,
         @JsonProperty("kind") val kind: String? = null
-    )
-
-    private data class Captions(
-        @JsonProperty("id") val id: String,
-        @JsonProperty("hash") val hash: String,
-        @JsonProperty("language") val language: String,
-    )
-
-    private data class Data(
-        @JsonProperty("file") val file: String,
-        @JsonProperty("label") val label: String,
-    )
-
-    private data class Player(
-        @JsonProperty("poster_file") val poster_file: String,
-    )
-
-    private data class ResponseKotakAjair(
-        @JsonProperty("success") val success: Boolean,
-        @JsonProperty("player") val player: Player,
-        @JsonProperty("data") val data: List<Data>?,
-        @JsonProperty("captions") val captions: List<Captions>?
     )
 
 }
