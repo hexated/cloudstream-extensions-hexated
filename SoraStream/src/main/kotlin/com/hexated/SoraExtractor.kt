@@ -2206,8 +2206,8 @@ object SoraExtractor : SoraStream() {
                 .attr("href")
         val res = app.get(fixUrl(streamUrl, monsterMainUrl)).document
         val script = res.selectFirst("script:containsData(hash:)")?.data()
-        val hash = Regex("hash:\\s*['\"](\\S+)['\"],").find(script ?: return)?.groupValues?.get(1)
-        val expires = Regex("expires:\\s*(\\d+),").find(script)?.groupValues?.get(1)
+        val hash = Regex("hash:\\s*['\"](\\S+)['\"]").find(script ?: return)?.groupValues?.get(1)
+        val expires = Regex("expires:\\s*(\\d+)").find(script)?.groupValues?.get(1)
 
         val videoUrl = if (season == null) {
             "$monsterMainUrl/api/v1/security/movie-access?id_movie=$episodeId&hash=$hash&expires=$expires"
