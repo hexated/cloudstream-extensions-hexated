@@ -419,3 +419,12 @@ data class NetflixResponse(
     @JsonProperty("episodes") val episodes: ArrayList<NetflixEpisodes>? = arrayListOf(),
     @JsonProperty("sources") val sources: ArrayList<NetflixSources>? = arrayListOf(),
 )
+
+data class NetflixSearchResult(
+    @JsonProperty("t") val t: String? = null,
+    @JsonProperty("id") val id: String? = null,
+)
+
+data class NetflixSearch(
+    @JsonProperty("searchResult") val searchResult: ArrayList<NetflixSearchResult>? = arrayListOf(),
+)

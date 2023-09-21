@@ -17,6 +17,7 @@ import com.hexated.SoraStream.Companion.watchhubApi
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
+import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -1334,10 +1335,14 @@ fun getBaseUrl(url: String): String {
 }
 
 fun isUpcoming(dateString: String?): Boolean {
-    if (dateString == null) return false
-    val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    val dateTime = format.parse(dateString)?.time ?: return false
-    return unixTimeMS < dateTime
+    return try {
+        val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val dateTime = dateString?.let { format.parse(it)?.time } ?: return false
+        return unixTimeMS < dateTime
+    } catch (t: Throwable) {
+        logError(t)
+        false
+    }
 }
 
 fun decode(input: String): String = URLDecoder.decode(input, "utf-8")

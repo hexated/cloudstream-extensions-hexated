@@ -1,6 +1,7 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.APIHolder.unixTime
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -1022,7 +1023,16 @@ object SoraExtractor : SoraStream() {
 
 
     }
-
+    suspend fun invokeDotmovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        invokeWpredis(title, year, season, episode, subtitleCallback, callback, dotmoviesAPI)
+    }
     suspend fun invokeVegamovies(
         title: String? = null,
         year: Int? = null,
@@ -1031,7 +1041,18 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        var res = app.get("$vegaMoviesAPI/search/$title").document
+        invokeWpredis(title, year, season, episode, subtitleCallback, callback, vegaMoviesAPI)
+    }
+    private suspend fun invokeWpredis(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        api: String
+    ) {
+        var res = app.get("$api/search/$title").document
         val match = if (season == null) "$year" else "Season $season"
         val media =
             res.selectFirst("div.blog-items article:has(h3.entry-title:matches((?i)$title.*$match)) a")
@@ -1048,7 +1069,7 @@ object SoraExtractor : SoraStream() {
                     app.post(
                         "${getBaseUrl(url)}/red.php",
                         data = mapOf("link" to url),
-                        referer = "$vegaMoviesAPI/"
+                        referer = "$api/"
                     ).text.substringAfter("location.href = \"").substringBefore("\"")
                 }
             val selector =
@@ -1059,7 +1080,7 @@ object SoraExtractor : SoraStream() {
             loadCustomTagExtractor(
                 tags,
                 server ?: return@apmap,
-                "$vegaMoviesAPI/",
+                "$api/",
                 subtitleCallback,
                 callback,
                 getIndexQuality(it.text())
@@ -2401,7 +2422,7 @@ object SoraExtractor : SoraStream() {
         })?.substringAfter("id=")?.substringBefore("&")
 
         val server = app.get(
-            "$emoviesAPI/ajax/v4_get_sources?s=oserver&id=${id ?: return}&_=${APIHolder.unixTimeMS}",
+            "$emoviesAPI/ajax/v4_get_sources?s=oserver&id=${id ?: return}&_=${unixTimeMS}",
             headers = mapOf(
                 "X-Requested-With" to "XMLHttpRequest"
             )
@@ -2513,7 +2534,7 @@ object SoraExtractor : SoraStream() {
             ExtractorLink(
                 "Jump1",
                 "Jump1",
-                "$jump1API/hls/${source ?: return}/master.m3u8?ts=${APIHolder.unixTimeMS}",
+                "$jump1API/hls/${source ?: return}/master.m3u8?ts=${unixTimeMS}",
                 referer,
                 Qualities.P1080.value,
                 true
@@ -2523,30 +2544,36 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeNetflix(
         imdbId: String? = null,
+        title: String? = null,
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest", "Cookie" to "hd=on")
-        val netflixId = imdbToNetflixId(imdbId, season)
-        val (title, id) = app.get(
-            "$netflixAPI/post.php?id=${netflixId ?: return}&t=${APIHolder.unixTime}",
+        val netflixId = imdbToNetflixId(imdbId, season) ?: run {
+            app.get("$netflixAPI/search.php?s=$title&t=${unixTime}", headers = headers)
+                .parsedSafe<NetflixSearch>()?.searchResult?.find { it.t.equals(title) }?.id
+        }
+        val (t, id) = app.get(
+            "$netflixAPI/post.php?id=${netflixId ?: return}&t=${unixTime}",
             headers = headers
         ).parsedSafe<NetflixResponse>().let { media ->
             if (season == null) {
                 media?.title to netflixId
             } else {
                 val seasonId = media?.season?.find { it.s == "$season" }?.id
-                val episodeId = app.get(
-                    "$netflixAPI/episodes.php?s=${seasonId}&series=$netflixId&t=${APIHolder.unixTime}",
-                    headers = headers
-                ).parsedSafe<NetflixResponse>()?.episodes?.find { it.ep == "E$episode" }?.id
+                val episodeId =
+                    app.get(
+                        "$netflixAPI/episodes.php?s=${seasonId}&series=$netflixId&t=${unixTime}",
+                        headers = headers
+                    )
+                        .parsedSafe<NetflixResponse>()?.episodes?.find { it.ep == "E$episode" }?.id
                 media?.title to episodeId
             }
         }
 
         app.get(
-            "$netflixAPI/playlist.php?id=${id ?: return}&t=${title ?: return}&tm=${APIHolder.unixTime}",
+            "$netflixAPI/playlist.php?id=${id ?: return}&t=${t ?: return}&tm=${unixTime}",
             headers = headers
         ).text.let {
             tryParseJson<ArrayList<NetflixResponse>>(it)

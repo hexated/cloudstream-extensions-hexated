@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 import com.hexated.SoraExtractor.invokeDahmerMovies
 import com.hexated.SoraExtractor.invokeDoomovies
+import com.hexated.SoraExtractor.invokeDotmovies
 import com.hexated.SoraExtractor.invokeDramaday
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeFDMovies
@@ -129,6 +130,7 @@ open class SoraStream : TmdbProvider() {
         const val netflixAPI = "https://m.netflixmirror.com"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
         const val watchflxAPI = "https://watchflx.tv"
+        const val dotmoviesAPI = "https://dotmovies.today"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -247,6 +249,7 @@ open class SoraStream : TmdbProvider() {
         val isAnime =
             genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
         val isAsian = !isAnime && (res.original_language == "zh" || res.original_language == "ko")
+        val isBollywood = res.production_countries?.any { it.name == "India" } ?: false
         val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
             .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
 
@@ -289,6 +292,7 @@ open class SoraStream : TmdbProvider() {
                                 date = season.airDate,
                                 airedDate = res.releaseDate ?: res.firstAirDate,
                                 isAsian = isAsian,
+                                isBollywood = isBollywood
                             ).toJson(),
                             name = eps.name + if (isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
                             season = eps.seasonNumber,
@@ -337,6 +341,7 @@ open class SoraStream : TmdbProvider() {
                     jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
                     airedDate = res.releaseDate ?: res.firstAirDate,
                     isAsian = isAsian,
+                    isBollywood = isBollywood
                 ).toJson(),
             ) {
                 this.posterUrl = poster
@@ -525,7 +530,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeBollyMaza(
+                if (!res.isAnime && res.isBollywood) invokeBollyMaza(
                     bollyMazaAPI,
                     "BollyMaza",
                     res.title,
@@ -654,6 +659,16 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
+                if (!res.isAnime && res.isBollywood) invokeDotmovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 if (!res.isAnime && res.season == null) invokePobmovies(
                     res.title,
                     res.year,
@@ -710,6 +725,7 @@ open class SoraStream : TmdbProvider() {
             {
                 if (!res.isAnime) invokeNetflix(
                     res.imdbId,
+                    res.title,
                     res.season,
                     res.episode,
                     callback
@@ -763,6 +779,7 @@ open class SoraStream : TmdbProvider() {
         val date: String? = null,
         val airedDate: String? = null,
         val isAsian: Boolean = false,
+        val isBollywood: Boolean = false,
     )
 
     data class Data(
@@ -867,6 +884,10 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("season_number") val season_number: Int? = null,
     )
 
+    data class ProductionCountries(
+        @JsonProperty("name") val name: String? = null,
+    )
+
     data class MediaDetail(
         @JsonProperty("id") val id: Int? = null,
         @JsonProperty("imdb_id") val imdbId: String? = null,
@@ -892,6 +913,7 @@ open class SoraStream : TmdbProvider() {
         @JsonProperty("credits") val credits: Credits? = null,
         @JsonProperty("recommendations") val recommendations: ResultsRecommendations? = null,
         @JsonProperty("alternative_titles") val alternative_titles: ResultsAltTitles? = null,
+        @JsonProperty("production_countries") val production_countries: ArrayList<ProductionCountries>? = arrayListOf(),
     )
 
 }

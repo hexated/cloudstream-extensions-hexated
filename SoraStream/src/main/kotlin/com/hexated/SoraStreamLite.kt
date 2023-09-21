@@ -316,6 +316,7 @@ class SoraStreamLite : SoraStream() {
             {
                 if (!res.isAnime) invokeNetflix(
                     res.imdbId,
+                    res.title,
                     res.season,
                     res.episode,
                     callback

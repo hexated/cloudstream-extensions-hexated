@@ -208,8 +208,7 @@ open class VCloud : ExtractorApi() {
             )
         ).document.select("p.text-success ~ a").apmap {
             val link = it.attr("href")
-            val uri = URI(link)
-            if (uri.path.contains("workers.dev")) {
+            if (link.contains("workers.dev")) {
                 callback.invoke(
                     ExtractorLink(
                         this.name,
