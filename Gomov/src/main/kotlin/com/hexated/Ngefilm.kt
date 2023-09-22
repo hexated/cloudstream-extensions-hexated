@@ -8,8 +8,8 @@ import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 
-class Ngefilm : DutaMovie() {
-    override var mainUrl = "https://ngefilm21.monster"
+class Ngefilm : Gomov() {
+    override var mainUrl = "https://nge-film21.site"
     override var name = "Ngefilm"
 
     override val mainPage = mainPageOf(

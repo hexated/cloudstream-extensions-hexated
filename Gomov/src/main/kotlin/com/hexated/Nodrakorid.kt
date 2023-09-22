@@ -9,7 +9,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class Nodrakorid : DutaMovie() {
-    override var mainUrl = "https://no-drak-or.xyz"
+    override var mainUrl = "https://no-drakor.xyz"
     override var name = "Nodrakorid"
 
     override val mainPage = mainPageOf(
