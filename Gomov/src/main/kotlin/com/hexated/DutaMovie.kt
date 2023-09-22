@@ -17,21 +17,4 @@ open class DutaMovie : Gomov() {
         "country/indonesia/page/%d/" to "Serial TV Indonesia",
     )
 
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-
-        app.get(data).document.select("ul.muvipro-player-tabs li a").apmap {
-            val iframe = app.get(fixUrl(it.attr("href"))).document.selectFirst("div.gmr-embed-responsive iframe")
-                ?.attr("src")
-            loadExtractor(httpsify(iframe ?: return@apmap ), "$mainUrl/", subtitleCallback, callback)
-        }
-
-        return true
-    }
-
-
 }

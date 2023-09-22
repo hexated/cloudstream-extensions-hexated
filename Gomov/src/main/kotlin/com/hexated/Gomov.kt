@@ -151,15 +151,23 @@ open class Gomov : MainAPI() {
     ): Boolean {
 
         val document = app.get(data).document
-        val id = document.selectFirst("div#muvipro_player_content_id")!!.attr("data-id")
+        val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
 
-        document.select("div.tab-content-ajax").apmap {
-            val server = app.post(
-                "$directUrl/wp-admin/admin-ajax.php",
-                data = mapOf("action" to "muvipro_player_content", "tab" to it.attr("id"), "post_id" to id)
-            ).document.select("iframe").attr("src")
+        if(id.isNullOrEmpty()) {
+            document.select("ul.muvipro-player-tabs li a").apmap {
+                val iframe = app.get(fixUrl(it.attr("href"))).document.selectFirst("div.gmr-embed-responsive iframe")
+                    ?.attr("src")
+                loadExtractor(httpsify(iframe ?: return@apmap ), "$directUrl/", subtitleCallback, callback)
+            }
+        } else {
+            document.select("div.tab-content-ajax").apmap {
+                val server = app.post(
+                    "$directUrl/wp-admin/admin-ajax.php",
+                    data = mapOf("action" to "muvipro_player_content", "tab" to it.attr("id"), "post_id" to "$id")
+                ).document.select("iframe").attr("src")
 
-            loadExtractor(httpsify(server), "$directUrl/", subtitleCallback, callback)
+                loadExtractor(httpsify(server), "$directUrl/", subtitleCallback, callback)
+            }
         }
 
         return true
