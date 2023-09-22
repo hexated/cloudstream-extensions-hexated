@@ -104,7 +104,8 @@ class Nimegami : MainAPI() {
 
         val episodes = document.select("div.list_eps_stream li")
             .mapNotNull {
-                val episode = Regex("Episode\\s?(\\d+)").find(it.text())?.groupValues?.getOrNull(0)?.toIntOrNull()
+                val episode = Regex("Episode\\s?(\\d+)").find(it.text())?.groupValues?.getOrNull(0)
+                    ?.toIntOrNull()
                 val link = it.attr("data")
                 Episode(link, episode = episode)
             }
@@ -120,7 +121,7 @@ class Nimegami : MainAPI() {
             }
         }
 
-        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+        val tracker = APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
 
         return newAnimeLoadResponse(title, url, type) {
             engName = title
@@ -148,7 +149,13 @@ class Nimegami : MainAPI() {
 
         tryParseJson<ArrayList<Sources>>(base64Decode(data))?.map { sources ->
             sources.url?.apmap { url ->
-                loadFixedExtractor(url.fixIframe(), sources.format, "$mainUrl/", subtitleCallback, callback)
+                loadFixedExtractor(
+                    url.fixIframe(),
+                    sources.format,
+                    "$mainUrl/",
+                    subtitleCallback,
+                    callback
+                )
             }
         }
 
@@ -184,18 +191,22 @@ class Nimegami : MainAPI() {
         }
     }
 
-    private fun Elements.getContent(css: String) : Elements {
+    private fun Elements.getContent(css: String): Elements {
         return this.select("tr:contains($css) td:last-child")
     }
 
-    private fun String.fixIframe() : String {
+    private fun String.fixIframe(): String {
         val url = base64Decode(this.substringAfter("url=").substringAfter("id="))
-        val host = getBaseUrl(url)
         return when {
             url.contains("hxfile") -> {
+                val host = getBaseUrl(url)
                 val id = url.substringAfterLast("/")
                 "$host/embed-$id.html"
             }
+            url.startsWith("https://mitedrive.my.id") -> url.replace(
+                "https://mitedrive.my.id",
+                "https://mitedrive.com"
+            )
             else -> fixUrl(url)
         }
     }

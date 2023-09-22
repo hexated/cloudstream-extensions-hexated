@@ -32,13 +32,8 @@ open class Mitedrive : ExtractorApi() {
                 this.name,
                 this.name,
                 video ?: return,
-                "$mainUrl/",
+                "",
                 Qualities.Unknown.value,
-                headers = mapOf(
-                    "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
-                    "Sec-Fetch-Dest" to "video",
-                    "Sec-Fetch-Mode" to "no-cors",
-                )
             )
         )
 
