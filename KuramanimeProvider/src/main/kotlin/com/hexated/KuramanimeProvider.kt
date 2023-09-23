@@ -3,7 +3,6 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
-import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -17,7 +16,8 @@ class KuramanimeProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-
+    private var headers: Map<String,String> = mapOf()
+    private var cookies: Map<String,String> = mapOf()
     override val supportedTypes = setOf(
         TvType.Anime,
         TvType.AnimeMovie,
@@ -163,7 +163,8 @@ class KuramanimeProvider : MainAPI() {
         val document = app.get(
             url,
             referer = ref,
-            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+            headers = headers,
+            cookies = cookies
         ).document
         document.select("video#player > source").map {
             val link = fixUrl(it.attr("src"))
@@ -173,14 +174,14 @@ class KuramanimeProvider : MainAPI() {
                     fixTitle(server),
                     fixTitle(server),
                     link,
-                    referer = "$mainUrl/",
+                    referer = "",
                     quality = quality ?: Qualities.Unknown.value,
                     headers = mapOf(
                         "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
                         "Range" to "bytes=0-",
                         "Sec-Fetch-Dest" to "video",
                         "Sec-Fetch-Mode" to "no-cors",
-                    )
+                    ),
                 )
             )
         }
@@ -192,21 +193,30 @@ class KuramanimeProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val res = app.get(data).document
+        val req = app.get(data)
+        val res = req.document
+        val token = res.select("meta[name=csrf-token]").attr("content")
+        headers = mapOf(
+            "X-Requested-With" to "XMLHttpRequest",
+            "X-CSRF-TOKEN" to token
+        )
+        cookies = req.cookies
+        val stream = app.post(
+            "$mainUrl/misc/post/get-stream-token", headers = headers, cookies = cookies
+        ).parsed<String>()
         res.select("select#changeServer option").apmap { source ->
-            safeApiCall {
-                val server = source.attr("value")
-                val link = "$data?activate_stream=1&stream_server=$server"
-                if (server == "kuramadrive" || server == "archive") {
-                    invokeLocalSource(link, server, data, callback)
-                } else {
-                    app.get(
-                        link,
-                        referer = data,
-                        headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-                    ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
-                        loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
-                    }
+            val server = source.attr("value")
+            val link = "$data?activate_stream=$stream&stream_server=$server"
+            if (server == "kuramadrive" || server == "archive") {
+                invokeLocalSource(link, server, data, callback)
+            } else {
+                app.get(
+                    link,
+                    referer = data,
+                    headers = headers,
+                    cookies = cookies
+                ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
+                    loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
                 }
             }
         }
