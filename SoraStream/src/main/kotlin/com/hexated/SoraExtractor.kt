@@ -1719,7 +1719,6 @@ object SoraExtractor : SoraStream() {
         imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
-        isAnime: Boolean = false,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
@@ -1735,13 +1734,13 @@ object SoraExtractor : SoraStream() {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
-                (it.second.equals("Player F", true) || it.second.equals(
+                it.second.equals("Player F", true) || it.second.equals(
                     "Player N", true
-                )) && !isAnime -> {
+                ) -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
 
-                it.second.equals("Player FM", true) && !isAnime -> invokeSmashyFm(
+                it.second.equals("Player FM", true) -> invokeSmashyFm(
                     it.second, it.first, url, callback
                 )
 
@@ -2034,6 +2033,26 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokePutactor(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeGpress(
+            title,
+            year,
+            season,
+            episode,
+            callback,
+            putactorAPI,
+            "Putactor",
+            "_VPzQdLFXWQppjNou",
+            "_hfDAQaOJyNSkXHjy"
+        )
+    }
+
     suspend fun invokePrimewire(
         title: String? = null,
         year: Int? = null,
@@ -2041,8 +2060,32 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        fun String.decrypt(key: String): List<PrimewireSources>? {
-            return tryParseJson<List<PrimewireSources>>(base64Decode(this).decodePrimewireXor(key))
+        invokeGpress(
+            title,
+            year,
+            season,
+            episode,
+            callback,
+            primewireAPI,
+            "Primewire",
+            "RvnMfoxhgm",
+            "vvqUtffkId"
+        )
+    }
+
+    private suspend fun invokeGpress(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+        api: String,
+        name: String,
+        mediaSelector: String,
+        episodeSelector: String,
+    ) {
+        fun String.decrypt(key: String): List<GpressSources>? {
+            return tryParseJson<List<GpressSources>>(base64Decode(this).decodePrimewireXor(key))
         }
 
         val slug = getEpisodeSlug(season, episode)
@@ -2052,9 +2095,9 @@ object SoraExtractor : SoraStream() {
             "$title Season $season"
         }
 
-        val doc = app.get("$primewireAPI/search/$query").document
+        val doc = app.get("$api/search/$query").document
 
-        val media = doc.select("div.RvnMfoxhgm").map {
+        val media = doc.select("div.$mediaSelector").map {
             Triple(
                 it.attr("data-filmName"), it.attr("data-year"), it.select("a").attr("href")
             )
@@ -2079,21 +2122,23 @@ object SoraExtractor : SoraStream() {
         } else {
             app.get(
                 fixUrl(
-                    media.third, primewireAPI
+                    media.third,
+                    api
                 )
-            ).document.selectFirst("div#vvqUtffkId a:contains(Episode ${slug.second})")
+            ).document.selectFirst("div#$episodeSelector a:contains(Episode ${slug.second})")
                 ?.attr("href")
         } ?: return
 
-        val res = app.get(fixUrl(iframe, primewireAPI), verify = false)
+        val res = app.get(fixUrl(iframe, api), verify = false)
         val serverUrl = "var url = '(/user/servers/.*?\\?ep=.*?)';".toRegex()
             .find(res.text)?.groupValues?.get(1) ?: return
-        val cookies = res.okhttpResponse.headers.getPrimewireCookies()
+        val cookies = res.cookies
         val url = res.document.select("meta[property=og:url]").attr("content")
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)
         val serverRes = app.get(
-            "$primewireAPI$serverUrl", cookies = cookies, referer = url, headers = headers
+            "$api$serverUrl",
+            cookies = cookies, referer = url, headers = headers
         )
         val unpack = getAndUnpack(serverRes.text)
         val key = unpack.substringAfter("(key=").substringBefore(")")
@@ -2101,7 +2146,7 @@ object SoraExtractor : SoraStream() {
         serverRes.document.select("ul li").amap { el ->
             val server = el.attr("data-value")
             val encryptedData = app.get(
-                "$url?server=$server&_=${unixTimeMS}",
+                "$url?server=$server&_=$unixTimeMS",
                 cookies = cookies,
                 referer = url,
                 headers = headers
@@ -2111,10 +2156,10 @@ object SoraExtractor : SoraStream() {
                 qualities.filter { it <= video.max.toInt() }.forEach {
                     callback(
                         ExtractorLink(
-                            "Primewire",
-                            "Primewire",
+                            name,
+                            name,
                             video.src.split("360", limit = 3).joinToString(it.toString()),
-                            "$primewireAPI/",
+                            "$api/",
                             it,
                         )
                     )

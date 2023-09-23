@@ -43,6 +43,7 @@ import com.hexated.SoraExtractor.invokeNetflix
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokePrimewire
+import com.hexated.SoraExtractor.invokePutactor
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVegamovies
@@ -124,6 +125,7 @@ open class SoraStream : TmdbProvider() {
         const val vidsrctoAPI = "https://vidsrc.to"
         const val dramadayAPI = "https://dramaday.me"
         const val animetoshoAPI = "https://animetosho.org"
+        const val putactorAPI = "https://putlocker.actor"
         const val susflixAPI = "https://susflix.tv"
         const val jump1API = "https://ca.jump1.net"
         const val vegaMoviesAPI = "https://vegamovies.im"
@@ -152,7 +154,7 @@ open class SoraStream : TmdbProvider() {
             }
         }
 
-        fun base64DecodeAPI(api: String): String {
+        private fun base64DecodeAPI(api: String): String {
             return api.chunked(4).map { base64Decode(it) }.reversed().joinToString("")
         }
 
@@ -466,7 +468,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeLing(
+                if (!res.isAnime) invokeLing(
                     res.title,
                     res.airedYear ?: res.year,
                     res.season,
@@ -486,7 +488,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeFwatayako(res.imdbId, res.season, res.episode, callback)
+                if (!res.isAnime) invokeFwatayako(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeGMovies(
@@ -516,7 +518,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeTvMovies(res.title, res.season, res.episode, callback)
+                if (!res.isAnime) invokeTvMovies(res.title, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeMoviezAdd(
@@ -541,23 +543,22 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeRStream(res.id, res.season, res.episode, callback)
+                if (!res.isAnime) invokeRStream(res.id, res.season, res.episode, callback)
             },
             {
-                invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
+                if (!res.isAnime) invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokeSmashyStream(
+                if (!res.isAnime) invokeSmashyStream(
                     res.imdbId,
                     res.season,
                     res.episode,
-                    res.isAnime,
                     subtitleCallback,
                     callback
                 )
             },
             {
-                invokeWatchsomuch(
+                if (!res.isAnime) invokeWatchsomuch(
                     res.imdbId,
                     res.season,
                     res.episode,
@@ -583,17 +584,11 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokePrimewire(res.title, res.year, res.season, res.episode, callback)
+                if (!res.isAnime) invokePrimewire(res.title, res.year, res.season, res.episode, callback)
             },
-//            {
-//                if (!res.isAnime) invokeGdbotMovies(
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    callback
-//                )
-//            },
+            {
+                if (!res.isAnime) invokePutactor(res.title, res.year, res.season, res.episode, callback)
+            },
             {
                 if (!res.isAnime) invokeShinobiMovies(
                     shinobiMovieAPI,

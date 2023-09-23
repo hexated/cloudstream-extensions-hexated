@@ -31,7 +31,7 @@ data class AniSearch(
     @JsonProperty("data") var data: AniData? = AniData()
 )
 
-data class PrimewireSources(
+data class GpressSources(
     @JsonProperty("src") val src: String,
     @JsonProperty("file") val file: String? = null,
     @JsonProperty("label") val label: Int? = null,

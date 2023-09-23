@@ -3,7 +3,6 @@ package com.hexated
 import android.util.Base64
 import com.hexated.DumpUtils.queryApi
 import com.hexated.SoraStream.Companion.anilistAPI
-import com.hexated.SoraStream.Companion.base64DecodeAPI
 import com.hexated.SoraStream.Companion.crunchyrollAPI
 import com.hexated.SoraStream.Companion.filmxyAPI
 import com.hexated.SoraStream.Companion.gdbot
@@ -26,7 +25,6 @@ import com.lagradost.nicehttp.RequestBodyTypes
 import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
-import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -1200,17 +1198,6 @@ fun String.decodePrimewireXor(key: String): String {
         }
     }
     return sb.toString()
-}
-
-fun Headers.getPrimewireCookies(cookieKey: String = "set-cookie"): Map<String, String> {
-    val cookieList =
-        this.filter { it.first.equals(cookieKey, ignoreCase = true) }.mapNotNull {
-            it.second.split(";").firstOrNull()
-        }
-    return cookieList.associate {
-        val split = it.split("=", limit = 2)
-        (split.getOrNull(0)?.trim() ?: "") to (split.getOrNull(1)?.trim() ?: "")
-    }.filter { it.key.isNotBlank() && it.value.isNotBlank() }
 }
 
 fun String?.createSlug(): String? {

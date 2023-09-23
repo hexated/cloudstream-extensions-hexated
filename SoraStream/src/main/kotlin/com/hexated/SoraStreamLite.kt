@@ -28,6 +28,7 @@ import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetflix
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePrimewire
+import com.hexated.SoraExtractor.invokePutactor
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
@@ -65,7 +66,7 @@ class SoraStreamLite : SoraStream() {
 //                )
 //            },
             {
-                invokeWatchsomuch(
+                if (!res.isAnime) invokeWatchsomuch(
                     res.imdbId,
                     res.season,
                     res.episode,
@@ -129,16 +130,6 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-//            {
-//                invokeUniqueStream(
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
             {
                 if (!res.isAnime) invokeFilmxy(
                     res.imdbId,
@@ -158,25 +149,14 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeSmashyStream(
+                if (!res.isAnime) invokeSmashyStream(
                     res.imdbId,
                     res.season,
                     res.episode,
-                    res.isAnime,
                     subtitleCallback,
                     callback
                 )
             },
-//            {
-//                invokeXmovies(
-//                    res.title,
-//                    res.year,
-//                    res.season,
-//                    res.episode,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
             {
                 if (!res.isAnime) invokeVidsrcto(
                     res.imdbId,
@@ -198,7 +178,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeLing(
+                if (!res.isAnime) invokeLing(
                     res.title,
                     res.airedYear ?: res.year,
                     res.season,
@@ -221,13 +201,16 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeRStream(res.id, res.season, res.episode, callback)
+                if (!res.isAnime) invokeRStream(res.id, res.season, res.episode, callback)
             },
             {
-                invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
+                if (!res.isAnime) invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokePrimewire(res.title, res.year, res.season, res.episode, callback)
+                if (!res.isAnime) invokePrimewire(res.title, res.year, res.season, res.episode, callback)
+            },
+            {
+                if (!res.isAnime) invokePutactor(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 invokeWatchOnline(
