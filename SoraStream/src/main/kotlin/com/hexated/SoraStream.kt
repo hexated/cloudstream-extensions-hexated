@@ -171,7 +171,7 @@ open class SoraStream : TmdbProvider() {
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2739" to "Disney+",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=453" to "Hulu",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=2552" to "Apple TV+",
-        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=49" to "HBO",
+        "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=49|3186" to "HBO",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=4330" to "Paramount+",
         "$tmdbAPI/discover/tv?api_key=$apiKey&with_networks=3353" to "Peacock",
         "$tmdbAPI/movie/top_rated?api_key=$apiKey&region=US" to "Top Rated Movies",
