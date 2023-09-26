@@ -6,14 +6,15 @@ import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.Voe
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
+import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.Pixeldrain
+import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.*
 import java.math.BigInteger
-import java.net.URI
 import java.security.MessageDigest
 
 open class Playm4u : ExtractorApi() {
@@ -234,6 +235,63 @@ open class VCloud : ExtractorApi() {
 
 }
 
+class NineTv {
+
+    companion object {
+        private const val key = "B#8G4o2\$WWFz"
+        suspend fun getUrl(
+            url: String,
+            referer: String?,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
+        ) {
+            val mainUrl = getBaseUrl(url)
+            val master = Regex("MasterJS\\s*=\\s*'([^']+)").find(
+                app.get(
+                    url,
+                    referer = referer
+                ).text
+            )?.groupValues?.get(1)
+            val decrypt = AesHelper.cryptoAESHandler(master ?: return, key.toByteArray(), false)
+                ?.replace("\\", "") ?: throw ErrorLoadingException("failed to decrypt")
+
+            val name = url.getHost()
+            val source = Regex(""""?file"?:\s*"([^"]+)""").find(decrypt)?.groupValues?.get(1)
+            val tracks = Regex("""tracks:\s*\[(.+)]""").find(decrypt)?.groupValues?.get(1)
+
+            M3u8Helper.generateM3u8(
+                name,
+                source ?: return,
+                "$mainUrl/",
+                headers = mapOf(
+                    "Accept" to "*/*",
+                    "Connection" to "keep-alive",
+                    "Sec-Fetch-Dest" to "empty",
+                    "Sec-Fetch-Mode" to "cors",
+                    "Sec-Fetch-Site" to "cross-site",
+                    "Origin" to mainUrl,
+                )
+            ).forEach(callback)
+
+            AppUtils.tryParseJson<List<Tracks>>("[$tracks]")
+                ?.filter { it.kind == "captions" }?.map { track ->
+                    subtitleCallback.invoke(
+                        SubtitleFile(
+                            track.label ?: "",
+                            track.file ?: return@map null
+                        )
+                    )
+                }
+        }
+    }
+
+    data class Tracks(
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+        @JsonProperty("kind") val kind: String? = null,
+    )
+}
+
 class Hubcloud : VCloud() {
     override val name = "Hubcloud"
     override val mainUrl = "https://hubcloud.in"
@@ -272,3 +330,4 @@ class Yipsu : Voe() {
     override val name = "Yipsu"
     override var mainUrl = "https://yip.su"
 }
+

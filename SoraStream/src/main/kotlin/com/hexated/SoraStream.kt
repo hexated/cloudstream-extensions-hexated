@@ -118,7 +118,7 @@ open class SoraStream : TmdbProvider() {
         const val emoviesAPI = "https://emovies.si"
         const val pobmoviesAPI = "https://pobmovies.cam"
         const val multimoviesAPI = "https://multi-movies.xyz"
-        const val netmoviesAPI = "https://web.netmovies.to"
+        const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
         const val doomoviesAPI = "https://doomovies.net"
         const val primewireAPI = "https://real-primewire.club"
@@ -626,7 +626,7 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeNowTv(res.id, res.season, res.episode, callback)
             },
             {
-                if (res.season == null) invokeRidomovies(res.title, res.year, callback)
+                if (!res.isAnime && res.season == null) invokeRidomovies(res.title, res.year, callback)
             },
             {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)

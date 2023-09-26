@@ -21,6 +21,8 @@ open class Gomov : MainAPI() {
         TvType.AsianDrama
     )
 
+    val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream")
+
     override val mainPage = mainPageOf(
         "page/%d/?s&search=advanced&post_type=movie" to "Movies",
         "category/western-series/page/%d/" to "Western Series",
@@ -154,19 +156,31 @@ open class Gomov : MainAPI() {
         val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")
 
         if(id.isNullOrEmpty()) {
-            document.select("ul.muvipro-player-tabs li a").apmap {
-                val iframe = app.get(fixUrl(it.attr("href"))).document.selectFirst("div.gmr-embed-responsive iframe")
-                    ?.attr("src")
-                loadExtractor(httpsify(iframe ?: return@apmap ), "$directUrl/", subtitleCallback, callback)
+            document.select("ul.muvipro-player-tabs li a").apmap { ele ->
+                val iframe = app.get(fixUrl(ele.attr("href"))).document.selectFirst("div.gmr-embed-responsive iframe")
+                    ?.attr("src")?.let { httpsify(it) } ?: return@apmap
+
+                when {
+                    sources.any { iframe.startsWith(it) } -> NineTv.getUrl(iframe, "$directUrl/", subtitleCallback, callback)
+                    else -> {
+                        loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
+                    }
+                }
             }
         } else {
-            document.select("div.tab-content-ajax").apmap {
+            document.select("div.tab-content-ajax").apmap { ele ->
                 val server = app.post(
                     "$directUrl/wp-admin/admin-ajax.php",
-                    data = mapOf("action" to "muvipro_player_content", "tab" to it.attr("id"), "post_id" to "$id")
-                ).document.select("iframe").attr("src")
+                    data = mapOf("action" to "muvipro_player_content", "tab" to ele.attr("id"), "post_id" to "$id")
+                ).document.select("iframe").attr("src").let { httpsify(it) }
 
-                loadExtractor(httpsify(server), "$directUrl/", subtitleCallback, callback)
+                when {
+                    sources.any { server.startsWith(it) } -> NineTv.getUrl(server, "$directUrl/", subtitleCallback, callback)
+                    else -> {
+                        loadExtractor(server, "$directUrl/", subtitleCallback, callback)
+                    }
+                }
+
             }
         }
 
@@ -174,17 +188,21 @@ open class Gomov : MainAPI() {
 
     }
 
-    private fun String?.fixImageQuality(): String? {
-        if(this == null) return null
-        val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues
-        if(regex?.isEmpty() == true) return this
-        return this.replace(regex?.get(0) ?: return null, "")
-    }
+}
 
-    private fun getBaseUrl(url: String): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
-        }
-    }
+fun String?.fixImageQuality(): String? {
+    if(this == null) return null
+    val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues
+    if(regex?.isEmpty() == true) return this
+    return this.replace(regex?.get(0) ?: return null, "")
+}
 
+fun getBaseUrl(url: String): String {
+    return URI(url).let {
+        "${it.scheme}://${it.host}"
+    }
+}
+
+fun String.getHost(): String {
+    return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
 }

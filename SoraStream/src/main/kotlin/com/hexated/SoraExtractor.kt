@@ -304,8 +304,12 @@ object SoraExtractor : SoraStream() {
                     else -> it.embed_url
                 }
             } ?: return@apmap
-            if (!source.contains("youtube")) {
-                loadCustomExtractor(name, source, "$referer/", subtitleCallback, callback)
+            val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream")
+            when {
+                sources.any { source.startsWith(it) } -> NineTv.getUrl(source, "$referer/", subtitleCallback, callback)
+                !source.contains("youtube") -> {
+                    loadCustomExtractor(name, source, "$referer/", subtitleCallback, callback)
+                }
             }
         }
     }
@@ -2289,9 +2293,9 @@ object SoraExtractor : SoraStream() {
             "$nineTvAPI/tv/$tmdbId-$season-$episode"
         }
 
-        val iframe = app.get(url, referer = "https://pressplay.top/").document.selectFirst("iframe")
-            ?.attr("src") ?: return
-        loadExtractor(iframe, "$nineTvAPI/", subtitleCallback, callback)
+        val iframe = app.get(url, referer = "https://pressplay.top/").document.selectFirst("iframe")?.attr("src")
+
+        NineTv.getUrl(iframe ?: return, "$nineTvAPI/", subtitleCallback, callback)
 
     }
 

@@ -231,7 +231,7 @@ class SoraStreamLite : SoraStream() {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)
             },
             {
-                if (res.season == null) invokeRidomovies(
+                if (!res.isAnime && res.season == null) invokeRidomovies(
                     res.title,
                     res.year,
                     callback

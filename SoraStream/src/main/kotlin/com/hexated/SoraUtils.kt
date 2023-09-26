@@ -1079,8 +1079,9 @@ suspend fun loadCustomExtractor(
                 name ?: link.name,
                 link.url,
                 link.referer,
-                when (link.type) {
-                    ExtractorLinkType.M3U8 -> link.quality
+                when {
+                    link.type == ExtractorLinkType.M3U8 -> link.quality
+                    link.name == "VidSrc" -> Qualities.P1080.value
                     else -> quality ?: link.quality
                 },
                 link.type,
@@ -1319,6 +1320,10 @@ fun getBaseUrl(url: String): String {
     return URI(url).let {
         "${it.scheme}://${it.host}"
     }
+}
+
+fun String.getHost(): String {
+    return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
 }
 
 fun isUpcoming(dateString: String?): Boolean {
