@@ -110,7 +110,7 @@ object SoraExtractor : SoraStream() {
             "$vidSrcAPI/embed/$id/${season}-${episode}"
         }
 
-        loadCustomExtractor(null, url, null, subtitleCallback, callback, Qualities.P1080.value)
+        loadCustomExtractor(null, url, null, subtitleCallback, callback)
     }
 
     suspend fun invokeDbgo(

@@ -1080,8 +1080,8 @@ suspend fun loadCustomExtractor(
                 link.url,
                 link.referer,
                 when {
-                    link.type == ExtractorLinkType.M3U8 -> link.quality
                     link.name == "VidSrc" -> Qualities.P1080.value
+                    link.type == ExtractorLinkType.M3U8 -> link.quality
                     else -> quality ?: link.quality
                 },
                 link.type,
