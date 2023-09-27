@@ -21,7 +21,7 @@ open class Gomov : MainAPI() {
         TvType.AsianDrama
     )
 
-    val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream")
+    private val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream")
 
     override val mainPage = mainPageOf(
         "page/%d/?s&search=advanced&post_type=movie" to "Movies",
