@@ -44,46 +44,24 @@ class NontonAnimeIDProvider : MainAPI() {
         }
     }
 
+    override val mainPage = mainPageOf(
+        "" to "Latest Update",
+        "ongoing-list/" to " Ongoing List",
+        "popular-series/" to "Popular Series",
+    )
+
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
-        val document = app.get(mainUrl).document
-
-        val homePageList = ArrayList<HomePageList>()
-
-        document.select("section#postbaru").forEach { block ->
-            val header = block.selectFirst("h2")!!.text().trim()
-            val animes = block.select("article.animeseries").mapNotNull {
-                it.toSearchResult()
-            }
-            if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
+        val document = app.get("$mainUrl/${request.data}").document
+        val home = document.select(".animeseries").mapNotNull {
+            it.toSearchResult()
         }
-
-        document.select("aside#sidebar_right > div.side").forEach { block ->
-            val header = block.selectFirst("h3")!!.ownText().trim()
-            val animes = block.select("div.bor").mapNotNull {
-                it.toSearchResultPopular()
-            }
-            if (animes.isNotEmpty()) homePageList.add(HomePageList(header, animes))
-        }
-
-        return HomePageResponse(homePageList)
+        return newHomePageResponse(request.name, home, hasNext = false)
     }
 
-    private fun Element.toSearchResult(): AnimeSearchResponse? {
+    private fun Element.toSearchResult(): AnimeSearchResponse {
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val title = this.selectFirst("h3.title")?.text() ?: return null
-        val posterUrl = fixUrl(this.select("img").attr("src"))
-
-        return newAnimeSearchResponse(title, href, TvType.Anime) {
-            this.posterUrl = posterUrl
-            addDubStatus(dubExist = false, subExist = true)
-        }
-
-    }
-
-    private fun Element.toSearchResultPopular(): AnimeSearchResponse? {
-        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val title = this.selectFirst("h4")?.text()?.trim() ?: return null
-        val posterUrl = fixUrl(this.select("img").attr("src"))
+        val title = this.selectFirst(".title")?.text() ?: ""
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
@@ -207,7 +185,6 @@ class NontonAnimeIDProvider : MainAPI() {
     ): Boolean {
 
         val document = app.get(data).document
-        val sources = ArrayList<String>()
 
         document.select(".container1 > ul > li:not(.boxtab)").apmap {
             val dataPost = it.attr("data-post")
@@ -220,17 +197,14 @@ class NontonAnimeIDProvider : MainAPI() {
                     "action" to "player_ajax",
                     "post" to dataPost,
                     "nume" to dataNume,
-                    "type" to dataType
+                    "type" to dataType,
+                    "nonce" to "e4dd8e45c2"
                 ),
                 referer = data,
                 headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-            ).document.select("iframe").attr("src")
+            ).document.selectFirst("iframe")?.attr("src")
 
-            sources.add(fixUrl(iframe))
-        }
-
-        sources.apmap {
-            loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
+            loadExtractor(iframe ?: return@apmap , "$mainUrl/", subtitleCallback, callback)
         }
 
         return true
@@ -252,6 +226,18 @@ class NontonAnimeIDProvider : MainAPI() {
 
 class KotakAnimeid2 : Hxfile() {
     override val name = "KotakAnimeid2"
+    override val mainUrl = "https://embed2.kotakanimeid.com"
+    override val requiresReferer = true
+}
+
+class KotakAnimeidCom : Hxfile() {
+    override val name = "KotakAnimeid"
+    override val mainUrl = "https://nontonanimeid.com"
+    override val requiresReferer = true
+}
+
+class EmbedKotakAnimeid : Hxfile() {
+    override val name = "EmbedKotakAnimeid"
     override val mainUrl = "https://embed2.kotakanimeid.com"
     override val requiresReferer = true
 }

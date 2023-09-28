@@ -27,7 +27,7 @@ import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetflix
 import com.hexated.SoraExtractor.invokeNetmovies
-import com.hexated.SoraExtractor.invokePrimewire
+import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokePutactor
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
@@ -207,7 +207,7 @@ class SoraStreamLite : SoraStream() {
                 if (!res.isAnime) invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                if (!res.isAnime) invokePrimewire(res.title, res.year, res.season, res.episode, callback)
+                if (!res.isAnime) invokeGomovies(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokePutactor(res.title, res.year, res.season, res.episode, callback)
@@ -215,7 +215,6 @@ class SoraStreamLite : SoraStream() {
             {
                 invokeWatchOnline(
                     res.imdbId,
-                    res.id,
                     res.title,
                     res.airedYear ?: res.year,
                     res.season,

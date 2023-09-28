@@ -1653,15 +1653,12 @@ object SoraExtractor : SoraStream() {
             "$rStreamAPI/e/?tmdb=$id&s=$season&e=$episode"
         }
 
-        val res = app.get(url).text
+        val res = app.get(url, referer = "https://watcha.movie/").text
         val link = Regex("\"file\":\"(http.*?)\"").find(res)?.groupValues?.getOrNull(1) ?: return
-
-        delay(1000)
-        if (!app.get(link, referer = rStreamAPI).isSuccessful) return
 
         callback.invoke(
             ExtractorLink(
-                "RStream", "RStream", link, rStreamAPI, Qualities.P720.value, link.contains(".m3u8")
+                "RStream", "RStream", link, rStreamAPI, Qualities.P720.value, INFER_TYPE
             )
         )
     }
@@ -2057,7 +2054,7 @@ object SoraExtractor : SoraStream() {
         )
     }
 
-    suspend fun invokePrimewire(
+    suspend fun invokeGomovies(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -2070,10 +2067,10 @@ object SoraExtractor : SoraStream() {
             season,
             episode,
             callback,
-            primewireAPI,
-            "Primewire",
-            "RvnMfoxhgm",
-            "vvqUtffkId"
+            gomoviesAPI,
+            "Gomovies",
+            "_smQamBQsETb",
+            "_sBWcqbTBMaT"
         )
     }
 
@@ -2175,7 +2172,6 @@ object SoraExtractor : SoraStream() {
 
     suspend fun invokeWatchOnline(
         imdbId: String? = null,
-        tmdbId: Int? = null,
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -2186,98 +2182,59 @@ object SoraExtractor : SoraStream() {
         val id = imdbId?.removePrefix("tt")
         val slug = title.createSlug()
         val url = if (season == null) {
-            "$watchOnlineAPI/movies/view/$id-$slug-$year"
+            "$watchOnlineAPI/movies/play/$id-$slug-$year"
         } else {
-            "$watchOnlineAPI/shows/view/$id-$slug-$year"
+            "$watchOnlineAPI/shows/play/$id-$slug-$year"
         }
 
         var res = app.get(url)
         if (res.code == 403) return
-        if (!res.isSuccessful) res = searchWatchOnline(title, season, imdbId, tmdbId) ?: return
+        if (!res.isSuccessful) res = searchWatchOnline(title, season, year) ?: return
         val doc = res.document
-        val episodeId = if (season == null) {
-            doc.selectFirst("div.movie__buttons-items a")?.attr("data-watch-list-media-id")
-        } else {
-            doc.select("ul[data-season-episodes=$season] li").find {
-                it.select("div.episodes__number").text().equals("Episode $episode", true)
-            }?.attr("data-id-episode")
-        } ?: return
-        argamap({
-            invokeMonster(res.url.substringAfterLast("/"), episodeId, season, callback)
-        }, {
-            val videoUrl = if (season == null) {
-                "$watchOnlineAPI/api/v1/security/movie-access?id_movie=$episodeId"
-            } else {
-                "$watchOnlineAPI/api/v1/security/episode-access?id=$episodeId"
-            }
-
-            val json = app.get(videoUrl, referer = url).parsedSafe<WatchOnlineResponse>()
-
-            json?.streams?.mapKeys { source ->
-                callback.invoke(
-                    ExtractorLink(
-                        "WatchOnline",
-                        "WatchOnline",
-                        source.value,
-                        "$watchOnlineAPI/",
-                        getQualityFromName(source.key),
-                        true
-                    )
-                )
-            }
-            val subtitles = json?.subtitles as ArrayList<HashMap<String, String>>
-            subtitles.map { sub ->
-                subtitleCallback.invoke(
-                    SubtitleFile(
-                        sub["language"] ?: return@map,
-                        fixUrl(sub["url"] ?: return@map, watchOnlineAPI)
-                    )
-                )
-            }
-        })
-
-    }
-
-    private suspend fun invokeMonster(
-        urlSlug: String? = null,
-        episodeId: String? = null,
-        season: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val monsterMainUrl = "https://lookmovie.foundation"
-        val viewSlug = if (season == null) {
-            "movies/view/$urlSlug"
-        } else {
-            "shows/view/$urlSlug"
-        }
-        val streamUrl =
-            app.get("$monsterMainUrl/$viewSlug").document.select("a.round-button:first-child")
-                .attr("href")
-        val res = app.get(fixUrl(streamUrl, monsterMainUrl)).document
-        val script = res.selectFirst("script:containsData(hash:)")?.data()
+        val script = doc.selectFirst("script:containsData(hash:)")?.data()
         val hash = Regex("hash:\\s*['\"](\\S+)['\"]").find(script ?: return)?.groupValues?.get(1)
         val expires = Regex("expires:\\s*(\\d+)").find(script)?.groupValues?.get(1)
+        val episodeId = (if(season == null) {
+            """id_movie:\s*(\d+)"""
+        } else {
+            """episode:\s*['"]$episode['"],[\n\s]+id_episode:\s*(\d+),[\n\s]+season:\s*['"]$season['"]"""
+        }).let { it.toRegex().find(script)?.groupValues?.get(1) }
 
         val videoUrl = if (season == null) {
-            "$monsterMainUrl/api/v1/security/movie-access?id_movie=$episodeId&hash=$hash&expires=$expires"
+            "$watchOnlineAPI/api/v1/security/movie-access?id_movie=$episodeId&hash=$hash&expires=$expires"
         } else {
-            "$monsterMainUrl/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
+            "$watchOnlineAPI/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
         }
 
-        app.get(
-            videoUrl, referer = streamUrl, headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-        ).parsedSafe<WatchOnlineResponse>()?.streams?.mapKeys { source ->
+        val sources = app.get(
+            videoUrl,
+            referer = url,
+            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsedSafe<WatchOnlineResponse>()
+
+        sources?.streams?.mapKeys { source ->
             callback.invoke(
                 ExtractorLink(
                     "WatchOnline",
                     "WatchOnline",
                     source.value,
-                    "$monsterMainUrl/",
+                    "$watchOnlineAPI/",
                     getQualityFromName(source.key),
                     true
                 )
             )
         }
+
+        sources?.subtitles?.map { sub ->
+            val file = sub.file.toString()
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.language ?: return@map,
+                    if(file.startsWith("[")) return@map else fixUrl(file, watchOnlineAPI),
+                )
+            )
+        }
+
     }
 
     suspend fun invokeNinetv(

@@ -25,6 +25,11 @@ class FilelionsTo : Filesim() {
     override var mainUrl = "https://filelions.to"
 }
 
+class FilelionsOn : Filesim() {
+    override val name = "Filelions"
+    override var mainUrl = "https://filelions.online"
+}
+
 class Lylxan : Filesim() {
     override val name = "Lylxan"
     override var mainUrl = "https://lylxan.com"

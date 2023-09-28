@@ -282,3 +282,8 @@ class DesuBeta : JWPlayer() {
     override val name = "DesuBeta"
     override val mainUrl = "https://desustream.me/beta/"
 }
+
+class Desudesuhd : JWPlayer() {
+    override val name = "Desudesuhd"
+    override val mainUrl = "https://desustream.me/desudesuhd/"
+}

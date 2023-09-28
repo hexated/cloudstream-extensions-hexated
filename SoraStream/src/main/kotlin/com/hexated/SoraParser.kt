@@ -195,19 +195,25 @@ data class JikanResponse(
     @JsonProperty("data") val data: JikanData? = null,
 )
 
-data class WatchOnlineItems(
+data class WatchOnlineResults(
     @JsonProperty("slug") val slug: String? = null,
-    @JsonProperty("tmdb_id") val tmdb_id: Int? = null,
-    @JsonProperty("imdb_id") val imdb_id: String? = null,
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("year") val year: String? = null,
 )
 
+
 data class WatchOnlineSearch(
-    @JsonProperty("items") val items: ArrayList<WatchOnlineItems>? = arrayListOf(),
+    @JsonProperty("result") val result: ArrayList<WatchOnlineResults>? = arrayListOf(),
+)
+
+data class WatchOnlineSubtitles(
+    @JsonProperty("language") val language: String? = null,
+    @JsonProperty("file") val file: Any? = null,
 )
 
 data class WatchOnlineResponse(
     @JsonProperty("streams") val streams: HashMap<String, String>? = null,
-    @JsonProperty("subtitles") val subtitles: Any? = null,
+    @JsonProperty("subtitles") val subtitles: ArrayList<WatchOnlineSubtitles>? = arrayListOf(),
 )
 
 data class CryMoviesProxyHeaders(

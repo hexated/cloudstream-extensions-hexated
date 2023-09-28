@@ -21,5 +21,6 @@ class GomovPlugin: Plugin() {
         registerExtractorAPI(Embedwish())
         registerExtractorAPI(Doods())
         registerExtractorAPI(Lylxan())
+        registerExtractorAPI(FilelionsOn())
     }
 }

@@ -12,5 +12,6 @@ class OtakudesuProviderPlugin: Plugin() {
         registerMainAPI(OtakudesuProvider())
         registerExtractorAPI(Moedesu())
         registerExtractorAPI(DesuBeta())
+        registerExtractorAPI(Desudesuhd())
     }
 }

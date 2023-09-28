@@ -11,5 +11,7 @@ class NontonAnimeIDProviderPlugin: Plugin() {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(NontonAnimeIDProvider())
         registerExtractorAPI(KotakAnimeid2())
+        registerExtractorAPI(KotakAnimeidCom())
+        registerExtractorAPI(EmbedKotakAnimeid())
     }
 }

@@ -42,7 +42,7 @@ import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetflix
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
-import com.hexated.SoraExtractor.invokePrimewire
+import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokePutactor
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
@@ -109,7 +109,7 @@ open class SoraStream : TmdbProvider() {
         const val flixonAPI = "https://flixon.lol"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        const val watchOnlineAPI = "https://watchonline.ag"
+        const val watchOnlineAPI = "https://lookmovie.foundation"
         const val nineTvAPI = "https://moviesapi.club"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
@@ -121,7 +121,6 @@ open class SoraStream : TmdbProvider() {
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
         const val doomoviesAPI = "https://doomovies.net"
-        const val primewireAPI = "https://real-primewire.club"
         const val vidsrctoAPI = "https://vidsrc.to"
         const val dramadayAPI = "https://dramaday.me"
         const val animetoshoAPI = "https://animetosho.org"
@@ -132,6 +131,7 @@ open class SoraStream : TmdbProvider() {
         const val netflixAPI = "https://m.netflixmirror.com"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
         const val watchflxAPI = "https://watchflx.tv"
+        const val gomoviesAPI = "https://gomovies-online.cam"
         const val dotmoviesAPI = "https://dotmovies.today"
 
         // INDEX SITE
@@ -585,7 +585,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokePrimewire(res.title, res.year, res.season, res.episode, callback)
+                if (!res.isAnime) invokeGomovies(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokePutactor(res.title, res.year, res.season, res.episode, callback)
@@ -604,7 +604,6 @@ open class SoraStream : TmdbProvider() {
             {
                 invokeWatchOnline(
                     res.imdbId,
-                    res.id,
                     res.title,
                     res.airedYear ?: res.year,
                     res.season,

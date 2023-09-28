@@ -841,26 +841,25 @@ fun Document.findTvMoviesIframe(): String? {
 suspend fun searchWatchOnline(
     title: String? = null,
     season: Int? = null,
-    imdbId: String? = null,
-    tmdbId: Int? = null,
+    year: Int? = null,
 ): NiceResponse? {
     val wTitle = title?.dropLast(1) // weird but this will make search working
     val mediaId = app.get(
         if (season == null) {
-            "${watchOnlineAPI}/api/v1/movies?filters[q]=$wTitle"
+            "${watchOnlineAPI}/api/v1/do-search/?q=$wTitle"
         } else {
-            "${watchOnlineAPI}/api/v1/shows?filters[q]=$wTitle"
+            "${watchOnlineAPI}/api/v1/do-search/?q=$wTitle"
         }
-    ).parsedSafe<WatchOnlineSearch>()?.items?.find {
-        it.imdb_id == imdbId || it.tmdb_id == tmdbId || it.imdb_id == imdbId?.removePrefix("tt")
+    ).parsedSafe<WatchOnlineSearch>()?.result?.find {
+        it.title.equals(title, true) && it.year.equals("$year")
     }?.slug
 
     return app.get(
         fixUrl(
             mediaId ?: return null, if (season == null) {
-                "${watchOnlineAPI}/movies/view"
+                "${watchOnlineAPI}/movies/play"
             } else {
-                "${watchOnlineAPI}/shows/view"
+                "${watchOnlineAPI}/shows/play"
             }
         )
     )
