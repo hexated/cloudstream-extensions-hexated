@@ -1,7 +1,6 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.APIHolder.unixTime
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -2546,57 +2545,6 @@ object SoraExtractor : SoraStream() {
                 true
             )
         )
-    }
-
-    suspend fun invokeNetflix(
-        imdbId: String? = null,
-        title: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val headers = mapOf("X-Requested-With" to "XMLHttpRequest", "Cookie" to "hd=on")
-        val netflixId = imdbToNetflixId(imdbId, season) ?: run {
-            app.get("$netflixAPI/search.php?s=$title&t=${unixTime}", headers = headers)
-                .parsedSafe<NetflixSearch>()?.searchResult?.find { it.t.equals(title) }?.id
-        }
-        val (t, id) = app.get(
-            "$netflixAPI/post.php?id=${netflixId ?: return}&t=${unixTime}",
-            headers = headers
-        ).parsedSafe<NetflixResponse>().let { media ->
-            if (season == null) {
-                media?.title to netflixId
-            } else {
-                val seasonId = media?.season?.find { it.s == "$season" }?.id
-                val episodeId =
-                    app.get(
-                        "$netflixAPI/episodes.php?s=${seasonId}&series=$netflixId&t=${unixTime}",
-                        headers = headers
-                    )
-                        .parsedSafe<NetflixResponse>()?.episodes?.find { it.ep == "E$episode" }?.id
-                media?.title to episodeId
-            }
-        }
-
-        app.get(
-            "$netflixAPI/playlist.php?id=${id ?: return}&t=${t ?: return}&tm=${unixTime}",
-            headers = headers
-        ).text.let {
-            tryParseJson<ArrayList<NetflixResponse>>(it)
-        }?.firstOrNull()?.sources?.map {
-            callback.invoke(
-                ExtractorLink(
-                    "Netflix",
-                    "Netflix",
-                    fixUrl(it.file ?: return@map, netflixAPI),
-                    "$netflixAPI/",
-                    getQualityFromName(it.file.substringAfter("q=")),
-                    INFER_TYPE,
-                    headers = mapOf("Cookie" to "hd=on")
-                )
-            )
-        }
-
     }
 
 }

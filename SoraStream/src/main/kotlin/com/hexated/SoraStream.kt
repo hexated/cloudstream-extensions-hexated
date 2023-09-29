@@ -39,7 +39,6 @@ import com.hexated.SoraExtractor.invokeHdmovies4u
 import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
-import com.hexated.SoraExtractor.invokeNetflix
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokeGomovies
@@ -80,7 +79,6 @@ open class SoraStream : TmdbProvider() {
         const val anilistAPI = "https://graphql.anilist.co"
         const val malsyncAPI = "https://api.malsync.moe"
         const val jikanAPI = "https://api.jikan.moe/v4"
-        const val watchhubApi = "https://watchhub.strem.io"
 
         private val apiKey =
             base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
@@ -128,7 +126,6 @@ open class SoraStream : TmdbProvider() {
         const val susflixAPI = "https://susflix.tv"
         const val jump1API = "https://ca.jump1.net"
         const val vegaMoviesAPI = "https://vegamovies.im"
-        const val netflixAPI = "https://m.netflixmirror.com"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
         const val watchflxAPI = "https://watchflx.tv"
         const val gomoviesAPI = "https://gomovies-online.cam"
@@ -712,15 +709,6 @@ open class SoraStream : TmdbProvider() {
                     res.tvdbId,
                     res.title,
                     res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeNetflix(
-                    res.imdbId,
-                    res.title,
                     res.season,
                     res.episode,
                     callback

@@ -25,7 +25,6 @@ import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
-import com.hexated.SoraExtractor.invokeNetflix
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokePutactor
@@ -290,15 +289,6 @@ class SoraStreamLite : SoraStream() {
             {
                 if(!res.isAnime) invoke2embed(
                     res.imdbId,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeNetflix(
-                    res.imdbId,
-                    res.title,
                     res.season,
                     res.episode,
                     callback
