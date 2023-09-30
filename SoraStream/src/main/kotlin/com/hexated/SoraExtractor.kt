@@ -303,7 +303,7 @@ object SoraExtractor : SoraStream() {
                     else -> it.embed_url
                 }
             } ?: return@apmap
-            val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream")
+            val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream", "https://w1.moviesapi.club")
             when {
                 sources.any { source.startsWith(it) } -> NineTv.getUrl(source, "$referer/", subtitleCallback, callback)
                 !source.contains("youtube") -> {

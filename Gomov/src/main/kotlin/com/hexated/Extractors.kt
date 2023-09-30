@@ -9,6 +9,9 @@ import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
+import org.jsoup.nodes.Document
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.Scriptable
 
 class Doods : DoodLaExtractor() {
     override var name = "Doods"
@@ -49,10 +52,8 @@ class DbGdriveplayer : Gdriveplayer() {
     override var mainUrl = "https://database.gdriveplayer.us"
 }
 
-class NineTv {
+object NineTv {
 
-    companion object {
-        private const val key = "B#8G4o2\$WWFz"
         suspend fun getUrl(
             url: String,
             referer: String?,
@@ -60,22 +61,20 @@ class NineTv {
             callback: (ExtractorLink) -> Unit
         ) {
             val mainUrl = getBaseUrl(url)
-            val master = Regex("MasterJS\\s*=\\s*'([^']+)").find(
-                app.get(
-                    url,
-                    referer = referer
-                ).text
-            )?.groupValues?.get(1)
+            val res = app.get(url, referer = referer)
+            val master = Regex("MasterJS\\s*=\\s*'([^']+)").find(res.text)?.groupValues?.get(1)
+            val key = res.document.getKeys() ?: throw ErrorLoadingException("can't generate key")
             val decrypt = AesHelper.cryptoAESHandler(master ?: return, key.toByteArray(), false)
-                ?.replace("\\", "") ?: throw ErrorLoadingException("failed to decrypt")
+                ?.replace("\\", "")
+                ?: throw ErrorLoadingException("failed to decrypt")
 
-            val name = url.getHost()
             val source = Regex(""""?file"?:\s*"([^"]+)""").find(decrypt)?.groupValues?.get(1)
             val tracks = Regex("""tracks:\s*\[(.+)]""").find(decrypt)?.groupValues?.get(1)
+            val name = source?.getHost()
 
             M3u8Helper.generateM3u8(
-                name,
-                source ?: return,
+                name ?: return,
+                source,
                 "$mainUrl/",
                 headers = mapOf(
                     "Accept" to "*/*",
@@ -97,6 +96,26 @@ class NineTv {
                     )
                 }
         }
+
+    private fun Document.getKeys(): String? {
+        val script = (this.selectFirst("script:containsData(eval\\()")?.data()
+            ?.replace("eval(", "var result=")?.removeSuffix(");") + ";").trimIndent()
+        val run = script.runJS("result")
+        return """,\s*'([^']+)""".toRegex().find(run)?.groupValues?.getOrNull(1)
+    }
+
+    fun String.runJS(variable: String): String {
+        val rhino = Context.enter()
+        rhino.optimizationLevel = -1
+        val scope: Scriptable = rhino.initSafeStandardObjects()
+        val result: String
+        try {
+            rhino.evaluateString(scope, this, "JavaScript", 1, null)
+            result = Context.toString(scope.get(variable, scope))
+        } finally {
+            Context.exit()
+        }
+        return result
     }
 
     data class Tracks(
