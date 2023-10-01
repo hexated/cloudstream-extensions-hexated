@@ -248,7 +248,7 @@ object NineTv {
         ) {
             val mainUrl = getBaseUrl(url)
             val res = app.get(url, referer = referer)
-            val master = Regex("MasterJS\\s*=\\s*'([^']+)").find(res.text)?.groupValues?.get(1)
+            val master = Regex("JScript\\s*=\\s*'([^']+)").find(res.text)?.groupValues?.get(1)
             val key = res.document.getKeys() ?: throw ErrorLoadingException("can't generate key")
             val decrypt = AesHelper.cryptoAESHandler(master ?: return, key.toByteArray(), false)
                 ?.replace("\\", "")
@@ -256,11 +256,11 @@ object NineTv {
 
             val source = Regex(""""?file"?:\s*"([^"]+)""").find(decrypt)?.groupValues?.get(1)
             val tracks = Regex("""tracks:\s*\[(.+)]""").find(decrypt)?.groupValues?.get(1)
-            val name = source?.getHost()
+            val name = url.getHost()
 
             M3u8Helper.generateM3u8(
-                name ?: return,
-                source,
+                name,
+                source ?: return,
                 "$mainUrl/",
                 headers = mapOf(
                     "Accept" to "*/*",

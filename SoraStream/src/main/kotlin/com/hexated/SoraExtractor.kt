@@ -2129,15 +2129,21 @@ object SoraExtractor : SoraStream() {
                 ?.attr("href")
         } ?: return
 
+        val users = if(season == null) {
+            media.third.substringAfterLast("/") to "0"
+        } else {
+            media.third.substringAfterLast("/") to iframe.substringAfterLast("/").substringBefore("-")
+        }
         val res = app.get(fixUrl(iframe, api), verify = false)
-        val serverUrl = "var url = '(/user/servers/.*?\\?ep=.*?)';".toRegex()
-            .find(res.text)?.groupValues?.get(1) ?: return
+        val serverUrl = res.document.selectFirst("script:containsData(pushState)")?.data()?.let {
+            """,\s*'([^']+)""".toRegex().find(it)?.groupValues?.get(1)
+        } ?: return
         val cookies = res.cookies
         val url = res.document.select("meta[property=og:url]").attr("content")
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)
         val serverRes = app.get(
-            "$api$serverUrl",
+            "$api/user/servers/${users.first}?ep=${users.second}",
             cookies = cookies, referer = url, headers = headers
         )
         val unpack = getAndUnpack(serverRes.text)
@@ -2146,7 +2152,7 @@ object SoraExtractor : SoraStream() {
         serverRes.document.select("ul li").amap { el ->
             val server = el.attr("data-value")
             val encryptedData = app.get(
-                "$url?server=$server&_=$unixTimeMS",
+                "${fixUrl(serverUrl, api)}?server=$server&_=$unixTimeMS",
                 cookies = cookies,
                 referer = url,
                 headers = headers
