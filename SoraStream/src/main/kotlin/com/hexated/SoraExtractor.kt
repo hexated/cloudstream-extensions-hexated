@@ -1,5 +1,6 @@
 package com.hexated
 
+import com.hexated.AESGCM.decrypt
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.utils.*
@@ -2171,6 +2172,49 @@ object SoraExtractor : SoraStream() {
                     )
                 }
             }
+        }
+
+    }
+
+    suspend fun invokeBlackvid(
+        tmdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val key = "c3124ecca65f4e72ef5cb39033cdfed69697e94e"
+        val url = if (season == null) {
+            "$blackvidAPI/v3/movie/sources/$tmdbId?key=$key"
+        } else {
+            "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
+        }
+
+        val data = app.get(url).body.bytes().decrypt(key)
+        val json = tryParseJson<BlackvidResponses>(data)
+
+        json?.sources?.map { source ->
+            source.sources.map s@{ s ->
+                callback.invoke(
+                    ExtractorLink(
+                        "Blackvid",
+                        "Blackvid${source.label}",
+                        s.url ?: return@s,
+                        "$blackvidAPI/",
+                        s.quality?.toIntOrNull() ?: Qualities.Unknown.value,
+                        INFER_TYPE
+                    )
+                )
+            }
+        }
+
+        json?.subtitles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.language.takeIf { it?.isNotEmpty() == true } ?: return@map,
+                    sub.url ?: return@map,
+                )
+            )
         }
 
     }

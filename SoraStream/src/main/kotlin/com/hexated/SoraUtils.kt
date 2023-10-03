@@ -30,12 +30,14 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.nodes.Document
 import java.math.BigInteger
 import java.net.*
+import java.nio.charset.StandardCharsets
 import java.security.*
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
@@ -1640,5 +1642,31 @@ object CryptoJS {
         return ByteArray(length).apply {
             SecureRandom().nextBytes(this)
         }
+    }
+}
+
+object AESGCM {
+    fun ByteArray.decrypt(pass: String): String {
+        val (key, iv) = generateKeyAndIv(pass)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
+        return String(cipher.doFinal(this), StandardCharsets.UTF_8)
+    }
+
+    private fun generateKeyAndIv(pass: String): Pair<ByteArray, ByteArray> {
+        val datePart = getCurrentUTCDateString().take(16)
+        val hexString = datePart + pass
+        val byteArray = hexString.toByteArray(StandardCharsets.UTF_8)
+        val digest = MessageDigest.getInstance("SHA-256").digest(byteArray)
+        return digest.copyOfRange(0, digest.size / 2) to digest.copyOfRange(
+            digest.size / 2,
+            digest.size
+        )
+    }
+
+    private fun getCurrentUTCDateString(): String {
+        val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.getDefault())
+        dateFormat.timeZone = TimeZone.getTimeZone("GMT")
+        return dateFormat.format(Date())
     }
 }

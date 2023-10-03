@@ -3,6 +3,7 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
+import com.hexated.SoraExtractor.invokeBlackvid
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeCryMovies
 import com.hexated.SoraExtractor.invokeDbgo
@@ -130,6 +131,7 @@ open class SoraStream : TmdbProvider() {
         const val watchflxAPI = "https://watchflx.tv"
         const val gomoviesAPI = "https://gomovies-online.cam"
         const val dotmoviesAPI = "https://dotmovies.today"
+        const val blackvidAPI = "https://prod.api.blackvid.space"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -731,6 +733,15 @@ open class SoraStream : TmdbProvider() {
                 invokeZshow(
                     res.title,
                     res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeBlackvid(
+                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,

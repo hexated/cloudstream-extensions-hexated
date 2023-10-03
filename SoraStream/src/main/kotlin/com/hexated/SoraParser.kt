@@ -392,3 +392,23 @@ data class EMovieTraks(
     @JsonProperty("file") val file: String? = null,
     @JsonProperty("label") val label: String? = null,
 )
+
+data class BlackvidSubtitles(
+    @JsonProperty("language") val language: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class BlackvidSource(
+    @JsonProperty("quality") var quality: String? = null,
+    @JsonProperty("url") var url: String? = null,
+)
+
+data class BlackvidSources(
+    @JsonProperty("label") var label: String? = null,
+    @JsonProperty("sources") var sources: ArrayList<BlackvidSource> = arrayListOf()
+)
+
+data class BlackvidResponses(
+    @JsonProperty("sources") var sources: ArrayList<BlackvidSources> = arrayListOf(),
+    @JsonProperty("subtitles") var subtitles: ArrayList<BlackvidSubtitles> = arrayListOf()
+)
