@@ -102,24 +102,6 @@ data class Jump1Movies(
     @JsonProperty("movies") val movies: ArrayList<Jump1Episodes>? = arrayListOf(),
 )
 
-data class EpisodesFwatayako(
-    @JsonProperty("id") val id: String? = null,
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("download") val download: HashMap<String, String>? = hashMapOf(),
-)
-
-data class SeasonFwatayako(
-    @JsonProperty("id") val id: Int? = null,
-    @JsonProperty("folder") val folder: ArrayList<EpisodesFwatayako>? = arrayListOf(),
-)
-
-data class SourcesFwatayako(
-    @JsonProperty("movie") val sourcesMovie: String? = null,
-    @JsonProperty("tv") val sourcesTv: ArrayList<SeasonFwatayako>? = arrayListOf(),
-    @JsonProperty("movie_dl") val movie_dl: HashMap<String, String>? = hashMapOf(),
-    @JsonProperty("tv_dl") val tv_dl: ArrayList<SeasonFwatayako>? = arrayListOf(),
-)
-
 data class DriveBotLink(
     @JsonProperty("url") val url: String? = null,
 )

@@ -1196,67 +1196,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeFwatayako(
-        imdbId: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val ref = "https://videoapi.tv/"
-        val files = app.get(
-            "$fwatayakoAPI/IAF0wWTdNYZm?imdb_id=$imdbId", referer = ref
-        ).document.selectFirst("input#files")?.attr("value") ?: return
-        val data = files.let {
-            if (season == null) {
-                it.replace("\"381\"", "\"movie\"").replace("\"30\"", "\"movie_dl\"")
-            } else {
-                it.replace("\"381\"", "\"tv\"").replace("\"30\"", "\"tv_dl\"")
-            }
-        }.let { tryParseJson<SourcesFwatayako>(it) } ?: return
-
-        val sourcesLink = if (season == null) {
-            data.sourcesMovie
-        } else {
-            data.sourcesTv?.find { it.id == season }?.folder?.find { it.id == "${season}_${episode}" }?.file
-        }
-
-        val downoadLink = if (season == null) {
-            data.movie_dl
-        } else {
-            data.tv_dl?.find { it.id == season }?.folder?.find { it.id == "${season}_${episode}" }?.download
-        }
-
-        sourcesLink?.split(",")?.map {
-            val source = it.substringBefore("or").trim()
-            val quality =
-                Regex("\\[(\\d{3,4})p]").find(source)?.groupValues?.getOrNull(1)?.toIntOrNull()
-            val link = httpsify(source.replace("[${quality}p]", "").trim())
-            callback.invoke(
-                ExtractorLink(
-                    "Fwatayako",
-                    "Fwatayako",
-                    link,
-                    ref,
-                    quality ?: Qualities.Unknown.value,
-                    isM3u8 = true
-                )
-            )
-        }
-
-        downoadLink?.mapKeys {
-            callback.invoke(
-                ExtractorLink(
-                    "Fwatayako",
-                    "Fwatayako",
-                    httpsify(it.value),
-                    ref,
-                    getQualityFromName(it.key),
-                )
-            )
-        }
-
-    }
-
     suspend fun invokeGMovies(
         title: String? = null,
         year: Int? = null,
@@ -2190,7 +2129,7 @@ object SoraExtractor : SoraStream() {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val data = app.get(url, timeout = 120L).body.bytes().decrypt(key)
+        val data = request(url).body.bytes().decrypt(key)
         val json = tryParseJson<BlackvidResponses>(data)
 
         json?.sources?.map { source ->
@@ -2200,7 +2139,7 @@ object SoraExtractor : SoraStream() {
                         "Blackvid",
                         "Blackvid${source.label}",
                         s.url ?: return@s,
-                        "$blackvidAPI/",
+                        "https://blackvid.space/",
                         s.quality?.toIntOrNull() ?: Qualities.Unknown.value,
                         INFER_TYPE
                     )

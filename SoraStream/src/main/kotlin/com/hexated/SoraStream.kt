@@ -20,7 +20,6 @@ import com.hexated.SoraExtractor.invokeDramaday
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
-import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGoku
 import com.hexated.SoraExtractor.invokeKisskh
@@ -97,7 +96,6 @@ open class SoraStream : TmdbProvider() {
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
         const val uhdmoviesAPI = "https://uhdmovies.store"
-        const val fwatayakoAPI = "https://5100.svetacdn.in"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val m4uhdAPI = "https://ww2.m4ufree.com"
@@ -486,9 +484,6 @@ open class SoraStream : TmdbProvider() {
                     res.episode,
                     callback
                 )
-            },
-            {
-                if (!res.isAnime) invokeFwatayako(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeGMovies(

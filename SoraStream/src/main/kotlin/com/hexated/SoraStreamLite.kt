@@ -9,7 +9,6 @@ import com.hexated.SoraExtractor.invokeDramaday
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeFlixon
-import com.hexated.SoraExtractor.invokeFwatayako
 import com.hexated.SoraExtractor.invokeGoku
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
@@ -195,9 +194,6 @@ class SoraStreamLite : SoraStream() {
                     subtitleCallback,
                     callback
                 )
-            },
-            {
-                invokeFwatayako(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if(!res.isAnime) invokeM4uhd(
