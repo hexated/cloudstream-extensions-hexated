@@ -2122,6 +2122,7 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
+        val referer = "https://blackvid.space/"
         val key = "c3124ecca65f4e72ef5cb39033cdfed69697e94e"
         val url = if (season == null) {
             "$blackvidAPI/v3/movie/sources/$tmdbId?key=$key"
@@ -2134,24 +2135,16 @@ object SoraExtractor : SoraStream() {
 
         json?.sources?.map { source ->
             source.sources.map s@{ s ->
-                if(s.quality.equals("auto")) {
-                    M3u8Helper.generateM3u8(
+                callback.invoke(
+                    ExtractorLink(
                         "Blackvid",
+                        "Blackvid${source.label}",
                         s.url ?: return@s,
-                        "https://blackvid.space/",
-                    ).forEach(callback)
-                } else {
-                    callback.invoke(
-                        ExtractorLink(
-                            "Blackvid",
-                            "Blackvid - ${source.label}",
-                            s.url ?: return@s,
-                            "https://blackvid.space/",
-                            s.quality?.toIntOrNull() ?: Qualities.Unknown.value,
-                            INFER_TYPE
-                        )
+                        referer,
+                        s.quality?.toIntOrNull() ?: Qualities.P1080.value,
+                        INFER_TYPE
                     )
-                }
+                )
             }
         }
 
