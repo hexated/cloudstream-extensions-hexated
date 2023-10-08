@@ -43,6 +43,7 @@ import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokePutactor
+import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVegamovies
@@ -95,7 +96,7 @@ open class SoraStream : TmdbProvider() {
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.store"
+        const val uhdmoviesAPI = "https://uhdmovies.click"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val m4uhdAPI = "https://ww2.m4ufree.com"
@@ -124,12 +125,13 @@ open class SoraStream : TmdbProvider() {
         const val putactorAPI = "https://putlocker.actor"
         const val susflixAPI = "https://susflix.tv"
         const val jump1API = "https://ca.jump1.net"
-        const val vegaMoviesAPI = "https://vegamovies.im"
+        const val vegaMoviesAPI = "https://vegamovies.id"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
         const val watchflxAPI = "https://watchflx.tv"
         const val gomoviesAPI = "https://gomovies-online.cam"
-        const val dotmoviesAPI = "https://dotmovies.today"
+        const val dotmoviesAPI = "https://dotmovies.monster"
         const val blackvidAPI = "https://prod.api.blackvid.space"
+        const val showflixAPI = "https://showflix.online"
 
         // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -742,7 +744,17 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
-            }
+            },
+            {
+                if (!res.isAnime) invokeShowflix(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
         )
 
         return true

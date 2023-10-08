@@ -394,3 +394,25 @@ data class BlackvidResponses(
     @JsonProperty("sources") var sources: ArrayList<BlackvidSources> = arrayListOf(),
     @JsonProperty("subtitles") var subtitles: ArrayList<BlackvidSubtitles> = arrayListOf()
 )
+
+data class ShowflixResultsMovies(
+    @JsonProperty("movieName") val movieName: String? = null,
+    @JsonProperty("streamwish") val streamwish: String? = null,
+    @JsonProperty("filelions") val filelions: String? = null,
+    @JsonProperty("streamruby") val streamruby: String? = null,
+)
+
+data class ShowflixResultsSeries(
+    @JsonProperty("seriesName") val seriesName: String? = null,
+    @JsonProperty("streamwish") val streamwish: HashMap<String, List<String>>? = hashMapOf(),
+    @JsonProperty("filelions") val filelions: HashMap<String, List<String>>? = hashMapOf(),
+    @JsonProperty("streamruby") val streamruby: HashMap<String, List<String>>? = hashMapOf(),
+)
+
+data class ShowflixSearchMovies(
+    @JsonProperty("results") val resultsMovies: ArrayList<ShowflixResultsMovies>? = arrayListOf(),
+)
+
+data class ShowflixSearchSeries(
+    @JsonProperty("results") val resultsSeries: ArrayList<ShowflixResultsSeries>? = arrayListOf(),
+)
