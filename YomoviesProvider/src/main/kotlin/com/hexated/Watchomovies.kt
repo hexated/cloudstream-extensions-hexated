@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.mainPageOf
 
 class Watchomovies : YomoviesProvider() {
-    override var mainUrl = "https://watchomovies.mom"
+    override var mainUrl = "https://watchomovies.beauty"
     override var name = "Watchomovies"
     override var lang = "en"
     override val supportedTypes = setOf(
