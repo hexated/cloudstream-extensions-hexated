@@ -191,10 +191,9 @@ open class Gomov : MainAPI() {
 }
 
 fun String?.fixImageQuality(): String? {
-    if(this == null) return null
-    val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues
-    if(regex?.isEmpty() == true) return this
-    return this.replace(regex?.get(0) ?: return null, "")
+    if (this == null) return null
+    val regex = Regex("(-\\d*x\\d*)").find(this)?.groupValues?.get(0) ?: return this
+    return this.replace(regex, "")
 }
 
 fun getBaseUrl(url: String): String {
