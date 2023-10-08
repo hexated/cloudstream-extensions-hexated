@@ -311,6 +311,50 @@ object NineTv {
     )
 }
 
+open class Streamruby : ExtractorApi() {
+    override val name = "Streamruby"
+    override val mainUrl = "https://streamruby.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val id = "/e/(\\w+)".toRegex().find(url)?.groupValues?.get(1) ?: return
+        val response = app.post("$mainUrl/dl", data = mapOf(
+            "op" to "embed",
+            "file_code" to id,
+            "auto" to "1",
+            "referer" to "",
+        ), referer = referer)
+        val script = if (!getPacked(response.text).isNullOrEmpty()) {
+            getAndUnpack(response.text)
+        } else {
+            response.document.selectFirst("script:containsData(sources:)")?.data()
+        }
+        val m3u8 =
+            Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+        M3u8Helper.generateM3u8(
+            name,
+            m3u8 ?: return,
+            mainUrl
+        ).forEach(callback)
+    }
+
+}
+
+class Streamwish : Filesim() {
+    override val name = "Streamwish"
+    override var mainUrl = "https://streamwish.to"
+}
+
+class FilelionsTo : Filesim() {
+    override val name = "Filelions"
+    override var mainUrl = "https://filelions.to"
+}
+
 class Hubcloud : VCloud() {
     override val name = "Hubcloud"
     override val mainUrl = "https://hubcloud.in"

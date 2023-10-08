@@ -22,5 +22,8 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Pixeldra())
         registerExtractorAPI(Hubcloud())
         registerExtractorAPI(M4ufree())
+        registerExtractorAPI(Streamruby())
+        registerExtractorAPI(Streamwish())
+        registerExtractorAPI(FilelionsTo())
     }
 }
