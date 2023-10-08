@@ -2141,7 +2141,7 @@ object SoraExtractor : SoraStream() {
                         "Blackvid${source.label}",
                         s.url ?: return@s,
                         referer,
-                        s.quality?.toIntOrNull() ?: Qualities.P1080.value,
+                        if(s.quality.equals("4k")) Qualities.P2160.value else s.quality?.toIntOrNull() ?: Qualities.P1080.value,
                         INFER_TYPE
                     )
                 )
