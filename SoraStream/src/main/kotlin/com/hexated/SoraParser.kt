@@ -67,21 +67,6 @@ data class KisskhDetail(
     @JsonProperty("episodes") val episodes: ArrayList<KisskhEpisodes>? = arrayListOf(),
 )
 
-data class SusflixSrtfiles(
-    @JsonProperty("caption") val caption: String? = null,
-    @JsonProperty("url") val url: String? = null,
-)
-
-data class SusflixQualities(
-    @JsonProperty("path") val path: String? = null,
-    @JsonProperty("quality") val quality: String? = null,
-)
-
-data class SusflixSources(
-    @JsonProperty("Qualities") val qualities: ArrayList<SusflixQualities>? = arrayListOf(),
-    @JsonProperty("Srtfiles") val srtfiles: ArrayList<SusflixSrtfiles>? = arrayListOf(),
-)
-
 data class KisskhResults(
     @JsonProperty("id") val id: Int?,
     @JsonProperty("title") val title: String?,
@@ -415,4 +400,19 @@ data class ShowflixSearchMovies(
 
 data class ShowflixSearchSeries(
     @JsonProperty("results") val resultsSeries: ArrayList<ShowflixResultsSeries>? = arrayListOf(),
+)
+
+data class VaticSrtfiles(
+    @JsonProperty("caption") var caption: String? = null,
+    @JsonProperty("url") var url: String? = null,
+)
+
+data class VaticQualities(
+    @JsonProperty("path") var path: String? = null,
+    @JsonProperty("quality") var quality: String? = null,
+)
+
+data class VaticSources(
+    @JsonProperty("Qualities") var qualities: ArrayList<VaticQualities> = arrayListOf(),
+    @JsonProperty("Srtfiles") var srtfiles: ArrayList<VaticSrtfiles> = arrayListOf(),
 )

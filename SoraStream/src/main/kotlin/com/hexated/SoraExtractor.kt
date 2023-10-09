@@ -34,8 +34,8 @@ object SoraExtractor : SoraStream() {
             "X-Requested-With" to "XMLHttpRequest"
         )
 
-        fun Document.getServers(): List<String> {
-            return this.select("a").map { it.attr("data-id") }
+        fun Document.getServers(): List<Pair<String,String>> {
+            return this.select("a").map { it.attr("data-id") to it.text() }
         }
 
         val media = app.get(
@@ -83,12 +83,12 @@ object SoraExtractor : SoraStream() {
             ).document.getServers()
         }
 
-        serversId.apmap { id ->
+        serversId.apmap { (id, name) ->
             val iframe =
                 app.get("$gokuAPI/ajax/movie/episode/server/sources/$id", headers = headers)
                     .parsedSafe<GokuServer>()?.data?.link ?: return@apmap
             loadCustomExtractor(
-                if (iframe.contains("rabbitstream")) "Vidcloud" else "Upcloud",
+                name,
                 iframe,
                 "$gokuAPI/",
                 subtitleCallback,
@@ -2501,49 +2501,6 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeSusflix(
-        tmdbId: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val url = if (season == null) {
-            "$susflixAPI/view/movie/$tmdbId"
-        } else {
-            "$susflixAPI/view/tv/$tmdbId/$season/$episode"
-        }
-
-        val res = app.get(
-            url, cookies = mapOf(
-                "session" to "eyJfZnJlc2giOmZhbHNlLCJwaG9uZV9udW1iZXIiOiJzdXNoZXg5OCJ9.ZO6CsA.XUs6Y5gna8ExAUX55-myMi1QpYU"
-            )
-        ).text.substringAfter("response = {").substringBefore("};").replace("\'", "\"")
-
-        val sources = tryParseJson<SusflixSources>("{$res}")
-        sources?.qualities?.map { source ->
-            callback.invoke(
-                ExtractorLink(
-                    "Susflix",
-                    "Susflix",
-                    source.path ?: return@map,
-                    "$susflixAPI/",
-                    getQualityFromName(source.quality)
-                )
-            )
-        }
-
-        sources?.srtfiles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.caption ?: return@map,
-                    sub.url ?: return@map,
-                )
-            )
-        }
-
-    }
-
     suspend fun invokeJump1(
         tmdbId: Int? = null,
         tvdbId: Int? = null,
@@ -2585,6 +2542,48 @@ object SoraExtractor : SoraStream() {
                 true
             )
         )
+    }
+
+    suspend fun invokeVatic(
+        tmdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val vaticAPI = BuildConfig.VATIC_API
+        val url = if (season == null) {
+            "$vaticAPI/api/movie?id=$tmdbId"
+        } else {
+            "$vaticAPI/api/tv?id=$tmdbId&s=$season&e=$episode"
+        }
+
+        val res = app.get(
+            url
+        ).parsedSafe<VaticSources>()
+
+        res?.qualities?.map { source ->
+            callback.invoke(
+                ExtractorLink(
+                    "Vatic",
+                    "Vatic",
+                    source.path ?: return@map,
+                    "$vaticAPI/",
+                    if(source.quality.equals("auto", true)) Qualities.P1080.value else getQualityFromName(source.quality),
+                    INFER_TYPE
+                )
+            )
+        }
+
+        res?.srtfiles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.caption ?: return@map,
+                    sub.url ?: return@map,
+                )
+            )
+        }
+
     }
 
 }

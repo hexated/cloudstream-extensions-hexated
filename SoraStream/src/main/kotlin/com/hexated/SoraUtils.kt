@@ -151,25 +151,6 @@ fun Document.getMirrorServer(server: Int): String {
     return this.select("div.text-center a:contains(Server $server)").attr("href")
 }
 
-suspend fun request(
-    url: String,
-    allowRedirects: Boolean = true,
-    timeout: Long = 30L
-): Response {
-    val client = OkHttpClient().newBuilder()
-        .connectTimeout(timeout, TimeUnit.SECONDS)
-        .readTimeout(timeout, TimeUnit.SECONDS)
-        .writeTimeout(timeout, TimeUnit.SECONDS)
-        .followRedirects(allowRedirects)
-        .followSslRedirects(allowRedirects)
-        .build()
-
-    val request: Request = Request.Builder()
-        .url(url)
-        .build()
-    return client.newCall(request).await()
-}
-
 suspend fun extractMirrorUHD(url: String, ref: String): String? {
     var baseDoc = app.get(fixUrl(url, ref)).document
     var downLink = baseDoc.getMirrorLink()

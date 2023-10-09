@@ -46,10 +46,10 @@ import com.hexated.SoraExtractor.invokePutactor
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
+import com.hexated.SoraExtractor.invokeVatic
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
-import com.hexated.SoraExtractor.invokeWatchflx
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
@@ -123,7 +123,6 @@ open class SoraStream : TmdbProvider() {
         const val dramadayAPI = "https://dramaday.me"
         const val animetoshoAPI = "https://animetosho.org"
         const val putactorAPI = "https://putlocker.actor"
-        const val susflixAPI = "https://susflix.tv"
         const val jump1API = "https://ca.jump1.net"
         const val vegaMoviesAPI = "https://vegamovies.id"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
@@ -699,9 +698,6 @@ open class SoraStream : TmdbProvider() {
             {
                 if (!res.isAnime) invoke2embed(res.imdbId, res.season, res.episode, callback)
             },
-//            {
-//                invokeSusflix(res.id,res.season,res.episode,subtitleCallback,callback)
-//            },
             {
                 if (!res.isAnime) invokeJump1(
                     res.id,
@@ -723,9 +719,9 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                if (!res.isAnime) invokeWatchflx(res.id, res.season, res.episode, callback)
-            },
+//            {
+//                if (!res.isAnime) invokeWatchflx(res.id, res.season, res.episode, callback)
+//            },
             {
                 invokeZshow(
                     res.title,
@@ -749,6 +745,15 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeShowflix(
                     res.title,
                     res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeVatic(
+                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,

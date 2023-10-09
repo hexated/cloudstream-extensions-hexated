@@ -29,10 +29,10 @@ import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokePutactor
 import com.hexated.SoraExtractor.invokeShowflix
+import com.hexated.SoraExtractor.invokeVatic
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
-import com.hexated.SoraExtractor.invokeWatchflx
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.SubtitleFile
@@ -56,15 +56,6 @@ class SoraStreamLite : SoraStream() {
             {
                 if(!res.isAnime) invokeJump1(res.id,res.tvdbId,res.title,res.year,res.season,res.episode,callback)
             },
-//            {
-//                invokeSusflix(
-//                    res.id,
-//                    res.season,
-//                    res.episode,
-//                    subtitleCallback,
-//                    callback
-//                )
-//            },
             {
                 if (!res.isAnime) invokeBlackvid(
                     res.id,
@@ -285,14 +276,14 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-            {
-                if (!res.isAnime) invokeWatchflx(
-                    res.id,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
+//            {
+//                if (!res.isAnime) invokeWatchflx(
+//                    res.id,
+//                    res.season,
+//                    res.episode,
+//                    callback
+//                )
+//            },
             {
                 if(!res.isAnime) invoke2embed(
                     res.imdbId,
@@ -315,6 +306,15 @@ class SoraStreamLite : SoraStream() {
                 if (!res.isAnime) invokeShowflix(
                     res.title,
                     res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeVatic(
+                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,
