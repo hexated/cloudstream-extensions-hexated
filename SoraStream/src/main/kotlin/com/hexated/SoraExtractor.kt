@@ -1330,7 +1330,7 @@ object SoraExtractor : SoraStream() {
         val script = if (scriptData.size == 1) {
             scriptData.firstOrNull()
         } else {
-            scriptData.find {
+            scriptData.find { it.first.equals("$title ($year)", true) } ?: scriptData.find {
                 it.first.contains(
                     "$title", true
                 ) && it.second == "$year"
@@ -1347,10 +1347,10 @@ object SoraExtractor : SoraStream() {
         val m4uData = if (season == null) {
             doc.select("div.le-server span").map { it.attr("data") }
         } else {
-            val episodeData =
-                doc.selectFirst("div.col-lg-9.col-xl-9 p:matches((?i)S$seasonSlug-E$episodeSlug)")
+            val idepisode =
+                doc.selectFirst("div.detail > p:matches((?i)S$seasonSlug-E$episodeSlug) button")
+                    ?.attr("idepisode")
                     ?: return
-            val idepisode = episodeData.select("button").attr("idepisode") ?: return
             val requestEmbed = app.post(
                 "$referer/ajaxtv", data = mapOf(
                     "idepisode" to idepisode, "_token" to "$token"
