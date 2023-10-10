@@ -1031,33 +1031,41 @@ object SoraExtractor : SoraStream() {
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
+        lastSeason: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        invokeWpredis(title, year, season, episode, subtitleCallback, callback, dotmoviesAPI)
+        invokeWpredis(title, year, season, lastSeason, episode, subtitleCallback, callback, dotmoviesAPI)
     }
+
     suspend fun invokeVegamovies(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
+        lastSeason: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        invokeWpredis(title, year, season, episode, subtitleCallback, callback, vegaMoviesAPI)
+        invokeWpredis(title, year, season, lastSeason, episode, subtitleCallback, callback, vegaMoviesAPI)
     }
     private suspend fun invokeWpredis(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
+        lastSeason: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
         api: String
     ) {
         var res = app.get("$api/search/$title").document
-        val match = if (season == null) "$year" else "Season $season"
+        val match = when (season) {
+            null -> "$year"
+            1 -> "Season 1"
+            else -> "Season 1 – $lastSeason"
+        }
         val media =
             res.selectFirst("div.blog-items article:has(h3.entry-title:matches((?i)$title.*$match)) a")
                 ?.attr("href")
@@ -1065,7 +1073,9 @@ object SoraExtractor : SoraStream() {
         res = app.get(media ?: return).document
         val hTag = if (season == null) "h5" else "h3"
         val aTag = if (season == null) "Download Now" else "V-Cloud"
-        res.select("div.entry-content > $hTag:matches(1080p|2160p)").apmap {
+        val sTag = if (season == null) "" else "Season $season"
+        res.select("div.entry-content > $hTag:matches((?i)$sTag.*1080p|2160p)").
+        filter { element -> !element.text().contains("Download", true) }.apmap {
             val tags =
                 """(?:1080p|2160p)(.*)""".toRegex().find(it.text())?.groupValues?.get(1)?.trim()
             val href =
@@ -1090,7 +1100,6 @@ object SoraExtractor : SoraStream() {
                 getIndexQuality(it.text())
             )
         }
-
     }
 
     suspend fun invokePobmovies(
