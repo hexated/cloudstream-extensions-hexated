@@ -1060,6 +1060,7 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
         api: String
     ) {
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
         var res = app.get("$api/search/$title").document
         val match = when (season) {
             null -> "$year"
@@ -1073,8 +1074,8 @@ object SoraExtractor : SoraStream() {
         res = app.get(media ?: return).document
         val hTag = if (season == null) "h5" else "h3"
         val aTag = if (season == null) "Download Now" else "V-Cloud"
-        val sTag = if (season == null) "" else "Season $season"
-        res.select("div.entry-content > $hTag:matches((?i)$sTag.*1080p|2160p)").
+        val sTag = if (season == null) "" else "(Season $season|S$seasonSlug)"
+        res.select("div.entry-content > $hTag:matches((?i)$sTag.*(1080p|2160p))").
         filter { element -> !element.text().contains("Download", true) }.apmap {
             val tags =
                 """(?:1080p|2160p)(.*)""".toRegex().find(it.text())?.groupValues?.get(1)?.trim()
