@@ -1278,7 +1278,7 @@ object SoraExtractor : SoraStream() {
                 it.select("img").attr("src")
             )
         }.filter {
-            it.quality.contains(Regex("(?i)(1080p|4k)")) && it.type.contains(Regex("(gdtot|oiya)"))
+            it.quality.contains(Regex("(?i)(1080p|4k)")) && it.type.contains(Regex("(gdtot|oiya|rarbgx)"))
         }
         iframe.apmap { (link, quality, size, type) ->
             val qualities = getFDoviesQuality(quality)
@@ -1289,7 +1289,7 @@ object SoraExtractor : SoraStream() {
                     extractGdflix(gdBotLink ?: return@apmap null)
                 }
 
-                type.contains("oiya") -> {
+                type.contains("oiya") || type.contains("rarbgx") -> {
                     val oiyaLink = extractOiya(fdLink ?: return@apmap null, qualities)
                     if (oiyaLink?.contains("gdtot") == true) {
                         val gdBotLink = extractGdbot(oiyaLink)
@@ -1602,12 +1602,12 @@ object SoraExtractor : SoraStream() {
             "$rStreamAPI/e/?tmdb=$id&s=$season&e=$episode"
         }
 
-        val res = app.get(url, referer = "https://watcha.movie/").text
+        val res = app.get("$url&apikey=whXgvN4kVyoubGwqXpw26Oy3PVryl8dm", referer = "https://watcha.movie/").text
         val link = Regex("\"file\":\"(http.*?)\"").find(res)?.groupValues?.getOrNull(1) ?: return
 
         callback.invoke(
             ExtractorLink(
-                "RStream", "RStream", link, rStreamAPI, Qualities.P720.value, INFER_TYPE
+                "RStream", "RStream", link, "$rStreamAPI/", Qualities.P720.value, INFER_TYPE
             )
         )
     }
@@ -2305,43 +2305,6 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeCryMovies(
-        imdbId: String? = null,
-        title: String? = null,
-        year: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        app.get("${cryMoviesAPI}/stream/movie/$imdbId.json")
-            .parsedSafe<CryMoviesResponse>()?.streams?.filter {
-                matchingIndex(
-                    it.title, null, title, year, null, episode, false
-                )
-            }?.apmap { stream ->
-                val quality = getIndexQuality(stream.title)
-                val tags = getIndexQualityTags(stream.title)
-                val size = getIndexSize(stream.title)
-                val headers = stream.behaviorHints?.proxyHeaders?.request ?: mapOf()
-
-                if (!app.get(
-                        stream.url ?: return@apmap, headers = headers
-                    ).isSuccessful
-                ) return@apmap
-
-                callback.invoke(
-                    ExtractorLink(
-                        "CryMovies",
-                        "CryMovies $tags [${size}]",
-                        stream.url,
-                        "",
-                        quality,
-                        headers = headers
-                    )
-                )
-            }
-
-    }
-
     suspend fun invokeNowTv(
         tmdbId: Int? = null,
         season: Int? = null,
@@ -2552,48 +2515,6 @@ object SoraExtractor : SoraStream() {
                 true
             )
         )
-    }
-
-    suspend fun invokeVatic(
-        tmdbId: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val vaticAPI = BuildConfig.VATIC_API
-        val url = if (season == null) {
-            "$vaticAPI/api/movie?id=$tmdbId"
-        } else {
-            "$vaticAPI/api/tv?id=$tmdbId&s=$season&e=$episode"
-        }
-
-        val res = app.get(
-            url
-        ).parsedSafe<VaticSources>()
-
-        res?.qualities?.map { source ->
-            callback.invoke(
-                ExtractorLink(
-                    "Vatic",
-                    "Vatic",
-                    source.path ?: return@map,
-                    "$vaticAPI/",
-                    if(source.quality.equals("auto", true)) Qualities.P1080.value else getQualityFromName(source.quality),
-                    INFER_TYPE
-                )
-            )
-        }
-
-        res?.srtfiles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.caption ?: return@map,
-                    sub.url ?: return@map,
-                )
-            )
-        }
-
     }
 
 }

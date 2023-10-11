@@ -183,25 +183,6 @@ data class WatchOnlineResponse(
     @JsonProperty("subtitles") val subtitles: ArrayList<WatchOnlineSubtitles>? = arrayListOf(),
 )
 
-data class CryMoviesProxyHeaders(
-    @JsonProperty("request") val request: Map<String, String>?,
-)
-
-data class CryMoviesBehaviorHints(
-    @JsonProperty("proxyHeaders") val proxyHeaders: CryMoviesProxyHeaders?,
-)
-
-data class CryMoviesStream(
-    @JsonProperty("title") val title: String? = null,
-    @JsonProperty("url") val url: String? = null,
-    @JsonProperty("description") val description: String? = null,
-    @JsonProperty("behaviorHints") val behaviorHints: CryMoviesBehaviorHints? = null,
-)
-
-data class CryMoviesResponse(
-    @JsonProperty("streams") val streams: List<CryMoviesStream>? = null,
-)
-
 data class FmoviesSubtitles(
     @JsonProperty("label") val label: String? = null,
     @JsonProperty("file") val file: String? = null,
@@ -400,19 +381,4 @@ data class ShowflixSearchMovies(
 
 data class ShowflixSearchSeries(
     @JsonProperty("results") val resultsSeries: ArrayList<ShowflixResultsSeries>? = arrayListOf(),
-)
-
-data class VaticSrtfiles(
-    @JsonProperty("caption") var caption: String? = null,
-    @JsonProperty("url") var url: String? = null,
-)
-
-data class VaticQualities(
-    @JsonProperty("path") var path: String? = null,
-    @JsonProperty("quality") var quality: String? = null,
-)
-
-data class VaticSources(
-    @JsonProperty("Qualities") var qualities: ArrayList<VaticQualities> = arrayListOf(),
-    @JsonProperty("Srtfiles") var srtfiles: ArrayList<VaticSrtfiles> = arrayListOf(),
 )

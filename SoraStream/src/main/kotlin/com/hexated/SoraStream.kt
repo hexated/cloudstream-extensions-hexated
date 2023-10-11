@@ -5,7 +5,6 @@ import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeBlackvid
 import com.hexated.SoraExtractor.invokeBollyMaza
-import com.hexated.SoraExtractor.invokeCryMovies
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeKimcartoon
@@ -31,7 +30,6 @@ import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokeRStream
 import com.hexated.SoraExtractor.invokeRidomovies
-import com.hexated.SoraExtractor.invokeShinobiMovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
@@ -46,7 +44,6 @@ import com.hexated.SoraExtractor.invokePutactor
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
-import com.hexated.SoraExtractor.invokeVatic
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
@@ -103,7 +100,7 @@ open class SoraStream : TmdbProvider() {
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
         const val moviezAddAPI = "https://ww3.moviezaddiction.click"
         const val bollyMazaAPI = "https://ww3.bollymaza.click"
-        const val rStreamAPI = "https://remotestre.am"
+        const val rStreamAPI = "https://remotestream.cc"
         const val flixonAPI = "https://flixon.lol"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
@@ -131,12 +128,7 @@ open class SoraStream : TmdbProvider() {
         const val dotmoviesAPI = "https://dotmovies.monster"
         const val blackvidAPI = "https://prod.api.blackvid.space"
         const val showflixAPI = "https://showflix.online"
-
-        // INDEX SITE
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
-        const val shinobiMovieAPI = "https://home.shinobicloud.cf/0:"
-        val cryMoviesAPI =
-            base64DecodeAPI("ZXY=LmQ=cnM=a2U=b3I=Lnc=ZXI=ZGQ=bGE=cy0=b2I=YWM=Lmo=YWw=aW4=LWY=cm4=Ym8=cmU=Ly8=czo=dHA=aHQ=")
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -586,17 +578,6 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokePutactor(res.title, res.year, res.season, res.episode, callback)
             },
             {
-                if (!res.isAnime) invokeShinobiMovies(
-                    shinobiMovieAPI,
-                    "ShinobiMovies",
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
                 invokeWatchOnline(
                     res.imdbId,
                     res.title,
@@ -604,15 +585,6 @@ open class SoraStream : TmdbProvider() {
                     res.season,
                     res.episode,
                     subtitleCallback,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime && res.season == null) invokeCryMovies(
-                    res.imdbId,
-                    res.title,
-                    res.year,
-                    res.episode,
                     callback
                 )
             },
@@ -747,15 +719,6 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeShowflix(
                     res.title,
                     res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeVatic(
-                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,
