@@ -41,9 +41,11 @@ import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokePutactor
+import com.hexated.SoraExtractor.invokeSFMovies
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
+import com.hexated.SoraExtractor.invokeVatic
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
@@ -534,7 +536,13 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeRStream(res.id, res.season, res.episode, callback)
             },
             {
-                if (!res.isAnime) invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
+                if (!res.isAnime) invokeFlixon(
+                    res.id,
+                    res.imdbId,
+                    res.season,
+                    res.episode,
+                    callback
+                )
             },
             {
                 if (!res.isAnime) invokeSmashyStream(
@@ -572,10 +580,22 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeGomovies(res.title, res.year, res.season, res.episode, callback)
+                if (!res.isAnime) invokeGomovies(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
             },
             {
-                if (!res.isAnime) invokePutactor(res.title, res.year, res.season, res.episode, callback)
+                if (!res.isAnime) invokePutactor(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
             },
             {
                 invokeWatchOnline(
@@ -592,7 +612,11 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeNowTv(res.id, res.season, res.episode, callback)
             },
             {
-                if (!res.isAnime && res.season == null) invokeRidomovies(res.title, res.year, callback)
+                if (!res.isAnime && res.season == null) invokeRidomovies(
+                    res.title,
+                    res.year,
+                    callback
+                )
             },
             {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)
@@ -725,6 +749,25 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
+            {
+                if (!res.isAnime) invokeVatic(
+                    res.id,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeSFMovies(
+                    res.id,
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            }
         )
 
         return true

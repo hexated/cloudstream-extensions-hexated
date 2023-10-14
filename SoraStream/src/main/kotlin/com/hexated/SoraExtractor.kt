@@ -2517,5 +2517,83 @@ object SoraExtractor : SoraStream() {
         )
     }
 
+    suspend fun invokeSFMovies(
+        tmdbId: Int? = null,
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val headers = mapOf("Authorization" to "Bearer 44d784c55e9a1e3dbb586f24b18b1cbcd1521673bd6178ef385890d2f989681fe22d05e291e2e0f03fce99cbc50cd520219e52cc6e30c944a559daf53a129af18349ec98f6a0e4e66b8d370a354f4f7fbd49df0ab806d533a3db71eecc7f75131a59ce8cffc5e0cc38e8af5919c23c0d904fbe31995308f065f0ff9cd1eda488")
+        val data = app.get("${BuildConfig.SFMOVIES_API}/api/mains?filters[title][\$contains]=$title", headers = headers)
+            .parsedSafe<SFMoviesSearch>()?.data
+        val media = data?.find {
+            it.attributes?.contentId.equals("$tmdbId") || (it.attributes?.title.equals(
+                title,
+                true
+            ) || it.attributes?.releaseDate?.substringBefore("-").equals("$year"))
+        }
+        val video = if (season == null || episode == null) {
+            media?.attributes?.video
+        } else {
+            media?.attributes?.seriess?.get(season - 1)?.get(episode - 1)?.svideos
+        } ?: return
+        val sig = "?sv=2022-11-02&ss=b&srt=sco&sp=rwlaix&se=2024-08-03T01:02:15Z&st=2023-08-02T17:02:15Z&spr=https&sig=9Fyz9V%2F%2FRsHa3%2F1nDYMU%2BxkblH5GMAtW7nrL5OCCASg%3D"
+        callback.invoke(
+            ExtractorLink(
+                "SFMovies",
+                "SFMovies",
+                fixUrl(video + sig, "https://awesomes.blob.core.windows.net/awesomes"),
+                "",
+                Qualities.P1080.value,
+                INFER_TYPE
+            )
+        )
+
+    }
+
+    suspend fun invokeVatic(
+        tmdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val vaticAPI = BuildConfig.VATIC_API
+        val url = if (season == null) {
+            "$vaticAPI/api/movie?id=$tmdbId"
+        } else {
+            "$vaticAPI/api/tv?id=$tmdbId&s=$season&e=$episode"
+        }
+
+        val res = app.get(
+            url
+        ).parsedSafe<VaticSources>()
+
+        res?.qualities?.map { source ->
+            callback.invoke(
+                ExtractorLink(
+                    "Vatic",
+                    "Vatic",
+                    source.path ?: return@map,
+                    "$vaticAPI/",
+                    if(source.quality.equals("auto", true)) Qualities.P1080.value else getQualityFromName(source.quality),
+                    INFER_TYPE
+                )
+            )
+        }
+
+        res?.srtfiles?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.caption ?: return@map,
+                    sub.url ?: return@map,
+                )
+            )
+        }
+
+    }
+
 }
 

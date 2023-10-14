@@ -382,3 +382,40 @@ data class ShowflixSearchMovies(
 data class ShowflixSearchSeries(
     @JsonProperty("results") val resultsSeries: ArrayList<ShowflixResultsSeries>? = arrayListOf(),
 )
+
+data class SFMoviesSeriess(
+    @JsonProperty("title") var title: String? = null,
+    @JsonProperty("svideos") var svideos: String? = null,
+)
+
+data class SFMoviesAttributes(
+    @JsonProperty("title") var title: String? = null,
+    @JsonProperty("video") var video: String? = null,
+    @JsonProperty("releaseDate") var releaseDate: String? = null,
+    @JsonProperty("seriess") var seriess: ArrayList<ArrayList<SFMoviesSeriess>>? = arrayListOf(),
+    @JsonProperty("contentId") var contentId: String? = null,
+)
+
+data class SFMoviesData(
+    @JsonProperty("id") var id: Int? = null,
+    @JsonProperty("attributes") var attributes: SFMoviesAttributes? = SFMoviesAttributes()
+)
+
+data class SFMoviesSearch(
+    @JsonProperty("data") var data: ArrayList<SFMoviesData>? = arrayListOf(),
+)
+
+data class VaticSrtfiles(
+    @JsonProperty("caption") var caption: String? = null,
+    @JsonProperty("url") var url: String? = null,
+)
+
+data class VaticQualities(
+    @JsonProperty("path") var path: String? = null,
+    @JsonProperty("quality") var quality: String? = null,
+)
+
+data class VaticSources(
+    @JsonProperty("Qualities") var qualities: ArrayList<VaticQualities> = arrayListOf(),
+    @JsonProperty("Srtfiles") var srtfiles: ArrayList<VaticSrtfiles> = arrayListOf(),
+)

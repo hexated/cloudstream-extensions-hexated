@@ -8,6 +8,8 @@ android {
         val properties = Properties()
         properties.load(project.rootProject.file("local.properties").inputStream())
 
+        buildConfigField("String", "SFMOVIES_API", "\"${properties.getProperty("SFMOVIES_API")}\"")
+        buildConfigField("String", "VATIC_API", "\"${properties.getProperty("VATIC_API")}\"")
         buildConfigField("String", "ZSHOW_API", "\"${properties.getProperty("ZSHOW_API")}\"")
         buildConfigField("String", "SORA_API", "\"${properties.getProperty("SORA_API")}\"")
         buildConfigField("String", "SORAHE", "\"${properties.getProperty("SORAHE")}\"")
