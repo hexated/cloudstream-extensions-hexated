@@ -6,9 +6,9 @@ import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.loadExtractor
 
 open class DutaMovie : Gomov() {
-    override var mainUrl = "https://tv.dutamovie21.life"
+    override var mainUrl = "https://tv5.dutamovie21.co"
     override var name = "DutaMovie"
-
+    override val imgAttr = "data-src"
     override val mainPage = mainPageOf(
         "category/box-office/page/%d/" to "Box Office",
         "category/serial-tv/page/%d/" to "Serial TV",

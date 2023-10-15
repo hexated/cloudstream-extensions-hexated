@@ -203,8 +203,3 @@ open class DramaidProvider : MainAPI() {
 
 }
 
-class Vanfem : XStreamCdn() {
-    override val name: String = "Vanfem"
-    override val mainUrl: String = "https://vanfem.com"
-}
-

@@ -20,7 +20,7 @@ open class Gomov : MainAPI() {
         TvType.TvSeries,
         TvType.AsianDrama
     )
-
+    open val imgAttr = "src"
     private val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream")
 
     override val mainPage = mainPageOf(
@@ -47,7 +47,7 @@ open class Gomov : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h2.entry-title > a")?.text()?.trim() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("src"))?.fixImageQuality()
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr(imgAttr))?.fixImageQuality()
         val quality = this.select("div.gmr-qual, div.gmr-quality-item > a").text().trim().replace("-", "")
         return if (quality.isEmpty()) {
             val episode =
@@ -68,7 +68,7 @@ open class Gomov : MainAPI() {
     private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("a > span.idmuvi-rp-title")?.text()?.trim() ?: return null
         val href = this.selectFirst("a")!!.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr("src").fixImageQuality())
+        val posterUrl = fixUrlNull(this.selectFirst("a > img")?.attr(imgAttr).fixImageQuality())
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
@@ -90,7 +90,7 @@ open class Gomov : MainAPI() {
             document.selectFirst("h1.entry-title")?.text()?.substringBefore("Season")?.substringBefore("Episode")?.trim()
                 .toString()
         val poster =
-            fixUrlNull(document.selectFirst("figure.pull-left > img")?.attr("src"))?.fixImageQuality()
+            fixUrlNull(document.selectFirst("figure.pull-left > img")?.attr(imgAttr))?.fixImageQuality()
         val tags = document.select("span.gmr-movie-genre:contains(Genre:) > a").map { it.text() }
 
         val year =

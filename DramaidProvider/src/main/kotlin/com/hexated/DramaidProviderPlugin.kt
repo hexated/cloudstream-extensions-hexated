@@ -13,5 +13,6 @@ class DramaidProviderPlugin: Plugin() {
         registerMainAPI(Oppadrama())
         registerExtractorAPI(Vanfem())
         registerExtractorAPI(Filelions())
+        registerExtractorAPI(Gcam())
     }
 }
