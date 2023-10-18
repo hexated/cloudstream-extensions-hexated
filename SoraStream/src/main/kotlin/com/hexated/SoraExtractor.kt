@@ -34,7 +34,7 @@ object SoraExtractor : SoraStream() {
             "X-Requested-With" to "XMLHttpRequest"
         )
 
-        fun Document.getServers(): List<Pair<String,String>> {
+        fun Document.getServers(): List<Pair<String, String>> {
             return this.select("a").map { it.attr("data-id") to it.text() }
         }
 
@@ -304,9 +304,20 @@ object SoraExtractor : SoraStream() {
                     else -> it.embed_url
                 }
             } ?: return@apmap
-            val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream", "https://w1.moviesapi.club")
+            val sources = arrayOf(
+                "https://chillx.top",
+                "https://watchx.top",
+                "https://bestx.stream",
+                "https://w1.moviesapi.club"
+            )
             when {
-                sources.any { source.startsWith(it) } -> NineTv.getUrl(source, "$referer/", subtitleCallback, callback)
+                sources.any { source.startsWith(it) } -> NineTv.getUrl(
+                    source,
+                    "$referer/",
+                    subtitleCallback,
+                    callback
+                )
+
                 !source.contains("youtube") -> {
                     loadCustomExtractor(name, source, "$referer/", subtitleCallback, callback)
                 }
@@ -1027,6 +1038,7 @@ object SoraExtractor : SoraStream() {
 
 
     }
+
     suspend fun invokeDotmovies(
         title: String? = null,
         year: Int? = null,
@@ -1036,7 +1048,16 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        invokeWpredis(title, year, season, lastSeason, episode, subtitleCallback, callback, dotmoviesAPI)
+        invokeWpredis(
+            title,
+            year,
+            season,
+            lastSeason,
+            episode,
+            subtitleCallback,
+            callback,
+            dotmoviesAPI
+        )
     }
 
     suspend fun invokeVegamovies(
@@ -1048,8 +1069,18 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        invokeWpredis(title, year, season, lastSeason, episode, subtitleCallback, callback, vegaMoviesAPI)
+        invokeWpredis(
+            title,
+            year,
+            season,
+            lastSeason,
+            episode,
+            subtitleCallback,
+            callback,
+            vegaMoviesAPI
+        )
     }
+
     private suspend fun invokeWpredis(
         title: String? = null,
         year: Int? = null,
@@ -1075,8 +1106,8 @@ object SoraExtractor : SoraStream() {
         val hTag = if (season == null) "h5" else "h3"
         val aTag = if (season == null) "Download Now" else "V-Cloud"
         val sTag = if (season == null) "" else "(Season $season|S$seasonSlug)"
-        res.select("div.entry-content > $hTag:matches((?i)$sTag.*(1080p|2160p))").
-        filter { element -> !element.text().contains("Download", true) }.apmap {
+        res.select("div.entry-content > $hTag:matches((?i)$sTag.*(1080p|2160p))")
+            .filter { element -> !element.text().contains("Download", true) }.apmap {
             val tags =
                 """(?:1080p|2160p)(.*)""".toRegex().find(it.text())?.groupValues?.get(1)?.trim()
             val href =
@@ -1602,7 +1633,10 @@ object SoraExtractor : SoraStream() {
             "$rStreamAPI/e/?tmdb=$id&s=$season&e=$episode"
         }
 
-        val res = app.get("$url&apikey=whXgvN4kVyoubGwqXpw26Oy3PVryl8dm", referer = "https://watcha.movie/").text
+        val res = app.get(
+            "$url&apikey=whXgvN4kVyoubGwqXpw26Oy3PVryl8dm",
+            referer = "https://watcha.movie/"
+        ).text
         val link = Regex("\"file\":\"(http.*?)\"").find(res)?.groupValues?.getOrNull(1) ?: return
 
         callback.invoke(
@@ -2079,10 +2113,11 @@ object SoraExtractor : SoraStream() {
                 ?.attr("href")
         } ?: return
 
-        val users = if(season == null) {
+        val users = if (season == null) {
             media.third.substringAfterLast("/") to "0"
         } else {
-            media.third.substringAfterLast("/") to iframe.substringAfterLast("/").substringBefore("-")
+            media.third.substringAfterLast("/") to iframe.substringAfterLast("/")
+                .substringBefore("-")
         }
         val res = app.get(fixUrl(iframe, api), verify = false)
         val serverUrl = res.document.selectFirst("script:containsData(pushState)")?.data()?.let {
@@ -2151,7 +2186,8 @@ object SoraExtractor : SoraStream() {
                         "Blackvid${source.label}",
                         s.url ?: return@s,
                         ref,
-                        if(s.quality.equals("4k")) Qualities.P2160.value else s.quality?.toIntOrNull() ?: Qualities.P1080.value,
+                        if (s.quality.equals("4k")) Qualities.P2160.value else s.quality?.toIntOrNull()
+                            ?: Qualities.P1080.value,
                         INFER_TYPE
                     )
                 )
@@ -2177,8 +2213,8 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val where = if(season==null) "movieName" else "seriesName"
-        val classes = if(season==null) "movies" else "series"
+        val where = if (season == null) "movieName" else "seriesName"
+        val classes = if (season == null) "movies" else "series"
         val body = """
         {
             "where": {
@@ -2196,16 +2232,27 @@ object SoraExtractor : SoraStream() {
         }
     """.trimIndent().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
 
-        val data = app.post("https://parse.showflix.tk/parse/classes/$classes", requestBody = body).text
-        val iframes = if(season==null) {
-            val result = tryParseJson<ShowflixSearchMovies>(data)?.resultsMovies?.find { it.movieName.equals("$title ($year)", true) }
+        val data =
+            app.post("https://parse.showflix.tk/parse/classes/$classes", requestBody = body).text
+        val iframes = if (season == null) {
+            val result = tryParseJson<ShowflixSearchMovies>(data)?.resultsMovies?.find {
+                it.movieName.equals(
+                    "$title ($year)",
+                    true
+                )
+            }
             listOf(
                 "https://streamwish.to/e/${result?.streamwish}",
                 "https://filelions.to/v/${result?.filelions}.html",
                 "https://streamruby.com/e/${result?.streamruby}.html",
             )
         } else {
-            val result = tryParseJson<ShowflixSearchSeries>(data)?.resultsSeries?.find { it.seriesName.equals(title, true) }
+            val result = tryParseJson<ShowflixSearchSeries>(data)?.resultsSeries?.find {
+                it.seriesName.equals(
+                    title,
+                    true
+                )
+            }
             listOf(
                 result?.streamwish?.get("Season $season")?.get(episode!!),
                 result?.filelions?.get("Season $season")?.get(episode!!),
@@ -2236,14 +2283,16 @@ object SoraExtractor : SoraStream() {
             "$watchOnlineAPI/shows/play/$id-$slug-$year"
         }
 
-        val monsterAPI = "https://ditairridgeleg.monster"
-        val fixUrl = url.replace(watchOnlineAPI, monsterAPI) + "?mid=1&sid=9k9iupt5sebbnfajrc6ti3ht7l&sec=1974bc4a902c4d69fcbab261dcec69094a9b8164&t=1694986826984"
-
-        val doc = app.get(fixUrl).document
+        val doc = app.get(
+            url.replace(
+                watchOnlineAPI,
+                "https://ditairridgeleg.monster"
+            ) + "?mid=1&sid=9k9iupt5sebbnfajrc6ti3ht7l&sec=1974bc4a902c4d69fcbab261dcec69094a9b8164&t=1694986826984"
+        ).document
         val script = doc.selectFirst("script:containsData(hash:)")?.data()
         val hash = Regex("hash:\\s*['\"](\\S+)['\"]").find(script ?: return)?.groupValues?.get(1)
         val expires = Regex("expires:\\s*(\\d+)").find(script)?.groupValues?.get(1)
-        val episodeId = (if(season == null) {
+        val episodeId = (if (season == null) {
             """id_movie:\s*(\d+)"""
         } else {
             """episode:\s*['"]$episode['"],[\n\s]+id_episode:\s*(\d+),[\n\s]+season:\s*['"]$season['"]"""
@@ -2279,7 +2328,7 @@ object SoraExtractor : SoraStream() {
             subtitleCallback.invoke(
                 SubtitleFile(
                     sub.language ?: return@map,
-                    if(file.startsWith("[")) return@map else fixUrl(file, watchOnlineAPI),
+                    if (file.startsWith("[")) return@map else fixUrl(file, watchOnlineAPI),
                 )
             )
         }
@@ -2299,7 +2348,8 @@ object SoraExtractor : SoraStream() {
             "$nineTvAPI/tv/$tmdbId-$season-$episode"
         }
 
-        val iframe = app.get(url, referer = "https://pressplay.top/").document.selectFirst("iframe")?.attr("src")
+        val iframe = app.get(url, referer = "https://pressplay.top/").document.selectFirst("iframe")
+            ?.attr("src")
 
         NineTv.getUrl(iframe ?: return, "$nineTvAPI/", subtitleCallback, callback)
 
@@ -2525,8 +2575,12 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val headers = mapOf("Authorization" to "Bearer 44d784c55e9a1e3dbb586f24b18b1cbcd1521673bd6178ef385890d2f989681fe22d05e291e2e0f03fce99cbc50cd520219e52cc6e30c944a559daf53a129af18349ec98f6a0e4e66b8d370a354f4f7fbd49df0ab806d533a3db71eecc7f75131a59ce8cffc5e0cc38e8af5919c23c0d904fbe31995308f065f0ff9cd1eda488")
-        val data = app.get("${BuildConfig.SFMOVIES_API}/api/mains?filters[title][\$contains]=$title", headers = headers)
+        val headers =
+            mapOf("Authorization" to "Bearer 44d784c55e9a1e3dbb586f24b18b1cbcd1521673bd6178ef385890d2f989681fe22d05e291e2e0f03fce99cbc50cd520219e52cc6e30c944a559daf53a129af18349ec98f6a0e4e66b8d370a354f4f7fbd49df0ab806d533a3db71eecc7f75131a59ce8cffc5e0cc38e8af5919c23c0d904fbe31995308f065f0ff9cd1eda488")
+        val data = app.get(
+            "${BuildConfig.SFMOVIES_API}/api/mains?filters[title][\$contains]=$title",
+            headers = headers
+        )
             .parsedSafe<SFMoviesSearch>()?.data
         val media = data?.find {
             it.attributes?.contentId.equals("$tmdbId") || (it.attributes?.title.equals(

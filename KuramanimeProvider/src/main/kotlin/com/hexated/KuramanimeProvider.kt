@@ -18,6 +18,7 @@ class KuramanimeProvider : MainAPI() {
     override val hasDownloadSupport = true
     private var headers: Map<String,String> = mapOf()
     private var cookies: Map<String,String> = mapOf()
+    private var misc: String? = null
     override val supportedTypes = setOf(
         TvType.Anime,
         TvType.AnimeMovie,
@@ -201,13 +202,10 @@ class KuramanimeProvider : MainAPI() {
             "X-CSRF-TOKEN" to token
         )
         cookies = req.cookies
-        val stream = app.post(
-            "$mainUrl/misc/post/get-stream-token", headers = headers, cookies = cookies
-        ).parsed<String>()
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?activate_stream=$stream&stream_server=$server"
-            if (server == "kuramadrive" || server == "archive") {
+            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getMisc()}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
                 app.get(
@@ -222,6 +220,12 @@ class KuramanimeProvider : MainAPI() {
         }
 
         return true
+    }
+
+    private suspend fun getMisc() = misc ?: fetchMisc()
+
+    private suspend fun fetchMisc(): String {
+        return app.post("$mainUrl/misc/post/fSbSQa7q5W8b9rhsGwu0KThQImPPQI2k", headers = headers, cookies = cookies).parsed()
     }
 
 }
