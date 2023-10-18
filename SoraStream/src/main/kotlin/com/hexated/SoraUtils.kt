@@ -10,7 +10,6 @@ import com.hexated.SoraStream.Companion.hdmovies4uAPI
 import com.hexated.SoraStream.Companion.malsyncAPI
 import com.hexated.SoraStream.Companion.smashyStreamAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
-import com.hexated.SoraStream.Companion.watchOnlineAPI
 import com.hexated.SoraStream.Companion.watchflxAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
@@ -21,16 +20,12 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.nicehttp.RequestBodyTypes
-import com.lagradost.nicehttp.Requests.Companion.await
 import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import org.jsoup.nodes.Document
 import java.math.BigInteger
 import java.net.*
@@ -40,7 +35,6 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
@@ -842,33 +836,6 @@ suspend fun fetchWatchflxCookies(): Map<String, String> {
 fun Document.findTvMoviesIframe(): String? {
     return this.selectFirst("script:containsData(var seconds)")?.data()?.substringAfter("href='")
         ?.substringBefore("'>")
-}
-
-suspend fun searchWatchOnline(
-    title: String? = null,
-    season: Int? = null,
-    year: Int? = null,
-): NiceResponse? {
-    val wTitle = title?.dropLast(1) // weird but this will make search working
-    val mediaId = app.get(
-        if (season == null) {
-            "${watchOnlineAPI}/api/v1/do-search/?q=$wTitle"
-        } else {
-            "${watchOnlineAPI}/api/v1/do-search/?q=$wTitle"
-        }
-    ).parsedSafe<WatchOnlineSearch>()?.result?.find {
-        it.title.equals(title, true) && it.year.equals("$year")
-    }?.slug
-
-    return app.get(
-        fixUrl(
-            mediaId ?: return null, if (season == null) {
-                "${watchOnlineAPI}/movies/play"
-            } else {
-                "${watchOnlineAPI}/shows/play"
-            }
-        )
-    )
 }
 
 //modified code from https://github.com/jmir1/aniyomi-extensions/blob/master/src/all/kamyroll/src/eu/kanade/tachiyomi/animeextension/all/kamyroll/AccessTokenInterceptor.kt

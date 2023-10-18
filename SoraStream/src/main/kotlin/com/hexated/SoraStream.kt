@@ -45,7 +45,6 @@ import com.hexated.SoraExtractor.invokeSFMovies
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
-import com.hexated.SoraExtractor.invokeVatic
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeWatchOnline
@@ -114,7 +113,7 @@ open class SoraStream : TmdbProvider() {
         const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"
         const val pobmoviesAPI = "https://pobmovies.cam"
-        const val multimoviesAPI = "https://multi-movies.xyz"
+        const val multimoviesAPI = "https://multimovies.live"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
         const val doomoviesAPI = "https://doomovies.net"
@@ -743,15 +742,6 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeShowflix(
                     res.title,
                     res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeVatic(
-                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,

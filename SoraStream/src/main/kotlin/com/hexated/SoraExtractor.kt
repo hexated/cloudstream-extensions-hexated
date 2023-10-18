@@ -1607,7 +1607,7 @@ object SoraExtractor : SoraStream() {
 
         callback.invoke(
             ExtractorLink(
-                "RStream", "RStream", link, "$rStreamAPI/", Qualities.P720.value, INFER_TYPE
+                "RStream", "RStream", link, "$rStreamAPI/", Qualities.P1080.value, INFER_TYPE
             )
         )
     }
@@ -2140,7 +2140,7 @@ object SoraExtractor : SoraStream() {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val data = app.get(url, timeout = 60L, referer = ref).body.bytes().decrypt(key)
+        val data = app.get(url, timeout = 120L, referer = ref).body.bytes().decrypt(key)
         val json = tryParseJson<BlackvidResponses>(data)
 
         json?.sources?.map { source ->
@@ -2236,10 +2236,10 @@ object SoraExtractor : SoraStream() {
             "$watchOnlineAPI/shows/play/$id-$slug-$year"
         }
 
-        var res = app.get(url)
-        if (res.code == 403) return
-        if (!res.isSuccessful) res = searchWatchOnline(title, season, year) ?: return
-        val doc = res.document
+        val monsterAPI = "https://ditairridgeleg.monster"
+        val fixUrl = url.replace(watchOnlineAPI, monsterAPI) + "?mid=1&sid=9k9iupt5sebbnfajrc6ti3ht7l&sec=1974bc4a902c4d69fcbab261dcec69094a9b8164&t=1694986826984"
+
+        val doc = app.get(fixUrl).document
         val script = doc.selectFirst("script:containsData(hash:)")?.data()
         val hash = Regex("hash:\\s*['\"](\\S+)['\"]").find(script ?: return)?.groupValues?.get(1)
         val expires = Regex("expires:\\s*(\\d+)").find(script)?.groupValues?.get(1)
@@ -2539,60 +2539,16 @@ object SoraExtractor : SoraStream() {
         } else {
             media?.attributes?.seriess?.get(season - 1)?.get(episode - 1)?.svideos
         } ?: return
-        val sig = "?sv=2022-11-02&ss=b&srt=sco&sp=rwlaix&se=2024-08-03T01:02:15Z&st=2023-08-02T17:02:15Z&spr=https&sig=9Fyz9V%2F%2FRsHa3%2F1nDYMU%2BxkblH5GMAtW7nrL5OCCASg%3D"
         callback.invoke(
             ExtractorLink(
                 "SFMovies",
                 "SFMovies",
-                fixUrl(video + sig, "https://awesomes.blob.core.windows.net/awesomes"),
+                fixUrl(video, "https://watchfree.blob.core.windows.net/watchfree"),
                 "",
                 Qualities.P1080.value,
                 INFER_TYPE
             )
         )
-
-    }
-
-    suspend fun invokeVatic(
-        tmdbId: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val vaticAPI = BuildConfig.VATIC_API
-        val url = if (season == null) {
-            "$vaticAPI/api/movie?id=$tmdbId"
-        } else {
-            "$vaticAPI/api/tv?id=$tmdbId&s=$season&e=$episode"
-        }
-
-        val res = app.get(
-            url
-        ).parsedSafe<VaticSources>()
-
-        res?.qualities?.map { source ->
-            callback.invoke(
-                ExtractorLink(
-                    "Vatic",
-                    "Vatic",
-                    source.path ?: return@map,
-                    "$vaticAPI/",
-                    if(source.quality.equals("auto", true)) Qualities.P1080.value else getQualityFromName(source.quality),
-                    INFER_TYPE
-                )
-            )
-        }
-
-        res?.srtfiles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.caption ?: return@map,
-                    sub.url ?: return@map,
-                )
-            )
-        }
-
     }
 
 }

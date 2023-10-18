@@ -56,7 +56,6 @@ jobs:
           ANICHI_APP: ${{ secrets.ANICHI_APP }}
           PRIMEWIRE_KEY: ${{ secrets.PRIMEWIRE_KEY }}
           ZSHOW_API: ${{ secrets.ZSHOW_API }}
-          VATIC_API: ${{ secrets.VATIC_API }}
           SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
         run: |
           cd $GITHUB_WORKSPACE/src
@@ -74,7 +73,6 @@ jobs:
           echo ANICHI_APP=$ANICHI_APP >> local.properties
           echo PRIMEWIRE_KEY=$PRIMEWIRE_KEY >> local.properties
           echo ZSHOW_API=$ZSHOW_API >> local.properties
-          echo VATIC_API=$VATIC_API >> local.properties
           echo SFMOVIES_API=$SFMOVIES_API >> local.properties
 
       - name: Build Plugins

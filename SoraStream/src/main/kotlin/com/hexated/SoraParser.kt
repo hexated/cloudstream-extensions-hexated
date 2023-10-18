@@ -162,17 +162,6 @@ data class JikanResponse(
     @JsonProperty("data") val data: JikanData? = null,
 )
 
-data class WatchOnlineResults(
-    @JsonProperty("slug") val slug: String? = null,
-    @JsonProperty("title") val title: String? = null,
-    @JsonProperty("year") val year: String? = null,
-)
-
-
-data class WatchOnlineSearch(
-    @JsonProperty("result") val result: ArrayList<WatchOnlineResults>? = arrayListOf(),
-)
-
 data class WatchOnlineSubtitles(
     @JsonProperty("language") val language: String? = null,
     @JsonProperty("file") val file: Any? = null,
@@ -403,19 +392,4 @@ data class SFMoviesData(
 
 data class SFMoviesSearch(
     @JsonProperty("data") var data: ArrayList<SFMoviesData>? = arrayListOf(),
-)
-
-data class VaticSrtfiles(
-    @JsonProperty("caption") var caption: String? = null,
-    @JsonProperty("url") var url: String? = null,
-)
-
-data class VaticQualities(
-    @JsonProperty("path") var path: String? = null,
-    @JsonProperty("quality") var quality: String? = null,
-)
-
-data class VaticSources(
-    @JsonProperty("Qualities") var qualities: ArrayList<VaticQualities> = arrayListOf(),
-    @JsonProperty("Srtfiles") var srtfiles: ArrayList<VaticSrtfiles> = arrayListOf(),
 )
