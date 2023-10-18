@@ -2017,7 +2017,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokePutactor(
+    suspend fun invokeMovies123(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -2030,10 +2030,10 @@ object SoraExtractor : SoraStream() {
             season,
             episode,
             callback,
-            putactorAPI,
-            "Putactor",
-            "_VPzQdLFXWQppjNou",
-            "_hfDAQaOJyNSkXHjy"
+            movies123API,
+            "Movie123",
+            "mouCgDQMxDwt",
+            "moFHVogrVLMH"
         )
     }
 

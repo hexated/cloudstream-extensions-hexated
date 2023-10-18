@@ -40,7 +40,7 @@ import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokeGomovies
-import com.hexated.SoraExtractor.invokePutactor
+import com.hexated.SoraExtractor.invokeMovies123
 import com.hexated.SoraExtractor.invokeSFMovies
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
@@ -120,7 +120,7 @@ open class SoraStream : TmdbProvider() {
         const val vidsrctoAPI = "https://vidsrc.to"
         const val dramadayAPI = "https://dramaday.me"
         const val animetoshoAPI = "https://animetosho.org"
-        const val putactorAPI = "https://putlocker.actor"
+        const val movies123API = "https://new-movies123.link"
         const val jump1API = "https://ca.jump1.net"
         const val vegaMoviesAPI = "https://vegamovies.id"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
@@ -588,7 +588,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokePutactor(
+                if (!res.isAnime) invokeMovies123(
                     res.title,
                     res.year,
                     res.season,
