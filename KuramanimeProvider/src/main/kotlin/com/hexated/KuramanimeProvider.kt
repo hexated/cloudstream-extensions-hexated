@@ -197,6 +197,7 @@ class KuramanimeProvider : MainAPI() {
         val req = app.get(data)
         val res = req.document
         val token = res.select("meta[name=csrf-token]").attr("content")
+        val stRt = res.selectFirst("script:containsData(window\\.stRt)")?.data()?.substringAfter("stRt = \"")?.substringBefore("\"") ?: return false
         headers = mapOf(
             "X-Requested-With" to "XMLHttpRequest",
             "X-CSRF-TOKEN" to token
@@ -204,7 +205,7 @@ class KuramanimeProvider : MainAPI() {
         cookies = req.cookies
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getMisc()}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getMisc(stRt)}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
             if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
@@ -222,10 +223,9 @@ class KuramanimeProvider : MainAPI() {
         return true
     }
 
-    private suspend fun getMisc() = misc ?: fetchMisc()
+    private suspend fun getMisc(url: String) = misc ?: fetchMisc(url)
 
-    private suspend fun fetchMisc(): String {
-        return app.post("$mainUrl/misc/post/fSbSQa7q5W8b9rhsGwu0KThQImPPQI2k", headers = headers, cookies = cookies).parsed()
+    private suspend fun fetchMisc(url: String): String {
+        return app.post(url, headers = headers, cookies = cookies).parsed()
     }
-
 }

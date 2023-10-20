@@ -12,10 +12,8 @@ import org.jsoup.Jsoup
 
 class Hdmovie2 : Movierulzhd() {
 
-    override var mainUrl = "https://hdmovie2.tel"
-
+    override var mainUrl = "https://hdmovie2.pink"
     override var name = "Hdmovie2"
-
     override val mainPage = mainPageOf(
         "trending" to "Trending",
         "movies" to "Movies",
@@ -54,10 +52,10 @@ class Hdmovie2 : Movierulzhd() {
             document.select("ul#playeroptionsul > li").map {
                 it.attr("data-nume")
             }.apmap { nume ->
-                val source = app.get(
-                    url = "$directUrl/wp-json/dooplayer/v2/${id}/${type}/${nume}",
-                    referer = data,
-                    headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+                val source = app.post(
+                    url = "$directUrl/wp-admin/admin-ajax.php", data = mapOf(
+                        "action" to "doo_player_ajax", "post" to id, "nume" to nume, "type" to type
+                    ), referer = data, headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest")
                 ).parsed<ResponseHash>().embed_url.getIframe()
                 when {
                     !source.contains("youtube") -> loadExtractor(

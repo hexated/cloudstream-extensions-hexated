@@ -124,20 +124,20 @@ open class Akamaicdn : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         val res = app.get(url, referer = referer).document
-        val mapper = res.select("script:containsData(sniff)").last()?.data()?.substringAfter("sniff(")
-            ?.substringBefore(");")?.split(",")?.map { it.replace("\"", "").trim() } ?: return
+        val mappers = res.selectFirst("script:containsData(sniff\\()")?.data()?.substringAfter("sniff(")
+            ?.substringBefore(");") ?: return
+        val ids = mappers.split(",").map { it.replace("\"", "") }
         callback.invoke(
             ExtractorLink(
                 this.name,
                 this.name,
-                "$mainUrl/m3u8/${mapper[1]}/${mapper[2]}/master.txt?s=1&cache=1",
+                "$mainUrl/m3u8/${ids[1]}/${ids[2]}/master.txt?s=1&cache=1",
                 url,
                 Qualities.Unknown.value,
                 isM3u8 = true,
             )
         )
     }
-
 }
 
 suspend fun invokeTwoEmbed(

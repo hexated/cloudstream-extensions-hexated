@@ -2031,7 +2031,7 @@ object SoraExtractor : SoraStream() {
             episode,
             callback,
             movies123API,
-            "Movie123",
+            "Movies123",
             "mouCgDQMxDwt",
             "moFHVogrVLMH"
         )
