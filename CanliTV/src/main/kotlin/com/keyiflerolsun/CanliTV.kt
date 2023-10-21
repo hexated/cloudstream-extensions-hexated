@@ -1,4 +1,4 @@
-package com.keyiflerolsun
+package com.lagradost
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -13,7 +13,7 @@ class CanliTV : MainAPI() {
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasChromecastSupport = true
-    override val supportedTypes = setOf(TvType.Live)
+    override val supportedTypes       = setOf(TvType.Live)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val data = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
