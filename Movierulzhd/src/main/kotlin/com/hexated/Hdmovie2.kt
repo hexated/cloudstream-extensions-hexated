@@ -30,11 +30,11 @@ class Hdmovie2 : Movierulzhd() {
     ): Boolean {
         if (data.startsWith("{")) {
             val loadData = tryParseJson<LinkData>(data)
-            val source = app.get(
-                url = "$directUrl/wp-json/dooplayer/v2/${loadData?.post}/${loadData?.type}/${loadData?.nume}",
-                referer = data,
-                headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-            ).parsed<ResponseHash>().embed_url.getIframe()
+            val source = app.post(
+                url = "$directUrl/wp-admin/admin-ajax.php", data = mapOf(
+                    "action" to "doo_player_ajax", "post" to "${loadData?.post}", "nume" to "${loadData?.nume}", "type" to "${loadData?.type}"
+                ), referer = data, headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest"
+                )).parsed<ResponseHash>().embed_url.getIframe()
             if (!source.contains("youtube")) loadExtractor(
                 source,
                 "$directUrl/",
