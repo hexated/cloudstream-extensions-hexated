@@ -7,28 +7,27 @@ import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
-class Turkish : MainAPI() {
-    override var mainUrl = "https://turkish123.com"
-    override var name = "Turkish123"
-    override val hasMainPage = true
-    override var lang = "tr"
+class Turkish123 : MainAPI() {
+    override var mainUrl            = "https://turkish123.com"
+    override var name               = "Turkish123"
+    override val hasMainPage        = true
+    override var lang               = "tr"
     override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.TvSeries, TvType.Movie)
+    override val supportedTypes     = setOf(TvType.TvSeries)
 
     companion object {
         private const val mainServer = "https://tukipasti.com"
     }
 
-    override val mainPage = mainPageOf(
-        "$mainUrl/series-list/page/" to "Series List",
-        "$mainUrl/episodes-list/page/" to "Episodes List",
-    )
+    override val mainPage =
+        mainPageOf(
+            "$mainUrl/series-list/page/" to "Diziler",
+            "$mainUrl/episodes-list/page/" to "Bölümler",
+        )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get(request.data + page).document
-        val home = document.select("div.movies-list div.ml-item").mapNotNull {
-            it.toSearchResult()
-        }
+        val home = document.select("div.movies-list div.ml-item").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(request.name, home)
     }
 
@@ -55,9 +54,7 @@ class Turkish : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val document = app.get("$mainUrl/?s=$query").document
-        return document.select("div.movies-list div.ml-item").mapNotNull {
-            it.toSearchResult()
-        }
+        return document.select("div.movies-list div.ml-item").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -67,24 +64,32 @@ class Turkish : MainAPI() {
         val poster = fixUrlNull(document.selectFirst("div.thumb.mvic-thumb img")?.attr("src"))
         val tags = document.select("div.mvici-left p:contains(Genre:) a").map { it.text() }
 
-        val year = document.selectFirst("div.mvici-right p:contains(Year:) a")?.text()?.trim()
-            ?.toIntOrNull()
+        val year =
+            document
+                .selectFirst("div.mvici-right p:contains(Year:) a")
+                ?.text()
+                ?.trim()
+                ?.toIntOrNull()
         val description = document.select("p.f-desc").text().trim()
-        val duration = document.selectFirst("div.mvici-right span[itemprop=duration]")?.text()
-            ?.filter { it.isDigit() }?.toIntOrNull()
+        val duration =
+            document
+                .selectFirst("div.mvici-right span[itemprop=duration]")
+                ?.text()
+                ?.filter { it.isDigit() }
+                ?.toIntOrNull()
         val rating = document.select("span.imdb-r").text().trim().toRatingInt()
         val actors = document.select("div.mvici-left p:contains(Actors:) a").map { it.text() }
 
-        val recommendations = document.select("div.movies-list div.ml-item").mapNotNull {
-            it.toSearchResult()
-        }
+        val recommendations =
+            document.select("div.movies-list div.ml-item").mapNotNull { it.toSearchResult() }
 
-        val episodes = document.select("div.les-content a").map {
-            Episode(
-                it.attr("href"),
-                it.text(),
-            )
-        }
+        val episodes =
+            document.select("div.les-content a").map {
+                Episode(
+                    it.attr("href"),
+                    it.text(),
+                )
+            }
         return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
             this.year = year
@@ -97,21 +102,13 @@ class Turkish : MainAPI() {
         }
     }
 
-    private suspend fun invokeLocalSource(
-        url: String,
-        callback: (ExtractorLink) -> Unit
-    ) {
+    private suspend fun invokeLocalSource(url: String, callback: (ExtractorLink) -> Unit) {
         val document = app.get(url, referer = "$mainUrl/").text
 
-        Regex("var\\surlPlay\\s=\\s[\"|'](\\S+)[\"|'];").find(document)?.groupValues?.get(1)
-            ?.let { link ->
-                M3u8Helper.generateM3u8(
-                    this.name,
-                    link,
-                    referer = "$mainServer/"
-                ).forEach(callback)
-            }
-
+        Regex("var\\surlPlay\\s=\\s[\"|'](\\S+)[\"|'];").find(document)?.groupValues?.get(1)?.let {
+            link ->
+            M3u8Helper.generateM3u8(this.name, link, referer = "$mainServer/").forEach(callback)
+        }
     }
 
     override suspend fun loadLinks(
@@ -123,8 +120,11 @@ class Turkish : MainAPI() {
 
         val document = app.get(data).text
 
-        Regex("<iframe.*src=[\"|'](\\S+)[\"|']\\s").findAll(document).map { it.groupValues[1] }
-            .toList().apmap { link ->
+        Regex("<iframe.*src=[\"|'](\\S+)[\"|']\\s")
+            .findAll(document)
+            .map { it.groupValues[1] }
+            .toList()
+            .apmap { link ->
                 if (link.startsWith(mainServer)) {
                     invokeLocalSource(link, callback)
                 } else {
@@ -133,7 +133,5 @@ class Turkish : MainAPI() {
             }
 
         return true
-
     }
-
 }
