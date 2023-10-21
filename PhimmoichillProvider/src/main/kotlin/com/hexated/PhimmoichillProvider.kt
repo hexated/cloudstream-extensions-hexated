@@ -3,13 +3,14 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import java.net.URI
 import java.net.URLDecoder
 
 class PhimmoichillProvider : MainAPI() {
-    override var mainUrl = "https://phimmoichillg.net"
+    override var mainUrl = "https://phimmoichillh.net"
+    private var directUrl = mainUrl
     override var name = "Phimmoichill"
     override val hasMainPage = true
     override var lang = "vi"
@@ -89,26 +90,33 @@ class PhimmoichillProvider : MainAPI() {
         }
     }
 
-    override suspend fun load( url: String ): LoadResponse {
-        val document = app.get(url).document
+    override suspend fun load(url: String): LoadResponse {
+        val request = app.get(url)
+        directUrl = getBaseUrl(request.url)
+        val document = request.document
 
         val title = document.selectFirst("h1[itemprop=name]")?.text()?.trim().toString()
         val link = document.select("ul.list-button li:last-child a").attr("href")
         val poster = document.selectFirst("div.image img[itemprop=image]")?.attr("src")
-        val tags = document.select("ul.entry-meta.block-film li:nth-child(4) a").map { it.text()!!.substringAfter("Phim") }
+        val tags = document.select("ul.entry-meta.block-film li:nth-child(4) a")
+            .map { it.text().substringAfter("Phim") }
         val year = document.select("ul.entry-meta.block-film li:nth-child(2) a").text().trim()
             .toIntOrNull()
         val tvType = if (document.select("div.latest-episode").isNotEmpty()
         ) TvType.TvSeries else TvType.Movie
-        val description = document.select("div#film-content").text().substringAfter("Full HD Vietsub Thuyết Minh").substringBefore("@phimmoi").trim()
+        val description =
+            document.select("div#film-content").text().substringAfter("Full HD Vietsub Thuyết Minh")
+                .substringBefore("@phimmoi").trim()
         val trailer = document.select("body script")
-            .find { it.data().contains("youtube.com") }?.data()?.substringAfterLast("file: \"")?.substringBefore("\",")
+            .find { it.data().contains("youtube.com") }?.data()?.substringAfterLast("file: \"")
+            ?.substringBefore("\",")
         val rating =
             document.select("ul.entry-meta.block-film li:nth-child(7) span").text().toRatingInt()
         val actors = document.select("ul.entry-meta.block-film li:last-child a").map { it.text() }
         val recommendations = document.select("ul#list-film-realted li.item").map {
             it.toSearchResult().apply {
-                this.posterUrl = decode(it.selectFirst("img")!!.attr("data-src").substringAfter("url="))
+                this.posterUrl =
+                    decode(it.selectFirst("img")!!.attr("data-src").substringAfter("url="))
             }
         }
 
@@ -148,7 +156,7 @@ class PhimmoichillProvider : MainAPI() {
             }
         }
     }
- 
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -159,39 +167,43 @@ class PhimmoichillProvider : MainAPI() {
 
         val key = document.select("div#content script")
             .find { it.data().contains("filmInfo.episodeID =") }?.data()?.let { script ->
-                val id = script.substringAfter("filmInfo.episodeID = parseInt('")
+                val id = script.substringAfter("parseInt('").substringBefore("'")
                 app.post(
-                    url = "${this.mainUrl}/chillsplayer.php",
-                    data = mapOf("qcao" to id, "sv" to "0"),
+                    url = "$directUrl/chillsplayer.php",
+                    data = mapOf("qcao" to id),
                     referer = data,
                     headers = mapOf(
                         "X-Requested-With" to "XMLHttpRequest",
                         "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8"
                     )
                 ).text.substringAfterLast("iniPlayers(\"")
-                    .substringBefore("\",")
+                    .substringBefore("\"")
             }
 
         listOf(
-            Pair("https://so-trym.topphimmoi.org/raw/$key/index.m3u8", "PMFAST"),
+            Pair("https://sotrim.topphimmoi.org/raw/$key/index.m3u8", "PMFAST"),
             Pair("https://dash.megacdn.xyz/raw/$key/index.m3u8", "PMHLS"),
             Pair("https://so-trym.phimchill.net/dash/$key/index.m3u8", "PMPRO"),
             Pair("https://dash.megacdn.xyz/dast/$key/index.m3u8", "PMBK")
-        ).apmap { (link, source) ->
-            safeApiCall {
-                callback.invoke(
-                    ExtractorLink(
-                        source,
-                        source,
-                        link,
-                        referer = "$mainUrl/",
-                        quality = Qualities.P1080.value,
-                        isM3u8 = true,
-                    )
+        ).map { (link, source) ->
+            callback.invoke(
+                ExtractorLink(
+                    source,
+                    source,
+                    link,
+                    referer = "$directUrl/",
+                    quality = Qualities.P1080.value,
+                    INFER_TYPE,
                 )
-            }
+            )
         }
         return true
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
     }
 
 }
