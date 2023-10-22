@@ -1718,9 +1718,7 @@ object SoraExtractor : SoraStream() {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
-                it.second.equals("Player F", true) || it.second.equals(
-                    "Player N", true
-                ) -> {
+                it.second.contains(Regex("(Player F|Player SE|Player N)")) -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
 
@@ -2168,14 +2166,14 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
     ) {
         val ref = "https://blackvid.space/"
-        val key = "c3124ecca65f4e72ef5cb39033cdfed69697e94e"
+        val key = "b6055c533c19131a638c3d2299d525d5ec08a814"
         val url = if (season == null) {
             "$blackvidAPI/v3/movie/sources/$tmdbId?key=$key"
         } else {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val data = app.get(url, timeout = 120L, referer = ref).body.bytes().decrypt(key)
+        val data = session.get(url, timeout = 120L, referer = ref).body.bytes().decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
         val json = tryParseJson<BlackvidResponses>(data)
 
         json?.sources?.map { source ->
