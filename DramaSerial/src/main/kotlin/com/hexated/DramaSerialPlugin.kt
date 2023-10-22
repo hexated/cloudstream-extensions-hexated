@@ -11,5 +11,6 @@ class DramaSerialPlugin: Plugin() {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(DramaSerial())
         registerExtractorAPI(Bk21())
+        registerExtractorAPI(Lkc21())
     }
 }

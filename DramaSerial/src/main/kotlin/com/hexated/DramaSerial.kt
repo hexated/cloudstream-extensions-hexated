@@ -1,13 +1,18 @@
 package com.hexated
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.Filesim
+import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.INFER_TYPE
+import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class DramaSerial : MainAPI() {
-    override var mainUrl = "https://dramaserial.sbs"
+    override var mainUrl = "https://tv1.dramaserial.id"
+    private var serverUrl = "https://juraganfilm.info"
     override var name = "DramaSerial"
     override val hasMainPage = true
     override var lang = "id"
@@ -101,6 +106,31 @@ class DramaSerial : MainAPI() {
         }
     }
 
+    private suspend fun invokeGetbk(
+        url: String,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val script = app.get(
+            url,
+            referer = "$serverUrl/"
+        ).document.selectFirst("script:containsData(sources)")?.data() ?: return
+
+        val json = "\"sources\":\\s*\\[(.*)]".toRegex().find(script)?.groupValues?.get(1)
+        AppUtils.tryParseJson<ArrayList<Sources>>("[$json]")?.map {
+            callback.invoke(
+                ExtractorLink(
+                    "Getbk",
+                    "Getbk",
+                    it.file ?: return@map,
+                    "$serverUrl/",
+                    getQualityFromName(it.label),
+                    INFER_TYPE,
+                )
+            )
+        }
+
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -109,22 +139,43 @@ class DramaSerial : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
-        val iframe = document.select("div.gmr-server-wrap iframe").attr("src")
-        app.get(iframe, referer = "$mainUrl/").document.select("div#header-slider ul li").apmap { mLink ->
-            mLink.attr("onclick").substringAfter("frame('").substringBefore("')").let { iLink ->
-                val uLink = app.get(iLink, referer = iframe).document.select("script").find { it.data().contains("(document).ready") }?.data()?.substringAfter("replace(\"")?.substringBefore("\");") ?: return@apmap null
-                val link = app.get(uLink, referer = iLink).document.selectFirst("iframe")?.attr("src") ?: return@apmap null
-                loadExtractor(fixUrl(link), "https://juraganfilm.info/", subtitleCallback, callback)
+        val iframe = document.select("iframe[name=juraganfilm]").attr("src")
+        app.get(iframe, referer = "$mainUrl/").document.select("div#header-slider ul li")
+            .apmap { mLink ->
+                mLink.attr("onclick").substringAfter("frame('").substringBefore("')").let { iLink ->
+                    val iMovie = iLink.substringAfter("movie=").substringBefore("&")
+                    val mIframe = iLink.substringAfter("iframe=")
+                    val iUrl = "$serverUrl/stream/$mIframe.php?movie=$iMovie"
+                    if(mIframe == "getbk") {
+                        invokeGetbk(iUrl, callback)
+                    } else {
+                        val link = app.get(
+                            iUrl,
+                            referer = "$serverUrl/"
+                        ).document.selectFirst("iframe")?.attr("src") ?: return@apmap null
+                        loadExtractor(fixUrl(link), "$serverUrl/", subtitleCallback, callback)
+                    }
+                }
             }
-        }
 
         return true
 
     }
+
+    private data class Sources(
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+    )
+
 
 }
 
 class Bk21 : Filesim() {
     override val name = "Bk21"
     override var mainUrl = "https://bk21.net"
+}
+
+class Lkc21 : Filesim() {
+    override val name = "Lkc21"
+    override var mainUrl = "https://lkc21.net"
 }
