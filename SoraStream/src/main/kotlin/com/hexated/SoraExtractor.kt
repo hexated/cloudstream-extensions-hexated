@@ -2376,27 +2376,37 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invokeRidomovies(
+        tmdbId: Int? = null,
+        imdbId: String? = null,
         title: String? = null,
-        year: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val iframe =
-            app.get("$ridomoviesAPI/movies/${title.createSlug()}-watch-online-$year").document.selectFirst(
-                "div.player-div iframe"
-            )?.attr("data-src")
-        val unpacked = getAndUnpack(app.get(iframe ?: return, referer = "$ridomoviesAPI/").text)
-        val video = Regex("=\"(aHR.*?)\";").find(unpacked)?.groupValues?.get(1)
-        callback.invoke(
-            ExtractorLink(
-                "Ridomovies",
-                "Ridomovies",
-                base64Decode(video ?: return),
-                "${getBaseUrl(iframe)}/",
-                Qualities.P1080.value,
-                isM3u8 = true
-            )
-        )
-
+        val slug = app.get("$ridomoviesAPI/core/api/search?q=$title")
+            .parsedSafe<RidoSearch>()?.data?.items?.find {
+                it.contentable?.tmdbId == tmdbId || it.contentable?.imdbId == imdbId
+            }?.slug ?: return
+        app.get("$ridomoviesAPI/core/api/movies/$slug/videos")
+            .parsedSafe<RidoResponses>()?.data?.apmap { link ->
+                val iframe = Jsoup.parse(link.url ?: return@apmap).select("iframe").attr("data-src")
+                val unpacked =
+                    getAndUnpack(
+                        app.get(
+                            iframe,
+                            referer = "$ridomoviesAPI/"
+                        ).text
+                    )
+                val video = Regex("=\"(aHR.*?)\";").find(unpacked)?.groupValues?.get(1)
+                callback.invoke(
+                    ExtractorLink(
+                        "Ridomovies",
+                        "Ridomovies",
+                        base64Decode(video ?: return@apmap),
+                        "${getBaseUrl(iframe)}/",
+                        Qualities.P1080.value,
+                        isM3u8 = true
+                    )
+                )
+            }
     }
 
     suspend fun invokeNavy(

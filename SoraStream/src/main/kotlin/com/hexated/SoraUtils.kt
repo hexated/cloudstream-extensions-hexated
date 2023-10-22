@@ -440,7 +440,7 @@ suspend fun invokeSmashyFfix(
     val source = Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(res)?.groupValues?.get(1) ?: return
 
     source.split(",").map { links ->
-        val quality = Regex("(?i)\\[(\\d+(?:k|p)?)]").find(links)?.groupValues?.getOrNull(1)?.trim()
+        val quality = Regex("\\[(\\S+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
         val link = links.removePrefix("[$quality]").trim()
         callback.invoke(
             ExtractorLink(
