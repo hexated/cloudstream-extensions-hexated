@@ -223,7 +223,10 @@ object SoraExtractor : SoraStream() {
         } else {
             "$multimoviesAPI/episodes/$fixTitle-${season}x${episode}"
         }
-        invokeWpmovies(null, url, subtitleCallback, callback, true)
+        val req = app.get(url)
+        val directUrl = getBaseUrl(req.url)
+        val iframe = req.document.selectFirst("div.pframe iframe")?.attr("src")
+        loadCustomExtractor("Multimovies", iframe ?: return, "$directUrl/", subtitleCallback, callback)
     }
 
     suspend fun invokeNetmovies(

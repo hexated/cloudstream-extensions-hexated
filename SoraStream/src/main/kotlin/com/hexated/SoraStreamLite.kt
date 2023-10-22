@@ -228,8 +228,9 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 if (!res.isAnime && res.season == null) invokeRidomovies(
+                    res.id,
+                    res.imdbId,
                     res.title,
-                    res.year,
                     callback
                 )
             },

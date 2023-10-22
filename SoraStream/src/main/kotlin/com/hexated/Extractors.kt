@@ -393,3 +393,8 @@ class Yipsu : Voe() {
     override val name = "Yipsu"
     override var mainUrl = "https://yip.su"
 }
+
+class Embedwish : Filesim() {
+    override val name = "Embedwish"
+    override var mainUrl = "https://embedwish.com"
+}

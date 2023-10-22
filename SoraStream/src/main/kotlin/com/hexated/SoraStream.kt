@@ -113,7 +113,7 @@ open class SoraStream : TmdbProvider() {
         const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"
         const val pobmoviesAPI = "https://pobmovies.cam"
-        const val multimoviesAPI = "https://multimovies.live"
+        const val multimoviesAPI = "https://multimovies.info"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
         const val doomoviesAPI = "https://doomovies.net"
@@ -612,8 +612,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime && res.season == null) invokeRidomovies(
+                    res.id,
+                    res.imdbId,
                     res.title,
-                    res.year,
                     callback
                 )
             },
