@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 import java.net.URI
 
-class Nodrakorid : DutaMovie() {
+class Nodrakorid : Gomov() {
     override var mainUrl = "https://no-drakor.xyz"
     override var name = "Nodrakorid"
 

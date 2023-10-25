@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.TvSeriesLoadResponse
 import com.lagradost.cloudstream3.*
 
 class Pusatfilm : Gomov() {
-    override var mainUrl = "https://tv.pusatfilm21.wiki"
+    override var mainUrl = "https://pusatfilm21.art"
     override var name = "Pusatfilm"
 
     override val mainPage = mainPageOf(
