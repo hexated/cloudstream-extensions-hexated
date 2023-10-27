@@ -105,12 +105,35 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit
     ) {
         val url = if (season == null) {
-            "$vidSrcAPI/embed/$id"
+            "$vidSrcAPI/embed/movie?tmdb=$id"
         } else {
-            "$vidSrcAPI/embed/$id/${season}-${episode}"
+            "$vidSrcAPI/embed/tv?tmdb=$id&season=$season&episode=$episode"
         }
 
-        loadCustomExtractor(null, url, null, subtitleCallback, callback)
+        val iframedoc = app.get(url).document.select("iframe#player_iframe").attr("src").let { httpsify(it) }
+        val doc = app.get(iframedoc, referer = url).document
+
+        val index = doc.select("body").attr("data-i")
+        val hash = doc.select("div#hidden").attr("data-h")
+        val srcrcp = deobfstr(hash, index)
+
+        val script = app.get(
+            httpsify(srcrcp),
+            referer = iframedoc
+        ).document.selectFirst("script:containsData(Playerjs)")?.data()
+        val video = script?.substringAfter("file:\"#2")?.substringBefore("\"")
+            ?.replace(Regex("(//\\S+?=)"), "")?.let { base64Decode(it) }
+
+        callback.invoke(
+            ExtractorLink(
+                "Vidsrc",
+                "Vidsrc",
+                video ?: return,
+                "https://vidsrc.stream/",
+                Qualities.P1080.value,
+                INFER_TYPE
+            )
+        )
     }
 
     suspend fun invokeDbgo(
@@ -1721,14 +1744,12 @@ object SoraExtractor : SoraStream() {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
-                it.second.contains(Regex("(Player F|Player SE|Player N)")) -> {
-                    invokeSmashyFfix(it.second, it.first, url, callback)
-                }
-
                 it.second.equals("Player FM", true) -> invokeSmashyFm(
                     it.second, it.first, url, callback
                 )
-
+                it.second.contains(Regex("(Player F|Player SE|Player N)")) -> {
+                    invokeSmashyFfix(it.second, it.first, url, callback)
+                }
                 else -> return@apmap
             }
         }
@@ -1991,30 +2012,25 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invoke2embed(
-        imdbId: String?, season: Int?, episode: Int?, callback: (ExtractorLink) -> Unit
+        imdbId: String?,
+        season: Int?,
+        episode: Int?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ) {
-        val server = "https://stream.2embed.cc"
         val url = if (season == null) {
             "$twoEmbedAPI/embed/$imdbId"
         } else {
             "$twoEmbedAPI/embedtv/$imdbId&s=$season&e=$episode"
         }
 
-        val iframesrc = app.get(url).document.selectFirst("iframe#iframesrc")?.attr("src")
+        val iframesrc = app.get(url).document.selectFirst("iframe#vsrcs")?.attr("data-src") ?: return
+        val ref = getBaseUrl(iframesrc)
         val framesrc = app.get(
-            fixUrl(
-                iframesrc ?: return, twoEmbedAPI
-            )
+            iframesrc
         ).document.selectFirst("iframe#framesrc")?.attr("src")
-        val video = app.get(fixUrl(framesrc ?: return, "$server/e/")).text.let {
-            Regex("file:\\s*\"(.*?m3u8.*?)\"").find(it)?.groupValues?.getOrNull(1)
-        }
 
-        M3u8Helper.generateM3u8(
-            "2embed",
-            video ?: return,
-            "$server/",
-        ).forEach(callback)
+        loadExtractor("https://embedwish.com/e/$framesrc", "$ref/", subtitleCallback, callback)
 
     }
 

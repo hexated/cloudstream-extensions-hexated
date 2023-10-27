@@ -694,7 +694,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invoke2embed(res.imdbId, res.season, res.episode, callback)
+                if (!res.isAnime) invoke2embed(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 if (!res.isAnime) invokeJump1(
