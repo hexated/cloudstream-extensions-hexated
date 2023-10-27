@@ -52,7 +52,6 @@ import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
-import com.lagradost.cloudstream3.extractors.VidSrcExtractor
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -79,8 +78,7 @@ open class SoraStream : TmdbProvider() {
         const val malsyncAPI = "https://api.malsync.moe"
         const val jikanAPI = "https://api.jikan.moe/v4"
 
-        private val apiKey =
-            base64DecodeAPI("ZTM=NTg=MjM=MjM=ODc=MzI=OGQ=MmE=Nzk=Nzk=ZjI=NTA=NDY=NDA=MzA=YjA=") // PLEASE DON'T STEAL
+        private const val apiKey = BuildConfig.TMDB_API
 
         /** ALL SOURCES */
         const val twoEmbedAPI = "https://www.2embed.cc"
@@ -143,10 +141,6 @@ open class SoraStream : TmdbProvider() {
                 "Returning Series" -> ShowStatus.Ongoing
                 else -> ShowStatus.Completed
             }
-        }
-
-        private fun base64DecodeAPI(api: String): String {
-            return api.chunked(4).map { base64Decode(it) }.reversed().joinToString("")
         }
 
     }
@@ -353,11 +347,6 @@ open class SoraStream : TmdbProvider() {
                 addImdbId(res.external_ids?.imdb_id)
             }
         }
-    }
-
-    override suspend fun extractorVerifierJob(extractorData: String?) {
-        if (extractorData == null) return
-        VidSrcExtractor.validatePass(extractorData)
     }
 
     override suspend fun loadLinks(

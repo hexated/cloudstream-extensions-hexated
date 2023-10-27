@@ -42,6 +42,7 @@ jobs:
 
       - name: Access Secrets
         env:
+          TMDB_API: ${{ secrets.TMDB_API }}
           SORA_API: ${{ secrets.SORA_API }}
           SORAHE: ${{ secrets.SORAHE }}
           SORAXA: ${{ secrets.SORAXA }}
@@ -60,6 +61,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           echo SORA_API=$SORA_API >> local.properties
+          echo TMDB_API=$TMDB_API >> local.properties
           echo SORAHE=$SORAHE >> local.properties
           echo SORAXA=$SORAXA >> local.properties
           echo SORATED=$SORATED >> local.properties
