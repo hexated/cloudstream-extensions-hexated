@@ -38,7 +38,6 @@ import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
-import com.hexated.SoraExtractor.invokePobmovies
 import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeMovies123
 import com.hexated.SoraExtractor.invokeSFMovies
@@ -82,7 +81,7 @@ open class SoraStream : TmdbProvider() {
 
         /** ALL SOURCES */
         const val twoEmbedAPI = "https://www.2embed.cc"
-        const val vidSrcAPI = "https://v2.vidsrc.me"
+        const val vidSrcAPI = "https://vidsrc.me"
         const val dbgoAPI = "https://dbgo.fun"
         const val dreamfilmAPI = "https://dreamfilmsw.net"
         const val noverseAPI = "https://www.nollyverse.com"
@@ -92,7 +91,7 @@ open class SoraStream : TmdbProvider() {
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
-        const val uhdmoviesAPI = "https://uhdmovies.click"
+        const val uhdmoviesAPI = "https://uhdmovies.dev"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val m4uhdAPI = "https://ww2.m4ufree.com"
@@ -104,13 +103,12 @@ open class SoraStream : TmdbProvider() {
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         const val watchOnlineAPI = "https://lookmovie.foundation"
-        const val nineTvAPI = "https://moviesapi.club"
+        const val nineTvAPI = "https://ww1.moviesapi.club"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
         const val ridomoviesAPI = "https://ridomovies.pw"
         const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"
-        const val pobmoviesAPI = "https://pobmovies.cam"
         const val multimoviesAPI = "https://multimovies.info"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://moment-explanation-i-244.site"
@@ -120,11 +118,11 @@ open class SoraStream : TmdbProvider() {
         const val animetoshoAPI = "https://animetosho.org"
         const val movies123API = "https://new-movies123.link"
         const val jump1API = "https://ca.jump1.net"
-        const val vegaMoviesAPI = "https://vegamovies.id"
+        const val vegaMoviesAPI = "https://vegamovies.zip"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
         const val watchflxAPI = "https://watchflx.tv"
         const val gomoviesAPI = "https://gomovies-online.cam"
-        const val dotmoviesAPI = "https://dotmovies.monster"
+        const val dotmoviesAPI = "https://dotmovies.tattoo"
         const val blackvidAPI = "https://prod.api.blackvid.space"
         const val showflixAPI = "https://showflix.online"
         const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
@@ -642,13 +640,6 @@ open class SoraStream : TmdbProvider() {
                     res.lastSeason,
                     res.episode,
                     subtitleCallback,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime && res.season == null) invokePobmovies(
-                    res.title,
-                    res.year,
                     callback
                 )
             },

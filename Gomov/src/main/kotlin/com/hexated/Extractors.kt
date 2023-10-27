@@ -106,7 +106,7 @@ object NineTv {
         ) {
             val mainUrl = getBaseUrl(url)
             val res = app.get(url, referer = referer)
-            val master = Regex("JScript\\s*=\\s*'([^']+)").find(res.text)?.groupValues?.get(1)
+            val master = Regex("JScripts\\s*=\\s*'([^']+)").find(res.text)?.groupValues?.get(1)
             val key = res.document.getKeys() ?: throw ErrorLoadingException("can't generate key")
             val decrypt = AesHelper.cryptoAESHandler(master ?: return, key.toByteArray(), false)
                 ?.replace("\\", "")

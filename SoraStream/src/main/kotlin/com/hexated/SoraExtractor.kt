@@ -1160,69 +1160,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokePobmovies(
-        title: String? = null, year: Int? = null, callback: (ExtractorLink) -> Unit
-    ) {
-        val detailDoc = app.get("$pobmoviesAPI/${title.createSlug()}-$year").document
-        val iframeList = detailDoc.select("div.entry-content p").map { it }
-            .filter { it.text().filterIframe(year = year, title = title) }.mapNotNull {
-                it.text() to it.nextElementSibling()?.select("a")?.attr("href")
-            }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
-
-        val sources = mutableListOf<Pair<String, String?>>()
-        if (iframeList.any {
-                it.first.contains(
-                    "2160p", true
-                )
-            }) {
-            sources.addAll(iframeList.filter {
-                it.first.contains(
-                    "2160p", true
-                )
-            })
-            sources.add(iframeList.first {
-                it.first.contains(
-                    "1080p", true
-                )
-            })
-        } else {
-            sources.addAll(iframeList.filter { it.first.contains("1080p", true) })
-        }
-
-        sources.apmap { (name, link) ->
-            if (link.isNullOrEmpty()) return@apmap
-            val videoLink = when {
-                link.contains("gdtot") -> {
-                    val gdBotLink = extractGdbot(link)
-                    extractGdflix(gdBotLink ?: return@apmap)
-                }
-
-                link.contains("gdflix") -> {
-                    extractGdflix(link)
-                }
-
-                else -> {
-                    return@apmap
-                }
-            }
-
-            val tags = getUhdTags(name)
-            val qualities = getIndexQuality(name)
-            val size = getIndexSize(name)
-            callback.invoke(
-                ExtractorLink(
-                    "Pobmovies",
-                    "Pobmovies $tags [${size}]",
-                    videoLink ?: return@apmap,
-                    "",
-                    qualities
-                )
-            )
-
-        }
-
-    }
-
     suspend fun invokeHdmovies4u(
         title: String? = null,
         imdbId: String? = null,
