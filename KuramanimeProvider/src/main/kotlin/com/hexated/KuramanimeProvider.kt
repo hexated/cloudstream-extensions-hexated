@@ -203,7 +203,7 @@ class KuramanimeProvider : MainAPI() {
         cookies = req.cookies
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getSt()}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=MlnPqDQEtapwKxSi5VkoFct2PX0zQXPg&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
             if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
