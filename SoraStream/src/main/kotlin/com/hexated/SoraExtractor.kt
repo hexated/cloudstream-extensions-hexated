@@ -1684,7 +1684,7 @@ object SoraExtractor : SoraStream() {
                 it.second.equals("Player FM", true) -> invokeSmashyFm(
                     it.second, it.first, url, callback
                 )
-                it.second.contains(Regex("(Player F|Player SE|Player N)")) -> {
+                it.second.contains(Regex("(Player F|Player SE|Player N|Player D)")) -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
                 else -> return@apmap
