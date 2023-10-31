@@ -196,7 +196,6 @@ class KuramanimeProvider : MainAPI() {
         val req = app.get(data)
         val res = req.document
         val token = res.select("meta[name=csrf-token]").attr("content")
-        val stBt = res.selectFirst("script:containsData(stBk)")?.data()?.substringAfter("stBk = \"")?.substringBefore("\"")?.substringAfterLast("/") ?: return false
         headers = mapOf(
             "X-Requested-With" to "XMLHttpRequest",
             "X-CSRF-TOKEN" to token
@@ -204,7 +203,7 @@ class KuramanimeProvider : MainAPI() {
         cookies = req.cookies
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=$stBt&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getSt()}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
             if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
@@ -220,6 +219,16 @@ class KuramanimeProvider : MainAPI() {
         }
 
         return true
+    }
+
+    private fun getSt(): String {
+        return arrayOf(
+            "mc7cY3F6QP41u6WXAf1LinSsjlpKpoO3",
+            "nLyoAr8klM7HPLsICFzN4s9lLZ3Wjk6S",
+            "Z20JAgnjciWqLa4SMnADIQhqx7kQZIpo",
+            "3OoTHpJOwLKftM3htx647pIEfQdwndDg",
+            "dFLaNEioDslaveEVSfRHim2mogIAriuV"
+        ).random()
     }
 
 }
