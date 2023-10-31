@@ -203,7 +203,7 @@ class KuramanimeProvider : MainAPI() {
         cookies = req.cookies
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=MlnPqDQEtapwKxSi5VkoFct2PX0zQXPg&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=o9x0eEcLo6lwZAK9jjuuTCRILJTQdc2C&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
             if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
@@ -219,16 +219,6 @@ class KuramanimeProvider : MainAPI() {
         }
 
         return true
-    }
-
-    private fun getSt(): String {
-        return arrayOf(
-            "mc7cY3F6QP41u6WXAf1LinSsjlpKpoO3",
-            "nLyoAr8klM7HPLsICFzN4s9lLZ3Wjk6S",
-            "Z20JAgnjciWqLa4SMnADIQhqx7kQZIpo",
-            "3OoTHpJOwLKftM3htx647pIEfQdwndDg",
-            "dFLaNEioDslaveEVSfRHim2mogIAriuV"
-        ).random()
     }
 
 }

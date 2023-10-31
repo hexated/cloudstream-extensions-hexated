@@ -944,9 +944,7 @@ object SoraExtractor : SoraStream() {
         val link = Regex("((https:|http:)//.*\\.mp4)").find(source.text)?.value ?: return
         callback.invoke(
             ExtractorLink(
-                "Ling", "Ling", link, "$lingAPI/", Qualities.Unknown.value, headers = mapOf(
-                    "Range" to "bytes=0-"
-                )
+                "Ling", "Ling", "$link/index.m3u8", "$lingAPI/", Qualities.P720.value, INFER_TYPE
             )
         )
 
