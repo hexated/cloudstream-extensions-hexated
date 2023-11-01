@@ -196,6 +196,7 @@ class KuramanimeProvider : MainAPI() {
         val req = app.get(data)
         val res = req.document
         val token = res.select("meta[name=csrf-token]").attr("content")
+        val st = res.select("input#kuramaRoute").attr("value")
         headers = mapOf(
             "X-Requested-With" to "XMLHttpRequest",
             "X-CSRF-TOKEN" to token
@@ -203,7 +204,7 @@ class KuramanimeProvider : MainAPI() {
         cookies = req.cookies
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=o9x0eEcLo6lwZAK9jjuuTCRILJTQdc2C&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=$st&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
             if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
