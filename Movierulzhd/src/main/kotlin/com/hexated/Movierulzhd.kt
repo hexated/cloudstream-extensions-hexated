@@ -12,7 +12,7 @@ import java.net.URI
 
 open class Movierulzhd : MainAPI() {
 
-    override var mainUrl = "https://movierulzhd.wine"
+    override var mainUrl = "https://movierulzhd.show"
 
     var directUrl = ""
     override var name = "Movierulzhd"
