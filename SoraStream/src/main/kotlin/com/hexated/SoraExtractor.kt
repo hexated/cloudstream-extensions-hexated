@@ -2313,10 +2313,9 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val referer = "https://2now.tv/"
+        val referer = "https://bflix.gs/"
         val slug = getEpisodeSlug(season, episode)
-        val url =
-            if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${slug.second}.mp4"
+        val url = if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${slug.second}.mp4"
         if (!app.get(url, referer = referer).isSuccessful) return
         callback.invoke(
             ExtractorLink(
