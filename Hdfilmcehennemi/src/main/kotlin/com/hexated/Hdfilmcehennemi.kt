@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 
 class Hdfilmcehennemi : MainAPI() {
-    override var mainUrl = "https://www.hdfilmcehennemi.life"
+    override var mainUrl = "https://www.hdfilmcehennemi.de"
     override var name = "hdfilmcehennemi"
     override val hasMainPage = true
     override var lang = "tr"
