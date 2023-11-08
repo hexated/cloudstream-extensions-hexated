@@ -1655,7 +1655,7 @@ object SoraExtractor : SoraStream() {
         app.get(
             url, referer = "https://smashystream.xyz/"
         ).document.select("div#_default-servers a.server").map {
-            it.attr("data-id") to it.text()
+            it.attr("data-url") to it.text()
         }.apmap {
             when {
                 it.second.contains(Regex("(Player F|Player FM)\$")) -> {
