@@ -445,48 +445,20 @@ suspend fun invokeSmashyFfix(
     ref: String,
     callback: (ExtractorLink) -> Unit,
 ) {
-    val res = app.get(url, referer = ref).text
-    val source = Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(res)?.groupValues?.get(1) ?: return
-
-    source.split(",").map { links ->
-        val quality = Regex("\\[(\\S+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
-        val link = links.removePrefix("[$quality]").trim()
+    val json = app.get(url, referer = ref, headers = mapOf("X-Requested-With" to "XMLHttpRequest"))
+        .parsedSafe<SmashySources>()
+    json?.sourceUrls?.map {
         callback.invoke(
             ExtractorLink(
                 "Smashy [$name]",
                 "Smashy [$name]",
-                decode(link).replace("\\/", "/"),
-                smashyStreamAPI,
-                getQualityFromName(quality),
-                INFER_TYPE,
+                it,
+                if(name == "Player FM") "https://vidplay.site/" else "",
+                Qualities.P1080.value,
+                INFER_TYPE
             )
         )
     }
-
-}
-
-suspend fun invokeSmashyFm(
-    name: String,
-    url: String,
-    ref: String,
-    callback: (ExtractorLink) -> Unit,
-) {
-    fun String.removeProxy(): String {
-        return if (this.contains("proxy")) {
-            "https${this.substringAfterLast("https")}"
-        } else {
-            this
-        }
-    }
-
-    val res = app.get(url, referer = ref).text
-    val source = Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(res)?.groupValues?.get(1) ?: return
-
-    M3u8Helper.generateM3u8(
-        "Smashy [$name]",
-        source.removeProxy(),
-        "https://vidplay.site/"
-    ).forEach(callback)
 
 }
 

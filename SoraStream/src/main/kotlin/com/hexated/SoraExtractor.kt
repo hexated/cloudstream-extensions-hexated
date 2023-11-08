@@ -996,34 +996,13 @@ object SoraExtractor : SoraStream() {
                 }
             }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
 
-//        val sources = mutableListOf<Pair<String, String?>>()
-//        if (iframeList.any {
-//                it.first.contains(
-//                    "2160p",
-//                    true
-//                )
-//            }) {
-//            sources.addAll(iframeList.filter {
-//                it.first.contains(
-//                    "2160p",
-//                    true
-//                )
-//            })
-//            sources.add(iframeList.first {
-//                it.first.contains(
-//                    "1080p",
-//                    true
-//                )
-//            })
-//        } else {
-//            sources.addAll(iframeList.filter { it.first.contains("1080p", true) })
-//        }
-
         iframeList.apmap { (quality, link) ->
             val driveLink =
-                if (link?.contains("driveleech") == true) bypassDriveleech(link) else bypassTechmny(
-                    link ?: return@apmap
-                )
+                when {
+                    link?.contains("oddfirm") == true -> bypassHrefli(link)
+                    link?.contains("driveleech") == true -> bypassDriveleech(link)
+                    else -> bypassTechmny(link ?: return@apmap)
+                }
             val base = getBaseUrl(driveLink ?: return@apmap)
             val driveReq = app.get(driveLink)
             val driveRes = driveReq.document
@@ -1661,28 +1640,25 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invokeSmashyStream(
-        imdbId: String? = null,
+        tmdbId: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
         val url = if (season == null) {
-            "$smashyStreamAPI/playere.php?imdb=$imdbId"
+            "$smashyStreamAPI/playere.php?tmdb=$tmdbId"
         } else {
-            "$smashyStreamAPI/playere.php?imdb=$imdbId&season=$season&episode=$episode"
+            "$smashyStreamAPI/playere.php?tmdb=$tmdbId&season=$season&episode=$episode"
         }
 
         app.get(
-            url, referer = "https://smashystream.com/"
+            url, referer = "https://smashystream.xyz/"
         ).document.select("div#_default-servers a.server").map {
             it.attr("data-id") to it.text()
         }.apmap {
             when {
-                it.second.equals("Player FM", true) -> invokeSmashyFm(
-                    it.second, it.first, url, callback
-                )
-                it.second.contains(Regex("(Player F|Player SE|Player N|Player D)")) -> {
+                it.second.contains(Regex("(Player F|Player FM)\$")) -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
                 else -> return@apmap

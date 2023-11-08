@@ -103,7 +103,7 @@ open class SoraStream : TmdbProvider() {
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
         const val watchOnlineAPI = "https://lookmovie.foundation"
-        const val nineTvAPI = "https://ww1.moviesapi.club"
+        const val nineTvAPI = "https://moviesapi.club"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
         const val ridomoviesAPI = "https://ridomovies.pw"
@@ -118,7 +118,7 @@ open class SoraStream : TmdbProvider() {
         const val animetoshoAPI = "https://animetosho.org"
         const val movies123API = "https://new-movies123.link"
         const val jump1API = "https://ca.jump1.net"
-        const val vegaMoviesAPI = "https://vegamovies.zip"
+        const val vegaMoviesAPI = "https://vegamovies.care"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
         const val watchflxAPI = "https://watchflx.tv"
         const val gomoviesAPI = "https://gomovies-online.cam"
@@ -532,7 +532,7 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeSmashyStream(
-                    res.imdbId,
+                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,

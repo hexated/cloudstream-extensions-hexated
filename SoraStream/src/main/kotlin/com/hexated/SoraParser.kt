@@ -416,3 +416,8 @@ data class RidoResponses(
 data class RidoSearch(
     @JsonProperty("data") var data: RidoData? = null,
 )
+
+data class SmashySources(
+    @JsonProperty("sourceUrls") var sourceUrls: ArrayList<String>? = arrayListOf(),
+    @JsonProperty("subtitleUrls") var subtitleUrls: String? = null,
+)
