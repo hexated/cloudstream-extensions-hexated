@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
 // use an integer for version numbers
-version = 192
+version = 193
 
 android {
     defaultConfig {
@@ -20,8 +20,6 @@ android {
         buildConfigField("String", "PRIMEWIRE_KEY", "\"${properties.getProperty("PRIMEWIRE_KEY")}\"")
         buildConfigField("String", "CRUNCHYROLL_BASIC_TOKEN", "\"${properties.getProperty("CRUNCHYROLL_BASIC_TOKEN")}\"")
         buildConfigField("String", "CRUNCHYROLL_REFRESH_TOKEN", "\"${properties.getProperty("CRUNCHYROLL_REFRESH_TOKEN")}\"")
-
-
     }
 }
 
