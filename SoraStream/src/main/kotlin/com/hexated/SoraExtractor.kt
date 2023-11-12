@@ -1311,10 +1311,8 @@ object SoraExtractor : SoraStream() {
         val script = if (scriptData.size == 1) {
             scriptData.firstOrNull()
         } else {
-            scriptData.find { it.first.equals("$title ($year)", true) } ?: scriptData.find {
-                it.first.contains(
-                    "$title", true
-                ) && it.second == "$year"
+            scriptData.find {
+                it.first.contains(Regex("(?i)$title \\($year\\s?\\)")) && if(season!=null) it.third?.contains("-tvshow-") == true else it.third?.contains("-movie-") == true
             }
         }
 
@@ -1945,46 +1943,6 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeMovies123(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeGpress(
-            title,
-            year,
-            season,
-            episode,
-            callback,
-            movies123API,
-            "Movies123",
-            "mouCgDQMxDwt",
-            "moFHVogrVLMH"
-        )
-    }
-
-    suspend fun invokeGomovies(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeGpress(
-            title,
-            year,
-            season,
-            episode,
-            callback,
-            gomoviesAPI,
-            "Gomovies",
-            "_smQamBQsETb",
-            "_sBWcqbTBMaT"
-        )
-    }
-
     private suspend fun invokeGpress(
         title: String? = null,
         year: Int? = null,
@@ -2353,7 +2311,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        invokeHindi(momentAPI, "https://hdmovies4u.green", imdbId, season, episode, callback)
+        invokeHindi(momentAPI, "https://hdmovies4u.band", imdbId, season, episode, callback)
     }
 
     private suspend fun invokeHindi(
@@ -2459,49 +2417,6 @@ object SoraExtractor : SoraStream() {
         }
 
 
-    }
-
-    suspend fun invokeJump1(
-        tmdbId: Int? = null,
-        tvdbId: Int? = null,
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val referer = "https://jump1.net/"
-        val res = if (season == null) {
-            val body =
-                """{"filters":[{"type":"slug","args":{"slugs":["${title.createSlug()}-$year"]}}],"sort":"addedRecent","skip":0,"limit":100}""".toRequestBody(
-                    RequestBodyTypes.JSON.toMediaTypeOrNull()
-                )
-            app.post("$jump1API/api/movies", requestBody = body, referer = referer)
-        } else {
-            app.get("$jump1API/api/shows/$tvdbId/seasons", referer = referer)
-        }.text
-
-        val source = if (season == null) {
-            tryParseJson<Jump1Movies>(res)?.movies?.find { it.id == tmdbId }?.videoId
-        } else {
-            val jumpSeason =
-                tryParseJson<ArrayList<Jump1Season>>(res)?.find { it.seasonNumber == season }?.id
-            val seasonRes = app.get(
-                "$jump1API/api/shows/seasons/${jumpSeason ?: return}/episodes", referer = referer
-            )
-            tryParseJson<ArrayList<Jump1Episodes>>(seasonRes.text)?.find { it.episodeNumber == episode }?.videoId
-        }
-
-        callback.invoke(
-            ExtractorLink(
-                "Jump1",
-                "Jump1",
-                "$jump1API/hls/${source ?: return}/master.m3u8?ts=${unixTimeMS}",
-                referer,
-                Qualities.P1080.value,
-                true
-            )
-        )
     }
 
     suspend fun invokeSFMovies(

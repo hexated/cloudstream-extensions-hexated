@@ -22,12 +22,9 @@ import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
-import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
-import com.hexated.SoraExtractor.invokeGomovies
-import com.hexated.SoraExtractor.invokeMovies123
 import com.hexated.SoraExtractor.invokeSFMovies
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -53,9 +50,6 @@ class SoraStreamLite : SoraStream() {
         val res = AppUtils.parseJson<LinkData>(data)
 
         argamap(
-            {
-                if(!res.isAnime) invokeJump1(res.id,res.tvdbId,res.title,res.year,res.season,res.episode,callback)
-            },
             {
                 if (!res.isAnime) invokeBlackvid(
                     res.id,
@@ -202,12 +196,6 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 if (!res.isAnime) invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
-            },
-            {
-                if (!res.isAnime) invokeGomovies(res.title, res.year, res.season, res.episode, callback)
-            },
-            {
-                if (!res.isAnime) invokeMovies123(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 invokeWatchOnline(

@@ -34,12 +34,9 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeHdmovies4u
-import com.hexated.SoraExtractor.invokeJump1
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
-import com.hexated.SoraExtractor.invokeGomovies
-import com.hexated.SoraExtractor.invokeMovies123
 import com.hexated.SoraExtractor.invokeSFMovies
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
@@ -111,17 +108,14 @@ open class SoraStream : TmdbProvider() {
         const val emoviesAPI = "https://emovies.si"
         const val multimoviesAPI = "https://multimovies.info"
         const val netmoviesAPI = "https://netmovies.to"
-        const val momentAPI = "https://moment-explanation-i-244.site"
+        const val momentAPI = "https://izzillent-dickstonyx-i-262.site"
         const val doomoviesAPI = "https://doomovies.net"
         const val vidsrctoAPI = "https://vidsrc.to"
         const val dramadayAPI = "https://dramaday.me"
         const val animetoshoAPI = "https://animetosho.org"
-        const val movies123API = "https://new-movies123.link"
-        const val jump1API = "https://ca.jump1.net"
         const val vegaMoviesAPI = "https://vegamovies.care"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
         const val watchflxAPI = "https://watchflx.tv"
-        const val gomoviesAPI = "https://gomovies-online.cam"
         const val dotmoviesAPI = "https://dotmovies.tattoo"
         const val blackvidAPI = "https://prod.api.blackvid.space"
         const val showflixAPI = "https://showflix.online"
@@ -566,24 +560,6 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeGomovies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeMovies123(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
                 invokeWatchOnline(
                     res.imdbId,
                     res.title,
@@ -675,17 +651,6 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invoke2embed(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
-                if (!res.isAnime) invokeJump1(
-                    res.id,
-                    res.tvdbId,
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
             },
             {
                 if (!res.isAnime) invokeHdmovies4u(

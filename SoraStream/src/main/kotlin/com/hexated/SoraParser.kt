@@ -72,21 +72,6 @@ data class KisskhResults(
     @JsonProperty("title") val title: String?,
 )
 
-data class Jump1Episodes(
-    @JsonProperty("id") val id: Any? = null,
-    @JsonProperty("episodeNumber") val episodeNumber: Int? = null,
-    @JsonProperty("videoId") val videoId: String? = null,
-)
-
-data class Jump1Season(
-    @JsonProperty("seasonNumber") val seasonNumber: Int? = null,
-    @JsonProperty("id") val id: String? = null,
-)
-
-data class Jump1Movies(
-    @JsonProperty("movies") val movies: ArrayList<Jump1Episodes>? = arrayListOf(),
-)
-
 data class DriveBotLink(
     @JsonProperty("url") val url: String? = null,
 )
