@@ -6,12 +6,13 @@ import com.lagradost.cloudstream3.APIHolder
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.*
 import kotlin.random.Random
 
 const val twoEmbedAPI = "https://www.2embed.to"
 
-class Sbnmp : Sbflix() {
+class Sbnmp : Filesim() {
     override val name = "Sbnmp"
     override var mainUrl = "https://sbnmp.bar"
 }
