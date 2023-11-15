@@ -174,7 +174,7 @@ open class Movierulzhd : MainAPI() {
                     val post = it.attr("data-post")
                     val nume = it.attr("data-nume")
                     Episode(
-                        LinkData(type, post, nume).toJson(),
+                        LinkData(name, type, post, nume).toJson(),
                         name,
                     )
                 }
@@ -231,7 +231,7 @@ open class Movierulzhd : MainAPI() {
                 referer = data,
                 headers = mapOf("X-Requested-With" to "XMLHttpRequest")
             ).parsed<ResponseHash>().embed_url
-            if (!source.contains("youtube")) loadExtractor(source, data, subtitleCallback, callback)
+            if (!source.contains("youtube")) loadCustomExtractor(loadData?.tag, source, "$directUrl/", subtitleCallback, callback)
         } else {
             var document = app.get(data).document
             if (document.select("title").text() == "Just a moment...") {
@@ -241,8 +241,8 @@ open class Movierulzhd : MainAPI() {
             val type = if (data.contains("/movies/")) "movie" else "tv"
 
             document.select("ul#playeroptionsul > li").map {
-                it.attr("data-nume")
-            }.apmap { nume ->
+                it.attr("data-nume") to it.select("span.title").text()
+            }.apmap { (nume, tag) ->
                 val source = app.post(
                     url = "$directUrl/wp-admin/admin-ajax.php",
                     data = mapOf(
@@ -256,9 +256,10 @@ open class Movierulzhd : MainAPI() {
                 ).parsed<ResponseHash>().embed_url
 
                 when {
-                    !source.contains("youtube") -> loadExtractor(
+                    !source.contains("youtube") -> loadCustomExtractor(
+                        tag,
                         source,
-                        data,
+                        "$directUrl/",
                         subtitleCallback,
                         callback
                     )
@@ -269,7 +270,35 @@ open class Movierulzhd : MainAPI() {
         return true
     }
 
+    private suspend fun loadCustomExtractor(
+        name: String? = null,
+        url: String,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        quality: Int? = null,
+    ) {
+        loadExtractor(url, referer, subtitleCallback) { link ->
+            callback.invoke(
+                ExtractorLink(
+                    name ?: link.source,
+                    name ?: link.name,
+                    link.url,
+                    link.referer,
+                    when (link.type) {
+                        ExtractorLinkType.M3U8 -> link.quality
+                        else -> quality ?: link.quality
+                    },
+                    link.type,
+                    link.headers,
+                    link.extractorData
+                )
+            )
+        }
+    }
+
     data class LinkData(
+        val tag: String? = null,
         val type: String? = null,
         val post: String? = null,
         val nume: String? = null,
