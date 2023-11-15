@@ -209,7 +209,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                if (!res.isAnime) invokeNowTv(res.id, res.season, res.episode, callback)
+                if (!res.isAnime) invokeNowTv(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)
