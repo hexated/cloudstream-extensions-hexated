@@ -26,5 +26,6 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Streamwish())
         registerExtractorAPI(FilelionsTo())
         registerExtractorAPI(Embedwish())
+        registerExtractorAPI(Wishfast())
     }
 }

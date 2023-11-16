@@ -106,7 +106,7 @@ open class SoraStream : TmdbProvider() {
         const val ridomoviesAPI = "https://ridomovies.pw"
         const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"
-        const val multimoviesAPI = "https://multimovies.info"
+        const val multimoviesAPI = "https://multimovies.live"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://izzillent-dickstonyx-i-262.site"
         const val doomoviesAPI = "https://doomovies.net"
@@ -119,7 +119,7 @@ open class SoraStream : TmdbProvider() {
         const val dotmoviesAPI = "https://dotmovies.yachts"
         const val blackvidAPI = "https://prod.api.blackvid.space"
         const val showflixAPI = "https://showflix.online"
-        const val dahmerMoviesAPI = "https://edytjedhgmdhm.abfhaqrhbnf.workers.dev"
+        const val dahmerMoviesAPI = "https://odd-bird-1319.zwuhygoaqe.workers.dev"
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -577,7 +577,6 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime && res.season == null) invokeRidomovies(
                     res.id,
                     res.imdbId,
-                    res.title,
                     callback
                 )
             },

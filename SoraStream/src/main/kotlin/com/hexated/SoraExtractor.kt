@@ -246,10 +246,6 @@ object SoraExtractor : SoraStream() {
         } else {
             "$multimoviesAPI/episodes/$fixTitle-${season}x${episode}"
         }
-        val req = app.get(url)
-        val directUrl = getBaseUrl(req.url)
-        val iframe = req.document.selectFirst("div.pframe iframe")?.attr("src")
-        loadCustomExtractor("Multimovies", iframe ?: return, "$directUrl/", subtitleCallback, callback)
     }
 
     suspend fun invokeNetmovies(
@@ -1933,13 +1929,10 @@ object SoraExtractor : SoraStream() {
             "$twoEmbedAPI/embedtv/$imdbId&s=$season&e=$episode"
         }
 
-        val iframesrc = app.get(url).document.selectFirst("iframe#vsrcs")?.attr("data-src") ?: return
-        val ref = getBaseUrl(iframesrc)
-        val framesrc = app.get(
-            iframesrc
-        ).document.selectFirst("iframe#framesrc")?.attr("src")
-
-        loadExtractor("https://embedwish.com/e/$framesrc", "$ref/", subtitleCallback, callback)
+        val framesrc = app.get(url).document.selectFirst("iframe#iframesrc")?.attr("data-src") ?: return
+        val ref = getBaseUrl(framesrc)
+        val id = framesrc.substringAfter("id=").substringBefore("&")
+        loadExtractor("https://wishfast.top/e/$id", "$ref/", subtitleCallback, callback)
 
     }
 
@@ -2269,10 +2262,9 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeRidomovies(
         tmdbId: Int? = null,
         imdbId: String? = null,
-        title: String? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val slug = app.get("$ridomoviesAPI/core/api/search?q=$title")
+        val slug = app.get("$ridomoviesAPI/core/api/search?q=$imdbId")
             .parsedSafe<RidoSearch>()?.data?.items?.find {
                 it.contentable?.tmdbId == tmdbId || it.contentable?.imdbId == imdbId
             }?.slug ?: return

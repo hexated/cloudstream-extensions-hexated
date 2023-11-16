@@ -359,6 +359,11 @@ class Streamwish : Filesim() {
     override var mainUrl = "https://streamwish.to"
 }
 
+class Wishfast : Filesim() {
+    override val name = "Wishfast"
+    override var mainUrl = "https://wishfast.top"
+}
+
 class FilelionsTo : Filesim() {
     override val name = "Filelions"
     override var mainUrl = "https://filelions.to"
