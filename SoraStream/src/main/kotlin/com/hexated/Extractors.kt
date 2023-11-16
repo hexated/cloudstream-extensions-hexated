@@ -250,12 +250,7 @@ object NineTv {
             val res = app.get(url, headers = mapOf(
                 "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                 "Accept-Language" to "en-US,en;q=0.5",
-                "Connection" to "keep-alive",
                 "Referer" to (referer ?: ""),
-                "Sec-Fetch-Dest" to "iframe",
-                "Sec-Fetch-Mode" to "navigate",
-                "Sec-Fetch-Site" to "same-origin",
-                "Upgrade-Insecure-Requests" to "1"
             ))
             val master = Regex("\\s*=\\s*'([^']+)").find(res.text)?.groupValues?.get(1)
             val key = res.document.getKeys() ?: throw ErrorLoadingException("can't generate key")
