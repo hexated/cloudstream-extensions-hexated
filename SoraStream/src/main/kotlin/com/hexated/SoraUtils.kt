@@ -34,6 +34,8 @@ import java.security.*
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
@@ -1279,9 +1281,22 @@ fun isUpcoming(dateString: String?): Boolean {
     }
 }
 
+fun getDate() : TmdbDate {
+    val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val calender = Calendar.getInstance()
+    val today = formatter.format(calender.time)
+    calender.add(Calendar.WEEK_OF_YEAR, 1)
+    val nextWeek = formatter.format(calender.time)
+    return TmdbDate(today, nextWeek)
+}
+
 fun decode(input: String): String = URLDecoder.decode(input, "utf-8")
 
 fun encode(input: String): String = URLEncoder.encode(input, "utf-8").replace("+", "%20")
+
+fun base64DecodeAPI(api: String): String {
+    return api.chunked(4).map { base64Decode(it) }.reversed().joinToString("")
+}
 
 fun decryptStreamUrl(data: String): String {
 

@@ -264,14 +264,6 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-//            {
-//                if (!res.isAnime) invokeWatchflx(
-//                    res.id,
-//                    res.season,
-//                    res.episode,
-//                    callback
-//                )
-//            },
             {
                 if(!res.isAnime) invoke2embed(
                     res.imdbId,

@@ -14,6 +14,11 @@ data class AniIds(
     var idMal: Int? = null
 )
 
+data class TmdbDate(
+    val today: String,
+    val nextWeek: String,
+)
+
 data class AniMedia(
     @JsonProperty("id") var id: Int? = null,
     @JsonProperty("idMal") var idMal: Int? = null

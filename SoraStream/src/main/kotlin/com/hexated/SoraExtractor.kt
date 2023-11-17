@@ -2445,7 +2445,7 @@ object SoraExtractor : SoraStream() {
             ExtractorLink(
                 "SFMovies",
                 "SFMovies",
-                fixUrl(video, "https://watchfree.blob.core.windows.net/watchfree"),
+                fixUrl(video, base64DecodeAPI("YQ==bm4=dGE=YXQ=L3I=ZXQ=Lm4=d3M=ZG8=aW4=Lnc=cmU=Y28=Yi4=bG8=LmI=bmE=YW4=dHQ=cmE=Ly8=czo=dHA=aHQ=")),
                 "",
                 Qualities.P1080.value,
                 INFER_TYPE
