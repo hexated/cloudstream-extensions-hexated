@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.nodes.Element
 
 class Phim1080Provider : MainAPI() {
-    override var mainUrl = "https://phimnhanh2.com"
+    override var mainUrl = "https://phimmoi2.com"
     override var name = "Phim1080"
     override val hasMainPage = true
     override var lang = "vi"

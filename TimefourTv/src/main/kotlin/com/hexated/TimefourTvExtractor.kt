@@ -72,7 +72,9 @@ object TimefourTvExtractor : TimefourTv() {
             return getSportLink(url)
         }
 
-        if(url.contains(daddyUrl.getHost(), true)) {
+        val daddyHost = daddyUrl.getHost()
+
+        if(url.contains(daddyHost, true)) {
             mainServer = getBaseUrl(url)
             return getFinalLink(app.get(url, referer = daddyUrl))
         }
@@ -101,7 +103,7 @@ object TimefourTvExtractor : TimefourTv() {
             )
         }
 
-        val linkFirst = "$iframe$channel.php"
+        val linkFirst = if(iframe.contains(daddyHost)) "${iframe.substringAfter("?")}$channel.php" else "$iframe$channel.php"
         val refFirst = getBaseUrl(url)
 
         val docSecond = app.get(fixUrl(linkFirst), referer = refFirst).document
