@@ -116,9 +116,9 @@ open class SoraStream : TmdbProvider() {
         const val vegaMoviesAPI = "https://vegamovies.boo"
         const val hdmovies4uAPI = "https://hdmovies4u.name"
         const val watchflxAPI = "https://watchflx.tv"
-        const val dotmoviesAPI = "https://dotmovies.yachts"
+        const val dotmoviesAPI = "https://dotmovies.im"
         const val blackvidAPI = "https://prod.api.blackvid.space"
-        const val showflixAPI = "https://showflix.online"
+        const val showflixAPI = "https://showflix.space"
         const val dahmerMoviesAPI = "https://odd-bird-1319.zwuhygoaqe.workers.dev"
 
         fun getType(t: String?): TvType {
