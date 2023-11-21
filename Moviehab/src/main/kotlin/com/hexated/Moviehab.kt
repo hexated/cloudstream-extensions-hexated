@@ -30,7 +30,6 @@ class Moviehab : MainAPI() {
         "$mainUrl/library/movies?sort_by=imdb_rate&page=" to "Movies by IMDB Rating",
         "$mainUrl/library/shows?&sort_by=imdb_rate&page=" to "TV Shows by IMDB Rating",
         "$mainUrl/library/movies?&sort_by=year&page=" to "New Movies",
-        "$mainUrl/trending/movies" to "Trending",
         "$mainUrl/library/shows?&sort_by=year&page=" to "New TV Shows",
         "$mainUrl/library/movies?country=Philippines&sort_by=year&page=" to "New Philippines Movies",
         "$mainUrl/library/shows?&country=Philippines&sort_by=year&page=" to "New Philippines TV Shows",
@@ -158,7 +157,7 @@ class Moviehab : MainAPI() {
 
         val res = parseJson<Episodes>(data)
         val url = if (res.season.isNullOrBlank()) {
-            "$mainUrl/embed/${res.id}"
+            "$mainUrl/embed/movie?id=${res.id}"
         } else {
             "$mainUrl/embed/series?id=${res.id}&sea=${res.season}&epi=${res.episode}"
         }
