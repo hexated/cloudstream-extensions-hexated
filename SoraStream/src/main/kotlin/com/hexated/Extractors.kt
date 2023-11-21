@@ -349,6 +349,47 @@ open class Streamruby : ExtractorApi() {
 
 }
 
+open class Uploadever : ExtractorApi() {
+    override val name = "Uploadever"
+    override val mainUrl = "https://uploadever.in"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        var res = app.get(url, referer = referer).document
+        val formUrl = res.select("form").attr("action")
+        var formData = res.select("form input").associate { it.attr("name") to it.attr("value") }.filterKeys { it != "go" }
+            .toMutableMap()
+        val formReq = app.post(formUrl, data = formData)
+
+        res = formReq.document
+        val captchaKey = res.select("script[src*=https://www.google.com/recaptcha/api.js?render=]").attr("src").substringAfter("render=")
+        val token = getCaptchaToken(url, captchaKey, referer = "$mainUrl/")
+        formData = res.select("form#down input").associate { it.attr("name") to it.attr("value") }.toMutableMap()
+        formData["adblock_detected"] = "0"
+        formData["referer"] = url
+        res = app.post(formReq.url, data = formData + mapOf("g-recaptcha-response" to "$token"), cookies = formReq.cookies).document
+        val video = res.select("div.download-button a.btn.btn-dow.recaptchav2").attr("href")
+
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                video,
+                "",
+                Qualities.Unknown.value,
+                INFER_TYPE
+            )
+        )
+
+    }
+
+}
+
 class Streamwish : Filesim() {
     override val name = "Streamwish"
     override var mainUrl = "https://streamwish.to"

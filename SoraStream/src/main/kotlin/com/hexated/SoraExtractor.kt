@@ -1178,6 +1178,7 @@ object SoraExtractor : SoraStream() {
         year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val fixTitle = title.createSlug()
@@ -1201,23 +1202,12 @@ object SoraExtractor : SoraStream() {
                 it.select("a").attr("href") to it.text()
             }
         })?.filter {
-            it.first.contains("gdtot") && it.second.contains(Regex("(?i)(4k|1080p)"))
+            it.second.contains(Regex("(?i)(4k|1080p)"))
         } ?: return
 
         iframe.apmap { (iframeLink, title) ->
             val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)
-            val gdBotLink = extractGdbot(iframeLink)
-            val videoLink = extractGdflix(gdBotLink ?: return@apmap null)
-
-            callback.invoke(
-                ExtractorLink(
-                    "GMovies",
-                    "GMovies [$size]",
-                    videoLink ?: return@apmap null,
-                    "",
-                    getGMoviesQuality(title)
-                )
-            )
+            loadCustomTagExtractor("[$size]",iframeLink, "$gMoviesAPI/", subtitleCallback, callback, getIndexQuality(title))
         }
     }
 
