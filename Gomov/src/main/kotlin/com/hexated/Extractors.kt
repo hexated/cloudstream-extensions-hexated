@@ -111,7 +111,7 @@ object NineTv {
                 "Referer" to (referer ?: ""),
             ))
             val master = Regex("\\s*=\\s*'([^']+)").find(res.text)?.groupValues?.get(1)
-            val key = res.document.getKeys() ?: throw ErrorLoadingException("can't generate key")
+            val key = "tSIsE8FgpRkv3QQQ"
             val decrypt = AesHelper.cryptoAESHandler(master ?: return, key.toByteArray(), false)
                 ?.replace("\\", "")
                 ?: throw ErrorLoadingException("failed to decrypt")

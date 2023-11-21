@@ -33,6 +33,7 @@ import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
+import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeHdmovies4u
 import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
@@ -678,6 +679,9 @@ open class SoraStream : TmdbProvider() {
                     subtitleCallback,
                     callback
                 )
+            },
+            {
+                if (!res.isAnime) invokeGomovies(res.title, res.year, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeShowflix(

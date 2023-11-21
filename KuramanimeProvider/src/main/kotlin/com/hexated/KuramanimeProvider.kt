@@ -176,12 +176,12 @@ class KuramanimeProvider : MainAPI() {
                     link,
                     referer = "",
                     quality = quality ?: Qualities.Unknown.value,
-//                    headers = mapOf(
-//                        "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
-//                        "Range" to "bytes=0-",
-//                        "Sec-Fetch-Dest" to "video",
-//                        "Sec-Fetch-Mode" to "no-cors",
-//                    ),
+                    headers = mapOf(
+                        "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                        "Range" to "bytes=0-",
+                        "Sec-Fetch-Dest" to "video",
+                        "Sec-Fetch-Mode" to "no-cors",
+                    ),
                 )
             )
         }
@@ -193,18 +193,20 @@ class KuramanimeProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+
         val req = app.get(data)
         val res = req.document
         val token = res.select("meta[name=csrf-token]").attr("content")
-        val st = res.select("input#kuramaRoute").attr("value")
         headers = mapOf(
+            "Accept" to "application/json, text/javascript, */*; q=0.01",
+            "Authorization" to "Bearer YTNWeVlXMWhibWx0WlRwaVMwNUNTWFk1U1d4NVFsbDBObE5KWW10a1JWVXpkWFIzTTA5c05rcFJPSFJ6T2pFM01EQTFOemN5TnpBd01EQT0%3D",
             "X-Requested-With" to "XMLHttpRequest",
             "X-CSRF-TOKEN" to token
         )
         cookies = req.cookies
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=$st&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getMisc()}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
             if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
@@ -220,6 +222,23 @@ class KuramanimeProvider : MainAPI() {
         }
 
         return true
+    }
+
+    private suspend fun getMisc(): String {
+        val misc = app.get(
+            "$mainUrl/misc/post/EVhcpMNbO77acNZcHr2XVjaG8WAdNC1u",
+            headers = headers + mapOf("X-Request-ID" to getRequestId()),
+            cookies = cookies
+        )
+        cookies = misc.cookies
+        return misc.parsed()
+    }
+
+    private fun getRequestId(length: Int = 8): String {
+        val allowedChars = ('a'..'z') + ('0'..'9')
+        return (1..length)
+            .map { allowedChars.random() }
+            .joinToString("")
     }
 
 }

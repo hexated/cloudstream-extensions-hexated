@@ -1936,6 +1936,26 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeGomovies(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        invokeGpress(
+            title,
+            year,
+            season,
+            episode,
+            callback,
+            "https://gomovies-online.cam",
+            "Gomovies",
+            "_smQamBQsETb",
+            "_sBWcqbTBMaT"
+        )
+    }
+
     private suspend fun invokeGpress(
         title: String? = null,
         year: Int? = null,
@@ -1957,9 +1977,14 @@ object SoraExtractor : SoraStream() {
         } else {
             "$title Season $season"
         }
-
-        val doc = app.get("$api/search/$query").document
-
+        val idCookies =
+            mapOf(
+                "advanced-frontendgomovies7" to "bjd4n0nnv4hlt4fj5cdjgbrne2",
+                "_identitygomovies7" to "52fdc70b008c0b1d881dac0f01cca819edd512de01cc8bbc1224ed4aafb78b52a:2:{i:0;s:18:\"_identitygomovies7\";i:1;s:52:\"[2050366,\"HnVRRAObTASOJEr45YyCM8wiHol0V1ko\",2592000]\";}"
+            )
+        val req = app.get("$api/search/$query")
+        val doc = req.document
+        var cookies = req.cookies + idCookies
         val media = doc.select("div.$mediaSelector").map {
             Triple(
                 it.attr("data-filmName"), it.attr("data-year"), it.select("a").attr("href")
@@ -1983,12 +2008,14 @@ object SoraExtractor : SoraStream() {
         val iframe = if (season == null) {
             media.third
         } else {
-            app.get(
+            val res = app.get(
                 fixUrl(
                     media.third,
                     api
-                )
-            ).document.selectFirst("div#$episodeSelector a:contains(Episode ${slug.second})")
+                ), cookies = cookies
+            )
+            cookies = cookies + res.cookies
+            res.document.selectFirst("div#$episodeSelector a:contains(Episode ${slug.second})")
                 ?.attr("href")
         } ?: return
 
@@ -1998,11 +2025,11 @@ object SoraExtractor : SoraStream() {
             media.third.substringAfterLast("/") to iframe.substringAfterLast("/")
                 .substringBefore("-")
         }
-        val res = app.get(fixUrl(iframe, api), verify = false)
+        val res = app.get(fixUrl(iframe ?: return, api), cookies = cookies, verify = false)
         val serverUrl = res.document.selectFirst("script:containsData(pushState)")?.data()?.let {
             """,\s*'([^']+)""".toRegex().find(it)?.groupValues?.get(1)
         } ?: return
-        val cookies = res.cookies
+        cookies = cookies + res.cookies
         val url = res.document.select("meta[property=og:url]").attr("content")
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)
@@ -2445,7 +2472,7 @@ object SoraExtractor : SoraStream() {
             ExtractorLink(
                 "SFMovies",
                 "SFMovies",
-                fixUrl(video, base64DecodeAPI("YQ==bm4=dGE=YXQ=L3I=ZXQ=Lm4=d3M=ZG8=aW4=Lnc=cmU=Y28=Yi4=bG8=LmI=bmE=YW4=dHQ=cmE=Ly8=czo=dHA=aHQ=")),
+                fixUrl(video, base64DecodeAPI("cw==aWM=c20=Y28=dC8=bmU=cy4=b3c=bmQ=d2k=ZS4=b3I=LmM=b2I=Ymw=cy4=aWM=c20=Y28=Ly8=czo=dHA=aHQ=")),
                 "",
                 Qualities.P1080.value,
                 INFER_TYPE
