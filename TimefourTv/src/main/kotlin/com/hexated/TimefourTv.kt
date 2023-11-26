@@ -20,13 +20,13 @@ open class TimefourTv : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        "$mainUrl/tv-channels" to "All Channels",
-        "$mainUrl/usa-channels" to "USA Channels",
-        "$mainUrl/uk-channels" to "UK Channels",
-        "$mainUrl/sports-channels" to "Sport Channels",
-        "$mainUrl/live-sports-streams" to "Live Sport Channels",
-        "$mainUrl/news-channels" to "News Channels",
-        "$mainUrl/schedule.php" to "Schedule",
+//        "$mainUrl/tv-channels" to "All Channels",
+//        "$mainUrl/usa-channels" to "USA Channels",
+//        "$mainUrl/uk-channels" to "UK Channels",
+//        "$mainUrl/sports-channels" to "Sport Channels",
+//        "$mainUrl/live-sports-streams" to "Live Sport Channels",
+//        "$mainUrl/news-channels" to "News Channels",
+//        "$mainUrl/schedule.php" to "Schedule",
         "$daddyUrl/24-7-channels.php" to "DaddyHD Channels"
     )
 
