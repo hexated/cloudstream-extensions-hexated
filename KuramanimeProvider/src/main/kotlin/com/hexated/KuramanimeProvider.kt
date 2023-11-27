@@ -199,7 +199,7 @@ class KuramanimeProvider : MainAPI() {
         val token = res.select("meta[name=csrf-token]").attr("content")
         headers = mapOf(
             "Accept" to "application/json, text/javascript, */*; q=0.01",
-            "Authorization" to "Bearer YTNWeVlXMWhibWx0WlRwaVMwNUNTWFk1U1d4NVFsbDBObE5KWW10a1JWVXpkWFIzTTA5c05rcFJPSFJ6T2pFM01EQTFOemN5TnpBd01EQT0%3D",
+            "Authorization" to "Bearer ${getAuth()}",
             "X-Requested-With" to "XMLHttpRequest",
             "X-CSRF-TOKEN" to token
         )
@@ -222,6 +222,11 @@ class KuramanimeProvider : MainAPI() {
         }
 
         return true
+    }
+
+    private fun getAuth() : String {
+        val key = "kuramanime2:LEcXGYdOGcMCV8jM5fhRdM2mneSj6kaNts:${APIHolder.unixTimeMS};"
+        return base64Encode(base64Encode(key.toByteArray()).toByteArray())
     }
 
     private suspend fun getMisc(): String {

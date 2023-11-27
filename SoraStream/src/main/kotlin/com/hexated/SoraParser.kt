@@ -162,7 +162,21 @@ data class WatchOnlineResponse(
     @JsonProperty("subtitles") val subtitles: ArrayList<WatchOnlineSubtitles>? = arrayListOf(),
 )
 
-data class FmoviesSubtitles(
+data class VidsrctoResult(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("url") val url: String? = null,
+)
+
+data class VidsrctoResponse(
+    @JsonProperty("result") val result: VidsrctoResult? = null,
+)
+
+data class VidsrctoSources(
+    @JsonProperty("result") val result: ArrayList<VidsrctoResult>? = arrayListOf(),
+)
+
+data class VidsrctoSubtitles(
     @JsonProperty("label") val label: String? = null,
     @JsonProperty("file") val file: String? = null,
 )

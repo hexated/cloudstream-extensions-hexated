@@ -686,13 +686,19 @@ object SoraExtractor : SoraStream() {
             "$vidsrctoAPI/embed/tv/$imdbId/$season/$episode"
         }
 
-        val id = app.get(url).document.selectFirst("ul.episodes li a")?.attr("data-id") ?: return
+        val mediaId = app.get(url).document.selectFirst("ul.episodes li a")?.attr("data-id") ?: return
 
-        val subtitles = app.get("$vidsrctoAPI/ajax/embed/episode/$id/subtitles").text
-        tryParseJson<List<FmoviesSubtitles>>(subtitles)?.map {
+        app.get("$vidsrctoAPI/ajax/embed/episode/$mediaId/sources").parsedSafe<VidsrctoSources>()?.result?.apmap {
+            val encUrl = app.get("$vidsrctoAPI/ajax/embed/source/${it.id}").parsedSafe<VidsrctoResponse>()?.result?.url
+            loadExtractor(vidsrctoDecrypt(encUrl ?: return@apmap), "$vidsrctoAPI/", subtitleCallback, callback)
+        }
+
+        val subtitles = app.get("$vidsrctoAPI/ajax/embed/episode/$mediaId/subtitles").text
+        tryParseJson<List<VidsrctoSubtitles>>(subtitles)?.map {
             subtitleCallback.invoke(
                 SubtitleFile(
-                    it.label ?: "", it.file ?: return@map
+                    it.label ?: "",
+                    it.file ?: return@map
                 )
             )
         }
@@ -1497,18 +1503,19 @@ object SoraExtractor : SoraStream() {
         val mediaLink =
             app.get(matchMedia?.first ?: return).document.selectFirst("a#jake1")?.attr("href")
         val detailDoc = app.get(mediaLink ?: return).document
-        val media = detailDoc.selectFirst("div.entry-content pre span")?.text()?.split("|")
+        val media = detailDoc.selectFirst("div.entry-content pre span")?.text()
+            ?.split("|")
             ?.map { it.trim() }
 
         val iframe = (if (season == null) {
             media?.mapIndexed { index, name ->
-                detailDoc.select("div.entry-content > pre")[index.plus(1)].selectFirst("a")
+                detailDoc.select("div.entry-content > h2")[index].selectFirst("a")
                     ?.attr("href") to name
             }
         } else {
             media?.mapIndexed { index, name ->
                 val linkMedia =
-                    detailDoc.select("div.entry-content > pre")[index.plus(1)].selectFirst("a")
+                    detailDoc.select("div.entry-content > h2")[index].selectFirst("a")
                         ?.attr("href")
                 app.get(
                     linkMedia ?: return@mapIndexed null
@@ -1518,25 +1525,19 @@ object SoraExtractor : SoraStream() {
         })?.filter { it?.first?.startsWith("http") == true }
 
         iframe?.apmap {
-            val token = app.get(
-                it?.first ?: return@apmap null
-            ).document.select("input[name=_csrf_token_645a83a41868941e4692aa31e7235f2]")
-                .attr("value")
-            val shortLink = app.post(
-                it.first ?: return@apmap null,
-                data = mapOf("_csrf_token_645a83a41868941e4692aa31e7235f2" to token)
-            ).document.selectFirst("a[rel=nofollow]")?.attr("href")
+            val iframeDoc = app.get(it?.first ?: return@apmap).document
+            val formUrl = iframeDoc.select("form").attr("action")
+            val formData = iframeDoc.select("form button").associate { v -> v.attr("name") to v.attr("value") }
 
-//            val videoUrl = extractRebrandly(shortLink ?: return@apmapIndexed null )
-            val quality =
-                Regex("(\\d{3,4})p").find(it.second)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val videoUrl = app.post(formUrl, data = formData, referer = it.first).document.selectFirst("div.d-flex.justify-content-center.flex-wrap a")?.attr("href")
+            val quality = Regex("(\\d{3,4})p").find(it.second)?.groupValues?.getOrNull(1)?.toIntOrNull()
             val qualityName = it.second.replace("${quality}p", "").trim()
 
             callback.invoke(
                 ExtractorLink(
                     "$api",
                     "$api $qualityName",
-                    shortLink ?: return@apmap null,
+                    videoUrl ?: return@apmap,
                     "",
                     quality ?: Qualities.Unknown.value
                 )

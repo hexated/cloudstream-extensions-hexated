@@ -1145,6 +1145,13 @@ fun String.decodePrimewireXor(key: String): String {
     return sb.toString()
 }
 
+fun vidsrctoDecrypt(text: String): String {
+    val parse = Base64.decode(text.toByteArray(), Base64.URL_SAFE)
+    val cipher = Cipher.getInstance("RC4")
+    cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec("8z5Ag5wgagfsOuhz".toByteArray(), "RC4"), cipher.parameters)
+    return decode(cipher.doFinal(parse).toString(Charsets.UTF_8))
+}
+
 fun String?.createSlug(): String? {
     return this?.replace(Regex("[^\\w\\s-]"), "")
         ?.replace(" ", "-")
