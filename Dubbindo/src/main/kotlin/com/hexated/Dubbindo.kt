@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class Dubbindo : MainAPI() {
-    override var mainUrl = "https://www.dubbindo.xyz"
+    override var mainUrl = "https://www.dubbindo.site"
     override var name = "Dubbindo"
     override val hasMainPage = true
     override var lang = "id"
