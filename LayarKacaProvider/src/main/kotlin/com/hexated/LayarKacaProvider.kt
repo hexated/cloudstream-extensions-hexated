@@ -9,7 +9,7 @@ import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
     override var mainUrl = "https://tv4.lk21official.wiki"
-    private var seriesUrl = "https://tv5.nontondrama.click"
+    private var seriesUrl = "https://tv6.nontondrama.click"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
