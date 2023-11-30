@@ -11,7 +11,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 open class DramaidProvider : MainAPI() {
-    override var mainUrl = "https://dramaid.best"
+    override var mainUrl = "https://dramaid.skin"
     override var name = "DramaId"
     override val hasMainPage = true
     override var lang = "id"
