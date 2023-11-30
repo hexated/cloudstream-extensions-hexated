@@ -451,7 +451,7 @@ object SoraExtractor : SoraStream() {
             sourcesData?.get("movie")?.get("movie")
         } else {
             sourcesData?.get("s$seasonSlug")?.get("e$episodeSlug")
-        }
+        } ?: return
         val subSources = if (season == null) {
             subSourcesData?.get("movie")?.get("movie")
         } else {
@@ -464,39 +464,45 @@ object SoraExtractor : SoraStream() {
             Regex("var\\suserNonce.*?[\"|'](\\S+?)[\"|'];").find(scriptUser)?.groupValues?.get(1)
         val userId =
             Regex("var\\suser_id.*?[\"|'](\\S+?)[\"|'];").find(scriptUser)?.groupValues?.get(1)
-        val linkIDs = sources?.joinToString("") {
-            "&linkIDs%5B%5D=$it"
-        }?.replace("\"", "")
 
-        val json = app.post(
-            "$filmxyAPI/wp-admin/admin-ajax.php",
-            requestBody = "action=get_vid_links$linkIDs&user_id=$userId&nonce=$userNonce".toRequestBody(),
-            referer = url,
-            headers = mapOf(
-                "Accept" to "*/*",
-                "DNT" to "1",
-                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
-                "Origin" to filmxyAPI,
-                "X-Requested-With" to "XMLHttpRequest",
-            ),
-            cookies = filmxyCookies
-        ).text.let { tryParseJson<HashMap<String, String>>(it) }
+        val listSources = sources.withIndex()
+            .groupBy { it.index / 2 }
+            .map { entry -> entry.value.map { it.value } }
 
-        sources?.map { source ->
-            val link = json?.get(source)
-            val quality = sourcesDetail?.get(source)?.get("resolution")
-            val server = sourcesDetail?.get(source)?.get("server")
-            val size = sourcesDetail?.get(source)?.get("size")
+        listSources.apmap { src ->
+            val linkIDs = src.joinToString("") {
+                "&linkIDs%5B%5D=$it"
+            }.replace("\"", "")
+            val json = app.post(
+                "$filmxyAPI/wp-admin/admin-ajax.php",
+                requestBody = "action=get_vid_links$linkIDs&user_id=$userId&nonce=$userNonce".toRequestBody(),
+                referer = url,
+                headers = mapOf(
+                    "Accept" to "*/*",
+                    "DNT" to "1",
+                    "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
+                    "Origin" to filmxyAPI,
+                    "X-Requested-With" to "XMLHttpRequest",
+                ),
+                cookies = filmxyCookies
+            ).text.let { tryParseJson<HashMap<String, String>>(it) }
 
-            callback.invoke(
-                ExtractorLink(
-                    "Filmxy",
-                    "Filmxy $server [$size]",
-                    link ?: return@map,
-                    "$filmxyAPI/",
-                    getQualityFromName(quality)
+            src.map { source ->
+                val link = json?.get(source)
+                val quality = sourcesDetail?.get(source)?.get("resolution")
+                val server = sourcesDetail?.get(source)?.get("server")
+                val size = sourcesDetail?.get(source)?.get("size")
+
+                callback.invoke(
+                    ExtractorLink(
+                        "Filmxy",
+                        "Filmxy $server [$size]",
+                        link ?: return@map,
+                        "$filmxyAPI/",
+                        getQualityFromName(quality)
+                    )
                 )
-            )
+            }
         }
 
         subSources?.mapKeys { sub ->
@@ -2463,7 +2469,7 @@ object SoraExtractor : SoraStream() {
             ExtractorLink(
                 "SFMovies",
                 "SFMovies",
-                fixUrl(video, base64DecodeAPI("aQ==YXA=dGE=ZGE=c3Q=cmU=dC8=bmU=cy4=b3c=bmQ=d2k=ZS4=b3I=LmM=b2I=Ymw=aS4=YXA=dGE=ZGE=c3Q=cmU=Ly8=czo=dHA=aHQ=")),
+                fixUrl(video, base64DecodeAPI("cw==bmU=Ym8=Y2s=YmE=dC8=bmU=cy4=b3c=bmQ=d2k=ZS4=b3I=LmM=b2I=Ymw=cy4=bmU=Ym8=Y2s=YmE=Ly8=czo=dHA=aHQ=")),
                 "",
                 Qualities.P1080.value,
                 INFER_TYPE
