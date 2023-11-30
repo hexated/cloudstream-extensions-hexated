@@ -230,7 +230,7 @@ class KuramanimeProvider : MainAPI() {
 
     private suspend fun fetchAuth(url: String) : Pair<String?,String?> {
         val found = WebViewResolver(
-            Regex("""$mainUrl/\w{32}""")
+            Regex("""$mainUrl/\w{24,36}""")
         ).resolveUsingWebView(
             requestCreator(
                 "GET", url
@@ -239,7 +239,7 @@ class KuramanimeProvider : MainAPI() {
         return found?.url.toString() to found?.headers?.get("Authorization")
     }
 
-    private suspend fun getAuth(url: String) = auth ?: fetchAuth(url)
+    private suspend fun getAuth(url: String) = auth ?: fetchAuth(url).also { auth = it }
 
     private suspend fun getMisc(url: String?): String {
         val misc = app.get(
