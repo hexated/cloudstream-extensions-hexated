@@ -200,32 +200,42 @@ class KuramanimeProvider : MainAPI() {
 
         val req = app.get(data)
         val res = req.document
-        val token = res.select("meta[name=csrf-token]").attr("content")
-        val auth = getAuth(data)
-        headers = mapOf(
-            "Accept" to "application/json, text/javascript, */*; q=0.01",
-            "Authorization" to "${auth.authHeader}",
-            "X-Requested-With" to "XMLHttpRequest",
-            "X-CSRF-TOKEN" to token
-        )
-        cookies = req.cookies
-        res.select("select#changeServer option").apmap { source ->
-            val server = source.attr("value")
-            val query = auth.serverUrl?.queryParameterNames
-            val link = "$data?${query?.first()}=${getMisc(auth.authUrl)}&${query?.last()}=$server"
-            if (server.contains(Regex("(?i)kuramadrive|archive"))) {
-                invokeLocalSource(link, server, data, callback)
-            } else {
-                app.get(
-                    link,
-                    referer = data,
-                    headers = headers,
-                    cookies = cookies
-                ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
-                    loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
+
+        argamap(
+            {
+                val token = res.select("meta[name=csrf-token]").attr("content")
+                val auth = getAuth(data)
+                headers = mapOf(
+                    "Accept" to "application/json, text/javascript, */*; q=0.01",
+                    "Authorization" to "${auth.authHeader}",
+                    "X-Requested-With" to "XMLHttpRequest",
+                    "X-CSRF-TOKEN" to token
+                )
+                cookies = req.cookies
+                res.select("select#changeServer option").apmap { source ->
+                    val server = source.attr("value")
+                    val query = auth.serverUrl?.queryParameterNames
+                    val link = "$data?${query?.first()}=${getMisc(auth.authUrl)}&${query?.last()}=$server"
+                    if (server.contains(Regex("(?i)kuramadrive|archive"))) {
+                        invokeLocalSource(link, server, data, callback)
+                    } else {
+                        app.get(
+                            link,
+                            referer = data,
+                            headers = headers,
+                            cookies = cookies
+                        ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
+                            loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
+                        }
+                    }
+                }
+            },
+            {
+                res.select("div#animeDownloadLink a").apmap {
+                    loadExtractor(it.attr("href"), "$mainUrl/", subtitleCallback, callback)
                 }
             }
-        }
+        )
 
         return true
     }
