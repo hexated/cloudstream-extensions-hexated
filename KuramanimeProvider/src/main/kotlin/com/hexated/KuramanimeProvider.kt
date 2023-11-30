@@ -18,7 +18,7 @@ class KuramanimeProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-    private var auth: String? = null
+    private var auth:  Pair<String?, String?>? = null
     private var headers: Map<String,String> = mapOf()
     private var cookies: Map<String,String> = mapOf()
     override val supportedTypes = setOf(
@@ -200,16 +200,17 @@ class KuramanimeProvider : MainAPI() {
         val req = app.get(data)
         val res = req.document
         val token = res.select("meta[name=csrf-token]").attr("content")
+        val auth = getAuth(data)
         headers = mapOf(
             "Accept" to "application/json, text/javascript, */*; q=0.01",
-            "Authorization" to "${getAuth(data)}",
+            "Authorization" to "${auth.second}",
             "X-Requested-With" to "XMLHttpRequest",
             "X-CSRF-TOKEN" to token
         )
         cookies = req.cookies
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getMisc()}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getMisc(auth.first)}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
             if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
@@ -227,22 +228,22 @@ class KuramanimeProvider : MainAPI() {
         return true
     }
 
-    private suspend fun fetchAuth(url: String) : String? {
+    private suspend fun fetchAuth(url: String) : Pair<String?,String?> {
         val found = WebViewResolver(
-            Regex("$mainUrl/OvBEip5oFwoN00rAl1Ab014feJWmLvhC")
+            Regex("""$mainUrl/\w{32}""")
         ).resolveUsingWebView(
             requestCreator(
                 "GET", url
             )
         ).first
-        return found?.headers?.get("Authorization")
+        return found?.url.toString() to found?.headers?.get("Authorization")
     }
 
     private suspend fun getAuth(url: String) = auth ?: fetchAuth(url)
 
-    private suspend fun getMisc(): String {
+    private suspend fun getMisc(url: String?): String {
         val misc = app.get(
-            "$mainUrl/OvBEip5oFwoN00rAl1Ab014feJWmLvhC",
+            "$url",
             headers = headers + mapOf("X-Request-ID" to getRequestId()),
             cookies = cookies
         )
