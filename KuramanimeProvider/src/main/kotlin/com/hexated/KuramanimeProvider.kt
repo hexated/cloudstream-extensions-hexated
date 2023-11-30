@@ -3,9 +3,11 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
+import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.nicehttp.requestCreator
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -16,6 +18,7 @@ class KuramanimeProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
+    private var auth: String? = null
     private var headers: Map<String,String> = mapOf()
     private var cookies: Map<String,String> = mapOf()
     override val supportedTypes = setOf(
@@ -199,7 +202,7 @@ class KuramanimeProvider : MainAPI() {
         val token = res.select("meta[name=csrf-token]").attr("content")
         headers = mapOf(
             "Accept" to "application/json, text/javascript, */*; q=0.01",
-            "Authorization" to "Bearer ${getAuth()}",
+            "Authorization" to "${getAuth(data)}",
             "X-Requested-With" to "XMLHttpRequest",
             "X-CSRF-TOKEN" to token
         )
@@ -225,9 +228,22 @@ class KuramanimeProvider : MainAPI() {
     }
 
     private fun getAuth() : String {
-        val key = "kuramanime2:LEcXGYdOGcMCV8jM5fhRdM2mneSj6kaNts:${APIHolder.unixTimeMS};"
+        val key = "kuramanime3:LEcXGYdOGcMCV8jM5fhRdM2mneSj6kaNts:${APIHolder.unixTimeMS};"
         return base64Encode(base64Encode(key.toByteArray()).toByteArray())
     }
+
+    private suspend fun fetchAuth(url: String) : String? {
+        val found = WebViewResolver(
+            Regex("$mainUrl/misc/post/EVhcpMNbO77acNZcHr2XVjaG8WAdNC1u")
+        ).resolveUsingWebView(
+            requestCreator(
+                "GET", url
+            )
+        ).first
+        return found?.headers?.get("Authorization")
+    }
+
+    private suspend fun getAuth(url: String) = auth ?: fetchAuth(url)
 
     private suspend fun getMisc(): String {
         val misc = app.get(

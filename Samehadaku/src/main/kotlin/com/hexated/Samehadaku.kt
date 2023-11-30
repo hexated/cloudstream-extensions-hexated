@@ -14,7 +14,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 class Samehadaku : MainAPI() {
-    override var mainUrl = "https://samehadaku.rent"
+    override var mainUrl = "https://samehadaku.digital/"
     override var name = "Samehadaku"
     override val hasMainPage = true
     override var lang = "id"
