@@ -227,14 +227,9 @@ class KuramanimeProvider : MainAPI() {
         return true
     }
 
-    private fun getAuth() : String {
-        val key = "kuramanime3:LEcXGYdOGcMCV8jM5fhRdM2mneSj6kaNts:${APIHolder.unixTimeMS};"
-        return base64Encode(base64Encode(key.toByteArray()).toByteArray())
-    }
-
     private suspend fun fetchAuth(url: String) : String? {
         val found = WebViewResolver(
-            Regex("$mainUrl/misc/post/EVhcpMNbO77acNZcHr2XVjaG8WAdNC1u")
+            Regex("$mainUrl/OvBEip5oFwoN00rAl1Ab014feJWmLvhC")
         ).resolveUsingWebView(
             requestCreator(
                 "GET", url
@@ -247,7 +242,7 @@ class KuramanimeProvider : MainAPI() {
 
     private suspend fun getMisc(): String {
         val misc = app.get(
-            "$mainUrl/misc/post/EVhcpMNbO77acNZcHr2XVjaG8WAdNC1u",
+            "$mainUrl/OvBEip5oFwoN00rAl1Ab014feJWmLvhC",
             headers = headers + mapOf("X-Request-ID" to getRequestId()),
             cookies = cookies
         )
