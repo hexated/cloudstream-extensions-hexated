@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.nicehttp.requestCreator
+import okhttp3.HttpUrl
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -18,7 +19,7 @@ class KuramanimeProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-    private var auth:  Pair<String?, String?>? = null
+    private var params:  AuthParams? = null
     private var headers: Map<String,String> = mapOf()
     private var cookies: Map<String,String> = mapOf()
     override val supportedTypes = setOf(
@@ -203,14 +204,15 @@ class KuramanimeProvider : MainAPI() {
         val auth = getAuth(data)
         headers = mapOf(
             "Accept" to "application/json, text/javascript, */*; q=0.01",
-            "Authorization" to "${auth.second}",
+            "Authorization" to "${auth.authHeader}",
             "X-Requested-With" to "XMLHttpRequest",
             "X-CSRF-TOKEN" to token
         )
         cookies = req.cookies
         res.select("select#changeServer option").apmap { source ->
             val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getMisc(auth.first)}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
+            val query = auth.serverUrl?.queryParameterNames
+            val link = "$data?${query?.first()}=${getMisc(auth.authUrl)}&${query?.last()}=$server"
             if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                 invokeLocalSource(link, server, data, callback)
             } else {
@@ -228,21 +230,21 @@ class KuramanimeProvider : MainAPI() {
         return true
     }
 
-    private suspend fun fetchAuth(url: String) : Pair<String?,String?> {
+    private suspend fun fetchAuth(url: String) : AuthParams {
         val regex = Regex("""$mainUrl/(?!anime|assets|images|misc|cf-fonts)\w+""")
         val found = WebViewResolver(
-            Regex("""dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb"""),
+            Regex("""$url(?!\?page=)\?"""),
             additionalUrls = listOf(regex)
         ).resolveUsingWebView(
             requestCreator(
                 "GET", url
             )
         )
-        val foundUrl = found.second.last()
-        return foundUrl.url.toString() to foundUrl.headers["Authorization"]
+        val addition = found.second.last()
+        return AuthParams(found.first?.url, addition.url.toString(), addition.headers["Authorization"])
     }
 
-    private suspend fun getAuth(url: String) = auth ?: fetchAuth(url).also { auth = it }
+    private suspend fun getAuth(url: String) = params ?: fetchAuth(url).also { params = it }
 
     private suspend fun getMisc(url: String?): String {
         val misc = app.get(
@@ -260,5 +262,11 @@ class KuramanimeProvider : MainAPI() {
             .map { allowedChars.random() }
             .joinToString("")
     }
+
+    data class AuthParams (
+        val serverUrl: HttpUrl?,
+        val authUrl: String?,
+        val authHeader: String?,
+    )
 
 }
