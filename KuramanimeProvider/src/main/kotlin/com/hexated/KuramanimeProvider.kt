@@ -230,7 +230,7 @@ class KuramanimeProvider : MainAPI() {
 
     private suspend fun fetchAuth(url: String) : Pair<String?,String?> {
         val found = WebViewResolver(
-            Regex("""$mainUrl/\w{24,36}""")
+            Regex("""$mainUrl/(?!anime|assets|images)\w+""")
         ).resolveUsingWebView(
             requestCreator(
                 "GET", url
