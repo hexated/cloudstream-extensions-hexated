@@ -241,7 +241,7 @@ class KuramanimeProvider : MainAPI() {
     }
 
     private suspend fun fetchAuth(url: String) : AuthParams {
-        val regex = Regex("""$mainUrl/(?!anime|assets|images|misc|cf-fonts)\w+""")
+        val regex = Regex("""$mainUrl/(?!anime/|assets/|images/|misc/|cf-fonts/)\w+""")
         val found = WebViewResolver(
             Regex("""$url(?!\?page=)\?"""),
             additionalUrls = listOf(regex)
