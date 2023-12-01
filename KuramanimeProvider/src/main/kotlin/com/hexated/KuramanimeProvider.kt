@@ -241,7 +241,7 @@ class KuramanimeProvider : MainAPI() {
     }
 
     private suspend fun fetchAuth(url: String) : AuthParams {
-        val regex = Regex("""$mainUrl/(?!anime/|assets/|images/|misc/|cf-fonts/)\w+""")
+        val regex = Regex("""$mainUrl/\S+""")
         val found = WebViewResolver(
             Regex("""$url(?!\?page=)\?"""),
             additionalUrls = listOf(regex)
@@ -250,8 +250,8 @@ class KuramanimeProvider : MainAPI() {
                 "GET", url
             )
         )
-        val addition = found.second.last()
-        return AuthParams(found.first?.url, addition.url.toString(), addition.headers["Authorization"])
+        val addition = found.second.find { !it.headers["Authorization"].isNullOrBlank() }
+        return AuthParams(found.first?.url, addition?.url.toString(), addition?.headers?.get("Authorization"))
     }
 
     private suspend fun getAuth(url: String) = params ?: fetchAuth(url).also { params = it }
