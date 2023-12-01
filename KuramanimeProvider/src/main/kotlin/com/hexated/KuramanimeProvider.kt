@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.nicehttp.requestCreator
+import okhttp3.Headers
 import okhttp3.HttpUrl
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
@@ -203,15 +204,8 @@ class KuramanimeProvider : MainAPI() {
 
         argamap(
             {
-                val token = res.select("meta[name=csrf-token]").attr("content")
                 val auth = getAuth(data)
-                headers = mapOf(
-                    "Accept" to "application/json, text/javascript, */*; q=0.01",
-                    "Authorization" to "${auth.authHeader}",
-                    "X-Fuck-ID" to "${auth.fidHeader}",
-                    "X-Requested-With" to "XMLHttpRequest",
-                    "X-CSRF-TOKEN" to token
-                ).filter { !it.value.isNullOrEmpty() }
+                headers = auth.authHeader?.associate { it.first to it.second }?.filter { it.key != "Cookie" }!!
                 cookies = req.cookies
                 res.select("select#changeServer option").apmap { source ->
                     val server = source.attr("value")
@@ -251,8 +245,8 @@ class KuramanimeProvider : MainAPI() {
                 "GET", url
             )
         )
-        val addition = found.second.find { !it.headers["Authorization"].isNullOrBlank() || !it.headers["X-Fuck-ID"].isNullOrBlank() }
-        return AuthParams(found.first?.url, addition?.url.toString(), addition?.headers?.get("Authorization"), addition?.headers?.get("X-Fuck-ID"))
+        val addition = found.second.findLast { it.headers["X-Requested-With"] == "XMLHttpRequest" }
+        return AuthParams(found.first?.url, addition?.url.toString(), addition?.headers)
     }
 
     private suspend fun getAuth(url: String) = params ?: fetchAuth(url).also { params = it }
@@ -260,25 +254,17 @@ class KuramanimeProvider : MainAPI() {
     private suspend fun getMisc(url: String?): String {
         val misc = app.get(
             "$url",
-            headers = headers + mapOf("X-Request-ID" to getRequestId()),
+            headers = headers,
             cookies = cookies
         )
         cookies = misc.cookies
         return misc.parsed()
     }
 
-    private fun getRequestId(length: Int = 8): String {
-        val allowedChars = ('a'..'z') + ('0'..'9')
-        return (1..length)
-            .map { allowedChars.random() }
-            .joinToString("")
-    }
-
     data class AuthParams (
         val serverUrl: HttpUrl?,
         val authUrl: String?,
-        val authHeader: String?,
-        val fidHeader: String?,
+        val authHeader: Headers?,
     )
 
 }
