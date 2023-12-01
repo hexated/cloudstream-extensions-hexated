@@ -85,10 +85,10 @@ jobs:
           cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
           cp build/plugins.json $GITHUB_WORKSPACE/builds
 
-      - name: Move Loklok
+      - name: Move Kuramanime
         run: |
-          rm $GITHUB_WORKSPACE/builds/Loklok.cs3 || true
-          cp $GITHUB_WORKSPACE/builds/stored/Loklok.cs3 $GITHUB_WORKSPACE/builds
+          rm $GITHUB_WORKSPACE/builds/KuramanimeProvider.cs3 || true
+          cp $GITHUB_WORKSPACE/builds/stored/KuramanimeProvider.cs3 $GITHUB_WORKSPACE/builds
 
       - name: Push builds
         run: |
