@@ -208,14 +208,15 @@ class KuramanimeProvider : MainAPI() {
                 headers = mapOf(
                     "Accept" to "application/json, text/javascript, */*; q=0.01",
                     "Authorization" to "${auth.authHeader}",
+                    "X-Fuck-ID" to "${auth.fidHeader}",
                     "X-Requested-With" to "XMLHttpRequest",
                     "X-CSRF-TOKEN" to token
-                )
+                ).filter { !it.value.isNullOrEmpty() }
                 cookies = req.cookies
                 res.select("select#changeServer option").apmap { source ->
                     val server = source.attr("value")
-                    val query = auth.serverUrl?.queryParameterNames
-                    val link = "$data?${query?.first()}=${getMisc(auth.authUrl)}&${query?.last()}=$server"
+                    val query = auth.serverUrl?.queryParameterNames?.map { it } ?: return@apmap
+                    val link = "$data?${query[0]}=${getMisc(auth.authUrl)}&${query[1]}=$server"
                     if (server.contains(Regex("(?i)kuramadrive|archive"))) {
                         invokeLocalSource(link, server, data, callback)
                     } else {
@@ -250,8 +251,8 @@ class KuramanimeProvider : MainAPI() {
                 "GET", url
             )
         )
-        val addition = found.second.find { !it.headers["Authorization"].isNullOrBlank() }
-        return AuthParams(found.first?.url, addition?.url.toString(), addition?.headers?.get("Authorization"))
+        val addition = found.second.find { !it.headers["Authorization"].isNullOrBlank() || !it.headers["X-Fuck-ID"].isNullOrBlank() }
+        return AuthParams(found.first?.url, addition?.url.toString(), addition?.headers?.get("Authorization"), addition?.headers?.get("X-Fuck-ID"))
     }
 
     private suspend fun getAuth(url: String) = params ?: fetchAuth(url).also { params = it }
@@ -277,6 +278,7 @@ class KuramanimeProvider : MainAPI() {
         val serverUrl: HttpUrl?,
         val authUrl: String?,
         val authHeader: String?,
+        val fidHeader: String?,
     )
 
 }
