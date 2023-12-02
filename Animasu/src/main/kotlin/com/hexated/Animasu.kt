@@ -157,7 +157,7 @@ class Animasu : MainAPI() {
                     link.name,
                     link.url,
                     link.referer,
-                    if(link.type != ExtractorLinkType.M3U8) getIndexQuality(quality) else link.quality,
+                    if(link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo") link.quality else getIndexQuality(quality),
                     link.type,
                     link.headers,
                     link.extractorData
