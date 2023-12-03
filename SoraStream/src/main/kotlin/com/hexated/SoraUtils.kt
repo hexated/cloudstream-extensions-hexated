@@ -46,6 +46,8 @@ import kotlin.math.min
 
 var watchflxCookies: Map<String, String>? = null
 var filmxyCookies: Map<String,String>? = null
+var sfServer: String? = null
+
 val encodedIndex = arrayOf(
     "GamMovies",
     "JSMovies",
@@ -761,6 +763,14 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
                     }.lastOrNull()
     }
 }
+
+suspend fun getSfServer() = sfServer ?: fetchSfServer().also { sfServer = it }
+
+suspend fun fetchSfServer(): String? {
+    return app.get(base64DecodeAPI("ZQ==dXI=YXo=eC8=bGk=bWY=ZWE=dHI=L3M=aW4=bWE=aS0=YXA=aS8=YXA=YW0=cmU=c3Q=dC8=bmU=cy4=b3c=bmQ=d2k=ZS4=b3I=LmM=b2I=Ymw=aS4=YXA=YW0=cmU=c3Q=Ly8=czo=dHA=aHQ="))
+        .parsedSafe<List<Map<String, String>>>()?.first()?.get("link")
+}
+
 suspend fun getFilmxyCookies(url: String) = filmxyCookies ?: fetchFilmxyCookies(url).also { filmxyCookies = it }
 suspend fun fetchFilmxyCookies(url: String): Map<String, String> {
 

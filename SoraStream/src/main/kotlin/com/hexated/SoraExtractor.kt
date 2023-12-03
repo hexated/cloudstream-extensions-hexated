@@ -2469,7 +2469,7 @@ object SoraExtractor : SoraStream() {
             ExtractorLink(
                 "SFMovies",
                 "SFMovies",
-                fixUrl(video, base64DecodeAPI("cw==bmU=Ym8=Y2s=YmE=dC8=bmU=cy4=b3c=bmQ=d2k=ZS4=b3I=LmM=b2I=Ymw=cy4=bmU=Ym8=Y2s=YmE=Ly8=czo=dHA=aHQ=")),
+                fixUrl(video, getSfServer() ?: return),
                 "",
                 Qualities.P1080.value,
                 INFER_TYPE
