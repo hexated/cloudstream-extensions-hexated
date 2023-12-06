@@ -127,7 +127,7 @@ class Minioppai : MainAPI() {
             val name = it.selectFirst("div.epl-num")?.text()
             val link = fixUrlNull(it.selectFirst("a")?.attr("href")) ?: return@mapNotNull null
             Episode(link, name = name)
-        }.reversed()
+        }
 
         return newAnimeLoadResponse(title, url, TvType.NSFW) {
             engName = title

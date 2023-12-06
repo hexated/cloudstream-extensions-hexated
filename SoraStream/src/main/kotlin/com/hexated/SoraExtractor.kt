@@ -246,6 +246,7 @@ object SoraExtractor : SoraStream() {
         } else {
             "$multimoviesAPI/episodes/$fixTitle-${season}x${episode}"
         }
+        invokeWpmovies(null, url, subtitleCallback, callback)
     }
 
     suspend fun invokeNetmovies(
@@ -326,20 +327,7 @@ object SoraExtractor : SoraStream() {
                     else -> it.embed_url
                 }
             } ?: return@apmap
-            val sources = arrayOf(
-                "https://chillx.top",
-                "https://watchx.top",
-                "https://bestx.stream",
-                "https://w1.moviesapi.club"
-            )
             when {
-                sources.any { source.startsWith(it) } -> NineTv.getUrl(
-                    source,
-                    "$referer/",
-                    subtitleCallback,
-                    callback
-                )
-
                 !source.contains("youtube") -> {
                     loadCustomExtractor(name, source, "$referer/", subtitleCallback, callback)
                 }
@@ -2078,7 +2066,7 @@ object SoraExtractor : SoraStream() {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val data = app.get(url, timeout = 120L, referer = ref).okhttpResponse.peekBody(1024 * 1024).bytes().decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
+        val data = app.get(url, timeout = 120L, referer = ref).okhttpResponse.peekBody(1024 * 128).bytes().decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
         val json = tryParseJson<BlackvidResponses>(data)
 
         json?.sources?.map { source ->
@@ -2254,7 +2242,7 @@ object SoraExtractor : SoraStream() {
         val iframe = app.get(url, referer = "https://pressplay.top/").document.selectFirst("iframe")
             ?.attr("src")
 
-        NineTv.getUrl(iframe ?: return, "$nineTvAPI/", subtitleCallback, callback)
+        loadExtractor(iframe ?: return, "$nineTvAPI/", subtitleCallback, callback)
 
     }
 

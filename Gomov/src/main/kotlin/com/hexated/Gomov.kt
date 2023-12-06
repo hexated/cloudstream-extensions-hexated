@@ -20,7 +20,6 @@ open class Gomov : MainAPI() {
         TvType.TvSeries,
         TvType.AsianDrama
     )
-    private val sources = arrayOf("https://chillx.top", "https://watchx.top", "https://bestx.stream")
 
     override val mainPage = mainPageOf(
         "page/%d/?s&search=advanced&post_type=movie" to "Movies",
@@ -159,12 +158,7 @@ open class Gomov : MainAPI() {
                 val iframe = app.get(fixUrl(ele.attr("href"))).document.selectFirst("div.gmr-embed-responsive iframe")
                     .getIframeAttr()?.let { httpsify(it) } ?: return@apmap
 
-                when {
-                    sources.any { iframe.startsWith(it) } -> NineTv.getUrl(iframe, "$directUrl/", subtitleCallback, callback)
-                    else -> {
-                        loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
-                    }
-                }
+                loadExtractor(iframe, "$directUrl/", subtitleCallback, callback)
             }
         } else {
             document.select("div.tab-content-ajax").apmap { ele ->
@@ -173,12 +167,7 @@ open class Gomov : MainAPI() {
                     data = mapOf("action" to "muvipro_player_content", "tab" to ele.attr("id"), "post_id" to "$id")
                 ).document.select("iframe").attr("src").let { httpsify(it) }
 
-                when {
-                    sources.any { server.startsWith(it) } -> NineTv.getUrl(server, "$directUrl/", subtitleCallback, callback)
-                    else -> {
-                        loadExtractor(server, "$directUrl/", subtitleCallback, callback)
-                    }
-                }
+                loadExtractor(server, "$directUrl/", subtitleCallback, callback)
 
             }
         }
@@ -207,8 +196,4 @@ fun getBaseUrl(url: String): String {
     return URI(url).let {
         "${it.scheme}://${it.host}"
     }
-}
-
-fun String.getHost(): String {
-    return fixTitle(URI(this).host.substringBeforeLast(".").substringAfterLast("."))
 }

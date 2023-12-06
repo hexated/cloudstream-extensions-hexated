@@ -86,7 +86,7 @@ open class Kuramadrive : ExtractorApi() {
         val token = doc.select("meta[name=csrf-token]").attr("content")
         val routeCheckAvl = doc.select("input#routeCheckAvl").attr("value")
 
-        val json = app.post(
+        val json = app.get(
             routeCheckAvl, headers = mapOf(
                 "X-Requested-With" to "XMLHttpRequest",
                 "X-CSRF-TOKEN" to token

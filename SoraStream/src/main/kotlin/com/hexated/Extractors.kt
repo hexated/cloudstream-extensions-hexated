@@ -6,17 +6,13 @@ import com.lagradost.cloudstream3.extractors.StreamSB
 import com.lagradost.cloudstream3.extractors.Voe
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
-import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.Pixeldrain
-import com.lagradost.cloudstream3.extractors.helper.AesHelper
+import com.lagradost.cloudstream3.extractors.ZplayerV2
 import com.lagradost.cloudstream3.utils.*
-import org.jsoup.nodes.Document
-import org.mozilla.javascript.Context
-import org.mozilla.javascript.Scriptable
 import java.math.BigInteger
 import java.security.MessageDigest
 
@@ -238,83 +234,6 @@ open class VCloud : ExtractorApi() {
 
 }
 
-object NineTv {
-
-        suspend fun getUrl(
-            url: String,
-            referer: String?,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
-        ) {
-            val mainUrl = getBaseUrl(url)
-            val res = app.get(url, headers = mapOf(
-                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                "Accept-Language" to "en-US,en;q=0.5",
-                "Referer" to (referer ?: ""),
-            ))
-            val master = Regex("\\s*=\\s*'([^']+)").find(res.text)?.groupValues?.get(1)
-            val key = "tSIsE8FgpRkv3QQQ"
-            val decrypt = AesHelper.cryptoAESHandler(master ?: return, key.toByteArray(), false)
-                ?.replace("\\", "")
-                ?: throw ErrorLoadingException("failed to decrypt")
-
-            val source = Regex(""""?file"?:\s*"([^"]+)""").find(decrypt)?.groupValues?.get(1)
-            val tracks = Regex("""tracks:\s*\[(.+)]""").find(decrypt)?.groupValues?.get(1)
-            val name = url.getHost()
-
-            M3u8Helper.generateM3u8(
-                name,
-                source ?: return,
-                "$mainUrl/",
-                headers = mapOf(
-                    "Accept" to "*/*",
-                    "Connection" to "keep-alive",
-                    "Sec-Fetch-Dest" to "empty",
-                    "Sec-Fetch-Mode" to "cors",
-                    "Sec-Fetch-Site" to "cross-site",
-                    "Origin" to mainUrl,
-                )
-            ).forEach(callback)
-
-            AppUtils.tryParseJson<List<Tracks>>("[$tracks]")
-                ?.filter { it.kind == "captions" }?.map { track ->
-                    subtitleCallback.invoke(
-                        SubtitleFile(
-                            track.label ?: "",
-                            track.file ?: return@map null
-                        )
-                    )
-                }
-        }
-
-    private fun Document.getKeys(): String? {
-        val script = (this.selectFirst("script:containsData(eval\\()")?.data()
-            ?.replace("eval(", "var result=")?.removeSuffix(");") + ";").trimIndent()
-        val run = script.runJS("result")
-        return """,\s*'([^']+)""".toRegex().find(run)?.groupValues?.getOrNull(1)
-    }
-
-    private fun String.runJS(variable: String): String {
-        val rhino = Context.enter()
-        rhino.optimizationLevel = -1
-        val scope: Scriptable = rhino.initSafeStandardObjects()
-        val result: String
-        try {
-            rhino.evaluateString(scope, this, "JavaScript", 1, null)
-            result = Context.toString(scope.get(variable, scope))
-        } finally {
-            Context.exit()
-        }
-        return result
-    }
-
-    data class Tracks(
-        @JsonProperty("file") val file: String? = null,
-        @JsonProperty("label") val label: String? = null,
-        @JsonProperty("kind") val kind: String? = null,
-    )
-}
-
 open class Streamruby : ExtractorApi() {
     override val name = "Streamruby"
     override val mainUrl = "https://streamruby.com"
@@ -447,4 +366,9 @@ class Yipsu : Voe() {
 class Embedwish : Filesim() {
     override val name = "Embedwish"
     override var mainUrl = "https://embedwish.com"
+}
+
+class Netembed: ZplayerV2() {
+    override var name: String = "Netembed"
+    override var mainUrl: String = "https://play.netembed.xyz"
 }
