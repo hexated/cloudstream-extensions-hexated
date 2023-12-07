@@ -1637,7 +1637,7 @@ object SoraExtractor : SoraStream() {
             it.attr("data-url") to it.text()
         }.apmap {
             when {
-                it.second.contains(Regex("(Player F|Player FM)\$")) -> {
+                it.second.contains(Regex("(Player F|Player FM)) -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
                 else -> return@apmap
