@@ -1619,27 +1619,32 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invokeSmashyStream(
-        tmdbId: Int? = null,
+        imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
         val url = if (season == null) {
-            "$smashyStreamAPI/playere.php?tmdb=$tmdbId"
+            "$smashyStreamAPI/playere.php?imdb=$imdbId"
         } else {
-            "$smashyStreamAPI/playere.php?tmdb=$tmdbId&season=$season&episode=$episode"
+            "$smashyStreamAPI/playere.php?imdb=$imdbId&season=$season&episode=$episode"
         }
 
         app.get(
-            url, referer = "https://smashystream.xyz/"
+            url, referer = "https://smashystream.com/"
         ).document.select("div#_default-servers a.server").map {
-            it.attr("data-url") to it.text()
+            it.attr("data-id") to it.text()
         }.apmap {
             when {
-                it.second.contains(Regex("(Player F|Player FM)\$")) -> {
+                it.second.contains(Regex("(Player F|Player SE|Player N|Player D)")) -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
+
+                it.second.equals("Player FM", true) -> invokeSmashyFm(
+                    it.second, it.first, url, callback
+                )
+
                 else -> return@apmap
             }
         }
