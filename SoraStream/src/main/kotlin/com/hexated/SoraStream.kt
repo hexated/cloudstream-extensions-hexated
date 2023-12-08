@@ -352,6 +352,15 @@ open class SoraStream : TmdbProvider() {
 
         argamap(
             {
+                if (!res.isAnime) invokeBlackvid(
+                    res.id,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 invokeDumpStream(
                     res.title,
                     res.year,
@@ -666,15 +675,6 @@ open class SoraStream : TmdbProvider() {
                 invokeZshow(
                     res.title,
                     res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime) invokeBlackvid(
-                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,

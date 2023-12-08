@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.Pixeldrain
+import com.lagradost.cloudstream3.extractors.Vidplay
 import com.lagradost.cloudstream3.extractors.ZplayerV2
 import com.lagradost.cloudstream3.utils.*
 import java.math.BigInteger
@@ -309,6 +310,40 @@ open class Uploadever : ExtractorApi() {
 
 }
 
+open class Netembed : ExtractorApi() {
+    override var name: String = "Netembed"
+    override var mainUrl: String = "https://play.netembed.xyz"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer = referer)
+        val script = getAndUnpack(response.text)
+        val m3u8 = Regex("((https:|http:)//.*\\.m3u8)").find(script)?.groupValues?.getOrNull(1)
+
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                m3u8 ?: return,
+                "$mainUrl/",
+                getQuality(m3u8),
+                INFER_TYPE
+            )
+        )
+    }
+
+    private suspend fun getQuality(url: String) : Int {
+        val res = app.get(url, referer = "$mainUrl/").text
+        val regex = "#quality:\\s*(\\S+)".toRegex().find(res)?.groupValues?.get(1)
+        return getQualityFromName(regex)
+    }
+}
+
 class Streamwish : Filesim() {
     override val name = "Streamwish"
     override var mainUrl = "https://streamwish.to"
@@ -368,7 +403,6 @@ class Embedwish : Filesim() {
     override var mainUrl = "https://embedwish.com"
 }
 
-class Netembed: ZplayerV2() {
-    override var name: String = "Netembed"
-    override var mainUrl: String = "https://play.netembed.xyz"
+class Vidplay2 : Vidplay() {
+    override val mainUrl = "https://vidplay.online"
 }
