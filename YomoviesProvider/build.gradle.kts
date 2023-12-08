@@ -6,7 +6,7 @@ cloudstream {
     language = "hi"
     // All of these properties are optional, you can safely remove them
 
-     description = "Included: Watchomovies(NSFW), Max resolution in 720p"
+     description = "Includes: Watchomovies(NS*W), Max resolution is 720p in both extensions."
      authors = listOf("Hexated")
 
     /**
