@@ -144,7 +144,7 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 if (!res.isAnime) invokeSmashyStream(
-                    res.id,
+                    res.imdbId,
                     res.season,
                     res.episode,
                     subtitleCallback,

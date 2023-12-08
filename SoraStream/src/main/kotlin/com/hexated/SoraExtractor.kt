@@ -1634,17 +1634,15 @@ object SoraExtractor : SoraStream() {
         app.get(
             url, referer = "https://smashystream.com/"
         ).document.select("div#_default-servers a.server").map {
-            it.attr("data-id") to it.text()
+            it.attr("data-url") to it.text()
         }.apmap {
-            when {
-                it.second.contains(Regex("(Player F|Player SE|Player N|Player D)")) -> {
+            when (it.second) {
+                "Player F" -> {
                     invokeSmashyFfix(it.second, it.first, url, callback)
                 }
-
-                it.second.equals("Player FM", true) -> invokeSmashyFm(
-                    it.second, it.first, url, callback
-                )
-
+                "Player D (Hindi)" -> {
+                    invokeSmashyD(it.first, url, callback)
+                }
                 else -> return@apmap
             }
         }

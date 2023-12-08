@@ -425,3 +425,12 @@ data class SmashySources(
     @JsonProperty("sourceUrls") var sourceUrls: ArrayList<String>? = arrayListOf(),
     @JsonProperty("subtitleUrls") var subtitleUrls: String? = null,
 )
+
+data class SmashyDSources(
+    @JsonProperty("sourceUrls") var sourceUrls: ArrayList<SmashyDSourcesUrls>? = arrayListOf(),
+)
+
+data class SmashyDSourcesUrls(
+    @JsonProperty("file") var file: String? = null,
+    @JsonProperty("title") var title: String? = null,
+)
