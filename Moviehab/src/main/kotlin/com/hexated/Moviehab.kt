@@ -12,7 +12,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class Moviehab : MainAPI() {
-    override var mainUrl = "https://vivamax.asia"
+    override var mainUrl = "https://nowshowing.to"
     override var name = "Moviehab"
     override val hasMainPage = true
     override var lang = "tl"
