@@ -449,17 +449,20 @@ suspend fun invokeSmashyFfix(
     ref: String,
     callback: (ExtractorLink) -> Unit,
 ) {
-    val json = app.get(url, referer = ref, headers = mapOf("X-Requested-With" to "XMLHttpRequest"))
-        .parsedSafe<SmashySources>()
-    json?.sourceUrls?.map {
+    val res = app.get(url, referer = ref).text
+    val source = Regex("['\"]?file['\"]?:\\s*\"([^\"]+)").find(res)?.groupValues?.get(1) ?: return
+
+    source.split(",").map { links ->
+        val quality = Regex("\\[(\\S+)]").find(links)?.groupValues?.getOrNull(1)?.trim()
+        val link = links.removePrefix("[$quality]").trim()
         callback.invoke(
             ExtractorLink(
                 "Smashy [$name]",
                 "Smashy [$name]",
-                it,
-                if(name == "Player FM") "https://vidplay.site/" else "",
-                Qualities.P1080.value,
-                INFER_TYPE
+                decode(link).replace("\\/", "/"),
+                smashyStreamAPI,
+                getQualityFromName(quality),
+                INFER_TYPE,
             )
         )
     }
