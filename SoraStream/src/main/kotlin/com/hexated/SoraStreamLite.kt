@@ -29,7 +29,7 @@ import com.hexated.SoraExtractor.invokeSFMovies
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
-import com.hexated.SoraExtractor.invokeWatchOnline
+import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.SubtitleFile
@@ -198,7 +198,7 @@ class SoraStreamLite : SoraStream() {
                 if (!res.isAnime) invokeFlixon(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                invokeWatchOnline(
+                invokeCinemaTv(
                     res.imdbId,
                     res.title,
                     res.airedYear ?: res.year,

@@ -43,7 +43,7 @@ import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
-import com.hexated.SoraExtractor.invokeWatchOnline
+import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
@@ -93,7 +93,7 @@ open class SoraStream : TmdbProvider() {
         const val flixonAPI = "https://flixon.lol"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        const val watchOnlineAPI = "https://www.lookmovie2.to"
+        var cinemaTvAPI = base64DecodeAPI("bw==LnQ=ZTI=dmk=bW8=b2s=bG8=dy4=d3c=Ly8=czo=dHA=aHQ=")
         const val nineTvAPI = "https://moviesapi.club"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
@@ -572,7 +572,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeWatchOnline(
+                invokeCinemaTv(
                     res.imdbId,
                     res.title,
                     res.airedYear ?: res.year,

@@ -8,11 +8,9 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.lagradost.cloudstream3.extractors.helper.AesHelper.cryptoAESHandler
-import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.Jsoup
@@ -2196,7 +2194,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeWatchOnline(
+    suspend fun invokeCinemaTv(
         imdbId: String? = null,
         title: String? = null,
         year: Int? = null,
@@ -2208,9 +2206,9 @@ object SoraExtractor : SoraStream() {
         val id = imdbId?.removePrefix("tt")
         val slug = title.createSlug()
         val url = if (season == null) {
-            "$watchOnlineAPI/movies/play/$id-$slug-$year"
+            "$cinemaTvAPI/movies/play/$id-$slug-$year"
         } else {
-            "$watchOnlineAPI/shows/play/$id-$slug-$year"
+            "$cinemaTvAPI/shows/play/$id-$slug-$year"
         }
 
         val headers = mapOf(
@@ -2230,9 +2228,9 @@ object SoraExtractor : SoraStream() {
         }).let { it.toRegex().find(script)?.groupValues?.get(1) }
 
         val videoUrl = if (season == null) {
-            "$watchOnlineAPI/api/v1/security/movie-access?id_movie=$episodeId&hash=$hash&expires=$expires"
+            "$cinemaTvAPI/api/v1/security/movie-access?id_movie=$episodeId&hash=$hash&expires=$expires"
         } else {
-            "$watchOnlineAPI/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
+            "$cinemaTvAPI/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
         }
 
         val sources = app.get(
@@ -2244,10 +2242,10 @@ object SoraExtractor : SoraStream() {
         sources?.streams?.mapKeys { source ->
             callback.invoke(
                 ExtractorLink(
-                    "WatchOnline",
-                    "WatchOnline",
+                    "CinemaTv",
+                    "CinemaTv",
                     source.value,
-                    "$watchOnlineAPI/",
+                    "$cinemaTvAPI/",
                     getQualityFromName(source.key),
                     true
                 )
@@ -2259,7 +2257,7 @@ object SoraExtractor : SoraStream() {
             subtitleCallback.invoke(
                 SubtitleFile(
                     sub.language ?: return@map,
-                    if (file.startsWith("[")) return@map else fixUrl(file, watchOnlineAPI),
+                    if (file.startsWith("[")) return@map else fixUrl(file, cinemaTvAPI),
                 )
             )
         }
