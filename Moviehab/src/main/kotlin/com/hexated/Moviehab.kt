@@ -23,16 +23,13 @@ class Moviehab : MainAPI() {
     )
 
     companion object {
-        private const val mainServer = "https://vivamax.asia"
+        private const val mainServer = "https://nowshowing.to"
     }
 
     override val mainPage = mainPageOf(
-        "$mainUrl/library/movies?sort_by=imdb_rate&page=" to "Movies by IMDB Rating",
-        "$mainUrl/library/shows?&sort_by=imdb_rate&page=" to "TV Shows by IMDB Rating",
-        "$mainUrl/library/movies?&sort_by=year&page=" to "New Movies",
-        "$mainUrl/library/shows?&sort_by=year&page=" to "New TV Shows",
-        "$mainUrl/library/movies?country=Philippines&sort_by=year&page=" to "New Philippines Movies",
-        "$mainUrl/library/shows?&country=Philippines&sort_by=year&page=" to "New Philippines TV Shows",
+        "$mainUrl/category/movies/" to "New Movies",
+        "$mainUrl/category/tv-series/" to "New TV Shows",
+        "$mainUrl/category/coming-soon/" to "Coming Soon",
     )
 
     override suspend fun getMainPage(
