@@ -300,6 +300,7 @@ open class SoraStream : TmdbProvider() {
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
                 this.actors = actors
+                this.contentRating = fetchContentRating(data.id, "US")
                 addTrailer(trailer)
                 addTMDbId(data.id.toString())
                 addImdbId(res.external_ids?.imdb_id)
@@ -334,6 +335,7 @@ open class SoraStream : TmdbProvider() {
                 this.rating = rating
                 this.recommendations = recommendations
                 this.actors = actors
+                this.contentRating = fetchContentRating(data.id, "US")
                 addTrailer(trailer)
                 addTMDbId(data.id.toString())
                 addImdbId(res.external_ids?.imdb_id)
