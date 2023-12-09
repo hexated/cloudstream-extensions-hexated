@@ -12,7 +12,6 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.Pixeldrain
 import com.lagradost.cloudstream3.extractors.Vidplay
-import com.lagradost.cloudstream3.extractors.ZplayerV2
 import com.lagradost.cloudstream3.utils.*
 import java.math.BigInteger
 import java.security.MessageDigest
