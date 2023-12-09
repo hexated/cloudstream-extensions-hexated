@@ -230,7 +230,7 @@ open class Movierulzhd : MainAPI() {
                 referer = data,
                 headers = mapOf("X-Requested-With" to "XMLHttpRequest")
             ).parsed<ResponseHash>().embed_url
-            if (!source.contains("youtube")) loadExtractor(source, "$directUrl/", subtitleCallback, callback)
+            if (!source.contains("youtube")) loadCustomExtractor(source, "$directUrl/", subtitleCallback, callback)
         } else {
             var document = app.get(data).document
             if (document.select("title").text() == "Just a moment...") {
@@ -257,7 +257,7 @@ open class Movierulzhd : MainAPI() {
                 ).parsed<ResponseHash>().embed_url
 
                 when {
-                    !source.contains("youtube") -> loadExtractor(
+                    !source.contains("youtube") -> loadCustomExtractor(
                         source,
                         "$directUrl/",
                         subtitleCallback,
@@ -276,6 +276,34 @@ open class Movierulzhd : MainAPI() {
             this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
             this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
             else -> this.attr("abs:src")
+        }
+    }
+
+    private suspend fun loadCustomExtractor(
+        url: String,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+        quality: Int? = null,
+    ) {
+        loadExtractor(url, referer, subtitleCallback) { link ->
+            if(link.quality == Qualities.Unknown.value) {
+                callback.invoke(
+                    ExtractorLink(
+                        link.source,
+                        link.name,
+                        link.url,
+                        link.referer,
+                        when (link.type) {
+                            ExtractorLinkType.M3U8 -> link.quality
+                            else -> quality ?: link.quality
+                        },
+                        link.type,
+                        link.headers,
+                        link.extractorData
+                    )
+                )
+            }
         }
     }
 
