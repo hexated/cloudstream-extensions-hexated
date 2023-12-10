@@ -93,10 +93,11 @@ open class SoraStream : TmdbProvider() {
         const val flixonAPI = "https://flixon.lol"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        var cinemaTvAPI = base64DecodeAPI("bw==LnQ=ZTI=dmk=bW8=b2s=bG8=dy4=d3c=Ly8=czo=dHA=aHQ=")
+        var cinemaTvAPI = BuildConfig.CINEMATV_API
         const val nineTvAPI = "https://moviesapi.club"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
+        const val zshowAPI = BuildConfig.ZSHOW_API
         const val ridomoviesAPI = "https://ridomovies.pw"
         const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"

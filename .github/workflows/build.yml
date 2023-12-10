@@ -58,6 +58,7 @@ jobs:
           PRIMEWIRE_KEY: ${{ secrets.PRIMEWIRE_KEY }}
           ZSHOW_API: ${{ secrets.ZSHOW_API }}
           SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
+          CINEMATV_API: ${{ secrets.CINEMATV_API }}
         run: |
           cd $GITHUB_WORKSPACE/src
           echo SORA_API=$SORA_API >> local.properties
@@ -76,6 +77,7 @@ jobs:
           echo PRIMEWIRE_KEY=$PRIMEWIRE_KEY >> local.properties
           echo ZSHOW_API=$ZSHOW_API >> local.properties
           echo SFMOVIES_API=$SFMOVIES_API >> local.properties
+          echo CINEMATV_API=$CINEMATV_API >> local.properties
 
       - name: Build Plugins
         run: |

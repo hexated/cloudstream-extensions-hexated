@@ -9,6 +9,7 @@ android {
         properties.load(project.rootProject.file("local.properties").inputStream())
 
         buildConfigField("String", "TMDB_API", "\"${properties.getProperty("TMDB_API")}\"")
+        buildConfigField("String", "CINEMATV_API", "\"${properties.getProperty("CINEMATV_API")}\"")
         buildConfigField("String", "SFMOVIES_API", "\"${properties.getProperty("SFMOVIES_API")}\"")
         buildConfigField("String", "ZSHOW_API", "\"${properties.getProperty("ZSHOW_API")}\"")
         buildConfigField("String", "SORA_API", "\"${properties.getProperty("SORA_API")}\"")

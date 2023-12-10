@@ -275,12 +275,11 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val api = BuildConfig.ZSHOW_API
         val fixTitle = title.createSlug()
         val url = if (season == null) {
-            "$api/movie/$fixTitle-$year"
+            "$zshowAPI/movie/$fixTitle-$year"
         } else {
-            "$api/episode/$fixTitle-season-$season-episode-$episode"
+            "$zshowAPI/episode/$fixTitle-season-$season-episode-$episode"
         }
         invokeWpmovies("ZShow", url, subtitleCallback, callback, encrypt = true)
     }
