@@ -2236,7 +2236,7 @@ object SoraExtractor : SoraStream() {
             videoUrl,
             referer = url,
             headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-        ).parsedSafe<WatchOnlineResponse>()
+        ).parsedSafe<CinemaTvResponse>()
 
         sources?.streams?.mapKeys { source ->
             callback.invoke(

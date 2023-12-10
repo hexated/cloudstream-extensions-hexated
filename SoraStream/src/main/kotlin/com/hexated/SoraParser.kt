@@ -152,14 +152,14 @@ data class JikanResponse(
     @JsonProperty("data") val data: JikanData? = null,
 )
 
-data class WatchOnlineSubtitles(
+data class CinemaTvSubtitles(
     @JsonProperty("language") val language: String? = null,
     @JsonProperty("file") val file: Any? = null,
 )
 
-data class WatchOnlineResponse(
+data class CinemaTvResponse(
     @JsonProperty("streams") val streams: HashMap<String, String>? = null,
-    @JsonProperty("subtitles") val subtitles: ArrayList<WatchOnlineSubtitles>? = arrayListOf(),
+    @JsonProperty("subtitles") val subtitles: ArrayList<CinemaTvSubtitles>? = arrayListOf(),
 )
 
 data class VidsrctoResult(
