@@ -2211,7 +2211,7 @@ object SoraExtractor : SoraStream() {
         }
 
         val headers = mapOf(
-            "Cookie" to "PHPSESSID=e555h63ilisoj2l6j7b5d4jb6p; _csrf=9597150e45f485ad9c4f2e06a2572534d8415337eda9d48d0ecfa25b73b6a9e1a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%222HcnegjGB0nX205FAUPb86fqMx9HWIF1%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTimeMS.2.0.$unixTimeMS.0.0.0",
+            "Cookie" to "PHPSESSID=e555h63ilisoj2l6j7b5d4jb6p; _csrf=9597150e45f485ad9c4f2e06a2572534d8415337eda9d48d0ecfa25b73b6a9e1a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%222HcnegjGB0nX205FAUPb86fqMx9HWIF1%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTimeMS.4.0.1.$unixTimeMS.0.0.0",
             "Connection" to "keep-alive",
             "x-requested-with" to "com.wwcinematv",
         )

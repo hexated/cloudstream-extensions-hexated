@@ -13,8 +13,9 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.net.URI
 import java.util.ArrayList
 import kotlin.math.roundToInt
+import com.lagradost.cloudstream3.metaproviders.TmdbProvider
 
-open class StremioX : MainAPI() {
+open class StremioX : TmdbProvider() {
     override var mainUrl = "https://torrentio.strem.fun"
     override var name = "StremioX"
     override val hasMainPage = true
@@ -181,6 +182,7 @@ open class StremioX : MainAPI() {
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
                 this.actors = actors
+                this.contentRating = fetchContentRating(data.id, "US")
                 addTrailer(trailer)
                 addTMDbId(data.id.toString())
                 addImdbId(res.external_ids?.imdb_id)
@@ -202,6 +204,7 @@ open class StremioX : MainAPI() {
                 this.rating = rating
                 this.recommendations = recommendations
                 this.actors = actors
+                this.contentRating = fetchContentRating(data.id, "US")
                 addTrailer(trailer)
                 addTMDbId(data.id.toString())
                 addImdbId(res.external_ids?.imdb_id)
