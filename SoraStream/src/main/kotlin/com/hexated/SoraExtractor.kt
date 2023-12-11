@@ -2063,7 +2063,6 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val ref = "https://blackvid.space/"
         val key = "b6055c533c19131a638c3d2299d525d5ec08a814"
         val url = if (season == null) {
             "$blackvidAPI/v3/movie/sources/$tmdbId?key=$key"
@@ -2071,11 +2070,7 @@ object SoraExtractor : SoraStream() {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val data = app.get(
-            url,
-            timeout = 120L,
-            referer = ref
-        ).okhttpResponse.peekBody(1024 * 512).source().buffer.readByteArray()
+        val data = request(url,).peekBody(1024 * 512).source().buffer.readByteArray()
             .decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
         val json = tryParseJson<BlackvidResponses>(data)
 
@@ -2086,7 +2081,7 @@ object SoraExtractor : SoraStream() {
                         "Blackvid",
                         "Blackvid${source.label}",
                         s.url ?: return@s,
-                        ref,
+                        "https://blackvid.space/",
                         if (s.quality.equals("4k")) Qualities.P2160.value else s.quality?.toIntOrNull()
                             ?: Qualities.P1080.value,
                         INFER_TYPE

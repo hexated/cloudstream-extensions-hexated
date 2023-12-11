@@ -171,7 +171,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeKisskh(
+                if (res.isAsian || res.isAnime) invokeKisskh(
                     res.title,
                     res.season,
                     res.episode,

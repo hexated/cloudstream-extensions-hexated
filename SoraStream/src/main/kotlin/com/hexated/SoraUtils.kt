@@ -19,12 +19,16 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.nicehttp.RequestBodyTypes
+import com.lagradost.nicehttp.Requests.Companion.await
 import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.jsoup.nodes.Document
 import java.math.BigInteger
 import java.net.*
@@ -34,6 +38,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
@@ -1276,6 +1281,25 @@ private enum class Symbol(val decimalValue: Int) {
                 .sortedByDescending { it.decimalValue }
                 .firstOrNull { value >= it.decimalValue }
     }
+}
+
+suspend fun request(
+    url: String,
+    allowRedirects: Boolean = true,
+    timeout: Long = 60L
+): Response {
+    val client = OkHttpClient().newBuilder()
+        .connectTimeout(timeout, TimeUnit.SECONDS)
+        .readTimeout(timeout, TimeUnit.SECONDS)
+        .writeTimeout(timeout, TimeUnit.SECONDS)
+        .followRedirects(allowRedirects)
+        .followSslRedirects(allowRedirects)
+        .build()
+
+    val request: Request = Request.Builder()
+        .url(url)
+        .build()
+    return client.newCall(request).await()
 }
 
 object DumpUtils {
