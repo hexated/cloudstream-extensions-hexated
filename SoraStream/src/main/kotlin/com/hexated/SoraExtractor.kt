@@ -980,7 +980,7 @@ object SoraExtractor : SoraStream() {
             "$uhdmoviesAPI/download-$fixTitle"
         }
 
-        val detailDoc = app.get(url, interceptor = CloudflareKiller()).document
+        val detailDoc = app.get(url).document
 
         val iSelector = if(season == null) {
             "div.entry-content p:has(:matches($year))"
