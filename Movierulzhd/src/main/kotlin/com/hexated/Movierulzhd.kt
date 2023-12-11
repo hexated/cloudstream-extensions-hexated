@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import org.jsoup.nodes.Element
@@ -34,16 +33,11 @@ open class Movierulzhd : MainAPI() {
         "episodes" to "Episode",
     )
 
-    val interceptor = CloudflareKiller()
-
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        var document = app.get("$mainUrl/${request.data}/page/$page").document
-        if (document.select("title").text() == "Just a moment...") {
-            document = app.get(request.data + page, interceptor = interceptor).document
-        }
+        val document = app.get("$mainUrl/${request.data}/page/$page").document
         val home =
             document.select("div.items.normal article, div#archive-content article, div.items.full article").mapNotNull {
                 it.toSearchResult()
@@ -79,18 +73,12 @@ open class Movierulzhd : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = quality
-            posterHeaders = interceptor.getCookieHeaders(mainUrl).toMap()
         }
 
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/search/$query"
-        var document = app.get(link).document
-        if (document.select("title").text() == "Just a moment...") {
-            document = app.get(link, interceptor = interceptor).document
-        }
-
+        val document = app.get("$mainUrl/search/$query").document
         return document.select("div.result-item").map {
             val title =
                 it.selectFirst("div.title > a")!!.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
@@ -98,17 +86,13 @@ open class Movierulzhd : MainAPI() {
             val posterUrl = it.selectFirst("img")!!.attr("src").toString()
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
-                posterHeaders = interceptor.getCookieHeaders(mainUrl).toMap()
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val request = app.get(url)
-        var document = request.document
-        if (document.select("title").text() == "Just a moment...") {
-            document = app.get(url, interceptor = interceptor).document
-        }
+        val document = request.document
         directUrl = getBaseUrl(request.url)
         val title =
             document.selectFirst("div.data > h1")?.text()?.trim().toString()
@@ -142,7 +126,6 @@ open class Movierulzhd : MainAPI() {
             val recPosterUrl = it.selectFirst("img")?.imageFromElement()
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
 
@@ -187,7 +170,6 @@ open class Movierulzhd : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
@@ -199,7 +181,6 @@ open class Movierulzhd : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
     }
@@ -232,10 +213,7 @@ open class Movierulzhd : MainAPI() {
             ).parsed<ResponseHash>().embed_url
             if (!source.contains("youtube")) loadCustomExtractor(source, "$directUrl/", subtitleCallback, callback)
         } else {
-            var document = app.get(data).document
-            if (document.select("title").text() == "Just a moment...") {
-                document = app.get(data, interceptor = interceptor).document
-            }
+            val document = app.get(data).document
 
             document.select("ul#playeroptionsul > li").map {
                 Triple(

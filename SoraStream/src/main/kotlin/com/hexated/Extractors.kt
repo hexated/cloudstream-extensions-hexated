@@ -198,9 +198,10 @@ open class VCloud : ExtractorApi() {
         val res = app.get(url)
         val doc = res.document
         val changedLink = doc.selectFirst("script:containsData(url =)")?.data()?.let {
-            """url\s*=\s*['"](.*)['"];""".toRegex().find(it)?.groupValues?.get(1)
-                ?.substringAfter("r=")
-        } ?: doc.selectFirst("div.div.vd.d-none a")?.attr("href")
+            val regex = """url\s*=\s*['"](.*)['"];""".toRegex()
+            val doc2 = app.get(regex.find(it)?.groupValues?.get(1) ?: return).text
+            regex.find(doc2)?.groupValues?.get(1)?.substringAfter("r=")
+        }
         val header = doc.selectFirst("div.card-header")?.text()
         app.get(
             base64Decode(changedLink ?: return), cookies = res.cookies, headers = mapOf(
@@ -208,7 +209,7 @@ open class VCloud : ExtractorApi() {
             )
         ).document.select("p.text-success ~ a").apmap {
             val link = it.attr("href")
-            if (link.contains("workers.dev")) {
+            if (link.contains("workers.dev") || it.text().contains("[Server : 1]")) {
                 callback.invoke(
                     ExtractorLink(
                         this.name,

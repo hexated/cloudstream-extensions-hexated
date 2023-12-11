@@ -116,8 +116,8 @@ open class SoraStream : TmdbProvider() {
         const val uhdmoviesAPI = "https://uhdmovies.zip"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val hdmovies4uAPI = "https://hdmovies4u.band"
-        const val vegaMoviesAPI = "https://vegamovies.ec"
-        const val dotmoviesAPI = "https://dotmovies.tokyo"
+        const val vegaMoviesAPI = "https://vegamovies.dad"
+        const val dotmoviesAPI = "https://dotmovies.bet"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
         const val moviezAddAPI = "https://ww3.moviezaddiction.click"
         const val bollyMazaAPI = "https://ww3.bollymaza.click"
@@ -467,7 +467,6 @@ open class SoraStream : TmdbProvider() {
                     res.title,
                     res.year,
                     res.season,
-                    res.lastSeason,
                     res.episode,
                     callback
                 )

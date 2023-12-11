@@ -2,6 +2,7 @@ package com.hexated
 
 import com.hexated.AESGCM.decrypt
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.APIHolder.unixTime
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -967,62 +968,50 @@ object SoraExtractor : SoraStream() {
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
-        lastSeason: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        val slug = title.createSlug()?.replace("-", " ")
-        val url = "$uhdmoviesAPI/?s=$slug"
-        var doc = app.get(url).document
-        if (doc.select("title").text() == "Just a moment...") {
-            doc = app.get(url, interceptor = CloudflareKiller()).document
-        }
-        val scriptData = doc.select("div.row.gridlove-posts article").map {
-            it.selectFirst("a")?.attr("href") to it.selectFirst("h1")?.text()
-        }
+        val fixTitle = title.createSlug()
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
-        val detailUrl = (if (scriptData.size == 1) {
-            scriptData.first()
+        val url = if(season == null) {
+            "$uhdmoviesAPI/download-$fixTitle-$year"
         } else {
-            scriptData.find { it.second?.filterMedia(title, year, lastSeason) == true }
-        })?.first
+            "$uhdmoviesAPI/download-$fixTitle"
+        }
 
-        val detailDoc = app.get(detailUrl ?: return).document
+        val detailDoc = app.get(url, interceptor = CloudflareKiller()).document
 
-        val iframeList = detailDoc.select("div.entry-content p").map { it }
-            .filter { it.text().filterIframe(season, lastSeason, year, title) }.mapNotNull {
-                if (season == null) {
-                    it.text() to it.nextElementSibling()?.select("a")?.attr("href")
-                } else {
-                    it.text() to it.nextElementSibling()?.select("a")?.find { child ->
-                        child.select("span").text().equals("Episode $episode", true)
-                    }?.attr("href")
-                }
-            }.filter { it.second?.contains(Regex("(https:)|(http:)")) == true }
+        val iSelector = if(season == null) {
+            "div.entry-content p:has(:matches($year))"
+        } else {
+            "div.entry-content p:has(:matches((?i)(?:S\\s*$seasonSlug|Season\\s*$seasonSlug)))"
+        }
+        val iframeList = detailDoc.select(iSelector).mapNotNull {
+            if (season == null) {
+                it.text() to it.nextElementSibling()?.select("a")?.attr("href")
+            } else {
+                it.text() to it.nextElementSibling()?.select("a")?.find { child ->
+                    child.select("span").text().equals("Episode $episode", true)
+                }?.attr("href")
+            }
+        }.filter { it.first.contains(Regex("(2160p)|(1080p)")) }
 
         iframeList.apmap { (quality, link) ->
-            val driveLink =
-                when {
-                    link?.contains("oddfirm") == true -> bypassHrefli(link)
-                    link?.contains("driveleech") == true -> bypassDriveleech(link)
-                    else -> bypassTechmny(link ?: return@apmap)
-                }
+            val driveLink = bypassHrefli(link ?: return@apmap)
             val base = getBaseUrl(driveLink ?: return@apmap)
             val driveReq = app.get(driveLink)
             val driveRes = driveReq.document
             val bitLink = driveRes.select("a.btn.btn-outline-success").attr("href")
-            val insLink =
-                driveRes.select("a.btn.btn-danger:contains(Instant Download)").attr("href")
+            val insLink = driveRes.select("a.btn.btn-danger:contains(Instant Download)").attr("href")
             val downloadLink = when {
                 insLink.isNotEmpty() -> extractInstantUHD(insLink)
                 driveRes.select("button.btn.btn-success").text()
                     .contains("Direct Download", true) -> extractDirectUHD(driveLink, driveReq)
-
                 bitLink.isNullOrEmpty() -> {
                     val backupIframe = driveRes.select("a.btn.btn-outline-warning").attr("href")
                     extractBackupUHD(backupIframe ?: return@apmap)
                 }
-
                 else -> {
                     extractMirrorUHD(bitLink, base)
                 }
@@ -1040,10 +1029,7 @@ object SoraExtractor : SoraStream() {
                     qualities
                 )
             )
-
         }
-
-
     }
 
     suspend fun invokeDotmovies(
@@ -1113,34 +1099,32 @@ object SoraExtractor : SoraStream() {
         val hTag = if (season == null) "h5" else "h3"
         val aTag = if (season == null) "Download Now" else "V-Cloud"
         val sTag = if (season == null) "" else "(Season $season|S$seasonSlug)"
-        res.select("div.entry-content > $hTag:matches((?i)$sTag.*(1080p|2160p))")
-            .filter { element -> !element.text().contains("Download", true) }.apmap {
-                val tags =
-                    """(?:1080p|2160p)(.*)""".toRegex().find(it.text())?.groupValues?.get(1)?.trim()
-                val href =
-                    it.nextElementSibling()?.select("a:contains($aTag)")?.attr("href")?.let { url ->
-                        app.post(
-                            "${getBaseUrl(url)}/red.php",
-                            data = mapOf("link" to url),
-                            referer = "$api/"
-                        ).text.substringAfter("location.href = \"").substringBefore("\"")
-                    }
-                val selector =
-                    if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
-                val server =
-                    app.get(
-                        href ?: return@apmap
-                    ).document.selectFirst("div.entry-content > $selector")
-                        ?.attr("href")
-                loadCustomTagExtractor(
-                    tags,
-                    server ?: return@apmap,
-                    "$api/",
-                    subtitleCallback,
-                    callback,
-                    getIndexQuality(it.text())
+        val entry = res.select("div.entry-content > $hTag:matches((?i)$sTag.*(1080p|2160p))")
+            .findLast { element -> !element.text().contains("Download", true) } ?: return
+        val tags =
+            """(?:1080p|2160p)(.*)""".toRegex().find(entry.text())?.groupValues?.get(1)?.trim()
+        val href =
+            entry.nextElementSibling()?.select("a:contains($aTag)")?.attr("href")
+        val selector =
+            if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
+        val serverRes = app.get(
+            href ?: return, interceptor = CloudflareKiller()
+        ).document
+        val server = serverRes.selectFirst("div.entry-content > $selector")
+            ?.attr("href")
+        loadExtractor(server ?: return, "$api/", subtitleCallback) { link ->
+            callback.invoke(
+                ExtractorLink(
+                    link.name,
+                    "${link.name} $tags",
+                    link.url,
+                    link.referer,
+                    getIndexQuality(entry.text()),
+                    link.type,
+                    link.headers,
                 )
-            }
+            )
+        }
     }
 
     suspend fun invokeHdmovies4u(
@@ -2210,10 +2194,12 @@ object SoraExtractor : SoraStream() {
             "$cinemaTvAPI/shows/play/$id-$slug-$year"
         }
 
+        val specialCookies = "PHPSESSID=e555h63ilisoj2l6j7b5d4jb6p; _csrf=9597150e45f485ad9c4f2e06a2572534d8415337eda9d48d0ecfa25b73b6a9e1a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%222HcnegjGB0nX205FAUPb86fqMx9HWIF1%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTime.4.0.1.$unixTime.0.0.0"
+        getCinemaChecker(specialCookies)
         val headers = mapOf(
-            "Cookie" to "PHPSESSID=e555h63ilisoj2l6j7b5d4jb6p; _csrf=9597150e45f485ad9c4f2e06a2572534d8415337eda9d48d0ecfa25b73b6a9e1a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%222HcnegjGB0nX205FAUPb86fqMx9HWIF1%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTimeMS.4.0.1.$unixTimeMS.0.0.0",
+            "Cookie" to specialCookies,
             "Connection" to "keep-alive",
-            "x-requested-with" to "com.wwcinematv",
+            "x-requested-with" to "XMLHttpRequest",
         )
 
         val doc = app.get(url, headers = headers).document
