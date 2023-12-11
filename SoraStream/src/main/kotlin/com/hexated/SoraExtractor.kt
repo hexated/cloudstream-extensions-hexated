@@ -1091,8 +1091,7 @@ object SoraExtractor : SoraStream() {
             1 -> "Season 1"
             else -> "Season 1 – $lastSeason"
         }
-        val media =
-            res.selectFirst("div.blog-items article:has(h3.entry-title:matches((?i)$title.*$match)) a")
+        val media = res.selectFirst("div.blog-items article:has(h3.entry-title:matches((?i)$title.*$match)) a")
                 ?.attr("href")
 
         res = app.get(media ?: return).document
@@ -1107,22 +1106,32 @@ object SoraExtractor : SoraStream() {
             entry.nextElementSibling()?.select("a:contains($aTag)")?.attr("href")
         val selector =
             if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
-        val serverRes = app.get(
+        val server = app.get(
             href ?: return, interceptor = CloudflareKiller()
-        ).document
-        val server = serverRes.selectFirst("div.entry-content > $selector")
-            ?.attr("href")
-        loadExtractor(server ?: return, "$api/", subtitleCallback) { link ->
+        ).document.selectFirst("div.entry-content > $selector")
+            ?.attr("href") ?: return
+
+        val quality = getIndexQuality(entry.text())
+
+        if(server.contains("/dl.php?")) {
             callback.invoke(
                 ExtractorLink(
-                    link.name,
-                    "${link.name} $tags",
-                    link.url,
-                    link.referer,
-                    getIndexQuality(entry.text()),
-                    link.type,
-                    link.headers,
+                    "Vegamovies",
+                    "Vegamovies",
+                    server,
+                    "",
+                    quality,
+                    INFER_TYPE
                 )
+            )
+        } else {
+            loadCustomTagExtractor(
+                tags,
+                server,
+                "$api/",
+                subtitleCallback,
+                callback,
+                quality
             )
         }
     }
