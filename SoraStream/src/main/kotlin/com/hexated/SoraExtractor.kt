@@ -1971,14 +1971,14 @@ object SoraExtractor : SoraStream() {
         } else {
             "$title Season $season"
         }
-        val idCookies =
+        val savedCookies =
             mapOf(
-                "advanced-frontendgomovies7" to "bjd4n0nnv4hlt4fj5cdjgbrne2",
-                "_identitygomovies7" to "52fdc70b008c0b1d881dac0f01cca819edd512de01cc8bbc1224ed4aafb78b52a:2:{i:0;s:18:\"_identitygomovies7\";i:1;s:52:\"[2050366,\"HnVRRAObTASOJEr45YyCM8wiHol0V1ko\",2592000]\";}"
+                "_identitygomovies7" to """52fdc70b008c0b1d881dac0f01cca819edd512de01cc8bbc1224ed4aafb78b52a:2:{i:0;s:18:"_identitygomovies7";i:1;s:52:"[2050366,"HnVRRAObTASOJEr45YyCM8wiHol0V1ko",2592000]";}""",
+                "_on_page" to "a7ae14b5ed54124bac8a10a84da3cc57f3eb1737692db730ebf8f8d17e091bcca%3A2%3A%7Bi%3A0%3Bs%3A8%3A%22_on_page%22%3Bi%3A1%3Bs%3A8%3A%22onpage_1%22%3B%7D",
+                "_pops2" to "9fcbd414a7444076e7431ef4db4cd0a011b4429c0397f23d17b709f43b432610a%3A2%3A%7Bi%3A0%3Bs%3A6%3A%22_pops2%22%3Bi%3A1%3Bs%3A8%3A%22pop_up_1%22%3B%7D",
             )
         val req = app.get("$api/search/$query")
         val doc = req.document
-        var cookies = req.cookies + idCookies
         val media = doc.select("div.$mediaSelector").map {
             Triple(
                 it.attr("data-filmName"), it.attr("data-year"), it.select("a").attr("href")
@@ -2006,9 +2006,8 @@ object SoraExtractor : SoraStream() {
                 fixUrl(
                     media.third,
                     api
-                ), cookies = cookies
+                )
             )
-            cookies = cookies + res.cookies
             res.document.selectFirst("div#$episodeSelector a:contains(Episode ${slug.second})")
                 ?.attr("href")
         } ?: return
@@ -2019,11 +2018,11 @@ object SoraExtractor : SoraStream() {
             media.third.substringAfterLast("/") to iframe.substringAfterLast("/")
                 .substringBefore("-")
         }
-        val res = app.get(fixUrl(iframe ?: return, api), cookies = cookies, verify = false)
+        val res = app.get(fixUrl(iframe, api), verify = false)
         val serverUrl = res.document.selectFirst("script:containsData(pushState)")?.data()?.let {
             """,\s*'([^']+)""".toRegex().find(it)?.groupValues?.get(1)
         } ?: return
-        cookies = cookies + res.cookies
+        val cookies = savedCookies + res.cookies
         val url = res.document.select("meta[property=og:url]").attr("content")
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)

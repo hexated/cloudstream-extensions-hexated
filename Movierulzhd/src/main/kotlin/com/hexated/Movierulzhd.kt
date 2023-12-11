@@ -68,7 +68,7 @@ open class Movierulzhd : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h3 > a")?.text() ?: return null
         val href = getProperLink(fixUrl(this.selectFirst("h3 > a")!!.attr("href")))
-        val posterUrl = fixUrlNull(this.select("div.poster img").last()?.imageFromElement())
+        val posterUrl = fixUrlNull(this.select("div.poster img").last()?.getImageAttr())
         val quality = getQualityFromString(this.select("span.quality").text())
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
@@ -96,7 +96,7 @@ open class Movierulzhd : MainAPI() {
         directUrl = getBaseUrl(request.url)
         val title =
             document.selectFirst("div.data > h1")?.text()?.trim().toString()
-        val poster = fixUrlNull(document.selectFirst("div.poster img:last-child")?.imageFromElement())
+        val poster = fixUrlNull(document.selectFirst("div.poster img:last-child")?.getImageAttr())
         val tags = document.select("div.sgeneros > a").map { it.text() }
 
         val year = Regex(",\\s?(\\d+)").find(
@@ -123,7 +123,7 @@ open class Movierulzhd : MainAPI() {
             val recName =
                 it.selectFirst("a")!!.attr("href").toString().removeSuffix("/").split("/").last()
             val recHref = it.selectFirst("a")!!.attr("href")
-            val recPosterUrl = it.selectFirst("img")?.imageFromElement()
+            val recPosterUrl = it.selectFirst("img")?.getImageAttr()
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
             }
@@ -134,7 +134,7 @@ open class Movierulzhd : MainAPI() {
                 document.select("ul.episodios > li").map {
                     val href = it.select("a").attr("href")
                     val name = fixTitle(it.select("div.episodiotitle > a").text().trim())
-                    val image = it.selectFirst("div.imagen > img")?.imageFromElement()
+                    val image = it.selectFirst("div.imagen > img")?.getImageAttr()
                     val episode =
                         it.select("div.numerando").text().replace(" ", "").split("-").last()
                             .toIntOrNull()
@@ -248,7 +248,7 @@ open class Movierulzhd : MainAPI() {
         return true
     }
 
-    private fun Element.imageFromElement(): String? {
+    private fun Element.getImageAttr(): String? {
         return when {
             this.hasAttr("data-src") -> this.attr("abs:data-src")
             this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")

@@ -44,6 +44,7 @@ import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
+import com.hexated.SoraExtractor.invokeGomovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
@@ -449,6 +450,15 @@ open class SoraStream : TmdbProvider() {
                     res.isAnime,
                     res.lastSeason,
                     subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeGomovies (
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
                     callback
                 )
             },
