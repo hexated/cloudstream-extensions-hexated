@@ -44,7 +44,6 @@ import kotlin.math.min
 var watchflxCookies: Map<String, String>? = null
 var filmxyCookies: Map<String, String>? = null
 var sfServer: String? = null
-var cinemaTvChecker: Boolean? = null
 
 val encodedIndex = arrayOf(
     "GamMovies",
@@ -641,16 +640,6 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
                             }.find { it.second?.contains("Episode $episode", true) == true }?.first
                     }.lastOrNull()
     }
-}
-
-suspend fun getCinemaChecker(cookie: String) = cinemaTvChecker ?: fetchCinemaChecker(cookie).also { cinemaTvChecker = it }
-
-suspend fun fetchCinemaChecker(cookie: String): Boolean? {
-    return app.post(
-        base64Decode("aHR0cHM6Ly9jaW5lbWEud2l3aWNlbnRlci5jb20vYXBpL3YxL2Nvb2tpZQ=="),
-        data = mapOf("cookie" to cookie),
-        headers = mapOf("App-version" to "3.4", "Authorization" to "Basic d2l3aTpXaXdpQDIwMjA=")
-    ).parsedSafe<Map<String,Boolean?>>()?.get("success")
 }
 
 suspend fun getSfServer() = sfServer ?: fetchSfServer().also { sfServer = it }
