@@ -359,11 +359,6 @@ class FilelionsTo : Filesim() {
     override var mainUrl = "https://filelions.to"
 }
 
-class Hubcloud : VCloud() {
-    override val name = "Hubcloud"
-    override val mainUrl = "https://hubcloud.in"
-}
-
 class Pixeldra : Pixeldrain() {
     override val mainUrl = "https://pixeldra.in"
 }
