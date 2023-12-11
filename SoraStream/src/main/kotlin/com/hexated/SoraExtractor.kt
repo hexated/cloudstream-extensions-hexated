@@ -1111,29 +1111,14 @@ object SoraExtractor : SoraStream() {
         ).document.selectFirst("div.entry-content > $selector")
             ?.attr("href") ?: return
 
-        val quality = getIndexQuality(entry.text())
-
-        if(server.contains("/dl.php?")) {
-            callback.invoke(
-                ExtractorLink(
-                    "Vegamovies",
-                    "Vegamovies",
-                    server,
-                    "",
-                    quality,
-                    INFER_TYPE
-                )
-            )
-        } else {
-            loadCustomTagExtractor(
-                tags,
-                server,
-                "$api/",
-                subtitleCallback,
-                callback,
-                quality
-            )
-        }
+        loadCustomTagExtractor(
+            tags,
+            server,
+            "$api/",
+            subtitleCallback,
+            callback,
+            getIndexQuality(entry.text())
+        )
     }
 
     suspend fun invokeHdmovies4u(

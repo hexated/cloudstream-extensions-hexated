@@ -209,7 +209,7 @@ open class VCloud : ExtractorApi() {
             )
         ).document.select("p.text-success ~ a").apmap {
             val link = it.attr("href")
-            if (link.contains("workers.dev") || it.text().contains("[Server : 1]")) {
+            if (link.contains("workers.dev") || it.text().contains("[Server : 1]") || link.contains("/dl.php?")) {
                 callback.invoke(
                     ExtractorLink(
                         this.name,
