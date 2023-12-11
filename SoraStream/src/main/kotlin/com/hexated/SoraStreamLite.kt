@@ -30,7 +30,7 @@ import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
-import com.hexated.SoraExtractor.invokeGomovies
+import com.hexated.SoraExtractor.invokeOmovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.SubtitleFile
@@ -135,7 +135,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                if (!res.isAnime) invokeGomovies(
+                if (!res.isAnime) invokeOmovies(
                     res.title,
                     res.year,
                     res.season,

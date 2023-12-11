@@ -1930,7 +1930,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeGomovies(
+    suspend fun invokeOmovies(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -1943,10 +1943,10 @@ object SoraExtractor : SoraStream() {
             season,
             episode,
             callback,
-            "https://gomovies-online.cam",
-            "Gomovies",
-            "_smQamBQsETb",
-            "_sBWcqbTBMaT"
+            BuildConfig.OMOVIES_API,
+            "Omovies",
+            base64Decode("X3NtUWFtQlFzRVRi"),
+            base64Decode("X3NCV2NxYlRCTWFU")
         )
     }
 

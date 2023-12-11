@@ -9,16 +9,12 @@ android {
         properties.load(project.rootProject.file("local.properties").inputStream())
 
         buildConfigField("String", "TMDB_API", "\"${properties.getProperty("TMDB_API")}\"")
+        buildConfigField("String", "OMOVIES_API", "\"${properties.getProperty("OMOVIES_API")}\"")
         buildConfigField("String", "CINEMATV_API", "\"${properties.getProperty("CINEMATV_API")}\"")
         buildConfigField("String", "SFMOVIES_API", "\"${properties.getProperty("SFMOVIES_API")}\"")
         buildConfigField("String", "ZSHOW_API", "\"${properties.getProperty("ZSHOW_API")}\"")
-        buildConfigField("String", "SORA_API", "\"${properties.getProperty("SORA_API")}\"")
-        buildConfigField("String", "SORAHE", "\"${properties.getProperty("SORAHE")}\"")
-        buildConfigField("String", "SORAXA", "\"${properties.getProperty("SORAXA")}\"")
-        buildConfigField("String", "SORATED", "\"${properties.getProperty("SORATED")}\"")
         buildConfigField("String", "DUMP_API", "\"${properties.getProperty("DUMP_API")}\"")
         buildConfigField("String", "DUMP_KEY", "\"${properties.getProperty("DUMP_KEY")}\"")
-        buildConfigField("String", "PRIMEWIRE_KEY", "\"${properties.getProperty("PRIMEWIRE_KEY")}\"")
         buildConfigField("String", "CRUNCHYROLL_BASIC_TOKEN", "\"${properties.getProperty("CRUNCHYROLL_BASIC_TOKEN")}\"")
         buildConfigField("String", "CRUNCHYROLL_REFRESH_TOKEN", "\"${properties.getProperty("CRUNCHYROLL_REFRESH_TOKEN")}\"")
     }
