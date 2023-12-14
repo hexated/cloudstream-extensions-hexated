@@ -2,9 +2,8 @@ package com.hexated
 
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.extractors.Chillx
 import com.lagradost.cloudstream3.utils.*
-
-const val twoEmbedAPI = "https://www.2embed.to"
 
 class Sbnmp : ExtractorApi() {
     override val name = "Sbnmp"
@@ -65,4 +64,9 @@ open class Akamaicdn : ExtractorApi() {
             )
         )
     }
+}
+
+class AnimesagaStream : Chillx() {
+    override val name = "AnimesagaStream"
+    override val mainUrl = "https://stream.animesaga.in"
 }

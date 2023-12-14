@@ -8,6 +8,8 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.nicehttp.requestCreator
+import okhttp3.Headers
+import okhttp3.HttpUrl
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -18,7 +20,7 @@ class KuramanimeProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-    private var auth: String? = null
+    private var params:  AuthParams? = null
     private var headers: Map<String,String> = mapOf()
     private var cookies: Map<String,String> = mapOf()
     override val supportedTypes = setOf(
@@ -199,67 +201,70 @@ class KuramanimeProvider : MainAPI() {
 
         val req = app.get(data)
         val res = req.document
-        val token = res.select("meta[name=csrf-token]").attr("content")
-        headers = mapOf(
-            "Accept" to "application/json, text/javascript, */*; q=0.01",
-            "Authorization" to "${getAuth(data)}",
-            "X-Requested-With" to "XMLHttpRequest",
-            "X-CSRF-TOKEN" to token
-        )
-        cookies = req.cookies
-        res.select("select#changeServer option").apmap { source ->
-            val server = source.attr("value")
-            val link = "$data?dfgRr1OagZvvxbzHNpyCy0FqJQ18mCnb=${getMisc()}&twEvZlbZbYRWBdKKwxkOnwYF0VWoGGVg=$server"
-            if (server.contains(Regex("(?i)kuramadrive|archive"))) {
-                invokeLocalSource(link, server, data, callback)
-            } else {
-                app.get(
-                    link,
-                    referer = data,
-                    headers = headers,
-                    cookies = cookies
-                ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
-                    loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
+
+        argamap(
+            {
+                val auth = getAuth(data)
+                headers = auth.authHeader?.associate { it.first to it.second }?.filter { it.key != "Cookie" }!!
+                cookies = req.cookies
+                res.select("select#changeServer option").apmap { source ->
+                    val server = source.attr("value")
+                    val query = auth.serverUrl?.queryParameterNames?.map { it } ?: return@apmap
+                    val link = "$data?${query[0]}=${getMisc(auth.authUrl)}&${query[1]}=$server"
+                    if (server.contains(Regex("(?i)kuramadrive|archive"))) {
+                        invokeLocalSource(link, server, data, callback)
+                    } else {
+                        app.get(
+                            link,
+                            referer = data,
+                            headers = headers,
+                            cookies = cookies
+                        ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
+                            loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
+                        }
+                    }
+                }
+            },
+            {
+                res.select("div#animeDownloadLink a").apmap {
+                    loadExtractor(it.attr("href"), "$mainUrl/", subtitleCallback, callback)
                 }
             }
-        }
+        )
 
         return true
     }
 
-    private fun getAuth() : String {
-        val key = "kuramanime3:LEcXGYdOGcMCV8jM5fhRdM2mneSj6kaNts:${APIHolder.unixTimeMS};"
-        return base64Encode(base64Encode(key.toByteArray()).toByteArray())
-    }
-
-    private suspend fun fetchAuth(url: String) : String? {
+    private suspend fun fetchAuth(url: String) : AuthParams {
+        val regex = Regex("""$mainUrl/\S+""")
         val found = WebViewResolver(
-            Regex("$mainUrl/misc/post/EVhcpMNbO77acNZcHr2XVjaG8WAdNC1u")
+            Regex("""$url(?!\?page=)\?"""),
+            additionalUrls = listOf(regex)
         ).resolveUsingWebView(
             requestCreator(
                 "GET", url
             )
-        ).first
-        return found?.headers?.get("Authorization")
+        )
+        val addition = found.second.findLast { it.headers["X-Requested-With"] == "XMLHttpRequest" }
+        return AuthParams(found.first?.url, addition?.url.toString(), addition?.headers)
     }
 
-    private suspend fun getAuth(url: String) = auth ?: fetchAuth(url)
+    private suspend fun getAuth(url: String) = params ?: fetchAuth(url).also { params = it }
 
-    private suspend fun getMisc(): String {
+    private suspend fun getMisc(url: String?): String {
         val misc = app.get(
-            "$mainUrl/misc/post/EVhcpMNbO77acNZcHr2XVjaG8WAdNC1u",
-            headers = headers + mapOf("X-Request-ID" to getRequestId()),
+            "$url",
+            headers = headers,
             cookies = cookies
         )
         cookies = misc.cookies
         return misc.parsed()
     }
 
-    private fun getRequestId(length: Int = 8): String {
-        val allowedChars = ('a'..'z') + ('0'..'9')
-        return (1..length)
-            .map { allowedChars.random() }
-            .joinToString("")
-    }
+    data class AuthParams (
+        val serverUrl: HttpUrl?,
+        val authUrl: String?,
+        val authHeader: Headers?,
+    )
 
 }

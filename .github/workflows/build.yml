@@ -43,10 +43,6 @@ jobs:
       - name: Access Secrets
         env:
           TMDB_API: ${{ secrets.TMDB_API }}
-          SORA_API: ${{ secrets.SORA_API }}
-          SORAHE: ${{ secrets.SORAHE }}
-          SORAXA: ${{ secrets.SORAXA }}
-          SORATED: ${{ secrets.SORATED }}
           DUMP_API: ${{ secrets.DUMP_API }}
           DUMP_KEY: ${{ secrets.DUMP_KEY }}
           CRUNCHYROLL_BASIC_TOKEN: ${{ secrets.CRUNCHYROLL_BASIC_TOKEN }}
@@ -55,16 +51,13 @@ jobs:
           ANICHI_SERVER: ${{ secrets.ANICHI_SERVER }}
           ANICHI_ENDPOINT: ${{ secrets.ANICHI_ENDPOINT }}
           ANICHI_APP: ${{ secrets.ANICHI_APP }}
-          PRIMEWIRE_KEY: ${{ secrets.PRIMEWIRE_KEY }}
           ZSHOW_API: ${{ secrets.ZSHOW_API }}
           SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
+          CINEMATV_API: ${{ secrets.CINEMATV_API }}
+          OMOVIES_API: ${{ secrets.OMOVIES_API }}
         run: |
           cd $GITHUB_WORKSPACE/src
-          echo SORA_API=$SORA_API >> local.properties
           echo TMDB_API=$TMDB_API >> local.properties
-          echo SORAHE=$SORAHE >> local.properties
-          echo SORAXA=$SORAXA >> local.properties
-          echo SORATED=$SORATED >> local.properties
           echo DUMP_API=$DUMP_API >> local.properties
           echo DUMP_KEY=$DUMP_KEY >> local.properties
           echo CRUNCHYROLL_BASIC_TOKEN=$CRUNCHYROLL_BASIC_TOKEN >> local.properties
@@ -73,9 +66,10 @@ jobs:
           echo ANICHI_SERVER=$ANICHI_SERVER >> local.properties
           echo ANICHI_ENDPOINT=$ANICHI_ENDPOINT >> local.properties
           echo ANICHI_APP=$ANICHI_APP >> local.properties
-          echo PRIMEWIRE_KEY=$PRIMEWIRE_KEY >> local.properties
           echo ZSHOW_API=$ZSHOW_API >> local.properties
           echo SFMOVIES_API=$SFMOVIES_API >> local.properties
+          echo CINEMATV_API=$CINEMATV_API >> local.properties
+          echo OMOVIES_API=$OMOVIES_API >> local.properties
 
       - name: Build Plugins
         run: |
@@ -85,10 +79,10 @@ jobs:
           cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
           cp build/plugins.json $GITHUB_WORKSPACE/builds
 
-      - name: Move Loklok
+      - name: Move Kuramanime
         run: |
-          rm $GITHUB_WORKSPACE/builds/Loklok.cs3 || true
-          cp $GITHUB_WORKSPACE/builds/stored/Loklok.cs3 $GITHUB_WORKSPACE/builds
+          rm $GITHUB_WORKSPACE/builds/KuramanimeProvider.cs3 || true
+          cp $GITHUB_WORKSPACE/builds/stored/KuramanimeProvider.cs3 $GITHUB_WORKSPACE/builds
 
       - name: Push builds
         run: |

@@ -2,10 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.*
-import okhttp3.Interceptor
-import okhttp3.Response
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.net.URLDecoder
@@ -17,23 +14,9 @@ class Minioppai : MainAPI() {
     override var lang = "id"
     override val hasDownloadSupport = true
     override val hasQuickSearch = true
-    private val cloudflareKiller by lazy { CloudflareKiller() }
-    private val interceptor by lazy { CloudflareInterceptor(cloudflareKiller) }
     override val supportedTypes = setOf(
         TvType.NSFW,
     )
-
-    class CloudflareInterceptor(private val cloudflareKiller: CloudflareKiller): Interceptor {
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request()
-            val response = chain.proceed(request)
-            val doc = Jsoup.parse(response.peekBody(1024 * 1024).string())
-            if (doc.select("title").text() == "Just a moment...") {
-                return cloudflareKiller.intercept(chain)
-            }
-            return response
-        }
-    }
 
     companion object {
         fun getStatus(t: String?): ShowStatus {
@@ -54,7 +37,7 @@ class Minioppai : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get("${request.data}/page/$page", interceptor = interceptor).document
+        val document = app.get("${request.data}/page/$page").document
         val home = document.select("div.latest a").mapNotNull {
             it.toSearchResult()
         }
@@ -84,7 +67,6 @@ class Minioppai : MainAPI() {
         return newAnimeSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
             addSub(epNum)
-            posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
         }
 
     }
@@ -97,7 +79,6 @@ class Minioppai : MainAPI() {
                 "action" to "ts_ac_do_search",
                 "ts_ac_query" to query,
             ), headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
-            interceptor = interceptor
         ).parsedSafe<SearchResponses>()?.post?.firstOrNull()?.all?.mapNotNull { item ->
             newAnimeSearchResponse(
                 item.postTitle ?: "",
@@ -105,13 +86,12 @@ class Minioppai : MainAPI() {
                 TvType.NSFW
             ) {
                 this.posterUrl = item.postImage
-                posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url, interceptor = interceptor).document
+        val document = app.get(url).document
 
         val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: return null
         val poster = fixUrlNull(document.selectFirst("div.limage img")?.attr("src"))
@@ -127,7 +107,7 @@ class Minioppai : MainAPI() {
             val name = it.selectFirst("div.epl-num")?.text()
             val link = fixUrlNull(it.selectFirst("a")?.attr("href")) ?: return@mapNotNull null
             Episode(link, name = name)
-        }.reversed()
+        }
 
         return newAnimeLoadResponse(title, url, TvType.NSFW) {
             engName = title
@@ -137,7 +117,6 @@ class Minioppai : MainAPI() {
             showStatus = status
             plot = description
             this.tags = tags
-            posterHeaders = cloudflareKiller.getCookieHeaders(mainUrl).toMap()
         }
     }
 
@@ -147,7 +126,7 @@ class Minioppai : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data, interceptor = interceptor).document
+        val document = app.get(data).document
         document.select("div.server ul.mirror li a").mapNotNull {
             Jsoup.parse(base64Decode(it.attr("data-em"))).select("iframe").attr("src")
         }.apmap { link ->

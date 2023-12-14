@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import org.jsoup.nodes.Element
@@ -34,18 +33,13 @@ open class Movierulzhd : MainAPI() {
         "episodes" to "Episode",
     )
 
-    val interceptor = CloudflareKiller()
-
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-        var document = app.get("$mainUrl/${request.data}/page/$page").document
-        if (document.select("title").text() == "Just a moment...") {
-            document = app.get(request.data + page, interceptor = interceptor).document
-        }
+        val document = app.get("$mainUrl/${request.data}/page/$page").document
         val home =
-            document.select("div.items.normal article, div#archive-content article").mapNotNull {
+            document.select("div.items.normal article, div#archive-content article, div.items.full article").mapNotNull {
                 it.toSearchResult()
             }
         return newHomePageResponse(request.name, home)
@@ -74,23 +68,17 @@ open class Movierulzhd : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h3 > a")?.text() ?: return null
         val href = getProperLink(fixUrl(this.selectFirst("h3 > a")!!.attr("href")))
-        val posterUrl = fixUrlNull(this.select("div.poster img").last()?.attr("src"))
+        val posterUrl = fixUrlNull(this.select("div.poster img").last()?.getImageAttr())
         val quality = getQualityFromString(this.select("span.quality").text())
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.quality = quality
-            posterHeaders = interceptor.getCookieHeaders(mainUrl).toMap()
         }
 
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val link = "$mainUrl/search/$query"
-        var document = app.get(link).document
-        if (document.select("title").text() == "Just a moment...") {
-            document = app.get(link, interceptor = interceptor).document
-        }
-
+        val document = app.get("$mainUrl/search/$query").document
         return document.select("div.result-item").map {
             val title =
                 it.selectFirst("div.title > a")!!.text().replace(Regex("\\(\\d{4}\\)"), "").trim()
@@ -98,21 +86,17 @@ open class Movierulzhd : MainAPI() {
             val posterUrl = it.selectFirst("img")!!.attr("src").toString()
             newMovieSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
-                posterHeaders = interceptor.getCookieHeaders(mainUrl).toMap()
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val request = app.get(url)
-        var document = request.document
-        if (document.select("title").text() == "Just a moment...") {
-            document = app.get(url, interceptor = interceptor).document
-        }
+        val document = request.document
         directUrl = getBaseUrl(request.url)
         val title =
             document.selectFirst("div.data > h1")?.text()?.trim().toString()
-        val poster = fixUrlNull(document.select("div.poster img:last-child").attr("src"))
+        val poster = fixUrlNull(document.selectFirst("div.poster img:last-child")?.getImageAttr())
         val tags = document.select("div.sgeneros > a").map { it.text() }
 
         val year = Regex(",\\s?(\\d+)").find(
@@ -139,10 +123,9 @@ open class Movierulzhd : MainAPI() {
             val recName =
                 it.selectFirst("a")!!.attr("href").toString().removeSuffix("/").split("/").last()
             val recHref = it.selectFirst("a")!!.attr("href")
-            val recPosterUrl = it.selectFirst("img")?.attr("src").toString()
+            val recPosterUrl = it.selectFirst("img")?.getImageAttr()
             newTvSeriesSearchResponse(recName, recHref, TvType.TvSeries) {
                 this.posterUrl = recPosterUrl
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
 
@@ -151,7 +134,7 @@ open class Movierulzhd : MainAPI() {
                 document.select("ul.episodios > li").map {
                     val href = it.select("a").attr("href")
                     val name = fixTitle(it.select("div.episodiotitle > a").text().trim())
-                    val image = it.select("div.imagen > img").attr("src")
+                    val image = it.selectFirst("div.imagen > img")?.getImageAttr()
                     val episode =
                         it.select("div.numerando").text().replace(" ", "").split("-").last()
                             .toIntOrNull()
@@ -187,7 +170,6 @@ open class Movierulzhd : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, url) {
@@ -199,7 +181,6 @@ open class Movierulzhd : MainAPI() {
                 addActors(actors)
                 this.recommendations = recommendations
                 addTrailer(trailer)
-                posterHeaders = interceptor.getCookieHeaders(url).toMap()
             }
         }
     }
@@ -230,18 +211,17 @@ open class Movierulzhd : MainAPI() {
                 referer = data,
                 headers = mapOf("X-Requested-With" to "XMLHttpRequest")
             ).parsed<ResponseHash>().embed_url
-            if (!source.contains("youtube")) loadCustomExtractor(loadData?.tag, source, "$directUrl/", subtitleCallback, callback)
+            if (!source.contains("youtube")) loadCustomExtractor(source, "$directUrl/", subtitleCallback, callback)
         } else {
-            var document = app.get(data).document
-            if (document.select("title").text() == "Just a moment...") {
-                document = app.get(data, interceptor = interceptor).document
-            }
-            val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
-            val type = if (data.contains("/movies/")) "movie" else "tv"
+            val document = app.get(data).document
 
             document.select("ul#playeroptionsul > li").map {
-                it.attr("data-nume") to it.select("span.title").text()
-            }.apmap { (nume, tag) ->
+                Triple(
+                    it.attr("data-post"),
+                    it.attr("data-nume"),
+                    it.attr("data-type")
+                )
+            }.apmap { (id, nume, type) ->
                 val source = app.post(
                     url = "$directUrl/wp-admin/admin-ajax.php",
                     data = mapOf(
@@ -256,7 +236,6 @@ open class Movierulzhd : MainAPI() {
 
                 when {
                     !source.contains("youtube") -> loadCustomExtractor(
-                        tag,
                         source,
                         "$directUrl/",
                         subtitleCallback,
@@ -269,8 +248,16 @@ open class Movierulzhd : MainAPI() {
         return true
     }
 
+    private fun Element.getImageAttr(): String? {
+        return when {
+            this.hasAttr("data-src") -> this.attr("abs:data-src")
+            this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
+            this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
+            else -> this.attr("abs:src")
+        }
+    }
+
     private suspend fun loadCustomExtractor(
-        name: String? = null,
         url: String,
         referer: String? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -278,21 +265,23 @@ open class Movierulzhd : MainAPI() {
         quality: Int? = null,
     ) {
         loadExtractor(url, referer, subtitleCallback) { link ->
-            callback.invoke(
-                ExtractorLink(
-                    name ?: link.source,
-                    name ?: link.name,
-                    link.url,
-                    link.referer,
-                    when (link.type) {
-                        ExtractorLinkType.M3U8 -> link.quality
-                        else -> quality ?: link.quality
-                    },
-                    link.type,
-                    link.headers,
-                    link.extractorData
+            if(link.quality == Qualities.Unknown.value) {
+                callback.invoke(
+                    ExtractorLink(
+                        link.source,
+                        link.name,
+                        link.url,
+                        link.referer,
+                        when (link.type) {
+                            ExtractorLinkType.M3U8 -> link.quality
+                            else -> quality ?: link.quality
+                        },
+                        link.type,
+                        link.headers,
+                        link.extractorData
+                    )
                 )
-            )
+            }
         }
     }
 

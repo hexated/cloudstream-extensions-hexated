@@ -138,7 +138,7 @@ class Animasu : MainAPI() {
         document.select(".mobius > .mirror > option").mapNotNull {
             fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src")) to it.text()
         }.apmap { (iframe, quality) ->
-            loadFixedExtractor(iframe, quality, "$mainUrl/", subtitleCallback, callback)
+            loadFixedExtractor(iframe.fixIframe(), quality, "$mainUrl/", subtitleCallback, callback)
         }
         return true
     }
@@ -157,12 +157,20 @@ class Animasu : MainAPI() {
                     link.name,
                     link.url,
                     link.referer,
-                    if(link.type != ExtractorLinkType.M3U8) getIndexQuality(quality) else link.quality,
+                    if(link.type == ExtractorLinkType.M3U8 || link.name == "Uservideo") link.quality else getIndexQuality(quality),
                     link.type,
                     link.headers,
                     link.extractorData
                 )
             )
+        }
+    }
+
+    private fun String.fixIframe() : String {
+        return if(this.startsWith("https://dl.berkasdrive.com")) {
+            base64Decode(this.substringAfter("id="))
+        } else {
+            this
         }
     }
 
