@@ -434,3 +434,31 @@ data class SmashyDSourcesUrls(
     @JsonProperty("file") var file: String? = null,
     @JsonProperty("title") var title: String? = null,
 )
+
+data class AoneroomResponse(
+    @JsonProperty("data") val data: Data? = null,
+) {
+    data class Data(
+        @JsonProperty("items") val items: ArrayList<Items>? = arrayListOf(),
+        @JsonProperty("list") val list: ArrayList<List>? = arrayListOf(),
+    ) {
+        data class Items(
+            @JsonProperty("subjectId") val subjectId: String? = null,
+            @JsonProperty("title") val title: String? = null,
+            @JsonProperty("releaseDate") val releaseDate: String? = null,
+        )
+
+        data class List(
+            @JsonProperty("resourceLink") val resourceLink: String? = null,
+            @JsonProperty("extCaptions") val extCaptions: ArrayList<ExtCaptions>? = arrayListOf(),
+            @JsonProperty("se") val se: Int? = null,
+            @JsonProperty("ep") val ep: Int? = null,
+            @JsonProperty("resolution") val resolution: Int? = null,
+        ) {
+            data class ExtCaptions(
+                @JsonProperty("lanName") val lanName: String? = null,
+                @JsonProperty("url") val url: String? = null,
+            )
+        }
+    }
+}

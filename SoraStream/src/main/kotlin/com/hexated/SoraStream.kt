@@ -3,6 +3,7 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
+import com.hexated.SoraExtractor.invokeAoneroom
 import com.hexated.SoraExtractor.invokeBlackvid
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeDbgo
@@ -102,7 +103,8 @@ open class SoraStream : TmdbProvider() {
         const val ridomoviesAPI = "https://ridomovies.pw"
         const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"
-        const val multimoviesAPI = "https://multimovies.live"
+        const val multimoviesAPI = "https://multimovies.top"
+        const val multimovies2API = "https://multimovies.click"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://izzillent-dickstonyx-i-262.site"
         const val doomoviesAPI = "https://doomovies.net"
@@ -112,6 +114,7 @@ open class SoraStream : TmdbProvider() {
         const val watchflxAPI = "https://watchflx.tv"
         const val blackvidAPI = "https://prod.api.blackvid.space"
         const val showflixAPI = "https://showflix.space"
+        const val aoneroomAPI = "https://api3.aoneroom.com"
 
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
@@ -392,6 +395,16 @@ open class SoraStream : TmdbProvider() {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
+                if (!res.isAnime) invokeAoneroom(
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 if (res.isAnime) invokeAnimes(
                     res.title,
                     res.epsTitle,
@@ -641,7 +654,10 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeMultimovies(res.title, res.season, res.episode, subtitleCallback, callback)
+                if(res.isBollywood) invokeMultimovies(multimoviesAPI, res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if(res.isBollywood) invokeMultimovies(multimovies2API, res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeNetmovies(

@@ -401,3 +401,8 @@ class Embedwish : Filesim() {
 class Vidplay2 : Vidplay() {
     override val mainUrl = "https://vidplay.online"
 }
+
+class Flaswish : Filesim() {
+    override val name = "Flaswish"
+    override var mainUrl = "https://flaswish.com"
+}

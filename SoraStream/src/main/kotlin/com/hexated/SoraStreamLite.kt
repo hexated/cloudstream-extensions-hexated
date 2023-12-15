@@ -2,6 +2,7 @@ package com.hexated
 
 import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
+import com.hexated.SoraExtractor.invokeAoneroom
 import com.hexated.SoraExtractor.invokeBlackvid
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeDoomovies
@@ -222,6 +223,16 @@ class SoraStreamLite : SoraStream() {
                 if (!res.isAnime) invokeNowTv(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
+                if (!res.isAnime) invokeAoneroom(
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 invokeNavy(res.imdbId, res.season, res.episode, callback)
             },
             {
@@ -242,7 +253,10 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeMultimovies(res.title, res.season, res.episode, subtitleCallback, callback)
+                if(res.isBollywood) invokeMultimovies(multimoviesAPI, res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if(res.isBollywood) invokeMultimovies(multimovies2API, res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeNetmovies(
