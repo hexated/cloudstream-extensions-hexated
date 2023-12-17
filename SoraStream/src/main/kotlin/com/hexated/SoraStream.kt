@@ -95,7 +95,7 @@ open class SoraStream : TmdbProvider() {
         const val flixonAPI = "https://flixon.lol"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        var cinemaTvAPI = BuildConfig.CINEMATV_API
+        const val cinemaTvAPI = BuildConfig.CINEMATV_API
         const val nineTvAPI = "https://moviesapi.club"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
@@ -231,10 +231,12 @@ open class SoraStream : TmdbProvider() {
         val year = releaseDate?.split("-")?.first()?.toIntOrNull()
         val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
-        val isAnime =
-            genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
+
+        val isCartoon = genres?.contains("Animation") ?: false
+        val isAnime = isCartoon && (res.original_language == "zh" || res.original_language == "ja")
         val isAsian = !isAnime && (res.original_language == "zh" || res.original_language == "ko")
         val isBollywood = res.production_countries?.any { it.name == "India" } ?: false
+
         val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
             .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
 
@@ -277,7 +279,8 @@ open class SoraStream : TmdbProvider() {
                                 date = season.airDate,
                                 airedDate = res.releaseDate ?: res.firstAirDate,
                                 isAsian = isAsian,
-                                isBollywood = isBollywood
+                                isBollywood = isBollywood,
+                                isCartoon = isCartoon
                             ).toJson(),
                             name = eps.name + if (isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
                             season = eps.seasonNumber,
@@ -438,7 +441,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeKimcartoon(
+                if (!res.isAnime && res.isCartoon) invokeKimcartoon(
                     res.title,
                     res.season,
                     res.episode,
@@ -755,6 +758,7 @@ open class SoraStream : TmdbProvider() {
         val airedDate: String? = null,
         val isAsian: Boolean = false,
         val isBollywood: Boolean = false,
+        val isCartoon: Boolean = false,
     )
 
     data class Data(

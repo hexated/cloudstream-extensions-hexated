@@ -2256,10 +2256,9 @@ object SoraExtractor : SoraStream() {
             "$cinemaTvAPI/shows/play/$id-$slug-$year"
         }
 
-        val specialCookies =
-            "PHPSESSID=e555h63ilisoj2l6j7b5d4jb6p; _csrf=9597150e45f485ad9c4f2e06a2572534d8415337eda9d48d0ecfa25b73b6a9e1a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%222HcnegjGB0nX205FAUPb86fqMx9HWIF1%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTime.4.0.1.$unixTime.0.0.0"
+        val session = "PHPSESSID=ngr4cudjrimdnhkth30ssohs0n; _csrf=a6ffd7bb7654083fce6df528225a238d0e85aa1fb885dc7638c1259ec1ba0d5ca%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22mTTLiDLjxohs-CpKk0bjRH3HdYMB9uBV%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTime.4.0.1.$unixTime.0.0.0"
         val headers = mapOf(
-            "Cookie" to specialCookies,
+            "Cookie" to session,
             "Connection" to "keep-alive",
             "x-requested-with" to "XMLHttpRequest",
         )

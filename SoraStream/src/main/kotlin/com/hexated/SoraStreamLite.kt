@@ -145,7 +145,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                if (!res.isAnime) invokeKimcartoon(
+                if (!res.isAnime && res.isCartoon) invokeKimcartoon(
                     res.title,
                     res.season,
                     res.episode,
