@@ -42,10 +42,7 @@ class Hdmovie2 : Movierulzhd() {
                 callback
             )
         } else {
-            var document = app.get(data).document
-            if (document.select("title").text() == "Just a moment...") {
-                document = app.get(data).document
-            }
+            val document = app.get(data).document
             val id = document.select("meta#dooplay-ajax-counter").attr("data-postid")
             val type = if (data.contains("/movies/")) "movie" else "tv"
 

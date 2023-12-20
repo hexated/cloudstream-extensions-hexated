@@ -236,6 +236,7 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invokeMultimovies(
+        apiUrl: String,
         title: String? = null,
         season: Int? = null,
         episode: Int? = null,
@@ -244,11 +245,82 @@ object SoraExtractor : SoraStream() {
     ) {
         val fixTitle = title.createSlug()
         val url = if (season == null) {
-            "$multimoviesAPI/movies/$fixTitle"
+            "$apiUrl/movies/$fixTitle"
         } else {
-            "$multimoviesAPI/episodes/$fixTitle-${season}x${episode}"
+            "$apiUrl/episodes/$fixTitle-${season}x${episode}"
         }
-        invokeWpmovies(null, url, subtitleCallback, callback)
+        val req = app.get(url)
+        val directUrl = getBaseUrl(req.url)
+        val iframe = req.document.selectFirst("div.pframe iframe")?.attr("src") ?: return
+        if(!iframe.contains("youtube")) {
+            loadExtractor(iframe, "$directUrl/", subtitleCallback) { link ->
+                if(link.quality == Qualities.Unknown.value) {
+                    callback.invoke(
+                        ExtractorLink(
+                            link.source,
+                            link.name,
+                            link.url,
+                            link.referer,
+                            Qualities.P1080.value,
+                            link.type,
+                            link.headers,
+                            link.extractorData
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun invokeAoneroom(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val headers = mapOf(
+            "Authorization" to "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjcyODc3MjQ5OTg4MzA0NzM5NzYsInV0cCI6MSwiZXhwIjoxNzEwMzg4NzczLCJpYXQiOjE3MDI2MTI3NzN9.Myt-gVHfPfQFbFyRX3WXtiiwvRzDwBrXTEKy1l-GDRU"
+        )
+        val subjectId = app.post(
+            "$aoneroomAPI/wefeed-mobile-bff/subject-api/search", data = mapOf(
+                "page" to "1",
+                "perPage" to "10",
+                "keyword" to "$title",
+                "subjectType" to if (season == null) "1" else "2",
+            ), headers = headers
+        ).parsedSafe<AoneroomResponse>()?.data?.items?.find {
+            it.title.equals(title, true) && it.releaseDate?.substringBefore("-") == "$year"
+        }?.subjectId
+
+        val data = app.get(
+            "$aoneroomAPI/wefeed-mobile-bff/subject-api/resource?subjectId=${subjectId ?: return}&page=1&perPage=10000&all=0&startPosition=1&endPosition=1&pagerMode=0&resolution=480",
+            headers = headers
+        ).parsedSafe<AoneroomResponse>()?.data?.list?.findLast {
+            it.se == (season ?: 0) && it.ep == (episode ?: 0)
+        }
+
+        callback.invoke(
+            ExtractorLink(
+                "Aoneroom",
+                "Aoneroom",
+                data?.resourceLink ?: return,
+                "",
+                data.resolution ?: Qualities.Unknown.value,
+                INFER_TYPE
+            )
+        )
+
+        data.extCaptions?.map { sub ->
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    sub.lanName ?: return@map,
+                    sub.url ?: return@map,
+                )
+            )
+        }
+
     }
 
     suspend fun invokeNetmovies(
@@ -733,15 +805,16 @@ object SoraExtractor : SoraStream() {
             res.first().id to res.first().title
         } else {
             val data = res.find {
-                val slugTitle = it.title.createSlug()
+                val slugTitle = it.title.createSlug() ?: return
                 when {
-                    season == null -> slugTitle?.equals(slug) == true
-                    lastSeason == 1 -> slugTitle?.contains(slug) == true
-                    else -> slugTitle?.contains(slug) == true && it.title?.contains(
-                        "Season $season", true
-                    ) == true
+                    season == null -> slugTitle == slug
+                    lastSeason == 1 -> slugTitle.contains(slug)
+                    else -> (slugTitle.contains(slug) && it.title?.contains(
+                        "Season $season",
+                        true
+                    ) == true)
                 }
-            }
+            } ?: res.find { it.title.equals(title) }
             data?.id to data?.title
         }
 
@@ -974,7 +1047,7 @@ object SoraExtractor : SoraStream() {
         val fixTitle = title.createSlug()
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
-        val url = if(season == null) {
+        val url = if (season == null) {
             "$uhdmoviesAPI/download-$fixTitle-$year"
         } else {
             "$uhdmoviesAPI/download-$fixTitle"
@@ -982,7 +1055,7 @@ object SoraExtractor : SoraStream() {
 
         val detailDoc = app.get(url).document
 
-        val iSelector = if(season == null) {
+        val iSelector = if (season == null) {
             "div.entry-content p:has(:matches($year))"
         } else {
             "div.entry-content p:has(:matches((?i)(?:S\\s*$seasonSlug|Season\\s*$seasonSlug)))"
@@ -1003,15 +1076,18 @@ object SoraExtractor : SoraStream() {
             val driveReq = app.get(driveLink)
             val driveRes = driveReq.document
             val bitLink = driveRes.select("a.btn.btn-outline-success").attr("href")
-            val insLink = driveRes.select("a.btn.btn-danger:contains(Instant Download)").attr("href")
+            val insLink =
+                driveRes.select("a.btn.btn-danger:contains(Instant Download)").attr("href")
             val downloadLink = when {
                 insLink.isNotEmpty() -> extractInstantUHD(insLink)
                 driveRes.select("button.btn.btn-success").text()
                     .contains("Direct Download", true) -> extractDirectUHD(driveLink, driveReq)
+
                 bitLink.isNullOrEmpty() -> {
                     val backupIframe = driveRes.select("a.btn.btn-outline-warning").attr("href")
                     extractBackupUHD(backupIframe ?: return@apmap)
                 }
+
                 else -> {
                     extractMirrorUHD(bitLink, base)
                 }
@@ -1091,7 +1167,8 @@ object SoraExtractor : SoraStream() {
             1 -> "Season 1"
             else -> "Season 1 – $lastSeason"
         }
-        val media = res.selectFirst("div.blog-items article:has(h3.entry-title:matches((?i)$title.*$match)) a")
+        val media =
+            res.selectFirst("div.blog-items article:has(h3.entry-title:matches((?i)$title.*$match)) a")
                 ?.attr("href")
 
         res = app.get(media ?: return).document
@@ -1972,8 +2049,8 @@ object SoraExtractor : SoraStream() {
             "$title Season $season"
         }
         val savedCookies = mapOf(
-                "_identitygomovies7" to "52fdc70b008c0b1d881dac0f01cca819edd512de01cc8bbc1224ed4aafb78b52a%3A2%3A%7Bi%3A0%3Bs%3A18%3A%22_identitygomovies7%22%3Bi%3A1%3Bs%3A52%3A%22%5B2050366%2C%22HnVRRAObTASOJEr45YyCM8wiHol0V1ko%22%2C2592000%5D%22%3B%7D",
-            )
+            "_identitygomovies7" to "52fdc70b008c0b1d881dac0f01cca819edd512de01cc8bbc1224ed4aafb78b52a%3A2%3A%7Bi%3A0%3Bs%3A18%3A%22_identitygomovies7%22%3Bi%3A1%3Bs%3A52%3A%22%5B2050366%2C%22HnVRRAObTASOJEr45YyCM8wiHol0V1ko%22%2C2592000%5D%22%3B%7D",
+        )
         val req = app.get("$api/search/$query")
         val doc = req.document
         val media = doc.select("div.$mediaSelector").map {
@@ -2070,8 +2147,8 @@ object SoraExtractor : SoraStream() {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val data = request(url,).peekBody(1024 * 512).source().buffer.readByteArray()
-            .decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
+        val res = request(url).peekBody(1024 * 512)
+        val data = res.source().buffer.readByteArray().decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
         val json = tryParseJson<BlackvidResponses>(data)
 
         json?.sources?.map { source ->
@@ -2179,9 +2256,9 @@ object SoraExtractor : SoraStream() {
             "$cinemaTvAPI/shows/play/$id-$slug-$year"
         }
 
-        val specialCookies = "PHPSESSID=e555h63ilisoj2l6j7b5d4jb6p; _csrf=9597150e45f485ad9c4f2e06a2572534d8415337eda9d48d0ecfa25b73b6a9e1a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%222HcnegjGB0nX205FAUPb86fqMx9HWIF1%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTime.4.0.1.$unixTime.0.0.0"
+        val session = "PHPSESSID=ngr4cudjrimdnhkth30ssohs0n; _csrf=a6ffd7bb7654083fce6df528225a238d0e85aa1fb885dc7638c1259ec1ba0d5ca%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22mTTLiDLjxohs-CpKk0bjRH3HdYMB9uBV%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTime.4.0.1.$unixTime.0.0.0"
         val headers = mapOf(
-            "Cookie" to specialCookies,
+            "Cookie" to session,
             "Connection" to "keep-alive",
             "x-requested-with" to "XMLHttpRequest",
         )

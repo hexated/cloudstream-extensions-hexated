@@ -3,6 +3,7 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
+import com.hexated.SoraExtractor.invokeAoneroom
 import com.hexated.SoraExtractor.invokeBlackvid
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeDbgo
@@ -94,7 +95,7 @@ open class SoraStream : TmdbProvider() {
         const val flixonAPI = "https://flixon.lol"
         const val smashyStreamAPI = "https://embed.smashystream.com"
         const val watchSomuchAPI = "https://watchsomuch.tv" // sub only
-        var cinemaTvAPI = BuildConfig.CINEMATV_API
+        const val cinemaTvAPI = BuildConfig.CINEMATV_API
         const val nineTvAPI = "https://moviesapi.club"
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
@@ -102,7 +103,8 @@ open class SoraStream : TmdbProvider() {
         const val ridomoviesAPI = "https://ridomovies.pw"
         const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"
-        const val multimoviesAPI = "https://multimovies.live"
+        const val multimoviesAPI = "https://multimovies.top"
+        const val multimovies2API = "https://multimovies.click"
         const val netmoviesAPI = "https://netmovies.to"
         const val momentAPI = "https://izzillent-dickstonyx-i-262.site"
         const val doomoviesAPI = "https://doomovies.net"
@@ -112,6 +114,7 @@ open class SoraStream : TmdbProvider() {
         const val watchflxAPI = "https://watchflx.tv"
         const val blackvidAPI = "https://prod.api.blackvid.space"
         const val showflixAPI = "https://showflix.space"
+        const val aoneroomAPI = "https://api3.aoneroom.com"
 
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
@@ -228,10 +231,12 @@ open class SoraStream : TmdbProvider() {
         val year = releaseDate?.split("-")?.first()?.toIntOrNull()
         val rating = res.vote_average.toString().toRatingInt()
         val genres = res.genres?.mapNotNull { it.name }
-        val isAnime =
-            genres?.contains("Animation") == true && (res.original_language == "zh" || res.original_language == "ja")
+
+        val isCartoon = genres?.contains("Animation") ?: false
+        val isAnime = isCartoon && (res.original_language == "zh" || res.original_language == "ja")
         val isAsian = !isAnime && (res.original_language == "zh" || res.original_language == "ko")
         val isBollywood = res.production_countries?.any { it.name == "India" } ?: false
+
         val keywords = res.keywords?.results?.mapNotNull { it.name }.orEmpty()
             .ifEmpty { res.keywords?.keywords?.mapNotNull { it.name } }
 
@@ -274,7 +279,8 @@ open class SoraStream : TmdbProvider() {
                                 date = season.airDate,
                                 airedDate = res.releaseDate ?: res.firstAirDate,
                                 isAsian = isAsian,
-                                isBollywood = isBollywood
+                                isBollywood = isBollywood,
+                                isCartoon = isCartoon
                             ).toJson(),
                             name = eps.name + if (isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
                             season = eps.seasonNumber,
@@ -392,6 +398,16 @@ open class SoraStream : TmdbProvider() {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
+                if (!res.isAnime) invokeAoneroom(
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 if (res.isAnime) invokeAnimes(
                     res.title,
                     res.epsTitle,
@@ -425,7 +441,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeKimcartoon(
+                if (!res.isAnime && res.isCartoon) invokeKimcartoon(
                     res.title,
                     res.season,
                     res.episode,
@@ -641,7 +657,10 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeMultimovies(res.title, res.season, res.episode, subtitleCallback, callback)
+                if(res.isBollywood) invokeMultimovies(multimoviesAPI, res.title, res.season, res.episode, subtitleCallback, callback)
+            },
+            {
+                if(res.isBollywood) invokeMultimovies(multimovies2API, res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 invokeNetmovies(
@@ -739,6 +758,7 @@ open class SoraStream : TmdbProvider() {
         val airedDate: String? = null,
         val isAsian: Boolean = false,
         val isBollywood: Boolean = false,
+        val isCartoon: Boolean = false,
     )
 
     data class Data(

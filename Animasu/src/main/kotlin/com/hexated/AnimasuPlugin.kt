@@ -12,5 +12,6 @@ class AnimasuPlugin: Plugin() {
         registerMainAPI(Animasu())
         registerExtractorAPI(Archivd())
         registerExtractorAPI(Newuservideo())
+        registerExtractorAPI(Vidhidepro())
     }
 }
