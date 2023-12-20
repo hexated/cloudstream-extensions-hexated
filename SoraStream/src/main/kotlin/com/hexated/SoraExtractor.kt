@@ -14,6 +14,7 @@ import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.internal.closeQuietly
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.select.Elements
@@ -2093,6 +2094,7 @@ object SoraExtractor : SoraStream() {
                 .substringBefore("-")
         }
         val res = app.get(fixUrl(iframe, api), verify = false)
+        delay(1000)
         val serverUrl = res.document.selectFirst("script:containsData(pushState)")?.data()?.let {
             """,\s*'([^']+)""".toRegex().find(it)?.groupValues?.get(1)
         } ?: return
@@ -2147,8 +2149,9 @@ object SoraExtractor : SoraStream() {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val res = request(url).peekBody(1024 * 512)
-        val data = res.source().buffer.readByteArray().decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
+        val res = request(url).body
+        val bytes = res.bytes().also { res.closeQuietly() }
+        val data = bytes.decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
         val json = tryParseJson<BlackvidResponses>(data)
 
         json?.sources?.map { source ->
