@@ -2149,8 +2149,8 @@ object SoraExtractor : SoraStream() {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val res = request(url).body
-        val bytes = res.bytes().also { res.closeQuietly() }
+        val res = request(url)
+        val bytes = res.peekBody(1024 * 512).bytes().also { res.closeQuietly() }
         val data = bytes.decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
         val json = tryParseJson<BlackvidResponses>(data)
 
