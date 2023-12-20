@@ -323,18 +323,26 @@ open class Netembed : ExtractorApi() {
     ) {
         val response = app.get(url, referer = referer)
         val script = getAndUnpack(response.text)
-        val m3u8 = Regex("((https:|http:)//.*\\.m3u8)").find(script)?.groupValues?.getOrNull(1)
+        val m3u8 = Regex("((https:|http:)//.*\\.m3u8)").find(script)?.groupValues?.getOrNull(1) ?: return
 
-        callback.invoke(
-            ExtractorLink(
-                this.name,
-                this.name,
-                m3u8 ?: return,
-                "$mainUrl/",
-                getQuality(m3u8),
-                INFER_TYPE
+        if(m3u8.startsWith("https://www.febbox.com")) {
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
+                    this.name,
+                    m3u8,
+                    "$mainUrl/",
+                    getQuality(m3u8),
+                    INFER_TYPE
+                )
             )
-        )
+        } else {
+            M3u8Helper.generateM3u8(
+                this.name,
+                m3u8,
+                "$mainUrl/",
+            ).forEach(callback)
+        }
     }
 
     private suspend fun getQuality(url: String) : Int {
