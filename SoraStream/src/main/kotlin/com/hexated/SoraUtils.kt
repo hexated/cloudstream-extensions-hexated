@@ -49,6 +49,7 @@ import kotlin.math.min
 var watchflxCookies: Map<String, String>? = null
 var filmxyCookies: Map<String, String>? = null
 var sfServer: String? = null
+var cinemaCookiesChecker: Boolean? = null
 
 val encodedIndex = arrayOf(
     "GamMovies",
@@ -645,6 +646,49 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
                             }.find { it.second?.contains("Episode $episode", true) == true }?.first
                     }.lastOrNull()
     }
+}
+
+suspend fun cinemaCookiesChecker(session: String) = cinemaCookiesChecker ?: fetchCinemaCookiesChecker(session).also { cinemaCookiesChecker = it }
+
+suspend fun fetchCinemaCookiesChecker(session: String): Boolean {
+    val wiwiApi = base64Decode("aHR0cHM6Ly9jaW5lbWEud2l3aWNlbnRlci5jb20=")
+    suspend fun createConfig(headers: Map<String, String>) {
+        app.get(
+            "$wiwiApi/api/v1/app-config",
+            headers = headers
+        ).text
+    }
+    suspend fun checkCookies(session: String, headers: Map<String, String>) {
+        app.post(
+            "$wiwiApi/api/v1/cookie",
+            data = mapOf("cookie" to session),
+            headers = headers
+        ).text
+    }
+    val configHeaders = mapOf(
+        "App-version" to "3.4",
+        "Authorization" to "Basic d2l3aTpXaXdpQDIwMjA=",
+        "Country" to "Indonesia",
+        "Device-id" to getDeviceId(),
+        "User-id" to "user-6694327",
+    )
+    listOf(1..2).apmap { createConfig(configHeaders) }
+    val unityData = """
+        {
+          "platform": "android",
+          "idfi": "d1ec7051-f58f-4ddb-9da8-8debb82cfbea",
+          "sdkVersionName": "4.3.0",
+          "gdpr.consent": true,
+          "user.nonbehavioral": false,
+          "unity.privacy.permissions.all": false,
+          "unity.privacy.permissions.gameExp": false,
+          "unity.privacy.permissions.ads": false,
+          "unity.privacy.permissions.external": false
+        }
+    """.trimIndent().toJson().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
+    app.post("https://configv2.unityads.unity3d.com/privacy/4519473/state", requestBody = unityData).text
+    listOf(1..4).map {checkCookies(session, configHeaders)}
+    return true
 }
 
 suspend fun getSfServer() = sfServer ?: fetchSfServer().also { sfServer = it }
