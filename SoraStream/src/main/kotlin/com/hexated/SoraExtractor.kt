@@ -2094,7 +2094,7 @@ object SoraExtractor : SoraStream() {
                 .substringBefore("-")
         }
         val res = app.get(fixUrl(iframe, api), verify = false)
-        delay(1000)
+        delay(2000)
         val serverUrl = res.document.selectFirst("script:containsData(pushState)")?.data()?.let {
             """,\s*'([^']+)""".toRegex().find(it)?.groupValues?.get(1)
         } ?: return
