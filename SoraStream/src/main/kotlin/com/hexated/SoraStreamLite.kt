@@ -31,6 +31,7 @@ import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
+import com.hexated.SoraExtractor.invokeFebbox
 import com.hexated.SoraExtractor.invokeOmovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
@@ -53,11 +54,10 @@ class SoraStreamLite : SoraStream() {
 
         argamap(
             {
-                if (!res.isAnime) invokeBlackvid(
-                    res.id,
+                if (!res.isAnime) invokeFebbox(
+                    res.imdbId,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },
@@ -100,7 +100,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeVidSrc(res.id, res.season, res.episode, subtitleCallback, callback)
+                invokeVidSrc(res.id, res.season, res.episode, callback)
             },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
@@ -158,7 +158,6 @@ class SoraStreamLite : SoraStream() {
                     res.imdbId,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },

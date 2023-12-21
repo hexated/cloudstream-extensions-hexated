@@ -103,7 +103,6 @@ object SoraExtractor : SoraStream() {
         id: Int? = null,
         season: Int? = null,
         episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
         val url = if (season == null) {
@@ -1703,7 +1702,6 @@ object SoraExtractor : SoraStream() {
         imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
         val url = if (season == null) {
@@ -2149,8 +2147,8 @@ object SoraExtractor : SoraStream() {
             "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
         }
 
-        val res = request(url)
-        val bytes = res.peekBody(1024 * 512).bytes().also { res.closeQuietly() }
+        val res = request(url).peekBody(1024 * 512)
+        val bytes = res.bytes().also { res.closeQuietly() }
         val data = bytes.decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
         val json = tryParseJson<BlackvidResponses>(data)
 
@@ -2260,7 +2258,6 @@ object SoraExtractor : SoraStream() {
         }
 
         val session = "PHPSESSID=ngr4cudjrimdnhkth30ssohs0n; _csrf=a6ffd7bb7654083fce6df528225a238d0e85aa1fb885dc7638c1259ec1ba0d5ca%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22mTTLiDLjxohs-CpKk0bjRH3HdYMB9uBV%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTime.4.0.1.$unixTime.0.0.0"
-        cinemaCookiesChecker(session)
 
         val headers = mapOf(
             "Cookie" to session,
@@ -2311,6 +2308,35 @@ object SoraExtractor : SoraStream() {
                 )
             )
         }
+
+    }
+
+    suspend fun invokeFebbox(
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val url = if (season == null) {
+            "$febboxAPI/stream/movie/$imdbId.json"
+        } else {
+            "$febboxAPI/stream/series/$imdbId:$season:$episode.json"
+        }
+
+        val res = request(url).body
+        val data = res.string().also { res.closeQuietly() }
+        val video = tryParseJson<FebboxResponse>(data)?.streams?.find { it.url?.startsWith("https://www.febbox.com") == true }?.url
+
+        callback.invoke(
+            ExtractorLink(
+                "Febbox",
+                "Febbox",
+                video ?: return,
+                "",
+                Qualities.P1080.value,
+                INFER_TYPE
+            )
+        )
 
     }
 

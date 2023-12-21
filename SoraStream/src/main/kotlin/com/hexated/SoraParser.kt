@@ -462,3 +462,11 @@ data class AoneroomResponse(
         }
     }
 }
+
+data class FebboxResponse(
+    @JsonProperty("streams") val streams: ArrayList<Streams>? = arrayListOf(),
+) {
+    data class Streams(
+        @JsonProperty("url") val url: String? = null,
+    )
+}

@@ -648,7 +648,7 @@ suspend fun getTvMoviesServer(url: String, season: Int?, episode: Int?): Pair<St
     }
 }
 
-suspend fun cinemaCookiesChecker(session: String) = cinemaCookiesChecker ?: fetchCinemaCookiesChecker(session).also { cinemaCookiesChecker = it }
+suspend fun refreshCinemaCookies(session: String) = cinemaCookiesChecker ?: fetchCinemaCookiesChecker(session).also { cinemaCookiesChecker = it }
 
 suspend fun fetchCinemaCookiesChecker(session: String): Boolean {
     val wiwiApi = base64Decode("aHR0cHM6Ly9jaW5lbWEud2l3aWNlbnRlci5jb20=")

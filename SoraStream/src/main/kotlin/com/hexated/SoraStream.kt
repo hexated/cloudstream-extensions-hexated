@@ -45,6 +45,7 @@ import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
+import com.hexated.SoraExtractor.invokeFebbox
 import com.hexated.SoraExtractor.invokeOmovies
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
@@ -115,6 +116,7 @@ open class SoraStream : TmdbProvider() {
         const val blackvidAPI = "https://prod.api.blackvid.space"
         const val showflixAPI = "https://showflix.space"
         const val aoneroomAPI = "https://api3.aoneroom.com"
+        const val febboxAPI = BuildConfig.FEBBOX_API
 
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
@@ -362,11 +364,10 @@ open class SoraStream : TmdbProvider() {
 
         argamap(
             {
-                if (!res.isAnime) invokeBlackvid(
-                    res.id,
+                if (!res.isAnime) invokeFebbox(
+                    res.imdbId,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },
@@ -392,7 +393,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeVidSrc(res.id, res.season, res.episode, subtitleCallback, callback)
+                invokeVidSrc(res.id, res.season, res.episode, callback)
             },
             {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
@@ -567,7 +568,6 @@ open class SoraStream : TmdbProvider() {
                     res.imdbId,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },
