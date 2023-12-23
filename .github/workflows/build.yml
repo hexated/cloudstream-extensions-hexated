@@ -26,8 +26,8 @@ jobs:
       - name: Checkout builds
         uses: actions/checkout@master
         with:
-          ref: "builds"
-          path: "builds"
+          ref: "rebuilds"
+          path: "rebuilds"
 
       - name: Clean old builds
         run: rm $GITHUB_WORKSPACE/builds/*.cs3 || true
@@ -76,8 +76,8 @@ jobs:
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
           ./gradlew make makePluginsJson
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
-          cp build/plugins.json $GITHUB_WORKSPACE/builds
+          cp **/build/*.cs3 $GITHUB_WORKSPACE/rebuilds
+          cp build/plugins.json $GITHUB_WORKSPACE/rebuilds
 
       - name: Push builds
         run: |
