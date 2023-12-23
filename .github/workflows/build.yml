@@ -30,7 +30,7 @@ jobs:
           path: "rebuilds"
 
       - name: Clean old builds
-        run: rm $GITHUB_WORKSPACE/builds/*.cs3 || true
+        run: rm $GITHUB_WORKSPACE/rebuilds/*.cs3 || true
 
       - name: Setup JDK 11
         uses: actions/setup-java@v1
