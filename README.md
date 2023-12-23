@@ -1,15 +1,12 @@
 <div align="center">
 
 # *X O R*
-Fork de Hexated-Extensions - SoraStream y StremioX.
+Fork de Hexated-Extensions: _SoraStream_ y _StremioX_.
 
 ##
 
 <!-- Badges -->
 <p>
-  <a href="https://github.com/AmineSoukara/EgyBest-Api/graphs/contributors">
-    <img src="https://img.shields.io/github/contributors/hexated/cloudstream-extensions-hexated" alt="contributors" />
-  </a>
   <a href="">
     <img src="https://img.shields.io/github/last-commit/VectorHex/Xor" alt="last update" />
   </a>
