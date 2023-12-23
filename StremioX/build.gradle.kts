@@ -6,7 +6,7 @@ cloudstream {
     language = "en"
     // All of these properties are optional, you can safely remove them
 
-     description = "[!] Requires Setup \n- StremioX allows you to use stream addons \n- StremioC allows you to use catalog addons"
+     description = "[!] Requires Setup \n- StremioX allows you to use stream addons"
      authors = listOf("Hexated")
 
     /**
@@ -22,5 +22,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://raw.githubusercontent.com/hexated/cloudstream-extensions-hexated/master/StremioX/icon.png"
+    iconUrl = "https://raw.githubusercontent.com/VectorHex/Xor/master/StremioX/icon.png"
 }
