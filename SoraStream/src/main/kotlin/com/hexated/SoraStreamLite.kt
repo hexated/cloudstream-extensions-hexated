@@ -57,6 +57,7 @@ class SoraStreamLite : SoraStream() {
                     res.title,
                     res.year,
                     res.season,
+                    res.lastSeason,
                     res.episode,
                     callback
                 )

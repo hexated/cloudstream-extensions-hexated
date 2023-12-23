@@ -2,6 +2,12 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
+data class ShowboxMedia(
+    val url: String,
+    val title: String,
+    val infor: String,
+    val type: String,
+)
 data class FDMovieIFrame(
     val link: String,
     val quality: String,

@@ -2269,9 +2269,11 @@ object SoraExtractor : SoraStream() {
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
+        lastSeason: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
+
         val showboxApi = "https://www.showbox.media"
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
@@ -2281,16 +2283,31 @@ object SoraExtractor : SoraStream() {
             ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         ).parsed<String>().let { Jsoup.parse(it) }
 
-        val mediaId = res.select("a.nav-item").find {
-            it.select("h3.film-name").text()
-                .equals(title, true) && it.select("div.film-infor > span:first-child").text()
-                .contains(if (season == null) "$year" else "SS") && it.select("div.film-infor > span:last-child")
-                .text()
-                .equals(if (season == null) "Movie" else "TV")
-        }?.attr("href")?.substringAfterLast("/")
+        val mediaRes = res.select("a.nav-item").map {
+            ShowboxMedia(
+                it.attr("href"),
+                it.select("h3.film-name").text(),
+                it.select("div.film-infor > span:first-child").text(),
+                it.select("div.film-infor > span:last-child").text(),
+            )
+        }
+
+        val media = mediaRes.find {
+            it.title.equals(
+                title,
+                true
+            ) && it.infor == if (season == null) "$year" else "SS $lastSeason" && it.type == if (season == null) "Movie" else "TV"
+        } ?: mediaRes.find {
+            it.title.equals(
+                title,
+                true
+            ) && it.infor.contains(if (season == null) "$year" else "SS") && it.type == if (season == null) "Movie" else "TV"
+        }
+
+        val shareId = media?.url?.substringAfterLast("/") ?: return
 
         val shareKey =
-            app.get("$showboxApi/index/share_link?id=${mediaId ?: return}&type=${if (season == null) "1" else "2"}")
+            app.get("$showboxApi/index/share_link?id=${shareId}&type=${if (season == null) "1" else "2"}")
                 .parsedSafe<FebboxResponse>()?.data?.link?.substringAfterLast("/")
 
         val headers = mapOf("Accept-Language" to "en")
