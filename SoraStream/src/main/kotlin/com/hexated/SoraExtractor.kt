@@ -2277,18 +2277,14 @@ object SoraExtractor : SoraStream() {
         val showboxApi = "https://www.showbox.media"
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
 
-        val res = app.post(
-            "$showboxApi/search/autocomplate2", data = mapOf(
-                "keyword" to "$title"
-            ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-        ).parsed<String>().let { Jsoup.parse(it) }
+        val res = app.get("$showboxApi/search?keyword=$title").document
 
-        val mediaRes = res.select("a.nav-item").map {
+        val mediaRes = res.select("div.film_list-wrap div.flw-item").map {
             ShowboxMedia(
-                it.attr("href"),
-                it.select("h3.film-name").text(),
-                it.select("div.film-infor > span:first-child").text(),
-                it.select("div.film-infor > span:last-child").text(),
+                it.select("h2.film-name a").attr("href"),
+                it.select("h2.film-name a").text(),
+                it.select("div.fd-infor > span:first-child").text(),
+                it.select("div.fd-infor > span:last-child").text(),
             )
         }
 
@@ -2331,7 +2327,7 @@ object SoraExtractor : SoraStream() {
             callback.invoke(
                 ExtractorLink(
                     "Febbox",
-                    "Febbox [Server $index]",
+                    "Febbox [Server ${index + 1}]",
                     "$febboxAPI/hls/main/${fileList.oss_fid}.m3u8",
                     "",
                     getIndexQuality(fileList.file_name),
