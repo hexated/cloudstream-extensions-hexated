@@ -10,8 +10,8 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.net.URI
 
-class IdlixProvider : MainAPI() {
-    override var mainUrl = "https://tv.idlixplus.net"
+class IdlixProvider : MainAPI() 
+    override var mainUrl = "https://tv5.idlixplus.net"
     private var directUrl = mainUrl
     override var name = "Idlix"
     override val hasMainPage = true
