@@ -334,26 +334,6 @@ data class EMovieTraks(
     @JsonProperty("label") val label: String? = null,
 )
 
-data class BlackvidSubtitles(
-    @JsonProperty("language") val language: String? = null,
-    @JsonProperty("url") val url: String? = null,
-)
-
-data class BlackvidSource(
-    @JsonProperty("quality") var quality: String? = null,
-    @JsonProperty("url") var url: String? = null,
-)
-
-data class BlackvidSources(
-    @JsonProperty("label") var label: String? = null,
-    @JsonProperty("sources") var sources: ArrayList<BlackvidSource> = arrayListOf()
-)
-
-data class BlackvidResponses(
-    @JsonProperty("sources") var sources: ArrayList<BlackvidSources> = arrayListOf(),
-    @JsonProperty("subtitles") var subtitles: ArrayList<BlackvidSubtitles> = arrayListOf()
-)
-
 data class ShowflixResultsMovies(
     @JsonProperty("movieName") val movieName: String? = null,
     @JsonProperty("streamwish") val streamwish: String? = null,
@@ -464,9 +444,16 @@ data class AoneroomResponse(
 }
 
 data class FebboxResponse(
-    @JsonProperty("streams") val streams: ArrayList<Streams>? = arrayListOf(),
+    @JsonProperty("data") val data: Data? = null,
 ) {
-    data class Streams(
-        @JsonProperty("url") val url: String? = null,
-    )
+    data class Data(
+        @JsonProperty("link") val link: String? = null,
+        @JsonProperty("file_list") val file_list: ArrayList<FileList>? = arrayListOf(),
+    ) {
+        data class FileList(
+            @JsonProperty("fid") val fid: Long? = null,
+            @JsonProperty("file_name") val file_name: String? = null,
+            @JsonProperty("oss_fid") val oss_fid: Long? = null,
+        )
+    }
 }

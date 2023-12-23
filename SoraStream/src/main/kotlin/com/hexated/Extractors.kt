@@ -124,8 +124,8 @@ open class Playm4u : ExtractorApi() {
         return "$this\\s*=\\s*[\"'](\\S+)[\"'];".toRegex().find(data)?.groupValues?.get(1) ?: ""
     }
 
-    private fun String.toLanguage() : String {
-        return if(this == "EN") "English" else this
+    private fun String.toLanguage(): String {
+        return if (this == "EN") "English" else this
     }
 
     data class Source(
@@ -209,7 +209,10 @@ open class VCloud : ExtractorApi() {
             )
         ).document.select("p.text-success ~ a").apmap {
             val link = it.attr("href")
-            if (link.contains("workers.dev") || it.text().contains("[Server : 1]") || link.contains("/dl.php?")) {
+            if (link.contains("workers.dev") || it.text().contains("[Server : 1]") || link.contains(
+                    "/dl.php?"
+                )
+            ) {
                 callback.invoke(
                     ExtractorLink(
                         this.name,
@@ -221,7 +224,7 @@ open class VCloud : ExtractorApi() {
                     )
                 )
             } else {
-                val direct = if(link.contains("gofile.io")) app.get(link).url else link
+                val direct = if (link.contains("gofile.io")) app.get(link).url else link
                 loadExtractor(direct, referer, subtitleCallback, callback)
             }
         }
@@ -247,12 +250,14 @@ open class Streamruby : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         val id = "/e/(\\w+)".toRegex().find(url)?.groupValues?.get(1) ?: return
-        val response = app.post("$mainUrl/dl", data = mapOf(
-            "op" to "embed",
-            "file_code" to id,
-            "auto" to "1",
-            "referer" to "",
-        ), referer = referer)
+        val response = app.post(
+            "$mainUrl/dl", data = mapOf(
+                "op" to "embed",
+                "file_code" to id,
+                "auto" to "1",
+                "referer" to "",
+            ), referer = referer
+        )
         val script = if (!getPacked(response.text).isNullOrEmpty()) {
             getAndUnpack(response.text)
         } else {
@@ -282,17 +287,25 @@ open class Uploadever : ExtractorApi() {
     ) {
         var res = app.get(url, referer = referer).document
         val formUrl = res.select("form").attr("action")
-        var formData = res.select("form input").associate { it.attr("name") to it.attr("value") }.filterKeys { it != "go" }
+        var formData = res.select("form input").associate { it.attr("name") to it.attr("value") }
+            .filterKeys { it != "go" }
             .toMutableMap()
         val formReq = app.post(formUrl, data = formData)
 
         res = formReq.document
-        val captchaKey = res.select("script[src*=https://www.google.com/recaptcha/api.js?render=]").attr("src").substringAfter("render=")
+        val captchaKey =
+            res.select("script[src*=https://www.google.com/recaptcha/api.js?render=]").attr("src")
+                .substringAfter("render=")
         val token = getCaptchaToken(url, captchaKey, referer = "$mainUrl/")
-        formData = res.select("form#down input").associate { it.attr("name") to it.attr("value") }.toMutableMap()
+        formData = res.select("form#down input").associate { it.attr("name") to it.attr("value") }
+            .toMutableMap()
         formData["adblock_detected"] = "0"
         formData["referer"] = url
-        res = app.post(formReq.url, data = formData + mapOf("g-recaptcha-response" to "$token"), cookies = formReq.cookies).document
+        res = app.post(
+            formReq.url,
+            data = formData + mapOf("g-recaptcha-response" to "$token"),
+            cookies = formReq.cookies
+        ).document
         val video = res.select("div.download-button a.btn.btn-dow.recaptchav2").attr("href")
 
         callback.invoke(
@@ -325,30 +338,13 @@ open class Netembed : ExtractorApi() {
         val script = getAndUnpack(response.text)
         val m3u8 = Regex("((https:|http:)//.*\\.m3u8)").find(script)?.groupValues?.getOrNull(1) ?: return
 
-        if(m3u8.startsWith("https://www.febbox.com")) {
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    m3u8,
-                    "$mainUrl/",
-                    getQuality(m3u8),
-                    INFER_TYPE
-                )
-            )
-        } else {
+        if (!m3u8.startsWith("https://www.febbox.com")) {
             M3u8Helper.generateM3u8(
                 this.name,
                 m3u8,
                 "$mainUrl/",
             ).forEach(callback)
         }
-    }
-
-    private suspend fun getQuality(url: String) : Int {
-        val res = app.get(url, referer = "$mainUrl/").text
-        val regex = "#quality:\\s*(\\S+)".toRegex().find(res)?.groupValues?.get(1)
-        return getQualityFromName(regex)
     }
 }
 

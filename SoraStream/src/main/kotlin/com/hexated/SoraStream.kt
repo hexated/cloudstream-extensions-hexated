@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAoneroom
-import com.hexated.SoraExtractor.invokeBlackvid
 import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
@@ -113,10 +112,9 @@ open class SoraStream : TmdbProvider() {
         const val dramadayAPI = "https://dramaday.me"
         const val animetoshoAPI = "https://animetosho.org"
         const val watchflxAPI = "https://watchflx.tv"
-        const val blackvidAPI = "https://prod.api.blackvid.space"
         const val showflixAPI = "https://showflix.space"
         const val aoneroomAPI = "https://api3.aoneroom.com"
-        const val febboxAPI = BuildConfig.FEBBOX_API
+        const val febboxAPI = "https://www.febbox.com"
 
         const val fdMoviesAPI = "https://freedrivemovie.lol"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
@@ -364,8 +362,9 @@ open class SoraStream : TmdbProvider() {
 
         argamap(
             {
-                if (!res.isAnime) invokeFebbox(
-                    res.imdbId,
+                invokeFebbox(
+                    res.title,
+                    res.year,
                     res.season,
                     res.episode,
                     callback

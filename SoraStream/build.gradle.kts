@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
 // use an integer for version numbers
-version = 207
+version = 208
 
 android {
     defaultConfig {
@@ -9,7 +9,6 @@ android {
         properties.load(project.rootProject.file("local.properties").inputStream())
 
         buildConfigField("String", "TMDB_API", "\"${properties.getProperty("TMDB_API")}\"")
-        buildConfigField("String", "FEBBOX_API", "\"${properties.getProperty("FEBBOX_API")}\"")
         buildConfigField("String", "OMOVIES_API", "\"${properties.getProperty("OMOVIES_API")}\"")
         buildConfigField("String", "CINEMATV_API", "\"${properties.getProperty("CINEMATV_API")}\"")
         buildConfigField("String", "SFMOVIES_API", "\"${properties.getProperty("SFMOVIES_API")}\"")

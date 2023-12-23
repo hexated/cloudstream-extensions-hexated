@@ -1354,14 +1354,14 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        val slugTitle = title.createSlug()
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-        val req = app.get("$m4uhdAPI/search/${title.createSlug()}.html")
+        val req = app.get("$m4uhdAPI/search/$slugTitle.html")
         val referer = getBaseUrl(req.url)
         val scriptData = req.document.select("div.row div.item").map { ele ->
             Triple(
-                ele.select("div.tiptitle p").text(),
-                ele.select("div.jtip-top div:last-child").text().substringBefore("–")
-                    .filter { it.isDigit() },
+                ele.select("div.tiptitle p").text().substringBefore("(").trim().createSlug(),
+                ele.select("div.jtip-top div:last-child").text().filter { it.isDigit() },
                 ele.selectFirst("a")?.attr("href")
             )
         }
@@ -1370,7 +1370,7 @@ object SoraExtractor : SoraStream() {
             scriptData.firstOrNull()
         } else {
             scriptData.find {
-                it.first.contains(Regex("(?i)$title \\($year\\s?\\)")) && if (season != null) it.third?.contains(
+                it.first.equals(slugTitle) && it.second == "$year" && if (season != null) it.third?.contains(
                     "-tvshow-"
                 ) == true else it.third?.contains("-movie-") == true
             }
@@ -2133,52 +2133,6 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeBlackvid(
-        tmdbId: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val key = "b6055c533c19131a638c3d2299d525d5ec08a814"
-        val url = if (season == null) {
-            "$blackvidAPI/v3/movie/sources/$tmdbId?key=$key"
-        } else {
-            "$blackvidAPI/v3/tv/sources/$tmdbId/$season/$episode?key=$key"
-        }
-
-        val res = request(url).peekBody(1024 * 512)
-        val bytes = res.bytes().also { res.closeQuietly() }
-        val data = bytes.decrypt("2378f8e4e844f2dc839ab48f66e00acc2305a401")
-        val json = tryParseJson<BlackvidResponses>(data)
-
-        json?.sources?.map { source ->
-            source.sources.map s@{ s ->
-                callback.invoke(
-                    ExtractorLink(
-                        "Blackvid",
-                        "Blackvid${source.label}",
-                        s.url ?: return@s,
-                        "https://blackvid.space/",
-                        if (s.quality.equals("4k")) Qualities.P2160.value else s.quality?.toIntOrNull()
-                            ?: Qualities.P1080.value,
-                        INFER_TYPE
-                    )
-                )
-            }
-        }
-
-        json?.subtitles?.map { sub ->
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    sub.language.takeIf { it?.isNotEmpty() == true } ?: return@map,
-                    sub.url ?: return@map,
-                )
-            )
-        }
-
-    }
-
     suspend fun invokeShowflix(
         title: String? = null,
         year: Int? = null,
@@ -2312,31 +2266,62 @@ object SoraExtractor : SoraStream() {
     }
 
     suspend fun invokeFebbox(
-        imdbId: String? = null,
+        title: String? = null,
+        year: Int? = null,
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val url = if (season == null) {
-            "$febboxAPI/stream/movie/$imdbId.json"
+        val showboxApi = "https://www.showbox.media"
+        val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
+
+        val res = app.post(
+            "$showboxApi/search/autocomplate2", data = mapOf(
+                "keyword" to "$title"
+            ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+        ).parsed<String>().let { Jsoup.parse(it) }
+
+        val mediaId = res.select("a.nav-item").find {
+            it.select("h3.film-name").text()
+                .equals(title, true) && it.select("div.film-infor > span:first-child").text()
+                .contains(if (season == null) "$year" else "SS") && it.select("div.film-infor > span:last-child")
+                .text()
+                .equals(if (season == null) "Movie" else "TV")
+        }?.attr("href")?.substringAfterLast("/")
+
+        val shareKey =
+            app.get("$showboxApi/index/share_link?id=${mediaId ?: return}&type=${if (season == null) "1" else "2"}")
+                .parsedSafe<FebboxResponse>()?.data?.link?.substringAfterLast("/")
+
+        val headers = mapOf("Accept-Language" to "en")
+        val shareRes = app.get("$febboxAPI/file/file_share_list?share_key=${shareKey ?: return}", headers = headers)
+            .parsedSafe<FebboxResponse>()?.data
+
+        val fids = if (season == null) {
+            shareRes?.file_list
         } else {
-            "$febboxAPI/stream/series/$imdbId:$season:$episode.json"
+            val parentId = shareRes?.file_list?.find { it.file_name.equals("season $season", true) }?.fid
+            app.get("$febboxAPI/file/file_share_list?share_key=${shareKey}&parent_id=$parentId&page=1", headers = headers)
+                .parsedSafe<FebboxResponse>()?.data?.file_list?.filter {
+                    it.file_name?.contains(
+                        "s${seasonSlug}e${episodeSlug}",
+                        true
+                    ) == true
+                }
         }
 
-        val res = request(url).body
-        val data = res.string().also { res.closeQuietly() }
-        val video = tryParseJson<FebboxResponse>(data)?.streams?.find { it.url?.startsWith("https://www.febbox.com") == true }?.url
-
-        callback.invoke(
-            ExtractorLink(
-                "Febbox",
-                "Febbox",
-                video ?: return,
-                "",
-                Qualities.P1080.value,
-                INFER_TYPE
+        fids?.mapIndexed { index, fileList ->
+            callback.invoke(
+                ExtractorLink(
+                    "Febbox",
+                    "Febbox [Server $index]",
+                    "$febboxAPI/hls/main/${fileList.oss_fid}.m3u8",
+                    "",
+                    getIndexQuality(fileList.file_name),
+                    isM3u8 = true
+                )
             )
-        )
+        }
 
     }
 

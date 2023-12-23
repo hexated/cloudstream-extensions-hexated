@@ -9,7 +9,7 @@ import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
     override var mainUrl = "https://tv6.lk21official.wiki"
-    private var seriesUrl = "https://tv8.nontondrama.click/"
+    private var seriesUrl = "https://tv8.nontondrama.click"
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"
@@ -40,6 +40,7 @@ class LayarKacaProvider : MainAPI() {
     }
 
     private suspend fun getProperLink(url: String): String? {
+        if(url.startsWith(seriesUrl)) return url
         val res = app.get(url).document
         return if (res.select("title").text().contains("- Nontondrama", true)) {
             res.selectFirst("div#content a")?.attr("href")

@@ -3,7 +3,6 @@ package com.hexated
 import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAoneroom
-import com.hexated.SoraExtractor.invokeBlackvid
 import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeDoomovies
 import com.hexated.SoraExtractor.invokeDramaday
@@ -54,8 +53,9 @@ class SoraStreamLite : SoraStream() {
 
         argamap(
             {
-                if (!res.isAnime) invokeFebbox(
-                    res.imdbId,
+                invokeFebbox(
+                    res.title,
+                    res.year,
                     res.season,
                     res.episode,
                     callback
