@@ -79,11 +79,6 @@ jobs:
           cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
           cp build/plugins.json $GITHUB_WORKSPACE/builds
 
-      - name: Move Kuramanime
-        run: |
-          rm $GITHUB_WORKSPACE/builds/KuramanimeProvider.cs3 || true
-          cp $GITHUB_WORKSPACE/builds/stored/KuramanimeProvider.cs3 $GITHUB_WORKSPACE/builds
-
       - name: Push builds
         run: |
           cd $GITHUB_WORKSPACE/builds
