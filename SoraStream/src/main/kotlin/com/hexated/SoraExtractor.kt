@@ -2297,7 +2297,7 @@ object SoraExtractor : SoraStream() {
             it.title.equals(
                 title,
                 true
-            ) && it.infor.contains(if (season == null) "$year" else "SS") && it.type == if (season == null) "Movie" else "TV"
+            ) && it.infor.equals(if (season == null) "$year" else "SS ${lastSeason?.minus(1)}") && it.type == if (season == null) "Movie" else "TV"
         }
 
         val shareId = media?.url?.substringAfterLast("/") ?: return
