@@ -42,5 +42,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://raw.githubusercontent.com/hexated/cloudstream-extensions-hexated/master/SoraStream/Icon.png"
+    iconUrl = "https://raw.githubusercontent.com/VectorHex/Xor/master/SoraStream/Icon.png"
 }
