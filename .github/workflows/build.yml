@@ -26,11 +26,11 @@ jobs:
       - name: Checkout builds
         uses: actions/checkout@master
         with:
-          ref: "rebuilds"
-          path: "rebuilds"
+          ref: "builds"
+          path: "builds"
 
       - name: Clean old builds
-        run: rm $GITHUB_WORKSPACE/rebuilds/*.cs3 || true
+        run: rm $GITHUB_WORKSPACE/builds/*.cs3 || true
 
       - name: Setup JDK 11
         uses: actions/setup-java@v1
@@ -76,8 +76,8 @@ jobs:
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
           ./gradlew make makePluginsJson
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/rebuilds
-          cp build/plugins.json $GITHUB_WORKSPACE/rebuilds
+          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
+          cp build/plugins.json $GITHUB_WORKSPACE/builds
 
       - name: Push builds
         run: |
