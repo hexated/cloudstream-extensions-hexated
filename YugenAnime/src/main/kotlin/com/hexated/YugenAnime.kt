@@ -13,7 +13,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class YugenAnime : MainAPI() {
-    override var mainUrl = "https://yugenanime.sx/"
+    override var mainUrl = "https://yugenanime.sx"
     override var name = "YugenAnime"
     override val hasMainPage = true
     override var lang = "en"
