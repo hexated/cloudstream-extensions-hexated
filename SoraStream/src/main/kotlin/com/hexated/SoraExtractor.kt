@@ -2296,7 +2296,7 @@ object SoraExtractor : SoraStream() {
             it.title.equals(
                 title,
                 true
-            ) && it.infor == if (season == null) "$year" else "SS $lastSeason" && it.type == if (season == null) "Movie" else "TV"
+            ) && it.infor.equals(if (season == null) "$year" else "SS $lastSeason") && it.type == if (season == null) "Movie" else "TV"
         } ?: mediaRes.find {
             it.title.equals(
                 title,
