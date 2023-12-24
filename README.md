@@ -11,7 +11,7 @@ Fork de Hexated-Extensions: _SoraStream_ y _StremioX_.
   <a href="https://github.com/hexated/cloudstream-extensions-hexated/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/VectorHex/xor.svg" alt="license" />
   </a>
-  
+  •
   <a href="">
     <img src="https://img.shields.io/github/last-commit/VectorHex/Xor/main" alt="last update" />
   </a>
