@@ -8,6 +8,7 @@ cloudstream {
 
      description = "[!] Requires Setup \n- StremioX allows you to use stream addons"
      authors = listOf("Hexated")
+     // Fork by VectorHex
 
     /**
      * Status int as the following:
