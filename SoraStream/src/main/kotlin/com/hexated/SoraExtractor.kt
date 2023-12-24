@@ -14,7 +14,6 @@ import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.internal.closeQuietly
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.select.Elements
@@ -321,6 +320,52 @@ object SoraExtractor : SoraStream() {
             )
         }
 
+    }
+
+    suspend fun invokeWatchCartoon(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val fixTitle = title.createSlug()
+        val url = if (season == null) {
+            "$watchCartoonAPI/movies/$fixTitle-$year"
+        } else {
+            "$watchCartoonAPI/episode/$fixTitle-season-$season-episode-$episode"
+        }
+
+        val req = app.get(url)
+        val host = getBaseUrl(req.url)
+        val doc = req.document
+
+        val id = doc.select("link[rel=shortlink]").attr("href").substringAfterLast("=")
+        doc.select("div.form-group.list-server option").apmap {
+            val server = app.get(
+                "$host/ajax-get-link-stream/?server=${it.attr("value")}&filmId=$id",
+                headers = mapOf(
+                    "X-Requested-With" to "XMLHttpRequest"
+                )
+            ).text
+            loadExtractor(server, "$host/", subtitleCallback) { link ->
+                if (link.quality == Qualities.Unknown.value) {
+                    callback.invoke(
+                        ExtractorLink(
+                            "WatchCartoon",
+                            "WatchCartoon",
+                            link.url,
+                            link.referer,
+                            Qualities.P720.value,
+                            link.type,
+                            link.headers,
+                            link.extractorData
+                        )
+                    )
+                }
+            }
+        }
     }
 
     suspend fun invokeNetmovies(
@@ -1702,6 +1747,7 @@ object SoraExtractor : SoraStream() {
         imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
         val url = if (season == null) {
@@ -1717,7 +1763,7 @@ object SoraExtractor : SoraStream() {
         }.apmap {
             when (it.second) {
                 "Player F" -> {
-                    invokeSmashyFfix(it.second, it.first, url, callback)
+                    invokeSmashyFfix(it.second, it.first, url, subtitleCallback, callback)
                 }
 
                 "Player D (Hindi)" -> {

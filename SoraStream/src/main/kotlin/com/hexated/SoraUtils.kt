@@ -402,6 +402,7 @@ suspend fun invokeSmashyFfix(
     name: String,
     url: String,
     ref: String,
+    subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit,
 ) {
     val json = app.get(url, referer = ref, headers = mapOf("X-Requested-With" to "XMLHttpRequest"))
@@ -412,6 +413,17 @@ suspend fun invokeSmashyFfix(
             it,
             ""
         ).forEach(callback)
+    }
+
+    json?.subtitleUrls?.split(",")?.map { sub ->
+        val lang = "\\[(.*)]".toRegex().find(sub)?.groupValues?.get(1)
+        val subUrl = sub.replace("[$lang]", "").trim()
+        subtitleCallback.invoke(
+            SubtitleFile(
+                lang ?: return@map,
+                subUrl
+            )
+        )
     }
 
 }

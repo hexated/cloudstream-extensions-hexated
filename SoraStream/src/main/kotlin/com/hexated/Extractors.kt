@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
+import com.lagradost.cloudstream3.extractors.Jeniusplay
 import com.lagradost.cloudstream3.extractors.Pixeldrain
 import com.lagradost.cloudstream3.extractors.Vidplay
 import com.lagradost.cloudstream3.utils.*
@@ -409,4 +410,9 @@ class Vidplay2 : Vidplay() {
 class Flaswish : Filesim() {
     override val name = "Flaswish"
     override var mainUrl = "https://flaswish.com"
+}
+
+class Comedyshow : Jeniusplay() {
+    override val mainUrl = "https://comedyshow.to"
+    override val name = "Comedyshow"
 }
