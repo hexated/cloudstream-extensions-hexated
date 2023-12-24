@@ -4,7 +4,7 @@
   <a href="https://hits.seeyoufarm.com"><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FVectorHex%2FXor&count_bg=%23C83D3D&title_bg=%2344546A&icon=aiqfome.svg&icon_color=%23FFFFFF&title=hits&edge_flat=false"/>
   </a>
   <a href="">
-    <img src="https://img.shields.io/github/last-commit/VectorHex/Xor/builds" alt="last update" />
+    <img src="https://img.shields.io/github/last-commit/VectorHex/Xor/main" alt="last update" />
   </a>
   </p>
   
