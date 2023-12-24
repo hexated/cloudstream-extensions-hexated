@@ -39,6 +39,7 @@ subprojects {
         setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/VectorHex/Xor")
 
         authors = listOf("Hexated")
+          // Fork by VectorHex
     }
 
     android {
