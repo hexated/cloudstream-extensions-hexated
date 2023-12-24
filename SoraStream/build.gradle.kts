@@ -26,7 +26,7 @@ cloudstream {
 
      description = "#1 best extension based on MultiAPI"
      authors = listOf("Hexated", "Sora")
-       // Fork by VectorHex
+     // Fork by VectorHex
       
     /**
      * Status int as the following:
