@@ -46,6 +46,7 @@ import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeFebbox
 import com.hexated.SoraExtractor.invokeOmovies
+import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
@@ -115,8 +116,9 @@ open class SoraStream : TmdbProvider() {
         const val showflixAPI = "https://showflix.space"
         const val aoneroomAPI = "https://api3.aoneroom.com"
         const val febboxAPI = "https://www.febbox.com"
+        const val watchCartoonAPI = "https://www1.watchcartoononline.bz"
 
-        const val fdMoviesAPI = "https://freedrivemovie.lol"
+        const val fdMoviesAPI = "https://freedrivemovie.com"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val hdmovies4uAPI = "https://hdmovies4u.band"
@@ -451,6 +453,16 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
+                if (!res.isAnime && res.isCartoon) invokeWatchCartoon(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 if (!res.isAnime) invokeVidsrcto(
                     res.imdbId,
                     res.season,
@@ -568,6 +580,7 @@ open class SoraStream : TmdbProvider() {
                     res.imdbId,
                     res.season,
                     res.episode,
+                    subtitleCallback,
                     callback
                 )
             },

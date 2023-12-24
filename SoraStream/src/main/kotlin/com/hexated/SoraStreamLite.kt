@@ -32,6 +32,7 @@ import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeFebbox
 import com.hexated.SoraExtractor.invokeOmovies
+import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.SubtitleFile
@@ -107,6 +108,16 @@ class SoraStreamLite : SoraStream() {
                 invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
             },
             {
+                if (!res.isAnime && res.isCartoon) invokeWatchCartoon(
+                    res.title,
+                    res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
                 if (res.isAnime) invokeAnimes(
                     res.title,
                     res.epsTitle,
@@ -159,6 +170,7 @@ class SoraStreamLite : SoraStream() {
                     res.imdbId,
                     res.season,
                     res.episode,
+                    subtitleCallback,
                     callback
                 )
             },
