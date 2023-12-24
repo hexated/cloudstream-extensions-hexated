@@ -252,9 +252,9 @@ object SoraExtractor : SoraStream() {
         val req = app.get(url)
         val directUrl = getBaseUrl(req.url)
         val iframe = req.document.selectFirst("div.pframe iframe")?.attr("src") ?: return
-        if(!iframe.contains("youtube")) {
+        if (!iframe.contains("youtube")) {
             loadExtractor(iframe, "$directUrl/", subtitleCallback) { link ->
-                if(link.quality == Qualities.Unknown.value) {
+                if (link.quality == Qualities.Unknown.value) {
                     callback.invoke(
                         ExtractorLink(
                             link.source,
@@ -1319,7 +1319,7 @@ object SoraExtractor : SoraStream() {
                 }
 
                 type.contains("oiya") || type.contains("rarbgx") -> {
-                    val oiyaLink = extractOiya(fdLink ?: return@apmap null, qualities)
+                    val oiyaLink = extractOiya(fdLink ?: return@apmap null)
                     if (oiyaLink?.contains("gdtot") == true) {
                         val gdBotLink = extractGdbot(oiyaLink)
                         extractGdflix(gdBotLink ?: return@apmap null)
@@ -2211,7 +2211,8 @@ object SoraExtractor : SoraStream() {
             "$cinemaTvAPI/shows/play/$id-$slug-$year"
         }
 
-        val session = "PHPSESSID=ngr4cudjrimdnhkth30ssohs0n; _csrf=a6ffd7bb7654083fce6df528225a238d0e85aa1fb885dc7638c1259ec1ba0d5ca%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22mTTLiDLjxohs-CpKk0bjRH3HdYMB9uBV%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTime.4.0.1.$unixTime.0.0.0"
+        val session =
+            "PHPSESSID=ngr4cudjrimdnhkth30ssohs0n; _csrf=a6ffd7bb7654083fce6df528225a238d0e85aa1fb885dc7638c1259ec1ba0d5ca%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22mTTLiDLjxohs-CpKk0bjRH3HdYMB9uBV%22%3B%7D; _ga=GA1.1.1195498587.1701871187; _ga_VZD7HJ3WK6=GS1.1.$unixTime.4.0.1.$unixTime.0.0.0"
 
         val headers = mapOf(
             "Cookie" to session,
@@ -2288,16 +2289,16 @@ object SoraExtractor : SoraStream() {
             )
         }
 
-        val media = mediaRes.find {
-            it.title.equals(
-                title,
-                true
-            ) && it.infor.equals(if (season == null) "$year" else "SS $lastSeason") && it.type == if (season == null) "Movie" else "TV"
-        } ?: mediaRes.find {
-            it.title.equals(
-                title,
-                true
-            ) && it.infor.contains(if (season == null) "$year" else "SS") && it.type == if (season == null) "Movie" else "TV"
+        val filter = mediaRes.filter {
+            it.title.equals(title, true) && it.type == if (season == null) "Movie" else "TV"
+        }
+
+        val media = if (season == null) {
+            filter.find { it.infor == "$year" }
+        } else {
+            filter.find { it.infor == "SS $lastSeason" }
+                ?: filter.find { it.infor == "SS ${lastSeason?.minus(1)}" }
+                ?: filter.find { it.infor == "SS 1" }
         }
 
         val shareId = media?.url?.substringAfterLast("/") ?: return
@@ -2307,14 +2308,21 @@ object SoraExtractor : SoraStream() {
                 .parsedSafe<FebboxResponse>()?.data?.link?.substringAfterLast("/")
 
         val headers = mapOf("Accept-Language" to "en")
-        val shareRes = app.get("$febboxAPI/file/file_share_list?share_key=${shareKey ?: return}", headers = headers)
+        val shareRes = app.get(
+            "$febboxAPI/file/file_share_list?share_key=${shareKey ?: return}",
+            headers = headers
+        )
             .parsedSafe<FebboxResponse>()?.data
 
         val fids = if (season == null) {
             shareRes?.file_list
         } else {
-            val parentId = shareRes?.file_list?.find { it.file_name.equals("season $season", true) }?.fid
-            app.get("$febboxAPI/file/file_share_list?share_key=${shareKey}&parent_id=$parentId&page=1", headers = headers)
+            val parentId =
+                shareRes?.file_list?.find { it.file_name.equals("season $season", true) }?.fid
+            app.get(
+                "$febboxAPI/file/file_share_list?share_key=${shareKey}&parent_id=$parentId&page=1",
+                headers = headers
+            )
                 .parsedSafe<FebboxResponse>()?.data?.file_list?.filter {
                     it.file_name?.contains(
                         "s${seasonSlug}e${episodeSlug}",
