@@ -12,7 +12,7 @@ import org.jsoup.Jsoup
 
 class Hdmovie2 : Movierulzhd() {
 
-    override var mainUrl = "https://hdmovie2.li"
+    override var mainUrl = "https://hdmovie2.foo"
     override var name = "Hdmovie2"
     override val mainPage = mainPageOf(
         "trending" to "Trending",
