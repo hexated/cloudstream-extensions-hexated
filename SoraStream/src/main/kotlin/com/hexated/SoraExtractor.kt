@@ -1,6 +1,5 @@
 package com.hexated
 
-import com.hexated.AESGCM.decrypt
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.unixTime
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
@@ -9,7 +8,6 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import com.lagradost.cloudstream3.extractors.helper.AesHelper.cryptoAESHandler
-import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -294,7 +292,7 @@ object SoraExtractor : SoraStream() {
         }?.subjectId
 
         val data = app.get(
-            "$aoneroomAPI/wefeed-mobile-bff/subject-api/resource?subjectId=${subjectId ?: return}&page=1&perPage=10000&all=0&startPosition=1&endPosition=1&pagerMode=0&resolution=480",
+            "$aoneroomAPI/wefeed-mobile-bff/subject-api/resource?subjectId=${subjectId ?: return}&page=1&perPage=20&all=0&startPosition=1&endPosition=1&pagerMode=0&resolution=480",
             headers = headers
         ).parsedSafe<AoneroomResponse>()?.data?.list?.findLast {
             it.se == (season ?: 0) && it.ep == (episode ?: 0)
@@ -1229,7 +1227,7 @@ object SoraExtractor : SoraStream() {
         val selector =
             if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
         val server = app.get(
-            href ?: return, interceptor = CloudflareKiller()
+            href ?: return, interceptor = wpredisInterceptor
         ).document.selectFirst("div.entry-content > $selector")
             ?.attr("href") ?: return
 
@@ -1695,9 +1693,9 @@ object SoraExtractor : SoraStream() {
         imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
+        callback: (ExtractorLink) -> Unit,
+        onionUrl: String = "https://onionplay.se/"
     ) {
-        val onionUrl = "https://onionplay.se/"
         val request = if (season == null) {
             val res = app.get("$flixonAPI/$imdbId", referer = onionUrl)
             if (res.text.contains("BEGIN PGP SIGNED MESSAGE")) app.get(
@@ -2319,13 +2317,10 @@ object SoraExtractor : SoraStream() {
         lastSeason: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
+        showboxApi: String = "https://www.showbox.media"
     ) {
-
-        val showboxApi = "https://www.showbox.media"
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-
-        val res = app.get("$showboxApi/search?keyword=$title").document
-
+        val res = app.get("$showboxApi/search?keyword=$title", interceptor = showboxInterceptor).document
         val mediaRes = res.select("div.film_list-wrap div.flw-item").map {
             ShowboxMedia(
                 it.select("h2.film-name a").attr("href"),
@@ -2350,7 +2345,7 @@ object SoraExtractor : SoraStream() {
         val shareId = media?.url?.substringAfterLast("/") ?: return
 
         val shareKey =
-            app.get("$showboxApi/index/share_link?id=${shareId}&type=${if (season == null) "1" else "2"}")
+            app.get("$showboxApi/index/share_link?id=${shareId}&type=${if (season == null) "1" else "2"}", interceptor = showboxInterceptor)
                 .parsedSafe<FebboxResponse>()?.data?.link?.substringAfterLast("/")
 
         val headers = mapOf("Accept-Language" to "en")
@@ -2417,9 +2412,9 @@ object SoraExtractor : SoraStream() {
         imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
-        callback: (ExtractorLink) -> Unit
+        callback: (ExtractorLink) -> Unit,
+        referer: String = "https://bflix.gs/"
     ) {
-        val referer = "https://bflix.gs/"
         val slug = getEpisodeSlug(season, episode)
         var url =
             if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${slug.second}.mp4"
@@ -2472,63 +2467,45 @@ object SoraExtractor : SoraStream() {
             }
     }
 
-    suspend fun invokeNavy(
+    suspend fun invokeAllMovieland(
         imdbId: String? = null,
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeHindi(navyAPI, navyAPI, imdbId, season, episode, callback)
-    }
-
-    suspend fun invokeMoment(
-        imdbId: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        invokeHindi(momentAPI, "https://hdmovies4u.band", imdbId, season, episode, callback)
-    }
-
-    private suspend fun invokeHindi(
-        host: String? = null,
-        referer: String? = null,
-        imdbId: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        callback: (ExtractorLink) -> Unit,
+        host: String = "https://esh-bostewsom-i-273.site",
     ) {
         val res = app.get(
-            "$host/play/$imdbId", referer = "$referer/"
+            "$host/play/$imdbId", referer = "$allmovielandAPI/"
         ).document.selectFirst("script:containsData(player =)")?.data()?.substringAfter("{")
             ?.substringBefore(";")?.substringBefore(")")
-        val json = tryParseJson<NavyPlaylist>("{${res ?: return}")
+        val json = tryParseJson<AllMovielandPlaylist>("{${res ?: return}")
         val headers = mapOf(
             "X-CSRF-TOKEN" to "${json?.key}"
         )
 
         val serverRes = app.get(
-            fixUrl(json?.file ?: return, navyAPI), headers = headers, referer = "$referer/"
+            fixUrl(json?.file ?: return, host), headers = headers, referer = "$allmovielandAPI/"
         ).text.replace(Regex(""",\s*\[]"""), "")
-        val server = tryParseJson<ArrayList<NavyServer>>(serverRes).let { server ->
+        val servers = tryParseJson<ArrayList<AllMovielandServer>>(serverRes).let { server ->
             if (season == null) {
-                server?.find { it.title == "English" }?.file
+                server?.map { it.file to it.title }
             } else {
-                server?.find { it.id.equals("$season") }?.folder?.find { it.episode.equals("$episode") }?.folder?.find {
-                    it.title.equals(
-                        "English"
-                    )
-                }?.file
+                server?.find { it.id.equals("$season") }?.folder?.find { it.episode.equals("$episode") }?.folder?.map {
+                    it.file to it.title
+                }
             }
         }
 
-        val path = app.post(
-            "${host}/playlist/${server ?: return}.txt", headers = headers, referer = "$referer/"
-        ).text
-
-        M3u8Helper.generateM3u8(
-            if (host == navyAPI) "Navy" else "Moment", path, "${referer}/"
-        ).forEach(callback)
+        servers?.apmap { (server, lang) ->
+            val path = app.post(
+                    "${host}/playlist/${server ?: return@apmap}.txt", headers = headers, referer = "$allmovielandAPI/"
+            ).text
+            M3u8Helper.generateM3u8(
+                    "Allmovieland [$lang]",
+                    path,
+                    "$allmovielandAPI/"
+            ).forEach(callback)
+        }
 
     }
 

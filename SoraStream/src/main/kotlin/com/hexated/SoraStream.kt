@@ -2,6 +2,7 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.hexated.SoraExtractor.invoke2embed
+import com.hexated.SoraExtractor.invokeAllMovieland
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAoneroom
 import com.hexated.SoraExtractor.invokeBollyMaza
@@ -25,7 +26,6 @@ import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
 import com.hexated.SoraExtractor.invokeMoviezAdd
-import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokeRStream
@@ -34,7 +34,6 @@ import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeHdmovies4u
-import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokeSFMovies
@@ -51,6 +50,7 @@ import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -67,6 +67,9 @@ open class SoraStream : TmdbProvider() {
         TvType.TvSeries,
         TvType.Anime,
     )
+
+    val showboxInterceptor by lazy { CloudflareKiller() }
+    val wpredisInterceptor by lazy { CloudflareKiller() }
 
     /** AUTHOR : Hexated & Sora */
     companion object {
@@ -102,12 +105,11 @@ open class SoraStream : TmdbProvider() {
         const val gokuAPI = "https://goku.sx"
         const val zshowAPI = BuildConfig.ZSHOW_API
         const val ridomoviesAPI = "https://ridomovies.pw"
-        const val navyAPI = "https://navy-issue-i-239.site"
         const val emoviesAPI = "https://emovies.si"
         const val multimoviesAPI = "https://multimovies.top"
         const val multimovies2API = "https://multimovies.click"
         const val netmoviesAPI = "https://netmovies.to"
-        const val momentAPI = "https://izzillent-dickstonyx-i-262.site"
+        const val allmovielandAPI = "https://allmovieland.fun"
         const val doomoviesAPI = "https://doomovies.net"
         const val vidsrctoAPI = "https://vidsrc.to"
         const val dramadayAPI = "https://dramaday.me"
@@ -121,7 +123,7 @@ open class SoraStream : TmdbProvider() {
         const val fdMoviesAPI = "https://freedrivemovie.com"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
-        const val hdmovies4uAPI = "https://hdmovies4u.band"
+        const val hdmovies4uAPI = "https://hdmovies4u.dad"
         const val vegaMoviesAPI = "https://vegamovies.dad"
         const val dotmoviesAPI = "https://dotmovies.bet"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
@@ -632,10 +634,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                invokeNavy(res.imdbId, res.season, res.episode, callback)
-            },
-            {
-                invokeMoment(res.imdbId, res.season, res.episode, callback)
+                if (!res.isAnime) invokeAllMovieland(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeEmovies(

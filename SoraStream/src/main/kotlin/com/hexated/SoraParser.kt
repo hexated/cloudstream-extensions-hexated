@@ -269,26 +269,26 @@ data class GokuServer(
     @JsonProperty("data") val data: GokuData? = GokuData(),
 )
 
-data class NavyEpisodeFolder(
+data class AllMovielandEpisodeFolder(
     @JsonProperty("title") val title: String? = null,
     @JsonProperty("id") val id: String? = null,
     @JsonProperty("file") val file: String? = null,
 )
 
-data class NavySeasonFolder(
-    @JsonProperty("episode") val episode: String? = null,
-    @JsonProperty("id") val id: String? = null,
-    @JsonProperty("folder") val folder: ArrayList<NavyEpisodeFolder>? = arrayListOf(),
+data class AllMovielandSeasonFolder(
+        @JsonProperty("episode") val episode: String? = null,
+        @JsonProperty("id") val id: String? = null,
+        @JsonProperty("folder") val folder: ArrayList<AllMovielandEpisodeFolder>? = arrayListOf(),
 )
 
-data class NavyServer(
-    @JsonProperty("title") val title: String? = null,
-    @JsonProperty("id") val id: String? = null,
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("folder") val folder: ArrayList<NavySeasonFolder>? = arrayListOf(),
+data class AllMovielandServer(
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("id") val id: String? = null,
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("folder") val folder: ArrayList<AllMovielandSeasonFolder>? = arrayListOf(),
 )
 
-data class NavyPlaylist(
+data class AllMovielandPlaylist(
     @JsonProperty("file") val file: String? = null,
     @JsonProperty("key") val key: String? = null,
     @JsonProperty("href") val href: String? = null,

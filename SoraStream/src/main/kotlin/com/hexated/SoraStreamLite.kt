@@ -1,6 +1,7 @@
 package com.hexated
 
 import com.hexated.SoraExtractor.invoke2embed
+import com.hexated.SoraExtractor.invokeAllMovieland
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAoneroom
 import com.hexated.SoraExtractor.invokeDbgo
@@ -14,7 +15,6 @@ import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
-import com.hexated.SoraExtractor.invokeNavy
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokeRStream
@@ -22,7 +22,6 @@ import com.hexated.SoraExtractor.invokeRidomovies
 import com.hexated.SoraExtractor.invokeSmashyStream
 import com.hexated.SoraExtractor.invokeDumpStream
 import com.hexated.SoraExtractor.invokeEmovies
-import com.hexated.SoraExtractor.invokeMoment
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
 import com.hexated.SoraExtractor.invokeSFMovies
@@ -245,9 +244,6 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeNavy(res.imdbId, res.season, res.episode, callback)
-            },
-            {
                 if (!res.isAnime && res.season == null) invokeRidomovies(
                     res.id,
                     res.imdbId,
@@ -281,7 +277,7 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                invokeMoment(res.imdbId, res.season, res.episode, callback)
+                if (!res.isAnime) invokeAllMovieland(res.imdbId, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime && res.season == null) invokeDoomovies(
