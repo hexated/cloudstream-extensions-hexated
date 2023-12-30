@@ -144,7 +144,7 @@ class Anilibria : MainAPI() {
     }
 
     private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
+        val res = app.get("https://consumet-instance.vercel.app/meta/anilist/$title")
             .parsedSafe<AniSearch>()?.results?.find { media ->
                 (media.title?.english.equals(title, true) || media.title?.romaji.equals(
                     title,
