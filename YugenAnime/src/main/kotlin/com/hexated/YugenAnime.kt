@@ -31,8 +31,8 @@ class YugenAnime : MainAPI() {
     )
 
     companion object {
-        private const val consumetAnilist = "https://api.consumet.org/meta/anilist"
-        private const val consumetMal = "https://api.consumet.org/meta/mal"
+        private const val consumetAnilist = "https://consumet-instance.vercel.app/meta/anilist"
+        private const val consumetMal = "https://consumet-instance.vercel.app/meta/mal"
 
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
