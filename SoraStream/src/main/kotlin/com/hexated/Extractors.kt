@@ -11,7 +11,7 @@ import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.extractors.Jeniusplay
-import com.lagradost.cloudstream3.extractors.Pixeldrain
+import com.lagradost.cloudstream3.extractors.PixelDrain
 import com.lagradost.cloudstream3.extractors.Vidplay
 import com.lagradost.cloudstream3.utils.*
 import java.math.BigInteger
@@ -364,7 +364,7 @@ class FilelionsTo : Filesim() {
     override var mainUrl = "https://filelions.to"
 }
 
-class Pixeldra : Pixeldrain() {
+class Pixeldra : PixelDrain() {
     override val mainUrl = "https://pixeldra.in"
 }
 
