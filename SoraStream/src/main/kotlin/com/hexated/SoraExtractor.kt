@@ -2092,7 +2092,7 @@ object SoraExtractor : SoraStream() {
             "$title Season $season"
         }
         val savedCookies = mapOf(
-            "_identitygomovies7" to "52fdc70b008c0b1d881dac0f01cca819edd512de01cc8bbc1224ed4aafb78b52a%3A2%3A%7Bi%3A0%3Bs%3A18%3A%22_identitygomovies7%22%3Bi%3A1%3Bs%3A52%3A%22%5B2050366%2C%22HnVRRAObTASOJEr45YyCM8wiHol0V1ko%22%2C2592000%5D%22%3B%7D",
+            base64Decode("X2lkZW50aXR5Z29tb3ZpZXM3") to base64Decode("NTJmZGM3MGIwMDhjMGIxZDg4MWRhYzBmMDFjY2E4MTllZGQ1MTJkZTAxY2M4YmJjMTIyNGVkNGFhZmI3OGI1MmElM0EyJTNBJTdCaSUzQTAlM0JzJTNBMTglM0ElMjJfaWRlbnRpdHlnb21vdmllczclMjIlM0JpJTNBMSUzQnMlM0E1MiUzQSUyMiU1QjIwNTAzNjYlMkMlMjJIblZSUkFPYlRBU09KRXI0NVl5Q004d2lIb2wwVjFrbyUyMiUyQzI1OTIwMDAlNUQlMjIlM0IlN0Q="),
         )
         val req = app.get("$api/search/$query")
         val doc = req.document
