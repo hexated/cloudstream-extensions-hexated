@@ -52,16 +52,16 @@ class SoraStreamLite : SoraStream() {
         val res = AppUtils.parseJson<LinkData>(data)
 
         argamap(
-            {
-                invokeFebbox(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.lastSeason,
-                    res.episode,
-                    callback
-                )
-            },
+//            {
+//                invokeFebbox(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.lastSeason,
+//                    res.episode,
+//                    callback
+//                )
+//            },
             {
                 if (!res.isAnime) invokeWatchsomuch(
                     res.imdbId,

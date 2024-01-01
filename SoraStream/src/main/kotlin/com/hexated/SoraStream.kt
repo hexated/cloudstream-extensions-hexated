@@ -365,16 +365,16 @@ open class SoraStream : TmdbProvider() {
         val res = parseJson<LinkData>(data)
 
         argamap(
-            {
-                invokeFebbox(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.lastSeason,
-                    res.episode,
-                    callback
-                )
-            },
+//            {
+//                invokeFebbox(
+//                    res.title,
+//                    res.year,
+//                    res.season,
+//                    res.lastSeason,
+//                    res.episode,
+//                    callback
+//                )
+//            },
             {
                 invokeDumpStream(
                     res.title,
