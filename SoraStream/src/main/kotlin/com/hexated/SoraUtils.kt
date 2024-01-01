@@ -734,7 +734,7 @@ fun Document.findTvMoviesIframe(): String? {
 }
 
 //modified code from https://github.com/jmir1/aniyomi-extensions/blob/master/src/all/kamyroll/src/eu/kanade/tachiyomi/animeextension/all/kamyroll/AccessTokenInterceptor.kt
-suspend fun getCrunchyrollToken(): Map<String, String> {
+suspend fun getCrunchyrollToken(): CrunchyrollAccessToken {
     val client = app.baseClient.newBuilder()
         .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("cr-unblocker.us.to", 1080)))
         .build()
@@ -760,9 +760,17 @@ suspend fun getCrunchyrollToken(): Map<String, String> {
         )
     )
 
-    val response = tryParseJson<CrunchyrollToken>(client.newCall(request).execute().body.string())
-    return mapOf("Authorization" to "${response?.tokenType} ${response?.accessToken}")
-
+    val token = tryParseJson<CrunchyrollToken>(client.newCall(request).execute().body.string())
+    val headers = mapOf("Authorization" to "${token?.tokenType} ${token?.accessToken}")
+    val cms = app.get("$crunchyrollAPI/index/v2", headers = headers).parsedSafe<CrunchyrollToken>()?.cms
+    return CrunchyrollAccessToken(
+            token?.accessToken,
+            token?.tokenType,
+            cms?.bucket,
+            cms?.policy,
+            cms?.signature,
+            cms?.key_pair_id,
+    )
 }
 
 suspend fun getCrunchyrollId(aniId: String?): String? {
@@ -796,7 +804,7 @@ suspend fun getCrunchyrollId(aniId: String?): String? {
 
     return (externalLinks?.find { it.site == "VRV" }
         ?: externalLinks?.find { it.site == "Crunchyroll" })?.url?.let {
-        Regex("series/(\\w+)/?").find(it)?.groupValues?.get(1)
+        app.get(it).url.substringAfter("/series/").substringBefore("/")
     }
 }
 

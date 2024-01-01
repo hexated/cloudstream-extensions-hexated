@@ -2,6 +2,15 @@ package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
+data class CrunchyrollAccessToken(
+        val accessToken: String? = null,
+        val tokenType: String? = null,
+        val bucket: String? = null,
+        val policy: String? = null,
+        val signature: String? = null,
+        val key_pair_id: String? = null,
+)
+
 data class ShowboxMedia(
     val url: String,
     val title: String,
@@ -207,12 +216,17 @@ data class AnilistResponses(
 )
 
 data class CrunchyrollToken(
-    @JsonProperty("access_token") val accessToken: String? = null,
-    @JsonProperty("expires_in") val expiresIn: Int? = null,
-    @JsonProperty("token_type") val tokenType: String? = null,
-    @JsonProperty("scope") val scope: String? = null,
-    @JsonProperty("country") val country: String? = null
-)
+        @JsonProperty("access_token") val accessToken: String? = null,
+        @JsonProperty("token_type") val tokenType: String? = null,
+        @JsonProperty("cms") val cms: Cms? = null,
+) {
+    data class Cms(
+            @JsonProperty("bucket") var bucket: String? = null,
+            @JsonProperty("policy") var policy: String? = null,
+            @JsonProperty("signature") var signature: String? = null,
+            @JsonProperty("key_pair_id") var key_pair_id: String? = null,
+    )
+}
 
 data class CrunchyrollVersions(
     @JsonProperty("audio_locale") val audio_locale: String? = null,
@@ -227,22 +241,21 @@ data class CrunchyrollData(
     @JsonProperty("episode_number") val episode_number: Int? = null,
     @JsonProperty("versions") val versions: ArrayList<CrunchyrollVersions>? = null,
     @JsonProperty("streams_link") val streams_link: String? = null,
-    @JsonProperty("adaptive_hls") val adaptive_hls: HashMap<String, HashMap<String, String>>? = hashMapOf(),
-    @JsonProperty("vo_adaptive_hls") val vo_adaptive_hls: HashMap<String, HashMap<String, String>>? = hashMapOf(),
 )
 
 data class CrunchyrollResponses(
     @JsonProperty("data") val data: ArrayList<CrunchyrollData>? = arrayListOf(),
 )
 
-data class CrunchyrollMeta(
-    @JsonProperty("subtitles") val subtitles: HashMap<String, HashMap<String, String>>? = hashMapOf(),
-)
-
 data class CrunchyrollSourcesResponses(
-    @JsonProperty("data") val data: ArrayList<CrunchyrollData>? = arrayListOf(),
-    @JsonProperty("meta") val meta: CrunchyrollMeta? = null,
-)
+        @JsonProperty("streams") val streams: Streams? = Streams(),
+        @JsonProperty("subtitles") val subtitles: HashMap<String, HashMap<String, String>>? = hashMapOf(),
+) {
+    data class Streams(
+            @JsonProperty("adaptive_hls") val adaptive_hls: HashMap<String, HashMap<String, String>>? = hashMapOf(),
+            @JsonProperty("vo_adaptive_hls") val vo_adaptive_hls: HashMap<String, HashMap<String, String>>? = hashMapOf(),
+    )
+}
 
 data class MALSyncSites(
     @JsonProperty("Zoro") val zoro: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),

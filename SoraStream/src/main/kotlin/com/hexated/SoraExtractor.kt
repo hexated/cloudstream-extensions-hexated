@@ -1505,7 +1505,8 @@ object SoraExtractor : SoraStream() {
             "en-US",
             "zh-CN",
         )
-        val headers = getCrunchyrollToken()
+        val token = getCrunchyrollToken()
+        val headers = mapOf("Authorization" to "${token.tokenType} ${token.accessToken}")
         val seasonIdData = app.get(
             "$crunchyrollAPI/content/v2/cms/series/${id ?: return}/seasons", headers = headers
         ).parsedSafe<CrunchyrollResponses>()?.data?.let { s ->
@@ -1532,17 +1533,18 @@ object SoraExtractor : SoraStream() {
                 it.title.equals(epsTitle, true) || it.slug_title.equals(
                     epsTitle.createSlug(), true
                 ) || it.episode_number == episode
-            }?.streams_link
-            val sources =
-                app.get(fixUrl(streamsLink ?: return@apmap, crunchyrollAPI), headers = headers)
-                    .parsedSafe<CrunchyrollSourcesResponses>()
+            }?.streams_link?.substringAfter("/videos/")?.substringBefore("/streams") ?: return@apmap
+            val sources = app.get(
+                    "$crunchyrollAPI/cms/v2${token.bucket}/videos/$streamsLink/streams?Policy=${token.policy}&Signature=${token.signature}&Key-Pair-Id=${token.key_pair_id}",
+            headers = headers
+            ).parsedSafe<CrunchyrollSourcesResponses>()
 
             listOf(
                 "adaptive_hls", "vo_adaptive_hls"
             ).map { hls ->
                 val name = if (hls == "adaptive_hls") "Crunchyroll" else "Vrv"
                 val audio = if (audioL == "en-US") "English Dub" else "Raw"
-                val source = sources?.data?.firstOrNull()?.let {
+                val source = sources?.streams?.let {
                     if (hls == "adaptive_hls") it.adaptive_hls else it.vo_adaptive_hls
                 }
                 M3u8Helper.generateM3u8(
@@ -1552,7 +1554,7 @@ object SoraExtractor : SoraStream() {
                 ).forEach(callback)
             }
 
-            sources?.meta?.subtitles?.map { sub ->
+            sources?.subtitles?.map { sub ->
                 subtitleCallback.invoke(
                     SubtitleFile(
                         "${fixCrunchyrollLang(sub.key) ?: sub.key} [ass]",
@@ -1560,8 +1562,6 @@ object SoraExtractor : SoraStream() {
                     )
                 )
             }
-
-
         }
     }
 
@@ -2135,7 +2135,7 @@ object SoraExtractor : SoraStream() {
             media.third.substringAfterLast("/") to iframe.substringAfterLast("/")
                 .substringBefore("-")
         }
-        val res = app.get(fixUrl(iframe, api))
+        val res = app.get(fixUrl(iframe, api), verify = false)
         delay(2000)
         val serverUrl = res.document.selectFirst("script:containsData(pushState)")?.data()?.let {
             """,\s*'([^']+)""".toRegex().find(it)?.groupValues?.get(1)

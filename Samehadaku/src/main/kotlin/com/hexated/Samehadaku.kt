@@ -217,9 +217,10 @@ class Samehadaku : MainAPI() {
     }
 
     private fun String.fixQuality() : Int {
-        return when(this) {
-            "MP4HD" -> Qualities.P720.value
+        return when(this.uppercase()) {
+            "4K" -> Qualities.P2160.value
             "FULLHD" -> Qualities.P1080.value
+            "MP4HD" -> Qualities.P720.value
             else -> this.filter { it.isDigit() }.toIntOrNull() ?: Qualities.Unknown.value
         }
     }
