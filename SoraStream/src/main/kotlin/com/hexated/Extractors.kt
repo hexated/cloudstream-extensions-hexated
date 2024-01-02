@@ -339,13 +339,7 @@ open class Netembed : ExtractorApi() {
         val script = getAndUnpack(response.text)
         val m3u8 = Regex("((https:|http:)//.*\\.m3u8)").find(script)?.groupValues?.getOrNull(1) ?: return
 
-        if (!m3u8.startsWith("https://www.febbox.com")) {
-            M3u8Helper.generateM3u8(
-                this.name,
-                m3u8,
-                "$mainUrl/",
-            ).forEach(callback)
-        }
+        M3u8Helper.generateM3u8(this.name, m3u8, "$mainUrl/", ).forEach(callback)
     }
 }
 
