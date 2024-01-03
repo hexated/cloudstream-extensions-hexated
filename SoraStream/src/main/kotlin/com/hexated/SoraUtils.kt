@@ -9,7 +9,6 @@ import com.hexated.SoraStream.Companion.gdbot
 import com.hexated.SoraStream.Companion.hdmovies4uAPI
 import com.hexated.SoraStream.Companion.malsyncAPI
 import com.hexated.SoraStream.Companion.tvMoviesAPI
-import com.hexated.SoraStream.Companion.watchflxAPI
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.APIHolder.getCaptchaToken
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
@@ -46,7 +45,6 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
 import kotlin.math.min
 
-var watchflxCookies: Map<String, String>? = null
 var filmxyCookies: Map<String, String>? = null
 var sfServer: String? = null
 
@@ -709,23 +707,6 @@ suspend fun fetchFilmxyCookies(url: String): Map<String, String> {
         .associate { it.name to it.value }.toMutableMap()
 
     return cookieJar.plus(defaultCookies)
-}
-
-suspend fun getWatchflxCookies() =
-    watchflxCookies ?: fetchWatchflxCookies().also { watchflxCookies = it }
-
-suspend fun fetchWatchflxCookies(): Map<String, String> {
-    session.get(watchflxAPI)
-    val cookies = session.baseClient.cookieJar.loadForRequest(watchflxAPI.toHttpUrl())
-        .associate { it.name to it.value }
-    val loginUrl = "$watchflxAPI/cookie-based-login"
-    session.post(
-        loginUrl, data = mapOf(
-            "continue_as_temp" to "true"
-        ), cookies = cookies, headers = mapOf("X-Requested-With" to "XMLHttpRequest")
-    )
-    return session.baseClient.cookieJar.loadForRequest(loginUrl.toHttpUrl())
-        .associate { it.name to it.value }
 }
 
 fun Document.findTvMoviesIframe(): String? {
