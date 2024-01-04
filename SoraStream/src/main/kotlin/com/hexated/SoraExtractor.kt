@@ -715,7 +715,7 @@ object SoraExtractor : SoraStream() {
                     child.select("span").text().equals("Episode $episode", true)
                 }?.attr("href")
             }
-        }.filter { it.first.contains(Regex("(2160p)|(1080p)")) }
+        }.filter { it.first.contains(Regex("(2160p)|(1080p)")) }.reversed().takeLast(3)
 
         iframeList.apmap { (quality, link) ->
             val driveLink = bypassHrefli(link ?: return@apmap)
@@ -768,16 +768,25 @@ object SoraExtractor : SoraStream() {
         val hTag = if (season == null) "h5" else "h3"
         val aTag = if (season == null) "Download Now" else "V-Cloud"
         val sTag = if (season == null) "" else "(Season $season|S$seasonSlug)"
-        val entry = res.select("div.entry-content > $hTag:matches((?i)$sTag.*(1080p|2160p))").findLast { element -> !element.text().contains("Download", true) }
-                ?: return
-        val tags = """(?:1080p|2160p)(.*)""".toRegex().find(entry.text())?.groupValues?.get(1)?.trim()
-        val href = entry.nextElementSibling()?.select("a:contains($aTag)")?.attr("href")
-        val selector = if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
-        val server = app.get(href
-                ?: return, interceptor = wpredisInterceptor).document.selectFirst("div.entry-content > $selector")?.attr("href")
-                ?: return
+        val entries = res.select("div.entry-content > $hTag:matches((?i)$sTag.*(1080p|2160p))").filter { element -> !element.text().contains("Download", true) }.takeLast(2)
+        entries.apmap {
+            val tags = """(?:1080p|2160p)(.*)""".toRegex().find(it.text())?.groupValues?.get(1)?.trim()
+            val href = it.nextElementSibling()?.select("a:contains($aTag)")?.attr("href")
+            val selector = if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
+            val server = app.get(
+                    href ?: return@apmap, interceptor = wpredisInterceptor
+            ).document.selectFirst("div.entry-content > $selector")
+                    ?.attr("href") ?: return@apmap
 
-        loadCustomTagExtractor(tags, server, "$api/", subtitleCallback, callback, getIndexQuality(entry.text()))
+            loadCustomTagExtractor(
+                    tags,
+                    server,
+                    "$api/",
+                    subtitleCallback,
+                    callback,
+                    getIndexQuality(it.text())
+            )
+        }
     }
 
     suspend fun invokeHdmovies4u(title: String? = null, imdbId: String? = null, season: Int? = null, episode: Int? = null, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
