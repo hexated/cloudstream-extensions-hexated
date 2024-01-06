@@ -13,7 +13,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class NontonAnimeIDProvider : MainAPI() {
-    override var mainUrl = "https://nontonanimeid.top"
+    override var mainUrl = "https://nontonanimeid.mom"
     override var name = "NontonAnimeID"
     override val hasQuickSearch = false
     override val hasMainPage = true
@@ -21,9 +21,9 @@ class NontonAnimeIDProvider : MainAPI() {
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
-        TvType.Anime,
-        TvType.AnimeMovie,
-        TvType.OVA
+            TvType.Anime,
+            TvType.AnimeMovie,
+            TvType.OVA
     )
 
     companion object {
@@ -45,9 +45,9 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "" to "Latest Update",
-        "ongoing-list/" to " Ongoing List",
-        "popular-series/" to "Popular Series",
+            "" to "Latest Update",
+            "ongoing-list/" to " Ongoing List",
+            "popular-series/" to "Popular Series",
     )
 
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
@@ -61,7 +61,7 @@ class NontonAnimeIDProvider : MainAPI() {
     private fun Element.toSearchResult(): AnimeSearchResponse {
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
         val title = this.selectFirst(".title")?.text() ?: ""
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.getImageAttr())
 
         return newAnimeSearchResponse(title, href, TvType.Anime) {
             this.posterUrl = posterUrl
@@ -76,9 +76,9 @@ class NontonAnimeIDProvider : MainAPI() {
 
         return document.select(".result > ul > li").mapNotNull {
             val title = it.selectFirst("h2")!!.text().trim()
-            val poster = it.selectFirst("img")!!.attr("src")
+            val poster = it.selectFirst("img")?.getImageAttr()
             val tvType = getType(
-                it.selectFirst(".boxinfores > span.typeseries")!!.text().toString()
+                    it.selectFirst(".boxinfores > span.typeseries")!!.text().toString()
             )
             val href = fixUrl(it.selectFirst("a")!!.attr("href"))
 
@@ -101,14 +101,14 @@ class NontonAnimeIDProvider : MainAPI() {
         val document = req.document
 
         val title = document.selectFirst("h1.entry-title.cs")!!.text().removeSurrounding("Nonton Anime", "Sub Indo").trim()
-        val poster = document.selectFirst(".poster > img")?.attr("data-src")
+        val poster = document.selectFirst(".poster > img")?.getImageAttr()
         val tags = document.select(".tagline > a").map { it.text() }
 
         val year = Regex("\\d, (\\d*)").find(
-            document.select(".bottomtitle > span:nth-child(5)").text()
+                document.select(".bottomtitle > span:nth-child(5)").text()
         )?.groupValues?.get(1)?.toIntOrNull()
         val status = getStatus(
-            document.select("span.statusseries").text().trim()
+                document.select("span.statusseries").text().trim()
         )
         val type = getType(document.select("span.typeseries").text().trim().lowercase())
         val rating = document.select("span.nilaiseries").text().trim().toIntOrNull()
@@ -118,21 +118,21 @@ class NontonAnimeIDProvider : MainAPI() {
         val episodes = if (document.select("button.buttfilter").isNotEmpty()) {
             val id = document.select("input[name=series_id]").attr("value")
             val numEp =
-                document.selectFirst(".latestepisode > a")?.text()?.replace(Regex("\\D"), "")
-                    .toString()
+                    document.selectFirst(".latestepisode > a")?.text()?.replace(Regex("\\D"), "")
+                            .toString()
             Jsoup.parse(
-                app.post(
-                    url = "$mainUrl/wp-admin/admin-ajax.php",
-                    data = mapOf(
-                        "misha_number_of_results" to numEp,
-                        "misha_order_by" to "date-DESC",
-                        "action" to "mishafilter",
-                        "series_id" to id
-                    )
-                ).parsed<EpResponse>().content
+                    app.post(
+                            url = "$mainUrl/wp-admin/admin-ajax.php",
+                            data = mapOf(
+                                    "misha_number_of_results" to numEp,
+                                    "misha_order_by" to "date-DESC",
+                                    "action" to "mishafilter",
+                                    "series_id" to id
+                            )
+                    ).parsed<EpResponse>().content
             ).select("li").map {
                 val episode = Regex("Episode\\s?(\\d+)").find(
-                    it.selectFirst("a")?.text().toString()
+                        it.selectFirst("a")?.text().toString()
                 )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = fixUrl(it.selectFirst("a")!!.attr("href"))
                 Episode(link, episode = episode?.toIntOrNull())
@@ -140,7 +140,7 @@ class NontonAnimeIDProvider : MainAPI() {
         } else {
             document.select("ul.misha_posts_wrap2 > li").map {
                 val episode = Regex("Episode\\s?(\\d+)").find(
-                    it.selectFirst("a")?.text().toString()
+                        it.selectFirst("a")?.text().toString()
                 )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = it.select("a").attr("href")
                 Episode(link, episode = episode?.toIntOrNull())
@@ -150,7 +150,7 @@ class NontonAnimeIDProvider : MainAPI() {
         val recommendations = document.select(".result > li").mapNotNull {
             val epHref = it.selectFirst("a")!!.attr("href")
             val epTitle = it.selectFirst("h3")!!.text()
-            val epPoster = it.select(".top > img").attr("data-src")
+            val epPoster = it.selectFirst(".top > img")?.getImageAttr()
             newAnimeSearchResponse(epTitle, epHref, TvType.Anime) {
                 this.posterUrl = epPoster
                 addDubStatus(dubExist = false, subExist = true)
@@ -178,10 +178,10 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+            data: String,
+            isCasting: Boolean,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
     ): Boolean {
 
         val document = app.get(data).document
@@ -192,16 +192,16 @@ class NontonAnimeIDProvider : MainAPI() {
             val dataType = it.attr("data-type")
 
             val iframe = app.post(
-                url = "$mainUrl/wp-admin/admin-ajax.php",
-                data = mapOf(
-                    "action" to "player_ajax",
-                    "post" to dataPost,
-                    "nume" to dataNume,
-                    "type" to dataType,
-                    "nonce" to "e4dd8e45c2"
-                ),
-                referer = data,
-                headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+                    url = "$mainUrl/wp-admin/admin-ajax.php",
+                    data = mapOf(
+                            "action" to "player_ajax",
+                            "post" to dataPost,
+                            "nume" to dataNume,
+                            "type" to dataType,
+                            "nonce" to "8c5a2e3cb2"
+                    ),
+                    referer = data,
+                    headers = mapOf("X-Requested-With" to "XMLHttpRequest")
             ).document.selectFirst("iframe")?.attr("src")
 
             loadExtractor(iframe ?: return@apmap , "$mainUrl/", subtitleCallback, callback)
@@ -215,29 +215,21 @@ class NontonAnimeIDProvider : MainAPI() {
             "${it.scheme}://${it.host}"
         }
     }
+
+    private fun Element.getImageAttr(): String? {
+        return when {
+            this.hasAttr("data-src") -> this.attr("abs:data-src")
+            this.hasAttr("data-lazy-src") -> this.attr("abs:data-lazy-src")
+            this.hasAttr("srcset") -> this.attr("abs:srcset").substringBefore(" ")
+            else -> this.attr("abs:src")
+        }
+    }
+
     private data class EpResponse(
-        @JsonProperty("posts") val posts: String?,
-        @JsonProperty("max_page") val max_page: Int?,
-        @JsonProperty("found_posts") val found_posts: Int?,
-        @JsonProperty("content") val content: String
+            @JsonProperty("posts") val posts: String?,
+            @JsonProperty("max_page") val max_page: Int?,
+            @JsonProperty("found_posts") val found_posts: Int?,
+            @JsonProperty("content") val content: String
     )
 
-}
-
-class KotakAnimeid2 : Hxfile() {
-    override val name = "KotakAnimeid2"
-    override val mainUrl = "https://embed2.kotakanimeid.com"
-    override val requiresReferer = true
-}
-
-class KotakAnimeidCom : Hxfile() {
-    override val name = "KotakAnimeid"
-    override val mainUrl = "https://nontonanimeid.com"
-    override val requiresReferer = true
-}
-
-class EmbedKotakAnimeid : Hxfile() {
-    override val name = "EmbedKotakAnimeid"
-    override val mainUrl = "https://embed2.kotakanimeid.com"
-    override val requiresReferer = true
 }
