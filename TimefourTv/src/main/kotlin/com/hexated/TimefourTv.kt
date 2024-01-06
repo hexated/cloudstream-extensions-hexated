@@ -1,220 +1,182 @@
 package com.hexated
 
-import com.hexated.TimefourTvExtractor.getBaseUrl
-import com.hexated.TimefourTvExtractor.getLink
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.AppUtils
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.net.URI
 
-open class TimefourTv : MainAPI() {
-    final override var mainUrl = "https://time4tv.stream"
-    var daddyUrl = "https://daddylivehd.com"
+class TimefourTv : MainAPI() {
+    override var mainUrl = "https://dlhd.sx"
     override var name = "Time4tv"
     override val hasDownloadSupport = false
     override val hasMainPage = true
-    private val time4tvPoster = "$mainUrl/images/logo.png"
     override val supportedTypes = setOf(
-        TvType.Live
+            TvType.Live
     )
+
+    private val homePoster =
+            "https://cdn.discordapp.com/attachments/1109266606292488297/1193060449193840681/Screenshot_2024-01-06_at_12-14-16_Logo_Maker_Used_By_2.3_Million_Startups.png"
+    private val detailPoster =
+            "https://cdn.discordapp.com/attachments/1109266606292488297/1193060448929595454/Screenshot_2024-01-06_at_12-13-02_Logo_Maker_Used_By_2.3_Million_Startups.png"
 
     override val mainPage = mainPageOf(
-//        "$mainUrl/tv-channels" to "All Channels",
-//        "$mainUrl/usa-channels" to "USA Channels",
-//        "$mainUrl/uk-channels" to "UK Channels",
-//        "$mainUrl/sports-channels" to "Sport Channels",
-//        "$mainUrl/live-sports-streams" to "Live Sport Channels",
-//        "$mainUrl/news-channels" to "News Channels",
-//        "$mainUrl/schedule.php" to "Schedule",
-        "$daddyUrl/24-7-channels.php" to "DaddyHD Channels"
+            "$mainUrl/24-7-channels.php" to "24/7 Channels",
+            "$mainUrl/schedule/schedule-generated.json" to "Schedule Channels"
     )
 
-    private fun fixDetailLink(link: String?): String? {
-        if (link == null) return null
-        return if (link.startsWith("/")) "$daddyUrl$link" else link
-    }
-
     override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
+            page: Int,
+            request: MainPageRequest
     ): HomePageResponse {
         val items = mutableListOf<HomePageList>()
-        val nonPaged = request.name != "All Channels" && page <= 1
-        if (nonPaged) {
-            val res = app.get("${request.data}.php").document
-            val home = res.select("div.tab-content ul li").mapNotNull {
-                it.toSearchResult()
+        if (request.name == "24/7 Channels") {
+            val req = app.get(request.data)
+            mainUrl = getBaseUrl(req.url)
+            val res = req.document
+            val channels = res.select("div.grid-container div.grid-item").mapNotNull {
+                it.toSearchResponse()
             }
-            if (home.isNotEmpty()) items.add(HomePageList(request.name, home, true))
-        }
-        if (request.name == "All Channels") {
-            val res = if (page == 1) {
-                app.get("${request.data}.php").document
-            } else {
-                app.get("${request.data}${page.minus(1)}.php").document
+            if (channels.isNotEmpty()) items.add(HomePageList(request.name, channels, true))
+        } else {
+            val res = app.get(request.data).parsedSafe<Map<String, Map<String, ArrayList<Items>>>>()
+            res?.forEach { tag ->
+                val header = tag.key
+                val channels = tag.value.mapNotNull {
+                    LiveSearchResponse(
+                            it.key,
+                            Item(it.key, items = it.value.toJson()).toJson(),
+                            this@TimefourTv.name,
+                            TvType.Live,
+                            posterUrl = homePoster,
+                    )
+                }
+                if (channels.isNotEmpty()) items.add(HomePageList(header, channels, true))
             }
-            val home = res.select("div.tab-content ul li").mapNotNull {
-                it.toSearchResult()
-            }
-            if (home.isNotEmpty()) items.add(HomePageList(request.name, home, true))
-        }
-
-        if (nonPaged && request.name == "DaddyHD Channels") {
-            val res = app.get(request.data).document
-            val channelDaddy = res.select("div.grid-container div.grid-item").mapNotNull {
-                it.toSearchDaddy()
-            }
-            if (channelDaddy.isNotEmpty()) items.add(HomePageList(request.name, channelDaddy, true))
         }
 
-        if (nonPaged && request.name == "Schedule") {
-            val res = app.get(request.data).document
-            val schedule = res.select("div.search_p h1,div.search_p h2").mapNotNull {
-                it.toSearchSchedule()
-            }
-            if (schedule.isNotEmpty()) items.add(HomePageList(request.name, schedule, true))
-        }
-
-        return newHomePageResponse(items)
+        return newHomePageResponse(items, false)
     }
 
-    private fun Element.toSearchDaddy(): LiveSearchResponse? {
+    private fun Element.toSearchResponse(): LiveSearchResponse {
+        val title = this.select("strong").text()
+        val href = fixUrl(this.select("a").attr("href"))
         return LiveSearchResponse(
-            this.select("strong").text() ?: return null,
-            fixDetailLink(this.select("a").attr("href")) ?: return null,
-            this@TimefourTv.name,
-            TvType.Live,
-            posterUrl = time4tvPoster
+                title,
+                Item(title, href).toJson(),
+                this@TimefourTv.name,
+                TvType.Live,
+                posterUrl = homePoster,
         )
-    }
-
-    private fun Element.toSearchSchedule(): LiveSearchResponse? {
-        return LiveSearchResponse(
-            this.text() ?: return null,
-            this.text(),
-            this@TimefourTv.name,
-            TvType.Live,
-            posterUrl = time4tvPoster
-        )
-    }
-
-    private fun Element.toSearchResult(): LiveSearchResponse? {
-        return LiveSearchResponse(
-            this.selectFirst("div.channelName")?.text() ?: return null,
-            fixUrl(this.selectFirst("a")!!.attr("href")),
-            this@TimefourTv.name,
-            TvType.Live,
-            fixUrlNull(this.selectFirst("img")?.attr("src")),
-        )
-
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$daddyUrl/24-7-channels.php").document
+        val document = app.get("$mainUrl/24-7-channels.php").document
         return document.select("div.grid-container div.grid-item:contains($query)").mapNotNull {
-            it.toSearchDaddy()
+            it.toSearchResponse()
         }
     }
 
-    private suspend fun loadSchedule(url: String): LoadResponse {
-        val name = url.removePrefix("$mainUrl/")
-        val doc = app.get("$mainUrl/schedule.php").document
-        val episode = mutableListOf<Episode>()
-        doc.selectFirst("div.search_p h2:contains($name)")?.nextElementSiblings()?.toString()
-            ?.substringBefore("<h2")?.split("<br>")?.map {
-                val desc = it.substringBefore("<span").replace(Regex("</?strong>"), "").replace("<p>", "")
-                Jsoup.parse(it).select("span").map { ele ->
-                    val title = ele.select("a").text()
-                    val href = ele.select("a").attr("href")
-                    episode.add(
-                        Episode(
-                            href,
-                            title,
-                            description = desc,
-                            posterUrl = time4tvPoster
-                        )
-                    )
-                }
+
+    override suspend fun load(url: String): LoadResponse {
+        val data = AppUtils.parseJson<Item>(url)
+        val episodes = if (data.items.isNullOrEmpty()) {
+            listOf(Episode(arrayListOf(Channels(data.title, data.url)).toJson()))
+        } else {
+            val items = AppUtils.parseJson<ArrayList<Items>>(data.items)
+            items.mapNotNull {
+                Episode(
+                        data = it.channels?.toJson() ?: return@mapNotNull null,
+                        name = "${it.event} - Live",
+                        description = it.time,
+                        posterUrl = detailPoster,
+                )
             }
-
-        return newTvSeriesLoadResponse(name, url, TvType.TvSeries, episode) {
         }
-    }
-
-    override suspend fun load(url: String): LoadResponse? {
-
-        val res = app.get(url)
-        daddyUrl = getBaseUrl(res.url)
-        if (!res.isSuccessful) return loadSchedule(url)
-
-        val document = res.document
-        val title =
-            document.selectFirst("div.channelHeading h1")?.text() ?: document.selectFirst("title")
-                ?.text()?.substringBefore("HD")?.trim() ?: return null
-        val poster =
-            fixUrlNull(document.selectFirst("meta[property=\"og:image\"]")?.attr("content")) ?: time4tvPoster
-        val description = document.selectFirst("div.tvText")?.text()
-            ?: document.selectFirst("meta[name=description]")?.attr("content") ?: return null
-        val episodes = document.selectFirst("div.playit")?.attr("onclick")?.substringAfter("open('")
-            ?.substringBefore("',")?.let { link ->
-                val doc = app.get(link).document.selectFirst("div.tv_palyer iframe")?.attr("src")
-                    ?.let { iframe ->
-                        app.get(fixUrl(iframe), referer = link).document
-                    }
-                if (doc?.select("div.stream_button").isNullOrEmpty()) {
-                    doc?.select("iframe")?.mapIndexed { eps, ele ->
-                        Episode(
-                            fixUrl(ele.attr("src")),
-                            "Server ${eps.plus(1)}"
-                        )
-                    }
-                } else {
-                    doc?.select("div.stream_button a")?.map {
-                        Episode(
-                            fixUrl(it.attr("href")),
-                            it.text()
-                        )
-                    }
-                }
-            } ?: listOf(
-            newEpisode(
-                document.selectFirst("div#content iframe#thatframe")?.attr("src") ?: return null
-            ) {
-                this.name = title
-            }
-        ) ?: throw ErrorLoadingException("Refresh page")
-        return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-            this.posterUrl = poster
-            this.plot = description
+        return newTvSeriesLoadResponse(
+                data.title ?: "",
+                url,
+                TvType.TvSeries,
+                episodes = episodes
+        ) {
+            posterUrl = homePoster
         }
+
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+            data: String,
+            isCasting: Boolean,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val link = when {
-            data.contains("/channel") -> app.get(data).document.selectFirst("div.tv_palyer iframe")
-                ?.attr("src")
-            data.startsWith(mainUrl) -> app.get(
-                data,
-                allowRedirects = false
-            ).document.selectFirst("iframe")?.attr("src")
-            else -> data
-        } ?: throw ErrorLoadingException()
-        getLink(fixUrl(link))?.let { m3uLink ->
-            val url = app.get(m3uLink, referer = "$mainServer/")
+        val json = AppUtils.parseJson<ArrayList<Channels>>(data)
+
+        json.apmap {
+            val iframe = app.get(
+                    fixChannelUrl(
+                            it.channel_id ?: return@apmap
+                    )
+            ).document.selectFirst("iframe#thatframe")?.attr("src")
+                    ?: throw ErrorLoadingException("No Iframe Found")
+            val host = getBaseUrl(iframe)
+            val video = extractVideo(iframe)
+
             M3u8Helper.generateM3u8(
-                this.name,
-                url.url,
-                "$mainServer/",
+                    it.channel_name ?: return@apmap,
+                    video ?: return@apmap,
+                    "$host/",
             ).forEach(callback)
         }
+
         return true
     }
+
+    private suspend fun extractVideo(url: String): String? {
+        val res = app.get(url, referer = mainUrl)
+        return Regex("""source:['"](\S+.m3u8)['"],""").find(res.text)?.groupValues?.getOrNull(
+                1
+        ) ?: run {
+            val scriptData =
+                    res.document.selectFirst("div#player")?.nextElementSibling()?.data()
+                            ?.substringAfterLast("return(")?.substringBefore(".join")
+            scriptData?.removeSurrounding("[", "]")?.replace("\"", "")?.split(",")
+                    ?.joinToString("")
+        }
+    }
+
+    private fun fixChannelUrl(url: String): String {
+        return if (url.startsWith(mainUrl)) {
+            url
+        } else {
+            "$mainUrl/stream/stream-$url.php"
+        }
+    }
+
+    private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
+    }
+
+    data class Item(
+            val title: String? = null,
+            val url: String? = null,
+            val items: String? = null,
+    )
+
+    data class Items(
+            val time: String? = null,
+            val event: String? = null,
+            val channels: ArrayList<Channels>? = arrayListOf(),
+    )
+
+    data class Channels(
+            val channel_name: String? = null,
+            val channel_id: String? = null,
+    )
 
 }

@@ -21,7 +21,7 @@ class Samehadaku : MainAPI() {
             TvType.AnimeMovie,
             TvType.OVA
     )
-    private val interceptor = CloudflareKiller()
+    private val interceptor by lazy { CloudflareKiller() }
     companion object {
         const val acefile = "https://acefile.co"
 
