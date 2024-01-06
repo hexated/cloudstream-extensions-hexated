@@ -1467,7 +1467,7 @@ object SoraExtractor : SoraStream() {
             "_ApplicationId": "SHOWFLIXAPPID",
             "_JavaScriptKey": "SHOWFLIXMASTERKEY",
             "_ClientVersion": "js3.4.1",
-            "_InstallationId": "6d19fd87-a0e8-47b2-a3c0-48c16add928b"
+            "_InstallationId": "d92d98d3-fa49-4103-8dcf-6347c86942a7"
         }
     """.trimIndent().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
 
