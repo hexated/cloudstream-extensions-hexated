@@ -257,7 +257,7 @@ open class SoraStream : TmdbProvider() {
                 this.backgroundPosterUrl = bgPoster
                 this.year = year
                 this.plot = res.overview
-                this.tags = keywords
+                this.tags = keywords ?: genres
                 this.rating = rating
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
@@ -281,7 +281,7 @@ open class SoraStream : TmdbProvider() {
                 this.year = year
                 this.plot = res.overview
                 this.duration = res.runtime
-                this.tags = keywords
+                this.tags = keywords ?: genres
                 this.rating = rating
                 this.recommendations = recommendations
                 this.actors = actors

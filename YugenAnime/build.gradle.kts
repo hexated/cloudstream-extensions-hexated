@@ -23,5 +23,5 @@ cloudstream {
         "OVA",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=yugenanime.sx&sz=%size%"
+    iconUrl = "https://yugenanime.sx/static/img/favicon-32x32.png"
 }

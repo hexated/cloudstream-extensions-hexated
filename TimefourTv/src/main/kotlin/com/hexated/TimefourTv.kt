@@ -89,7 +89,7 @@ class TimefourTv : MainAPI() {
             items.mapNotNull {
                 Episode(
                         data = it.channels?.toJson() ?: return@mapNotNull null,
-                        name = "${it.event} - Live",
+                        name = "${it.event} •",
                         description = it.time,
                         posterUrl = detailPoster,
                 )
