@@ -21,5 +21,5 @@ cloudstream {
         "Live",
     )
 
-    iconUrl = "https://cdn.discordapp.com/attachments/1109266606292488297/1193079167600840734/Untitled.jpg"
+    iconUrl = "https://cdn.discordapp.com/attachments/1109266606292488297/1193088870212976640/Untitled.jpg"
 }
