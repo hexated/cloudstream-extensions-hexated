@@ -3,13 +3,7 @@ package com.hexated
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
-import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.nicehttp.requestCreator
-import okhttp3.Headers
-import okhttp3.HttpUrl
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -20,10 +14,6 @@ class KuramanimeProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-    private var miscUrl: String? = null
-    private var headers: Map<String, String> = mapOf()
-    private var cookies: Map<String, String> = mapOf()
-    private var mixPage: Pair<String, String>? = null
     override val supportedTypes = setOf(
             TvType.Anime,
             TvType.AnimeMovie,
@@ -165,43 +155,6 @@ class KuramanimeProvider : MainAPI() {
 
     }
 
-    private suspend fun invokeLocalSource(
-            url: String,
-            server: String,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
-    ) {
-        val document = app.get(
-                url,
-                headers = headers,
-                cookies = cookies
-        ).document
-        document.select("video#player > source").map {
-            val link = fixUrl(it.attr("src"))
-            val quality = it.attr("size").toIntOrNull()
-            callback.invoke(
-                    ExtractorLink(
-                            fixTitle(server),
-                            fixTitle(server),
-                            link,
-                            referer = "",
-                            quality = quality ?: Qualities.Unknown.value,
-                            headers = mapOf(
-                                    "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
-                                    "Range" to "bytes=0-",
-                                    "Sec-Fetch-Dest" to "video",
-                                    "Sec-Fetch-Mode" to "no-cors",
-                            ),
-                    )
-            )
-        }
-        if(server=="kuramadrive") {
-            document.select("div#animeDownloadLink a").apmap {
-                loadExtractor(it.attr("href"), "$mainUrl/", subtitleCallback, callback)
-            }
-        }
-    }
-
     override suspend fun loadLinks(
             data: String,
             isCasting: Boolean,
@@ -209,88 +162,7 @@ class KuramanimeProvider : MainAPI() {
             callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val req = app.get(data)
-        val res = req.document
-        cookies = req.cookies
-
-        val bpjs = res.selectFirst("div.col-lg-12.mt-3")?.attr("data-bpjs") ?: return false
-
-        val auth = getMiscUrl(data)
-        val misc = getMisc(auth)
-        val mixPage = getMixPage(bpjs)
-
-        res.select("select#changeServer option").apmap { source ->
-            val server = source.attr("value")
-            val link = "$data?${mixPage.first}=$misc&${mixPage.second}=$server"
-            if (server.contains(Regex("(?i)kuramadrive|archive"))) {
-                invokeLocalSource(link, server, subtitleCallback, callback)
-            } else {
-                app.get(
-                        link,
-                        referer = data,
-                        headers = headers,
-                        cookies = cookies
-                ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
-                    loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
-                }
-            }
-        }
-
-
         return true
     }
-
-    private suspend fun fetchMiscUrl(url: String): String {
-        val regex = Regex("""$mainUrl/.*""")
-        val found = WebViewResolver(
-                Regex("""$mainUrl/assets/\S+.jpg"""),
-                additionalUrls = listOf(regex),
-        ).resolveUsingWebView(
-                requestCreator(
-                        "GET", url
-                        , cookies = cookies, referer = "$mainUrl/", headers = mapOf(
-                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                        "Accept-Language" to "en-US,en;q=0.5",
-                )
-                )
-        ).first
-        headers = found?.headers?.associate { it.first to it.second } ?: mapOf()
-        return found?.url.toString()
-    }
-
-    private suspend fun getMiscUrl(url: String) = miscUrl ?: fetchMiscUrl(url).also { miscUrl = it }
-
-    private suspend fun fetchMixPage(bpjs: String): Pair<String,String> {
-        val env = app.get("$mainUrl/assets/js/$bpjs.js").text
-        val MIX_PAGE_TOKEN_KEY = env.substringAfter("MIX_PAGE_TOKEN_KEY: '").substringBefore("',")
-        val MIX_STREAM_SERVER_KEY = env.substringAfter("MIX_STREAM_SERVER_KEY: '").substringBefore("',")
-        return MIX_PAGE_TOKEN_KEY to MIX_STREAM_SERVER_KEY
-    }
-
-    private suspend fun getMixPage(bpjs: String) = mixPage ?: fetchMixPage(bpjs).also { mixPage = it }
-
-    private suspend fun getMisc(url: String?): String {
-        val res = app.get("$url", headers = headers)
-        cookies = res.cookies
-        return res.text.removeBloat()
-    }
-
-    private fun getRequestId(length: Int = 6): String {
-        val allowedChars = ('a'..'z') + ('0'..'9')
-        return (1..length)
-                .map { allowedChars.random() }
-                .joinToString("")
-    }
-
-    private fun String.removeBloat() : String {
-        return this.replace("\"", "")
-    }
-
-    data class AuthParams(
-            val header: Map<String, String>?,
-            val params: List<String>?,
-            val misc: String,
-            val miscUrl: String?,
-    )
 
 }
