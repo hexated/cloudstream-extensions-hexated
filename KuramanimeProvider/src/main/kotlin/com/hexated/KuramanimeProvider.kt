@@ -20,13 +20,14 @@ class KuramanimeProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
-    private var params:  AuthParams? = null
-    private var headers: Map<String,String> = mapOf()
-    private var cookies: Map<String,String> = mapOf()
+    private var miscUrl: String? = null
+    private var headers: Map<String, String> = mapOf()
+    private var cookies: Map<String, String> = mapOf()
+    private var mixPage: Pair<String, String>? = null
     override val supportedTypes = setOf(
-        TvType.Anime,
-        TvType.AnimeMovie,
-        TvType.OVA
+            TvType.Anime,
+            TvType.AnimeMovie,
+            TvType.OVA
     )
 
     companion object {
@@ -46,15 +47,15 @@ class KuramanimeProvider : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "$mainUrl/anime/ongoing?order_by=updated&page=" to "Sedang Tayang",
-        "$mainUrl/anime/finished?order_by=updated&page=" to "Selesai Tayang",
-        "$mainUrl/properties/season/summer-2022?order_by=most_viewed&page=" to "Dilihat Terbanyak Musim Ini",
-        "$mainUrl/anime/movie?order_by=updated&page=" to "Film Layar Lebar",
+            "$mainUrl/anime/ongoing?order_by=updated&page=" to "Sedang Tayang",
+            "$mainUrl/anime/finished?order_by=updated&page=" to "Selesai Tayang",
+            "$mainUrl/properties/season/summer-2022?order_by=most_viewed&page=" to "Dilihat Terbanyak Musim Ini",
+            "$mainUrl/anime/movie?order_by=updated&page=" to "Film Layar Lebar",
     )
 
     override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
+            page: Int,
+            request: MainPageRequest
     ): HomePageResponse {
         val document = app.get(request.data + page).document
 
@@ -102,35 +103,40 @@ class KuramanimeProvider : MainAPI() {
 
         val title = document.selectFirst(".anime__details__title > h3")!!.text().trim()
         val poster = document.selectFirst(".anime__details__pic")?.attr("data-setbg")
-        val tags = document.select("div.anime__details__widget > div > div:nth-child(2) > ul > li:nth-child(1)")
-            .text().trim().replace("Genre: ", "").split(", ")
+        val tags =
+                document.select("div.anime__details__widget > div > div:nth-child(2) > ul > li:nth-child(1)")
+                        .text().trim().replace("Genre: ", "").split(", ")
 
         val year = Regex("\\D").replace(
-            document.select("div.anime__details__widget > div > div:nth-child(1) > ul > li:nth-child(5)")
-                .text().trim().replace("Musim: ", ""), ""
+                document.select("div.anime__details__widget > div > div:nth-child(1) > ul > li:nth-child(5)")
+                        .text().trim().replace("Musim: ", ""), ""
         ).toIntOrNull()
         val status = getStatus(
-            document.select("div.anime__details__widget > div > div:nth-child(1) > ul > li:nth-child(3)")
-                .text().trim().replace("Status: ", "")
+                document.select("div.anime__details__widget > div > div:nth-child(1) > ul > li:nth-child(3)")
+                        .text().trim().replace("Status: ", "")
         )
         val description = document.select(".anime__details__text > p").text().trim()
 
         val episodes = mutableListOf<Episode>()
 
-        for (i in 1..6) {
+        for (i in 1..10) {
             val doc = app.get("$url?page=$i").document
-            val eps = Jsoup.parse(doc.select("#episodeLists").attr("data-content")).select("a.btn.btn-sm.btn-danger")
-                .mapNotNull {
-                    val name = it.text().trim()
-                    val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)
-                        ?.toIntOrNull()
-                    val link = it.attr("href")
-                    Episode(link, episode = episode)
-                }
-            if(eps.isEmpty()) break else episodes.addAll(eps)
+            val eps = Jsoup.parse(doc.select("#episodeLists").attr("data-content"))
+                    .select("a.btn.btn-sm.btn-danger")
+                    .mapNotNull {
+                        val name = it.text().trim()
+                        val episode = Regex("(\\d+[.,]?\\d*)").find(name)?.groupValues?.getOrNull(0)
+                                ?.toIntOrNull()
+                        val link = it.attr("href")
+                        Episode(link, episode = episode)
+                    }
+            if (eps.isEmpty()) break else episodes.addAll(eps)
         }
 
-        val type = getType(document.selectFirst("div.col-lg-6.col-md-6 ul li:contains(Tipe:) a")?.text()?.lowercase() ?: "tv", episodes.size)
+        val type = getType(
+                document.selectFirst("div.col-lg-6.col-md-6 ul li:contains(Tipe:) a")?.text()
+                        ?.lowercase() ?: "tv", episodes.size
+        )
         val recommendations = document.select("div#randomList > a").mapNotNull {
             val epHref = it.attr("href")
             val epTitle = it.select("h5.sidebar-title-h5.px-2.py-2").text()
@@ -141,7 +147,7 @@ class KuramanimeProvider : MainAPI() {
             }
         }
 
-        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+        val tracker = APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
 
         return newAnimeLoadResponse(title, url, type) {
             engName = title
@@ -160,111 +166,131 @@ class KuramanimeProvider : MainAPI() {
     }
 
     private suspend fun invokeLocalSource(
-        url: String,
-        server: String,
-        ref: String,
-        callback: (ExtractorLink) -> Unit
+            url: String,
+            server: String,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
     ) {
         val document = app.get(
-            url,
-            referer = ref,
-            headers = headers,
-            cookies = cookies
+                url,
+                headers = headers,
+                cookies = cookies
         ).document
         document.select("video#player > source").map {
             val link = fixUrl(it.attr("src"))
             val quality = it.attr("size").toIntOrNull()
             callback.invoke(
-                ExtractorLink(
-                    fixTitle(server),
-                    fixTitle(server),
-                    link,
-                    referer = "",
-                    quality = quality ?: Qualities.Unknown.value,
-                    headers = mapOf(
-                        "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
-                        "Range" to "bytes=0-",
-                        "Sec-Fetch-Dest" to "video",
-                        "Sec-Fetch-Mode" to "no-cors",
-                    ),
-                )
+                    ExtractorLink(
+                            fixTitle(server),
+                            fixTitle(server),
+                            link,
+                            referer = "",
+                            quality = quality ?: Qualities.Unknown.value,
+                            headers = mapOf(
+                                    "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                                    "Range" to "bytes=0-",
+                                    "Sec-Fetch-Dest" to "video",
+                                    "Sec-Fetch-Mode" to "no-cors",
+                            ),
+                    )
             )
+        }
+        if(server=="kuramadrive") {
+            document.select("div#animeDownloadLink a").apmap {
+                loadExtractor(it.attr("href"), "$mainUrl/", subtitleCallback, callback)
+            }
         }
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
+            data: String,
+            isCasting: Boolean,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
     ): Boolean {
 
         val req = app.get(data)
         val res = req.document
+        cookies = req.cookies
 
-        argamap(
-            {
-                val auth = getAuth(data)
-                headers = auth.authHeader?.associate { it.first to it.second }?.filter { it.key != "Cookie" }!!
-                cookies = req.cookies
-                res.select("select#changeServer option").apmap { source ->
-                    val server = source.attr("value")
-                    val query = auth.serverUrl?.queryParameterNames?.map { it } ?: return@apmap
-                    val link = "$data?${query[0]}=${getMisc(auth.authUrl)}&${query[1]}=$server"
-                    if (server.contains(Regex("(?i)kuramadrive|archive"))) {
-                        invokeLocalSource(link, server, data, callback)
-                    } else {
-                        app.get(
-                            link,
-                            referer = data,
-                            headers = headers,
-                            cookies = cookies
-                        ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
-                            loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
-                        }
-                    }
-                }
-            },
-            {
-                res.select("div#animeDownloadLink a").apmap {
-                    loadExtractor(it.attr("href"), "$mainUrl/", subtitleCallback, callback)
+        val bpjs = res.selectFirst("div.col-lg-12.mt-3")?.attr("data-bpjs") ?: return false
+
+        val auth = getMiscUrl(data)
+        val misc = getMisc(auth)
+        val mixPage = getMixPage(bpjs)
+
+        res.select("select#changeServer option").apmap { source ->
+            val server = source.attr("value")
+            val link = "$data?${mixPage.first}=$misc&${mixPage.second}=$server"
+            if (server.contains(Regex("(?i)kuramadrive|archive"))) {
+                invokeLocalSource(link, server, subtitleCallback, callback)
+            } else {
+                app.get(
+                        link,
+                        referer = data,
+                        headers = headers,
+                        cookies = cookies
+                ).document.select("div.iframe-container iframe").attr("src").let { videoUrl ->
+                    loadExtractor(fixUrl(videoUrl), "$mainUrl/", subtitleCallback, callback)
                 }
             }
-        )
+        }
+
 
         return true
     }
 
-    private suspend fun fetchAuth(url: String) : AuthParams {
-        val regex = Regex("""$mainUrl/\S+""")
+    private suspend fun fetchMiscUrl(url: String): String {
+        val regex = Regex("""$mainUrl/.*""")
         val found = WebViewResolver(
-            Regex("""$url(?!\?page=)\?"""),
-            additionalUrls = listOf(regex)
+                Regex("""$mainUrl/assets/\S+.jpg"""),
+                additionalUrls = listOf(regex),
         ).resolveUsingWebView(
-            requestCreator(
-                "GET", url
-            )
-        )
-        val addition = found.second.findLast { it.headers["X-Requested-With"] == "XMLHttpRequest" }
-        return AuthParams(found.first?.url, addition?.url.toString(), addition?.headers)
+                requestCreator(
+                        "GET", url
+                        , cookies = cookies, referer = "$mainUrl/", headers = mapOf(
+                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                        "Accept-Language" to "en-US,en;q=0.5",
+                )
+                )
+        ).first
+        headers = found?.headers?.associate { it.first to it.second } ?: mapOf()
+        return found?.url.toString()
     }
 
-    private suspend fun getAuth(url: String) = params ?: fetchAuth(url).also { params = it }
+    private suspend fun getMiscUrl(url: String) = miscUrl ?: fetchMiscUrl(url).also { miscUrl = it }
+
+    private suspend fun fetchMixPage(bpjs: String): Pair<String,String> {
+        val env = app.get("$mainUrl/assets/js/$bpjs.js").text
+        val MIX_PAGE_TOKEN_KEY = env.substringAfter("MIX_PAGE_TOKEN_KEY: '").substringBefore("',")
+        val MIX_STREAM_SERVER_KEY = env.substringAfter("MIX_STREAM_SERVER_KEY: '").substringBefore("',")
+        return MIX_PAGE_TOKEN_KEY to MIX_STREAM_SERVER_KEY
+    }
+
+    private suspend fun getMixPage(bpjs: String) = mixPage ?: fetchMixPage(bpjs).also { mixPage = it }
 
     private suspend fun getMisc(url: String?): String {
-        val misc = app.get(
-            "$url",
-            headers = headers,
-            cookies = cookies
-        )
-        cookies = misc.cookies
-        return misc.parsed()
+        val res = app.get("$url", headers = headers)
+        cookies = res.cookies
+        return res.text.removeBloat()
     }
 
-    data class AuthParams (
-        val serverUrl: HttpUrl?,
-        val authUrl: String?,
-        val authHeader: Headers?,
+    private fun getRequestId(length: Int = 6): String {
+        val allowedChars = ('a'..'z') + ('0'..'9')
+        return (1..length)
+                .map { allowedChars.random() }
+                .joinToString("")
+    }
+
+    private fun String.removeBloat() : String {
+        return this.replace("\"", "")
+    }
+
+    data class AuthParams(
+            val header: Map<String, String>?,
+            val params: List<String>?,
+            val misc: String,
+            val miscUrl: String?,
     )
 
 }
