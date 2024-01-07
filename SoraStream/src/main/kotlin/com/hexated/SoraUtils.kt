@@ -743,14 +743,15 @@ suspend fun getCrunchyrollToken(): CrunchyrollAccessToken {
 
     val token = tryParseJson<CrunchyrollToken>(client.newCall(request).execute().body.string())
     val headers = mapOf("Authorization" to "${token?.tokenType} ${token?.accessToken}")
-    val cms = app.get("$crunchyrollAPI/index/v2", headers = headers).parsedSafe<CrunchyrollToken>()?.cms
+    val cms =
+        app.get("$crunchyrollAPI/index/v2", headers = headers).parsedSafe<CrunchyrollToken>()?.cms
     return CrunchyrollAccessToken(
-            token?.accessToken,
-            token?.tokenType,
-            cms?.bucket,
-            cms?.policy,
-            cms?.signature,
-            cms?.key_pair_id,
+        token?.accessToken,
+        token?.tokenType,
+        cms?.bucket,
+        cms?.policy,
+        cms?.signature,
+        cms?.key_pair_id,
     )
 }
 
