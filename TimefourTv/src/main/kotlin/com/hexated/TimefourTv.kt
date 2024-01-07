@@ -86,11 +86,11 @@ class TimefourTv : MainAPI() {
             listOf(Episode(arrayListOf(Channels(data.title, data.url)).toJson()))
         } else {
             val items = AppUtils.parseJson<ArrayList<Items>>(data.items)
-            items.mapNotNull {
+            items.mapNotNull { eps ->
                 Episode(
-                        data = it.channels?.toJson() ?: return@mapNotNull null,
-                        name = "${it.event} •",
-                        description = it.time,
+                        data = eps.channels?.toJson() ?: return@mapNotNull null,
+                        name = "${eps.event} • ${eps.time}",
+                        description = eps.channels.map { it.channel_name }.joinToString(" • "),
                         posterUrl = detailPoster,
                 )
             }
