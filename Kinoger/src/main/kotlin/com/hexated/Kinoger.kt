@@ -70,24 +70,24 @@ class Kinoger : MainAPI() {
         val poster = fixUrlNull(document.selectFirst("div.images-border img")?.getImageAttr())
         val description = document.select("div.images-border").text()
         val year = """\((\d{4})\)""".toRegex().find(title)?.groupValues?.get(1)?.toIntOrNull()
-        val type = if (document.selectFirst("label[title=Stream HD+]")
-                        ?.hasText() == true
-        ) TvType.Movie else TvType.TvSeries
+        val tags = document.select("li.category a").map { it.text() }
 
         val recommendations = document.select("ul.ul_related li").mapNotNull {
             it.toSearchResult()
         }
 
         val script = document.selectFirst("script:containsData(pw.show)")?.data()
-                ?.substringAfter("[")?.substringBeforeLast("]")?.replace("\'", "\"")
-        val json = AppUtils.tryParseJson<List<List<String>>>("[$script]")
+        val data = script?.substringAfter("[")?.substringBeforeLast("]")?.replace("\'", "\"")
+        val json = AppUtils.tryParseJson<List<List<String>>>("[$data]")
+
+        val type = if(script?.substringBeforeLast(")")?.substringAfterLast(",") == "0.2") TvType.Movie else TvType.TvSeries
 
         val episodes = json?.flatMapIndexed { season: Int, iframes: List<String> ->
             iframes.mapIndexed { episode, iframe ->
                 Episode(
-                        iframe.trim(),
-                        season = season + 1,
-                        episode = episode + 1
+                    iframe.trim(),
+                    season = season + 1,
+                    episode = episode + 1
                 )
             }
         } ?: emptyList()
@@ -96,6 +96,7 @@ class Kinoger : MainAPI() {
             this.posterUrl = poster
             this.year = year
             this.plot = description
+            this.tags = tags
             this.recommendations = recommendations
         }
     }
