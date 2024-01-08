@@ -50,7 +50,7 @@ class Kinoger : MainAPI() {
         val title = this.selectFirst("a")?.text() ?: this.selectFirst("img")?.attr("alt")
         ?: this.selectFirst("a")?.attr("title") ?: return null
         val posterUrl = fixUrlNull(
-                (this.nextElementSibling()?.selectFirst("div.content_text img") ?: this.selectFirst("div.content_text img") ?: this.selectFirst("img"))?.getImageAttr()
+            (this.selectFirst("div.content_text img") ?: this.nextElementSibling()?.selectFirst("div.content_text img") ?: this.selectFirst("img"))?.getImageAttr()
         )
 
         return newTvSeriesSearchResponse(title, href, TvType.AsianDrama) {
