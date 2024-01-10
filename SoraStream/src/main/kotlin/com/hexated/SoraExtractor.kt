@@ -764,8 +764,9 @@ object SoraExtractor : SoraStream() {
         val mediaId = app.get(url).document.selectFirst("ul.episodes li a")?.attr("data-id")
             ?: return
 
-        app.get("$vidsrctoAPI/ajax/embed/episode/$mediaId/sources")
-            .parsedSafe<VidsrctoSources>()?.result?.apmap {
+        app.get("$vidsrctoAPI/ajax/embed/episode/$mediaId/sources", headers = mapOf(
+            "X-Requested-With" to "XMLHttpRequest"
+        )).parsedSafe<VidsrctoSources>()?.result?.apmap {
             val encUrl = app.get("$vidsrctoAPI/ajax/embed/source/${it.id}")
                 .parsedSafe<VidsrctoResponse>()?.result?.url
             loadExtractor(
