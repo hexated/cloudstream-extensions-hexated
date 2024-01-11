@@ -30,5 +30,8 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Netembed())
         registerExtractorAPI(Flaswish())
         registerExtractorAPI(Comedyshow())
+        registerExtractorAPI(Ridoo())
+        registerExtractorAPI(Streamvid())
+        registerExtractorAPI(Embedrise())
     }
 }

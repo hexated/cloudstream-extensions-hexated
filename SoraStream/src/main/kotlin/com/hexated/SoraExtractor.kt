@@ -476,17 +476,34 @@ object SoraExtractor : SoraStream() {
         document.select("ul#playeroptionsul > li")
             .filter { element -> element.select("span.flag img").attr("src").contains("/en.") }
             .map {
-                Triple(it.attr("data-post"), it.attr("data-nume"), it.attr("data-type"))
+                Triple(
+                    it.attr("data-post"),
+                    it.attr("data-nume"),
+                    it.attr("data-type")
+                )
             }.apmap { (id, nume, type) ->
-            val source = app.get(
-                "$host/wp-json/dooplayer/v2/${id}/${type}/${nume}",
-                headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
-                referer = "$host/"
-            ).parsed<ResponseHash>().embed_url
-            if (!source.contains("youtube")) {
-                loadExtractor(source, "$host/", subtitleCallback, callback)
+                val source = app.get(
+                    "$host/wp-json/dooplayer/v2/${id}/${type}/${nume}",
+                    headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
+                    referer = "$host/"
+                ).parsed<ResponseHash>().embed_url
+                if (!source.contains("youtube")) {
+                    if (source.startsWith("https://voe.sx")) {
+                        val req = app.get(source, referer = "$host/")
+                        val server = getBaseUrl(req.url)
+                        val script = req.text.substringAfter("wc0 = '").substringBefore("'")
+                        val video = tryParseJson<Map<String, String>>(base64Decode(script))?.get("file")
+                        M3u8Helper.generateM3u8(
+                            "Voe",
+                            video ?: return@apmap,
+                            "$server/",
+                            headers = mapOf("Origin" to server)
+                        ).forEach(callback)
+                    } else {
+                        loadExtractor(source, "$host/", subtitleCallback, callback)
+                    }
+                }
             }
-        }
     }
 
     suspend fun invokeNoverse(
@@ -2339,25 +2356,51 @@ object SoraExtractor : SoraStream() {
     suspend fun invokeRidomovies(
         tmdbId: Int? = null,
         imdbId: String? = null,
+        title: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val slug = app.get("$ridomoviesAPI/core/api/search?q=$imdbId")
-            .parsedSafe<RidoSearch>()?.data?.items?.find {
-            it.contentable?.tmdbId == tmdbId || it.contentable?.imdbId == imdbId
-        }?.slug ?: return
-        app.get("$ridomoviesAPI/core/api/movies/$slug/videos")
-            .parsedSafe<RidoResponses>()?.data?.apmap { link ->
+        val slug = if (season == null) {
+            app.get("$ridomoviesAPI/core/api/search?q=$imdbId")
+                .parsedSafe<RidoSearch>()?.data?.items?.find {
+                    it.contentable?.tmdbId == tmdbId || it.contentable?.imdbId == imdbId
+                }?.slug
+        } else {
+            app.get("$ridomoviesAPI/tv/${title.createSlug()}/season-$season/episode-$episode").text.substringAfterLast(
+                """postid\":\""""
+            ).substringBefore("""\"""")
+        } ?: return
+        val url = if(season == null) {
+            "$ridomoviesAPI/core/api/movies/$slug/videos"
+        } else {
+            "$ridomoviesAPI/core/api/episodes/$slug/videos"
+        }
+        app.get(url).parsedSafe<RidoResponses>()?.data?.apmap { link ->
             val iframe = Jsoup.parse(link.url ?: return@apmap).select("iframe").attr("data-src")
-            val unpacked = getAndUnpack(app.get(iframe, referer = "$ridomoviesAPI/").text)
-            val video = Regex("=\"(aHR.*?)\";").find(unpacked)?.groupValues?.get(1)
-            callback.invoke(
-                ExtractorLink(
-                    "Ridomovies", "Ridomovies", base64Decode(
-                        video
-                            ?: return@apmap
-                    ), "${getBaseUrl(iframe)}/", Qualities.P1080.value, isM3u8 = true
+            if(iframe.startsWith("https://closeload.top")) {
+                val unpacked =
+                    getAndUnpack(
+                        app.get(
+                            iframe,
+                            referer = "$ridomoviesAPI/"
+                        ).text
+                    )
+                val video = Regex("=\"(aHR.*?)\";").find(unpacked)?.groupValues?.get(1)
+                callback.invoke(
+                    ExtractorLink(
+                        "Ridomovies",
+                        "Ridomovies",
+                        base64Decode(video ?: return@apmap),
+                        "${getBaseUrl(iframe)}/",
+                        Qualities.P1080.value,
+                        isM3u8 = true
+                    )
                 )
-            )
+            } else {
+                loadExtractor(iframe, "$ridomoviesAPI/", subtitleCallback, callback)
+            }
         }
     }
 

@@ -104,7 +104,7 @@ open class SoraStream : TmdbProvider() {
         const val nowTvAPI = "https://myfilestorage.xyz"
         const val gokuAPI = "https://goku.sx"
         const val zshowAPI = BuildConfig.ZSHOW_API
-        const val ridomoviesAPI = "https://ridomovies.pw"
+        const val ridomoviesAPI = "https://ridomovies.tv"
         const val emoviesAPI = "https://emovies.si"
         const val multimoviesAPI = "https://multimovies.top"
         const val multimovies2API = "https://multimovies.click"
@@ -584,11 +584,7 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeNowTv(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                if (!res.isAnime && res.season == null) invokeRidomovies(
-                    res.id,
-                    res.imdbId,
-                    callback
-                )
+                if (!res.isAnime && res.season == null) invokeRidomovies(res.id, res.imdbId, res.title, res.season, res.episode, subtitleCallback, callback)
             },
             {
                 if (!res.isAnime) invokeAllMovieland(res.imdbId, res.season, res.episode, callback)

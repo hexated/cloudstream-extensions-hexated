@@ -342,6 +342,96 @@ open class Netembed : ExtractorApi() {
     }
 }
 
+open class Ridoo : ExtractorApi() {
+    override val name = "Ridoo"
+    override var mainUrl = "https://ridoo.net"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer = referer)
+        val script = if (!getPacked(response.text).isNullOrEmpty()) {
+            getAndUnpack(response.text)
+        } else {
+            response.document.selectFirst("script:containsData(sources:)")?.data()
+        }
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                m3u8 ?: return,
+                mainUrl,
+                Qualities.P1080.value,
+                INFER_TYPE
+            )
+        )
+    }
+
+}
+
+open class Streamvid : ExtractorApi() {
+    override val name = "Streamvid"
+    override val mainUrl = "https://streamvid.net"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer = referer)
+        val script = if (!getPacked(response.text).isNullOrEmpty()) {
+            getAndUnpack(response.text)
+        } else {
+            response.document.selectFirst("script:containsData(sources:)")?.data()
+        }
+        val m3u8 =
+            Regex("src:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+        M3u8Helper.generateM3u8(
+            name,
+            m3u8 ?: return,
+            mainUrl
+        ).forEach(callback)
+    }
+
+}
+
+open class Embedrise : ExtractorApi() {
+    override val name = "Embedrise"
+    override val mainUrl = "https://embedrise.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get(url, referer = referer).document
+        val title = res.select("title").text()
+        val video = res.select("video#player source").attr("src")
+
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                video,
+                "$mainUrl/",
+                getIndexQuality(title),
+                INFER_TYPE
+            )
+        )
+
+    }
+
+}
+
 class Streamwish : Filesim() {
     override val name = "Streamwish"
     override var mainUrl = "https://streamwish.to"
