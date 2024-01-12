@@ -492,7 +492,8 @@ object SoraExtractor : SoraStream() {
                         val req = app.get(source, referer = "$host/")
                         val server = getBaseUrl(req.url)
                         val script = req.text.substringAfter("wc0 = '").substringBefore("'")
-                        val video = tryParseJson<Map<String, String>>(base64Decode(script))?.get("file")
+                        val video =
+                            tryParseJson<Map<String, String>>(base64Decode(script))?.get("file")
                         M3u8Helper.generateM3u8(
                             "Voe",
                             video ?: return@apmap,
@@ -528,8 +529,8 @@ object SoraExtractor : SoraStream() {
         } else {
             doc.select("table.table-striped tbody tr")
                 .find { it.text().contains("Episode $episode") }?.select("td")?.map {
-                it.select("a").attr("href") to it.select("a").text()
-            }
+                    it.select("a").attr("href") to it.select("a").text()
+                }
         } ?: return
 
         delay(4000)
@@ -781,9 +782,11 @@ object SoraExtractor : SoraStream() {
         val mediaId = app.get(url).document.selectFirst("ul.episodes li a")?.attr("data-id")
             ?: return
 
-        app.get("$vidsrctoAPI/ajax/embed/episode/$mediaId/sources", headers = mapOf(
-            "X-Requested-With" to "XMLHttpRequest"
-        )).parsedSafe<VidsrctoSources>()?.result?.apmap {
+        app.get(
+            "$vidsrctoAPI/ajax/embed/episode/$mediaId/sources", headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest"
+            )
+        ).parsedSafe<VidsrctoSources>()?.result?.apmap {
             val encUrl = app.get("$vidsrctoAPI/ajax/embed/source/${it.id}")
                 .parsedSafe<VidsrctoResponse>()?.result?.url
             loadExtractor(
@@ -905,21 +908,68 @@ object SoraExtractor : SoraStream() {
             if (season == null) TvType.AnimeMovie else TvType.Anime
         )
 
-        argamap({
-            invokeAnimetosho(malId, season, episode, subtitleCallback, callback)
-        }, {
-            invokeAniwatch(malId, episode, subtitleCallback, callback)
-        }, {
-            if (season != null) invokeCrunchyroll(
-                aniId,
-                malId,
-                epsTitle,
-                season,
-                episode,
+        val malsync = app.get("$malsyncAPI/mal/anime/${malId ?: return}")
+            .parsedSafe<MALSyncResponses>()?.sites
+
+        val zoroIds = malsync?.zoro?.keys?.map { it }
+        val aniwaveId = malsync?.nineAnime?.firstNotNullOf { it.value["url"] }
+
+        argamap(
+            {
+                invokeAnimetosho(malId, season, episode, subtitleCallback, callback)
+            },
+            {
+                invokeAniwatch(zoroIds, episode, subtitleCallback, callback)
+            },
+            {
+                invokeAniwave(aniwaveId, episode, subtitleCallback, callback)
+            },
+            {
+                if (season != null) invokeCrunchyroll(
+                    aniId,
+                    malId,
+                    epsTitle,
+                    season,
+                    episode,
+                    subtitleCallback,
+                    callback
+                )
+            }
+        )
+    }
+
+    private suspend fun invokeAniwave(
+        url: String? = null,
+        episode: Int? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get(url ?: return).document
+        val id = res.select("div#watch-main").attr("data-id")
+        val episodeId =
+            app.get("$aniwaveAPI/ajax/episode/list/$id?vrf=${AniwaveUtils.encodeVrf(id)}")
+                .parsedSafe<AniwaveResponse>()?.asJsoup()
+                ?.selectFirst("ul.ep-range li a[data-num=${episode ?: 1}]")?.attr("data-ids")
+                ?: return
+        val servers =
+            app.get("$aniwaveAPI/ajax/server/list/$episodeId?vrf=${AniwaveUtils.encodeVrf(episodeId)}")
+                .parsedSafe<AniwaveResponse>()?.asJsoup()
+                ?.select("div.servers > div[data-type!=sub] ul li") ?: return
+
+        servers.apmap {
+            val linkId = it.attr("data-link-id")
+            val iframe =
+                app.get("$aniwaveAPI/ajax/server/$linkId?vrf=${AniwaveUtils.encodeVrf(linkId)}")
+                    .parsedSafe<AniwaveServer>()?.result?.decrypt()
+            val audio = if (it.attr("data-cmid").endsWith("softsub")) "Raw" else "English Dub"
+            loadCustomExtractor(
+                "${it.text()} [$audio]",
+                iframe ?: return@apmap,
+                "$aniwaveAPI/",
                 subtitleCallback,
-                callback
+                callback,
             )
-        })
+        }
     }
 
     private suspend fun invokeAnimetosho(
@@ -968,7 +1018,7 @@ object SoraExtractor : SoraStream() {
     }
 
     private suspend fun invokeAniwatch(
-        malId: Int? = null,
+        animeIds: List<String?>? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
@@ -976,9 +1026,7 @@ object SoraExtractor : SoraStream() {
         val headers = mapOf(
             "X-Requested-With" to "XMLHttpRequest",
         )
-        val animeId = app.get("$malsyncAPI/mal/anime/${malId ?: return}")
-            .parsedSafe<MALSyncResponses>()?.sites?.zoro?.keys?.map { it }
-        animeId?.apmap { id ->
+        animeIds?.apmap { id ->
             val episodeId = app.get(
                 "$aniwatchAPI/ajax/v2/episode/list/${id ?: return@apmap}",
                 headers = headers
@@ -992,12 +1040,12 @@ object SoraExtractor : SoraStream() {
                 headers = headers
             ).parsedSafe<AniwatchResponses>()?.html?.let { Jsoup.parse(it) }
                 ?.select("div.item.server-item")?.map {
-                Triple(
-                    it.text(),
-                    it.attr("data-id"),
-                    it.attr("data-type"),
-                )
-            }
+                    Triple(
+                        it.text(),
+                        it.attr("data-id"),
+                        it.attr("data-type"),
+                    )
+                }
 
             servers?.apmap servers@{ server ->
                 val iframe = app.get(
@@ -1914,8 +1962,8 @@ object SoraExtractor : SoraStream() {
                         timeout = 120L
                     ).document.selectFirst("script:containsData(downloaddomain)")?.data()
                         ?.substringAfter("\"downloaddomain\":\"")?.substringBefore("\",")?.let {
-                        "$it/0:"
-                    }
+                            "$it/0:"
+                        }
                     fixUrl(path, worker ?: return@apmap null)
                 } else {
                     fixUrl(path, apiUrl)
@@ -2372,14 +2420,14 @@ object SoraExtractor : SoraStream() {
                 """postid\":\""""
             ).substringBefore("""\"""")
         } ?: return
-        val url = if(season == null) {
+        val url = if (season == null) {
             "$ridomoviesAPI/core/api/movies/$slug/videos"
         } else {
             "$ridomoviesAPI/core/api/episodes/$slug/videos"
         }
         app.get(url).parsedSafe<RidoResponses>()?.data?.apmap { link ->
             val iframe = Jsoup.parse(link.url ?: return@apmap).select("iframe").attr("data-src")
-            if(iframe.startsWith("https://closeload.top")) {
+            if (iframe.startsWith("https://closeload.top")) {
                 val unpacked =
                     getAndUnpack(
                         app.get(

@@ -263,8 +263,7 @@ open class Streamruby : ExtractorApi() {
         } else {
             response.document.selectFirst("script:containsData(sources:)")?.data()
         }
-        val m3u8 =
-            Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
         M3u8Helper.generateM3u8(
             name,
             m3u8 ?: return,
@@ -466,7 +465,7 @@ class Animefever : Filesim() {
     override var mainUrl = "https://animefever.fun"
 }
 
-class Multimovies : Filesim() {
+class Multimovies : Ridoo() {
     override val name = "Multimovies"
     override var mainUrl = "https://multimovies.cloud"
 }

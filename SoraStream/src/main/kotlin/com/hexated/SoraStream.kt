@@ -91,6 +91,7 @@ open class SoraStream : TmdbProvider() {
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
         const val aniwatchAPI = "https://aniwatch.to"
+        const val aniwaveAPI = "https://aniwave.to"
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
         const val lingAPI = "https://ling-online.net"
@@ -185,8 +186,8 @@ open class SoraStream : TmdbProvider() {
         val type = if (request.data.contains("/movie")) "movie" else "tv"
         val home = app.get("${request.data}$adultQuery&page=$page")
             .parsedSafe<Results>()?.results?.mapNotNull { media ->
-            media.toSearchResponse(type)
-        } ?: throw ErrorLoadingException("Invalid Json reponse")
+                media.toSearchResponse(type)
+            } ?: throw ErrorLoadingException("Invalid Json reponse")
         return newHomePageResponse(request.name, home)
     }
 
@@ -205,8 +206,8 @@ open class SoraStream : TmdbProvider() {
     override suspend fun search(query: String): List<SearchResponse>? {
         return app.get("$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=1&include_adult=${settingsForProvider.enableAdult}")
             .parsedSafe<Results>()?.results?.mapNotNull { media ->
-            media.toSearchResponse()
-        }
+                media.toSearchResponse()
+            }
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -257,39 +258,39 @@ open class SoraStream : TmdbProvider() {
             val episodes = res.seasons?.mapNotNull { season ->
                 app.get("$tmdbAPI/${data.type}/${data.id}/season/${season.seasonNumber}?api_key=$apiKey")
                     .parsedSafe<MediaDetailEpisodes>()?.episodes?.map { eps ->
-                    Episode(
-                        LinkData(
-                            data.id,
-                            res.external_ids?.imdb_id,
-                            res.external_ids?.tvdb_id,
-                            data.type,
-                            eps.seasonNumber,
-                            eps.episodeNumber,
-                            title = title,
-                            year = season.airDate?.split("-")?.first()?.toIntOrNull(),
-                            orgTitle = orgTitle,
-                            isAnime = isAnime,
-                            airedYear = year,
-                            lastSeason = lastSeason,
-                            epsTitle = eps.name,
-                            jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
-                            date = season.airDate,
-                            airedDate = res.releaseDate
-                                ?: res.firstAirDate,
-                            isAsian = isAsian,
-                            isBollywood = isBollywood,
-                            isCartoon = isCartoon
-                        ).toJson(),
-                        name = eps.name + if (isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
-                        season = eps.seasonNumber,
-                        episode = eps.episodeNumber,
-                        posterUrl = getImageUrl(eps.stillPath),
-                        rating = eps.voteAverage?.times(10)?.roundToInt(),
-                        description = eps.overview
-                    ).apply {
-                        this.addDate(eps.airDate)
+                        Episode(
+                            LinkData(
+                                data.id,
+                                res.external_ids?.imdb_id,
+                                res.external_ids?.tvdb_id,
+                                data.type,
+                                eps.seasonNumber,
+                                eps.episodeNumber,
+                                title = title,
+                                year = season.airDate?.split("-")?.first()?.toIntOrNull(),
+                                orgTitle = orgTitle,
+                                isAnime = isAnime,
+                                airedYear = year,
+                                lastSeason = lastSeason,
+                                epsTitle = eps.name,
+                                jpTitle = res.alternative_titles?.results?.find { it.iso_3166_1 == "JP" }?.title,
+                                date = season.airDate,
+                                airedDate = res.releaseDate
+                                    ?: res.firstAirDate,
+                                isAsian = isAsian,
+                                isBollywood = isBollywood,
+                                isCartoon = isCartoon
+                            ).toJson(),
+                            name = eps.name + if (isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
+                            season = eps.seasonNumber,
+                            episode = eps.episodeNumber,
+                            posterUrl = getImageUrl(eps.stillPath),
+                            rating = eps.voteAverage?.times(10)?.roundToInt(),
+                            description = eps.overview
+                        ).apply {
+                            this.addDate(eps.airDate)
+                        }
                     }
-                }
             }?.flatten() ?: listOf()
             newTvSeriesLoadResponse(
                 title,
@@ -584,7 +585,15 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeNowTv(res.id, res.imdbId, res.season, res.episode, callback)
             },
             {
-                if (!res.isAnime && res.season == null) invokeRidomovies(res.id, res.imdbId, res.title, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeRidomovies(
+                    res.id,
+                    res.imdbId,
+                    res.title,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
             },
             {
                 if (!res.isAnime) invokeAllMovieland(res.imdbId, res.season, res.episode, callback)
