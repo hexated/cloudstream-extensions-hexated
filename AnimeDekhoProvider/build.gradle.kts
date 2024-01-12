@@ -1,11 +1,8 @@
-version = 1
-
+version = 2
 
 cloudstream {
     language = "hi"
-    // All of these properties are optional, you can safely remove them
-
-    description = "YOU HAVE SKIP ADS on the SITE each 24 hours, Hindi dubbed cartoons"
+    description = "SKIP ADS on the SITE every 24 hours to Play, has Hindi Dubbed Cartoons"
     authors = listOf("anon")
 
     /**

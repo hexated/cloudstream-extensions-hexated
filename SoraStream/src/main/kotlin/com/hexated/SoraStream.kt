@@ -125,7 +125,7 @@ open class SoraStream : TmdbProvider() {
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val hdmovies4uAPI = "https://hdmovies4u.dad"
         const val vegaMoviesAPI = "https://vegamovies.dad"
-        const val dotmoviesAPI = "https://dotmovies.bet"
+        const val dotmoviesAPI = "https://dotmovies.rsvp"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
         const val moviezAddAPI = "https://ww3.moviezaddiction.click"
         const val bollyMazaAPI = "https://ww3.bollymaza.click"
