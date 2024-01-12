@@ -281,7 +281,7 @@ open class SoraStream : TmdbProvider() {
                                 isBollywood = isBollywood,
                                 isCartoon = isCartoon
                             ).toJson(),
-                            name = eps.name + if (isUpcoming(eps.airDate)) " - [UPCOMING]" else "",
+                            name = eps.name + if (isUpcoming(eps.airDate)) " • [UPCOMING]" else "",
                             season = eps.seasonNumber,
                             episode = eps.episodeNumber,
                             posterUrl = getImageUrl(eps.stillPath),
