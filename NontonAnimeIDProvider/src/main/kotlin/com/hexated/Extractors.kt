@@ -73,6 +73,12 @@ class EmbedKotakAnimeid : Hxfile() {
     override val requiresReferer = true
 }
 
+class Kotaksb : Hxfile() {
+    override val name = "Kotaksb"
+    override val mainUrl = "https://kotaksb.fun"
+    override val requiresReferer = true
+}
+
 class KotakAnimeidCom : Hxfile() {
     override val name = "KotakAnimeid"
     override val mainUrl = "https://kotakanimeid.com"
