@@ -126,7 +126,7 @@ object SoraExtractor : SoraStream() {
             referer = iframedoc
         ).document.selectFirst("script:containsData(Playerjs)")?.data()
         val video = script?.substringAfter("file:\"#2")?.substringBefore("\"")
-            ?.replace(Regex("(//\\S+?=)"), "")?.let { base64Decode(it) }
+            ?.replace(Regex("/.*?=?="), "")?.let { base64Decode(it) }
 
         callback.invoke(
             ExtractorLink(

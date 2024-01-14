@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.extractors.Hxfile
+import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
@@ -13,7 +13,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class NontonAnimeIDProvider : MainAPI() {
-    override var mainUrl = "https://nontonanimeid.mom"
+    override var mainUrl = "https://nontonanimeid.biz"
     override var name = "NontonAnimeID"
     override val hasQuickSearch = false
     override val hasMainPage = true
@@ -21,16 +21,16 @@ class NontonAnimeIDProvider : MainAPI() {
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
-            TvType.Anime,
-            TvType.AnimeMovie,
-            TvType.OVA
+        TvType.Anime,
+        TvType.AnimeMovie,
+        TvType.OVA
     )
 
     companion object {
         fun getType(t: String): TvType {
             return when {
-                t.contains("TV",true) -> TvType.Anime
-                t.contains("Movie",true) -> TvType.AnimeMovie
+                t.contains("TV", true) -> TvType.Anime
+                t.contains("Movie", true) -> TvType.AnimeMovie
                 else -> TvType.OVA
             }
         }
@@ -45,12 +45,12 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-            "" to "Latest Update",
-            "ongoing-list/" to " Ongoing List",
-            "popular-series/" to "Popular Series",
+        "" to "Latest Update",
+        "ongoing-list/" to " Ongoing List",
+        "popular-series/" to "Popular Series",
     )
 
-    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("$mainUrl/${request.data}").document
         val home = document.select(".animeseries").mapNotNull {
             it.toSearchResult()
@@ -78,7 +78,7 @@ class NontonAnimeIDProvider : MainAPI() {
             val title = it.selectFirst("h2")!!.text().trim()
             val poster = it.selectFirst("img")?.getImageAttr()
             val tvType = getType(
-                    it.selectFirst(".boxinfores > span.typeseries")!!.text().toString()
+                it.selectFirst(".boxinfores > span.typeseries")!!.text().toString()
             )
             val href = fixUrl(it.selectFirst("a")!!.attr("href"))
 
@@ -100,15 +100,16 @@ class NontonAnimeIDProvider : MainAPI() {
         mainUrl = getBaseUrl(req.url)
         val document = req.document
 
-        val title = document.selectFirst("h1.entry-title.cs")!!.text().removeSurrounding("Nonton Anime", "Sub Indo").trim()
+        val title = document.selectFirst("h1.entry-title.cs")!!.text()
+            .removeSurrounding("Nonton Anime", "Sub Indo").trim()
         val poster = document.selectFirst(".poster > img")?.getImageAttr()
         val tags = document.select(".tagline > a").map { it.text() }
 
         val year = Regex("\\d, (\\d*)").find(
-                document.select(".bottomtitle > span:nth-child(5)").text()
+            document.select(".bottomtitle > span:nth-child(5)").text()
         )?.groupValues?.get(1)?.toIntOrNull()
         val status = getStatus(
-                document.select("span.statusseries").text().trim()
+            document.select("span.statusseries").text().trim()
         )
         val type = getType(document.select("span.typeseries").text().trim().lowercase())
         val rating = document.select("span.nilaiseries").text().trim().toIntOrNull()
@@ -118,21 +119,21 @@ class NontonAnimeIDProvider : MainAPI() {
         val episodes = if (document.select("button.buttfilter").isNotEmpty()) {
             val id = document.select("input[name=series_id]").attr("value")
             val numEp =
-                    document.selectFirst(".latestepisode > a")?.text()?.replace(Regex("\\D"), "")
-                            .toString()
+                document.selectFirst(".latestepisode > a")?.text()?.replace(Regex("\\D"), "")
+                    .toString()
             Jsoup.parse(
-                    app.post(
-                            url = "$mainUrl/wp-admin/admin-ajax.php",
-                            data = mapOf(
-                                    "misha_number_of_results" to numEp,
-                                    "misha_order_by" to "date-DESC",
-                                    "action" to "mishafilter",
-                                    "series_id" to id
-                            )
-                    ).parsed<EpResponse>().content
+                app.post(
+                    url = "$mainUrl/wp-admin/admin-ajax.php",
+                    data = mapOf(
+                        "misha_number_of_results" to numEp,
+                        "misha_order_by" to "date-DESC",
+                        "action" to "mishafilter",
+                        "series_id" to id
+                    )
+                ).parsed<EpResponse>().content
             ).select("li").map {
                 val episode = Regex("Episode\\s?(\\d+)").find(
-                        it.selectFirst("a")?.text().toString()
+                    it.selectFirst("a")?.text().toString()
                 )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = fixUrl(it.selectFirst("a")!!.attr("href"))
                 Episode(link, episode = episode?.toIntOrNull())
@@ -140,7 +141,7 @@ class NontonAnimeIDProvider : MainAPI() {
         } else {
             document.select("ul.misha_posts_wrap2 > li").map {
                 val episode = Regex("Episode\\s?(\\d+)").find(
-                        it.selectFirst("a")?.text().toString()
+                    it.selectFirst("a")?.text().toString()
                 )?.groupValues?.getOrNull(0) ?: it.selectFirst("a")?.text()
                 val link = it.select("a").attr("href")
                 Episode(link, episode = episode?.toIntOrNull())
@@ -157,7 +158,7 @@ class NontonAnimeIDProvider : MainAPI() {
             }
         }
 
-        val tracker = APIHolder.getTracker(listOf(title),TrackerType.getTypes(type),year,true)
+        val tracker = APIHolder.getTracker(listOf(title), TrackerType.getTypes(type), year, true)
 
         return newAnimeLoadResponse(title, url, type) {
             engName = title
@@ -178,13 +179,19 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ): Boolean {
 
         val document = app.get(data).document
+
+        val nonce =
+            document.select("script#ajax_video-js-extra").attr("src").substringAfter("base64,")
+                .let {
+                    AppUtils.parseJson<Map<String, String>>(base64Decode(it).substringAfter("="))["nonce"]
+                }
 
         document.select(".container1 > ul > li:not(.boxtab)").apmap {
             val dataPost = it.attr("data-post")
@@ -192,19 +199,19 @@ class NontonAnimeIDProvider : MainAPI() {
             val dataType = it.attr("data-type")
 
             val iframe = app.post(
-                    url = "$mainUrl/wp-admin/admin-ajax.php",
-                    data = mapOf(
-                            "action" to "player_ajax",
-                            "post" to dataPost,
-                            "nume" to dataNume,
-                            "type" to dataType,
-                            "nonce" to "8c5a2e3cb2"
-                    ),
-                    referer = data,
-                    headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+                url = "$mainUrl/wp-admin/admin-ajax.php",
+                data = mapOf(
+                    "action" to "player_ajax",
+                    "post" to dataPost,
+                    "nume" to dataNume,
+                    "type" to dataType,
+                    "nonce" to "$nonce"
+                ),
+                referer = data,
+                headers = mapOf("X-Requested-With" to "XMLHttpRequest")
             ).document.selectFirst("iframe")?.attr("src")
 
-            loadExtractor(iframe ?: return@apmap , "$mainUrl/", subtitleCallback, callback)
+            loadExtractor(iframe ?: return@apmap, "$mainUrl/", subtitleCallback, callback)
         }
 
         return true
@@ -226,10 +233,10 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     private data class EpResponse(
-            @JsonProperty("posts") val posts: String?,
-            @JsonProperty("max_page") val max_page: Int?,
-            @JsonProperty("found_posts") val found_posts: Int?,
-            @JsonProperty("content") val content: String
+        @JsonProperty("posts") val posts: String?,
+        @JsonProperty("max_page") val max_page: Int?,
+        @JsonProperty("found_posts") val found_posts: Int?,
+        @JsonProperty("content") val content: String
     )
 
 }
