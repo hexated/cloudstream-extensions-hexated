@@ -28,18 +28,17 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 import com.lagradost.cloudstream3.extractors.helper.AesHelper.cryptoAESHandler
 
-
-class AnimeDekhoProvider : MainAPI() { // all providers must be an instance of MainAPI
-    override var mainUrl = "https://animedekho.com/"
+class AnimeDekhoProvider : MainAPI() {
+    override var mainUrl = "https://animedekho.com"
     override var name = "Anime Dekho"
-
     override val hasMainPage = true
-
     override var lang = "hi"
     override val hasDownloadSupport = true
 
     override val supportedTypes = setOf(
-        TvType.TvSeries,
+        TvType.Cartoon,
+        TvType.Anime,
+        TvType.AnimeMovie,
         TvType.Movie
     )
 
@@ -53,14 +52,11 @@ class AnimeDekhoProvider : MainAPI() { // all providers must be an instance of M
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val link = "$mainUrl${request.data}"
         val document = app.get(link).document
-        //Log.d("TAGNAME", "$document")
         val home = document.select("article").mapNotNull {
             it.toSearchResult()
         }
         return newHomePageResponse(request.name, home)
     }
-
-
 
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         //val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
@@ -128,7 +124,6 @@ class AnimeDekhoProvider : MainAPI() { // all providers must be an instance of M
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-
         var vidlink = ""
 
         if(data.contains("https://vidxstream.xyz")){
@@ -142,7 +137,6 @@ class AnimeDekhoProvider : MainAPI() { // all providers must be an instance of M
 
             var term = Regex("""\bterm-(\d+)\b""").find(name)?.value!!?.replace("term-","")
 
-
             vidlink = app.get("https://animedekho.com/?trembed=0&trid="+term)
                                 .document?.selectFirst("iframe")?.attr("src") ?: "null"
         }
@@ -150,7 +144,6 @@ class AnimeDekhoProvider : MainAPI() { // all providers must be an instance of M
         //Log.d("TAGNAME", "vidlink $vidlink") //https://vidxstream.xyz/v/H0Rh3ixVLJKk/
 
         val body = app.get(vidlink).text
-
 
         val master = Regex("""JScript[\w+]?\s*=\s*'([^']+)""").find(body)!!.groupValues?.get(1)
 
@@ -172,27 +165,17 @@ class AnimeDekhoProvider : MainAPI() { // all providers must be an instance of M
             "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0",
                 )
         
-        callback.invoke(
-                            ExtractorLink(
-                                source = "Toon",
-                                name = "Toon",
-                                url = vidfinal!!,
-                                referer = "https://vidxstream.xyz/",
-                                quality = Qualities.Unknown.value,
-                                isM3u8 = true,
-                                headers = headers,
-                                
-                            )
-                        )
-        
-        
-                             
-
+        callback.invoke(ExtractorLink
+            (
+            source = "Toon",
+            name = "Toon",
+            url = vidfinal!!,
+            referer = "https://vidxstream.xyz/",
+            quality = Qualities.Unknown.value,
+            isM3u8 = true,
+            headers = headers,
+            )
+        )
         return true
-
-        
     }
-
-    
 }
-

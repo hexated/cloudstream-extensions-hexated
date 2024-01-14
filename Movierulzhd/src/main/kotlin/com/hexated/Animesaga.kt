@@ -18,6 +18,4 @@ class Animesaga : Movierulzhd() {
         "tvshows" to "TV-Shows",
         "genre/hindi-dub" to "Hindi Dub",
     )
-
-
 }
