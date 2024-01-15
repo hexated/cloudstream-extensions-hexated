@@ -74,8 +74,7 @@ class Moflix : MainAPI() {
         val res = app.get(
             "$mainUrl/api/v1/titles/${url.removePrefix("$mainUrl/")}?loader=titlePage",
             referer = "$mainUrl/"
-        )
-            .parsedSafe<Responses>()
+        ).parsedSafe<Responses>()
 
         val id = res?.title?.id
         val title = res?.title?.name ?: ""
@@ -202,7 +201,7 @@ class Moflix : MainAPI() {
         quality: Int? = null,
     ) {
         loadExtractor(url, referer, subtitleCallback) { link ->
-            if (link.quality == Qualities.Unknown.value) {
+            if (link.quality == Qualities.Unknown.value || !link.isM3u8) {
                 callback.invoke(
                     ExtractorLink(
                         link.source,
