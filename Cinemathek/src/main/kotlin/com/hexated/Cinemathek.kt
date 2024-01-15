@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.extractors.DoodLaExtractor
+import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
@@ -177,4 +179,24 @@ class Cinemathek : MainAPI() {
         @JsonProperty("embed_url") val embedUrl: String,
     )
 
+}
+
+class StreamwishCom : Filesim() {
+    override val name = "Streamwish"
+    override var mainUrl = "https://streamwish.com"
+}
+
+class Ds2play : DoodLaExtractor() {
+    override var name = "Ds2play"
+    override var mainUrl = "https://ds2play.com"
+}
+
+class Do0od : DoodLaExtractor() {
+    override var name = "Do0od"
+    override var mainUrl = "https://do0od.com"
+}
+
+class Filelions : Filesim() {
+    override val name = "Filelions"
+    override var mainUrl = "https://filelions.live"
 }
