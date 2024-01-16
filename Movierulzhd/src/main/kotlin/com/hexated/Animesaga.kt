@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.mainPageOf
 
 class Animesaga : Movierulzhd() {
 
-    override var mainUrl = "https://www.animesaga.in"
+    override var mainUrl = "https://anplay.in"
     override var name = "Animesaga"
     override val supportedTypes = setOf(
         TvType.Anime,
