@@ -76,14 +76,18 @@ class Nimegami : MainAPI() {
             this.posterUrl = posterUrl
             addSub(episode)
         }
-
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        return app.get("$mainUrl/?s=$query&post_type=post").document.select("div.archive article")
-            .mapNotNull {
-                it.toSearchResult()
-            }
+        val searchResponse = mutableListOf<SearchResponse>()
+        for (i in 1..2) {
+            val res = app.get("$mainUrl/page/$i/?s=gintama&post_type=post").document.select("div.archive article")
+                .mapNotNull {
+                    it.toSearchResult()
+                }
+            searchResponse.addAll(res)
+        }
+        return searchResponse
     }
 
     override suspend fun load(url: String): LoadResponse {
