@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import org.jsoup.Jsoup
 import kotlin.math.roundToInt
 
 class Moflix : MainAPI() {
@@ -72,10 +73,11 @@ class Moflix : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val res = app.get(
-            "$mainUrl/api/v1/titles/${url.removePrefix("$mainUrl/")}?loader=titlePage",
+            "$mainUrl/api/v1/titles/${url.fixId()}?loader=titlePage",
             referer = "$mainUrl/"
         ).parsedSafe<Responses>()
 
+        val uri = Jsoup.parse(res?.seo.toString()).selectFirst("link[rel=canonical]")?.attr("href")
         val id = res?.title?.id
         val title = res?.title?.name ?: ""
         val poster = res?.title?.poster
@@ -83,6 +85,8 @@ class Moflix : MainAPI() {
         val tags = res?.title?.keywords?.mapNotNull { it.displayName }
         val year = res?.title?.year
         val isSeries = res?.title?.isSeries
+        val certification = res?.title?.certification
+        val duration = res?.title?.runtime
         val type = getType(isSeries)
         val description = res?.title?.description
         val trailers = res?.title?.videos?.filter { it.category.equals("trailer", true) }
@@ -123,7 +127,7 @@ class Moflix : MainAPI() {
                     }
                 }
             }?.flatten() ?: emptyList()
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            newTvSeriesLoadResponse(title, uri ?: url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.backgroundPosterUrl = backdrop
                 this.year = year
@@ -132,7 +136,9 @@ class Moflix : MainAPI() {
                 this.tags = tags
                 this.rating = rating
                 this.actors = actors
+                this.duration = duration
                 this.recommendations = recommendations
+                this.contentRating = certification
                 addTrailer(trailers)
                 addImdbId(res?.title?.imdbId)
                 addTMDbId(res?.title?.tmdbId)
@@ -142,7 +148,7 @@ class Moflix : MainAPI() {
 
             newMovieLoadResponse(
                 title,
-                url,
+                uri ?: url,
                 TvType.Movie,
                 LoadData(isSeries = isSeries, urls = urls)
             ) {
@@ -154,7 +160,9 @@ class Moflix : MainAPI() {
                 this.tags = tags
                 this.rating = rating
                 this.actors = actors
+                this.duration = duration
                 this.recommendations = recommendations
+                this.contentRating = certification
                 addTrailer(trailers)
                 addImdbId(res?.title?.imdbId)
                 addTMDbId(res?.title?.tmdbId)
@@ -191,6 +199,12 @@ class Moflix : MainAPI() {
         }
 
         return true
+    }
+
+    private fun String.fixId(): String {
+        val chunk = "/titles/"
+        return if (this.contains(chunk)) this.substringAfter(chunk)
+            .substringBefore("/") else this.substringAfterLast("/")
     }
 
     private suspend fun loadCustomExtractor(
@@ -233,6 +247,7 @@ class Moflix : MainAPI() {
     data class Responses(
         @JsonProperty("pagination") val pagination: Pagination? = null,
         @JsonProperty("title") val title: Title? = null,
+        @JsonProperty("seo") val seo: String? = null,
         @JsonProperty("credits") val credits: Credits? = null,
         @JsonProperty("seasons") val seasons: Seasons? = null,
         @JsonProperty("episodes") val episodes: Episodes? = null,
@@ -305,6 +320,7 @@ class Moflix : MainAPI() {
         @JsonProperty("name") val name: String? = null,
         @JsonProperty("release_date") val releaseDate: String? = null,
         @JsonProperty("year") val year: Int? = null,
+        @JsonProperty("runtime") val runtime: Int? = null,
         @JsonProperty("poster") val poster: String? = null,
         @JsonProperty("backdrop") val backdrop: String? = null,
         @JsonProperty("description") val description: String? = null,
