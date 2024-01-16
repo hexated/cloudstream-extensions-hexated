@@ -68,7 +68,7 @@ open class SoraStream : TmdbProvider() {
         TvType.Anime,
     )
 
-    val wpredisInterceptor by lazy { CloudflareKiller() }
+    val wpRedisInterceptor by lazy { CloudflareKiller() }
     val multiInterceptor by lazy { CloudflareKiller() }
 
     /** AUTHOR : Hexated & Sora */
@@ -250,8 +250,7 @@ open class SoraStream : TmdbProvider() {
         val recommendations =
             res.recommendations?.results?.mapNotNull { media -> media.toSearchResponse() }
 
-        val trailer =
-            res.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }?.randomOrNull()
+        val trailer = res.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }
 
         return if (type == TvType.TvSeries) {
             val lastSeason = res.last_episode_to_air?.season_number

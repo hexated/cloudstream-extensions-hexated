@@ -23,6 +23,7 @@ import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -1285,23 +1286,17 @@ private enum class Symbol(val decimalValue: Int) {
     }
 }
 
-suspend fun request(
-    url: String,
-    allowRedirects: Boolean = true,
-    timeout: Long = 60L
-): Response {
-    val client = OkHttpClient().newBuilder()
-        .connectTimeout(timeout, TimeUnit.SECONDS)
-        .readTimeout(timeout, TimeUnit.SECONDS)
-        .writeTimeout(timeout, TimeUnit.SECONDS)
-        .followRedirects(allowRedirects)
-        .followSslRedirects(allowRedirects)
-        .build()
-
-    val request: Request = Request.Builder()
-        .url(url)
-        .build()
-    return client.newCall(request).await()
+class TimeOutInterceptor : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val call = chain
+            .withConnectTimeout(60, TimeUnit.SECONDS)
+            .withReadTimeout(60, TimeUnit.SECONDS)
+            .withWriteTimeout(60, TimeUnit.SECONDS)
+            .request()
+            .newBuilder()
+            .build()
+        return chain.proceed(call)
+    }
 }
 
 // steal from https://github.com/aniyomiorg/aniyomi-extensions/blob/master/src/en/aniwave/src/eu/kanade/tachiyomi/animeextension/en/nineanime/AniwaveUtils.kt

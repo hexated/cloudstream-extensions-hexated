@@ -10,24 +10,23 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import java.net.URI
-
-private const val TRACKER_LIST_URL =
-    "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best.txt"
 
 class StremioC : MainAPI() {
     override var mainUrl = "https://stremio.github.io/stremio-static-addon-example"
     override var name = "StremioC"
     override val supportedTypes = setOf(TvType.Others)
     override val hasMainPage = true
-    private val cinemataUrl = "https://v3-cinemeta.strem.io"
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
+    companion object {
+        private const val cinemataUrl = "https://v3-cinemeta.strem.io"
+        private const val TRACKER_LIST_URL = "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best.txt"
+    }
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         mainUrl = mainUrl.fixSourceUrl()
-        val res = tryParseJson<Manifest>(request("${mainUrl}/manifest.json").body.string()) ?: return null
+        val res = app.get("${mainUrl}/manifest.json").parsedSafe<Manifest>()
         val lists = mutableListOf<HomePageList>()
-        res.catalogs.apmap { catalog ->
+        res?.catalogs?.apmap { catalog ->
             catalog.toHomePageList(this).let {
                 if (it.list.isNotEmpty()) lists.add(it)
             }
@@ -38,11 +37,11 @@ class StremioC : MainAPI() {
         )
     }
 
-    override suspend fun search(query: String): List<SearchResponse>? {
+    override suspend fun search(query: String): List<SearchResponse> {
         mainUrl = mainUrl.fixSourceUrl()
-        val res = tryParseJson<Manifest>(request("${mainUrl}/manifest.json").body.string()) ?: return null
+        val res = app.get("${mainUrl}/manifest.json").parsedSafe<Manifest>()
         val list = mutableListOf<SearchResponse>()
-        res.catalogs.apmap { catalog ->
+        res?.catalogs?.apmap { catalog ->
             list.addAll(catalog.search(query, this))
         }
         return list.distinct()
@@ -64,10 +63,13 @@ class StremioC : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val loadData = parseJson<LoadData>(data)
-        val request = request("${mainUrl}/stream/${loadData.type}/${loadData.id}.json")
-        if (request.code.isSuccessful()) {
-            val res = tryParseJson<StreamsResponse>(request.body.string()) ?: return false
-            res.streams.forEach { stream ->
+        val request = app.get(
+            "${mainUrl}/stream/${loadData.type}/${loadData.id}.json",
+            interceptor = interceptor
+        )
+        if (request.isSuccessful) {
+            val res = request.parsedSafe<StreamsResponse>()
+            res?.streams?.forEach { stream ->
                 stream.runCallback(subtitleCallback, callback)
             }
         } else {
@@ -103,15 +105,14 @@ class StremioC : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val sites =
-            AcraApplication.getKey<Array<CustomSite>>(USER_PROVIDER_API)?.toMutableList()
-                ?: mutableListOf()
+        val sites = AcraApplication.getKey<Array<CustomSite>>(USER_PROVIDER_API)?.toMutableList()
+            ?: mutableListOf()
         sites.filter { it.parentJavaClass == "StremioX" }.apmap { site ->
-            val request = request("${site.url.fixSourceUrl()}/stream/${type}/${id}.json").body.string()
-            val res =
-                tryParseJson<StreamsResponse>(request)
-                    ?: return@apmap
-            res.streams.forEach { stream ->
+            val res = app.get(
+                "${site.url.fixSourceUrl()}/stream/${type}/${id}.json",
+                interceptor = interceptor
+            ).parsedSafe<StreamsResponse>()
+            res?.streams?.forEach { stream ->
                 stream.runCallback(subtitleCallback, callback)
             }
         }
@@ -151,11 +152,11 @@ class StremioC : MainAPI() {
         suspend fun search(query: String, provider: StremioC): List<SearchResponse> {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
-                val json = request("${provider.mainUrl}/catalog/${type}/${id}/search=${query}.json").body.string()
-                val res =
-                    tryParseJson<CatalogResponse>(json)
-                        ?: return@forEach
-                res.metas?.forEach { entry ->
+                val res = app.get(
+                    "${provider.mainUrl}/catalog/${type}/${id}/search=${query}.json",
+                    interceptor = interceptor
+                ).parsedSafe<CatalogResponse>()
+                res?.metas?.forEach { entry ->
                     entries.add(entry.toSearchResponse(provider))
                 }
             }
@@ -165,11 +166,11 @@ class StremioC : MainAPI() {
         suspend fun toHomePageList(provider: StremioC): HomePageList {
             val entries = mutableListOf<SearchResponse>()
             types.forEach { type ->
-                val json = request("${provider.mainUrl}/catalog/${type}/${id}.json").body.string()
-                val res =
-                    tryParseJson<CatalogResponse>(json)
-                        ?: return@forEach
-                res.metas?.forEach { entry ->
+                val res = app.get(
+                    "${provider.mainUrl}/catalog/${type}/${id}.json",
+                    interceptor = interceptor
+                ).parsedSafe<CatalogResponse>()
+                res?.metas?.forEach { entry ->
                     entries.add(entry.toSearchResponse(provider))
                 }
             }
@@ -186,6 +187,7 @@ class StremioC : MainAPI() {
         val source: String?,
         val type: String?
     )
+
     private data class CatalogEntry(
         @JsonProperty("name") val name: String,
         @JsonProperty("id") val id: String,
@@ -226,7 +228,7 @@ class StremioC : MainAPI() {
                     year = yearNum?.toIntOrNull()
                     tags = genre ?: genres
                     addActors(cast)
-                    addTrailer(trailersSources?.map { "https://www.youtube.com/watch?v=${it.source}" }?.randomOrNull())
+                    addTrailer(trailersSources?.map { "https://www.youtube.com/watch?v=${it.source}" })
                     addImdbId(imdbId)
                 }
             } else {
@@ -245,7 +247,8 @@ class StremioC : MainAPI() {
                     year = yearNum?.toIntOrNull()
                     tags = genre ?: genres
                     addActors(cast)
-                    addTrailer(trailersSources?.map { "https://www.youtube.com/watch?v=${it.source}" }?.randomOrNull())
+                    addTrailer(trailersSources?.map { "https://www.youtube.com/watch?v=${it.source}" }
+                        ?.randomOrNull())
                     addImdbId(imdbId)
                 }
             }
@@ -285,13 +288,14 @@ class StremioC : MainAPI() {
     )
 
     private data class ProxyHeaders(
-        val request: Map<String,String>?,
+        val request: Map<String, String>?,
     )
 
     private data class BehaviorHints(
         val proxyHeaders: ProxyHeaders?,
-        val headers: Map<String,String>?,
+        val headers: Map<String, String>?,
     )
+
     private data class Stream(
         val name: String?,
         val title: String?,
@@ -312,12 +316,13 @@ class StremioC : MainAPI() {
                 callback.invoke(
                     ExtractorLink(
                         name ?: "",
-                        fixRDSourceName(name, title),
+                        fixSourceName(name, title),
                         url,
                         "",
-                        getQualityFromName(description),
-                        headers = behaviorHints?.proxyHeaders?.request ?: behaviorHints?.headers ?: mapOf(),
-                        isM3u8 = URI(url).path.endsWith(".m3u8")
+                        getQuality(listOf(description,title,name)),
+                        headers = behaviorHints?.proxyHeaders?.request ?: behaviorHints?.headers
+                        ?: mapOf(),
+                        type = INFER_TYPE
                     )
                 )
                 subtitles.map { sub ->

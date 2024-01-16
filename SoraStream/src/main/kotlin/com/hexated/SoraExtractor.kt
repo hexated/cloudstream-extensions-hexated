@@ -1275,7 +1275,7 @@ object SoraExtractor : SoraStream() {
             val selector =
                 if (season == null) "p a:contains(V-Cloud)" else "h4:matches(0?$episode) + p a:contains(V-Cloud)"
             val server = app.get(
-                href ?: return@apmap, interceptor = wpredisInterceptor
+                href ?: return@apmap, interceptor = wpRedisInterceptor
             ).document.selectFirst("div.entry-content > $selector")
                 ?.attr("href") ?: return@apmap
 
@@ -1717,13 +1717,13 @@ object SoraExtractor : SoraStream() {
             "$url&apikey=whXgvN4kVyoubGwqXpw26Oy3PVryl8dm",
             referer = "https://watcha.movie/"
         ).text
-        val link = Regex("\"file\":\"(http.*?)\"").find(res)?.groupValues?.getOrNull(1) ?: return
+        val link = Regex("\"file\":\"(http.*?)\"").find(res)?.groupValues?.getOrNull(1)
 
         callback.invoke(
             ExtractorLink(
                 "RStream",
                 "RStream",
-                link,
+                link ?: return,
                 "$rStreamAPI/",
                 Qualities.P1080.value,
                 INFER_TYPE
@@ -2053,7 +2053,7 @@ object SoraExtractor : SoraStream() {
             "$dahmerMoviesAPI/tvs/${title?.replace(":", " -")}/Season $season/"
         }
 
-        val request = app.get(url, timeout = 120L)
+        val request = app.get(url, interceptor = TimeOutInterceptor())
         if (!request.isSuccessful) return
         val paths = request.document.select("a").map {
             it.text() to it.attr("href")
@@ -2382,12 +2382,18 @@ object SoraExtractor : SoraStream() {
         callback: (ExtractorLink) -> Unit,
         referer: String = "https://bflix.gs/"
     ) {
+        suspend fun String.isSuccess() : Boolean {
+            return app.get(this, referer = referer).isSuccessful
+        }
         val slug = getEpisodeSlug(season, episode)
-        var url =
-            if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${slug.second}.mp4"
-        if (!app.get(url, referer = referer).isSuccessful) {
-            url =
-                if (season == null) "$nowTvAPI/$imdbId.mp4" else "$nowTvAPI/tv/$imdbId/s${season}e${slug.second}.mp4"
+        var url = if (season == null) "$nowTvAPI/$tmdbId.mp4" else "$nowTvAPI/tv/$tmdbId/s${season}e${slug.second}.mp4"
+        if (!url.isSuccess()) {
+            url = if (season == null) {
+                val temp = "$nowTvAPI/$imdbId.mp4"
+                if (temp.isSuccess()) temp else "$nowTvAPI/$tmdbId-1.mp4"
+            } else {
+                "$nowTvAPI/tv/$imdbId/s${season}e${slug.second}.mp4"
+            }
             if (!app.get(url, referer = referer).isSuccessful) return
         }
         callback.invoke(
