@@ -238,7 +238,7 @@ class StremioX : TmdbProvider() {
         } else {
             "$fixMainUrl/stream/series/$imdbId:$season:$episode.json"
         }
-        val res = app.get(url, interceptor = interceptor).parsedSafe<StreamsResponse>()
+        val res = app.get(url, timeout = 120L).parsedSafe<StreamsResponse>()
         res?.streams?.forEach { stream ->
             stream.runCallback(subtitleCallback, callback)
         }

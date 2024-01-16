@@ -55,6 +55,10 @@ jobs:
           SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
           CINEMATV_API: ${{ secrets.CINEMATV_API }}
           OMOVIES_API: ${{ secrets.OMOVIES_API }}
+          SUPERSTREAM_FIRST_API: ${{ secrets.SUPERSTREAM_FIRST_API }}
+          SUPERSTREAM_SECOND_API: ${{ secrets.SUPERSTREAM_SECOND_API }}
+          SUPERSTREAM_THIRD_API: ${{ secrets.SUPERSTREAM_THIRD_API }}
+          SUPERSTREAM_FOURTH_API: ${{ secrets.SUPERSTREAM_FOURTH_API }}
         run: |
           cd $GITHUB_WORKSPACE/src
           echo TMDB_API=$TMDB_API >> local.properties
@@ -70,6 +74,10 @@ jobs:
           echo SFMOVIES_API=$SFMOVIES_API >> local.properties
           echo CINEMATV_API=$CINEMATV_API >> local.properties
           echo OMOVIES_API=$OMOVIES_API >> local.properties
+          echo SUPERSTREAM_FIRST_API=$SUPERSTREAM_FIRST_API >> local.properties
+          echo SUPERSTREAM_SECOND_API=$SUPERSTREAM_SECOND_API >> local.properties
+          echo SUPERSTREAM_THIRD_API=$SUPERSTREAM_THIRD_API >> local.properties
+          echo SUPERSTREAM_FOURTH_API=$SUPERSTREAM_FOURTH_API >> local.properties
 
       - name: Build Plugins
         run: |

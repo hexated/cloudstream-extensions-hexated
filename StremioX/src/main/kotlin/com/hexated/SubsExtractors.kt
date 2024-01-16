@@ -20,7 +20,7 @@ object SubsExtractors {
         } else {
             "series/$imdbId:$season:$episode"
         }
-        app.get("${openSubAPI}/subtitles/$slug.json", interceptor = interceptor).parsedSafe<OsResult>()?.subtitles?.map { sub ->
+        app.get("${openSubAPI}/subtitles/$slug.json", timeout = 120L).parsedSafe<OsResult>()?.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
                     SubtitleHelper.fromThreeLettersToLanguage(sub.lang ?: "") ?: sub.lang
@@ -42,7 +42,7 @@ object SubsExtractors {
             "${watchSomuchAPI}/Watch/ajMovieTorrents.aspx", data = mapOf(
                 "index" to "0",
                 "mid" to "$id",
-                "wsk" to "f6ea6cde-e42b-4c26-98d3-b4fe48cdd4fb",
+                "wsk" to "30fb68aa-1c71-4b8c-b5d4-4ca9222cfb45",
                 "lid" to "",
                 "liu" to ""
             ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")

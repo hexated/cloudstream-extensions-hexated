@@ -1834,7 +1834,7 @@ object SoraExtractor : SoraStream() {
             data = mapOf(
                 "index" to "0",
                 "mid" to "$id",
-                "wsk" to "f6ea6cde-e42b-4c26-98d3-b4fe48cdd4fb",
+                "wsk" to "30fb68aa-1c71-4b8c-b5d4-4ca9222cfb45",
                 "lid" to "",
                 "liu" to ""
             ),
@@ -2053,7 +2053,7 @@ object SoraExtractor : SoraStream() {
             "$dahmerMoviesAPI/tvs/${title?.replace(":", " -")}/Season $season/"
         }
 
-        val request = app.get(url, interceptor = TimeOutInterceptor())
+        val request = app.get(url, timeout = 60L)
         if (!request.isSuccessful) return
         val paths = request.document.select("a").map {
             it.text() to it.attr("href")

@@ -65,7 +65,7 @@ class StremioC : MainAPI() {
         val loadData = parseJson<LoadData>(data)
         val request = app.get(
             "${mainUrl}/stream/${loadData.type}/${loadData.id}.json",
-            interceptor = interceptor
+            timeout = 120L
         )
         if (request.isSuccessful) {
             val res = request.parsedSafe<StreamsResponse>()
@@ -110,7 +110,7 @@ class StremioC : MainAPI() {
         sites.filter { it.parentJavaClass == "StremioX" }.apmap { site ->
             val res = app.get(
                 "${site.url.fixSourceUrl()}/stream/${type}/${id}.json",
-                interceptor = interceptor
+                timeout = 120L
             ).parsedSafe<StreamsResponse>()
             res?.streams?.forEach { stream ->
                 stream.runCallback(subtitleCallback, callback)
@@ -154,7 +154,7 @@ class StremioC : MainAPI() {
             types.forEach { type ->
                 val res = app.get(
                     "${provider.mainUrl}/catalog/${type}/${id}/search=${query}.json",
-                    interceptor = interceptor
+                    timeout = 120L
                 ).parsedSafe<CatalogResponse>()
                 res?.metas?.forEach { entry ->
                     entries.add(entry.toSearchResponse(provider))
@@ -168,7 +168,7 @@ class StremioC : MainAPI() {
             types.forEach { type ->
                 val res = app.get(
                     "${provider.mainUrl}/catalog/${type}/${id}.json",
-                    interceptor = interceptor
+                    timeout = 120L
                 ).parsedSafe<CatalogResponse>()
                 res?.metas?.forEach { entry ->
                     entries.add(entry.toSearchResponse(provider))

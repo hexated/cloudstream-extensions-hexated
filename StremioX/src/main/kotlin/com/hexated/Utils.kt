@@ -9,21 +9,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-val interceptor = TimeOutInterceptor()
-
-class TimeOutInterceptor : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val call = chain
-            .withConnectTimeout(60, TimeUnit.SECONDS)
-            .withReadTimeout(60, TimeUnit.SECONDS)
-            .withWriteTimeout(60, TimeUnit.SECONDS)
-            .request()
-            .newBuilder()
-            .build()
-        return chain.proceed(call)
-    }
-}
-
 fun String.fixSourceUrl(): String {
     return this.replace("/manifest.json", "").replace("stremio://", "https://")
 }
