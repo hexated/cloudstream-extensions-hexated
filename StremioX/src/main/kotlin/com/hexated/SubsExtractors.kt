@@ -20,7 +20,7 @@ object SubsExtractors {
         } else {
             "series/$imdbId:$season:$episode"
         }
-        app.get("${openSubAPI}/subtitles/$slug.json").parsedSafe<OsResult>()?.subtitles?.map { sub ->
+        app.get("${openSubAPI}/subtitles/$slug.json", interceptor = interceptor).parsedSafe<OsResult>()?.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
                     SubtitleHelper.fromThreeLettersToLanguage(sub.lang ?: "") ?: sub.lang
