@@ -68,5 +68,5 @@ open class Akamaicdn : ExtractorApi() {
 
 class AnimesagaStream : Chillx() {
     override val name = "AnimesagaStream"
-    override val mainUrl = "https://stream.animesaga.in"
+    override val mainUrl = "https://stream.anplay.in"
 }
