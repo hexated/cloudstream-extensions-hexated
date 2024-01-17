@@ -36,11 +36,15 @@ open class Streampai : ExtractorApi() {
         val res = app.get(url, referer = referer).document
         val data = res.selectFirst("script:containsData(player =)")?.data() ?: return
 
-        val sources = data.substringAfter("sources: [").substringBefore("]").replace("\'", "\"")
+        val sources = data.substringAfter("sources: [").substringBefore("]")
             .addMarks("src")
             .addMarks("type")
             .addMarks("size")
             .replace("\'", "\"")
+
+        val tracks = data.substringAfter("tracks: [").substringBefore("]")
+            .replace("\'", "\"")
+
 
         tryParseJson<List<Responses>>("[$sources]")?.forEach {
             callback.invoke(
@@ -56,6 +60,15 @@ open class Streampai : ExtractorApi() {
                 )
             )
         }
+
+        tryParseJson<List<Responses>>("[$tracks]")?.forEach {
+            subtitleCallback.invoke(
+                SubtitleFile(
+                    fixTitle(it.label ?: return@forEach),
+                    fixUrl(it.src)
+                )
+            )
+        }
     }
 
     private fun String.addMarks(str: String): String {
@@ -65,6 +78,7 @@ open class Streampai : ExtractorApi() {
     data class Responses(
         @JsonProperty("src") val src: String,
         @JsonProperty("type") val type: String?,
+        @JsonProperty("label") val label: String?,
         @JsonProperty("size") val size: Int?
     )
 
