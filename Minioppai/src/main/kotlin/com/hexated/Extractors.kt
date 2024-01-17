@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.fixTitle
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.fixUrl
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.getQualityFromName
@@ -32,41 +33,39 @@ open class Streampai : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val res = app.get(url, referer = referer).text
-        val data = getAndUnpack(res)
+        val res = app.get(url, referer = referer).document
+        val data = res.selectFirst("script:containsData(player =)")?.data() ?: return
 
-        val sources = data.substringAfter("sources:[").substringBefore("]").replace("\'", "\"")
-        val tracks = data.substringAfter("\"tracks\":[").substringBefore("]")
+        val sources = data.substringAfter("sources: [").substringBefore("]").replace("\'", "\"")
+            .addMarks("src")
+            .addMarks("type")
+            .addMarks("size")
+            .replace("\'", "\"")
 
         tryParseJson<List<Responses>>("[$sources]")?.forEach {
             callback.invoke(
                 ExtractorLink(
                     this.name,
                     this.name,
-                    fixUrl(it.file),
+                    fixUrl(it.src),
                     url,
-                    getQualityFromName(it.label),
+                    it.size ?: Qualities.Unknown.value,
                     headers = mapOf(
                         "Range" to "bytes=0-",
-                    )
-                )
-            )
-        }
-
-        tryParseJson<List<Responses>>("[$tracks]")?.forEach {
-            subtitleCallback.invoke(
-                SubtitleFile(
-                    fixTitle(it.label ?: ""),
-                    fixUrl(it.file),
+                    ),
                 )
             )
         }
     }
 
+    private fun String.addMarks(str: String): String {
+        return this.replace(Regex("\"?$str\"?"), "\"$str\"")
+    }
+
     data class Responses(
-        @JsonProperty("file") val file: String,
+        @JsonProperty("src") val src: String,
         @JsonProperty("type") val type: String?,
-        @JsonProperty("label") val label: String?
+        @JsonProperty("size") val size: Int?
     )
 
 }
