@@ -44,6 +44,7 @@ import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeMMovies
+import com.hexated.SoraExtractor.invokeMoflix
 import com.hexated.SoraExtractor.invokeOmovies
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -119,6 +120,7 @@ open class SoraStream : TmdbProvider() {
         const val aoneroomAPI = "https://api3.aoneroom.com"
         const val mMoviesAPI = "https://multimovies.uno"
         const val watchCartoonAPI = "https://www1.watchcartoononline.bz"
+        const val moflixAPI = "https://moflix-stream.xyz"
 
         const val fdMoviesAPI = "https://freedrivemovie.com"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
@@ -721,8 +723,11 @@ open class SoraStream : TmdbProvider() {
                         ?: res.year, res.season, res.episode, callback
                 )
             },
+//            {
+//                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+//            },
             {
-                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+                invokeMoflix(res.id, res.season, res.episode, callback)
             },
         )
 

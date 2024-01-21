@@ -30,6 +30,7 @@ import com.hexated.SoraExtractor.invokeVidSrc
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeMMovies
+import com.hexated.SoraExtractor.invokeMoflix
 import com.hexated.SoraExtractor.invokeOmovies
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
@@ -52,6 +53,9 @@ class SoraStreamLite : SoraStream() {
         val res = AppUtils.parseJson<LinkData>(data)
 
         argamap(
+            {
+                invokeMoflix(res.id, res.season, res.episode, callback)
+            },
             {
                 if (!res.isAnime) invokeWatchsomuch(
                     res.imdbId,
@@ -328,9 +332,9 @@ class SoraStreamLite : SoraStream() {
                         ?: res.year, res.season, res.episode, callback
                 )
             },
-            {
-                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
-            },
+//            {
+//                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+//            },
         )
 
         return true

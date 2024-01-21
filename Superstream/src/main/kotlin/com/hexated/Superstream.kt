@@ -623,7 +623,6 @@ open class Superstream : MainAPI() {
         }
     }
 
-
     private data class LinkData(
         val id: Int,
         val type: Int,
@@ -632,7 +631,6 @@ open class Superstream : MainAPI() {
         val mediaId: Int?,
         val imdbId: String?,
     )
-
 
     data class LinkDataProp(
         @JsonProperty("code") val code: Int? = null,

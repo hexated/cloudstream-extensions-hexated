@@ -10,7 +10,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 open class Gomov : MainAPI() {
-    override var mainUrl = "https://gomov.bio"
+    override var mainUrl = "https://gomov.co"
     private var directUrl: String? = null
     override var name = "Gomov"
     override val hasMainPage = true

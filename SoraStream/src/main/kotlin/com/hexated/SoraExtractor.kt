@@ -1821,6 +1821,51 @@ object SoraExtractor : SoraStream() {
 
     }
 
+    suspend fun invokeMoflix(
+        tmdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val id = (if(season == null) {
+            "tmdb|movie|$tmdbId"
+        } else {
+            "tmdb|series|$tmdbId"
+        }).let { base64Encode(it.toByteArray()) }
+
+        val loaderUrl = "$moflixAPI/api/v1/titles/$id?loader=titlePage"
+        val url = if(season == null) {
+            loaderUrl
+        } else {
+            val mediaId = app.get(loaderUrl, referer = "$moflixAPI/").parsedSafe<MoflixResponse>()?.title?.id
+            "$moflixAPI/api/v1/titles/$mediaId/seasons/$season/episodes/$episode?loader=episodePage"
+        }
+
+        val res = app.get(url, referer = "$moflixAPI/").parsedSafe<MoflixResponse>()
+        (res?.episode ?: res?.title)?.videos?.filter { it.category.equals("full", true) }?.apmap { iframe ->
+            val response = app.get(iframe.src ?: return@apmap, referer = "$moflixAPI/")
+            val host = getBaseUrl(iframe.src)
+            val doc = response.document.selectFirst("script:containsData(sources:)")?.data()
+            val script = if (doc.isNullOrEmpty()) {
+                getAndUnpack(response.text)
+            } else {
+                doc
+            }
+            val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return@apmap)?.groupValues?.getOrNull(1)
+            callback.invoke(
+                ExtractorLink(
+                    "Moflix",
+                    "Moflix [${iframe.name}]",
+                    m3u8 ?: return@apmap,
+                    "$host/",
+                    iframe.quality?.filter { it.isDigit() }?.toIntOrNull() ?: Qualities.Unknown.value,
+                    INFER_TYPE
+                )
+            )
+        }
+
+    }
+
     //TODO only subs
     suspend fun invokeWatchsomuch(
         imdbId: String? = null,

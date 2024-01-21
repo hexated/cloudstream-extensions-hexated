@@ -47,6 +47,23 @@ data class AniwaveServer(
     }
 }
 
+data class MoflixResponse(
+    @JsonProperty("title") val title: Episode? = null,
+    @JsonProperty("episode") val episode: Episode? = null,
+) {
+    data class Episode(
+        @JsonProperty("id") val id: Int? = null,
+        @JsonProperty("videos") val videos: ArrayList<Videos>? = arrayListOf(),
+    ) {
+        data class Videos(
+            @JsonProperty("name") val name: String? = null,
+            @JsonProperty("category") val category: String? = null,
+            @JsonProperty("src") val src: String? = null,
+            @JsonProperty("quality") val quality: String? = null,
+        )
+    }
+}
+
 data class AniMedia(
     @JsonProperty("id") var id: Int? = null,
     @JsonProperty("idMal") var idMal: Int? = null
