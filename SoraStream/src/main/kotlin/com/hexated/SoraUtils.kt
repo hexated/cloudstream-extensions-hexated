@@ -800,6 +800,10 @@ suspend fun getCrunchyrollIdFromMalSync(aniId: String?): String? {
         ?: regex.find("$crunchyroll")?.groupValues?.getOrNull(1)
 }
 
+suspend fun String.haveDub(referer: String) : Boolean {
+    return app.get(this,referer=referer).text.contains("TYPE=AUDIO")
+}
+
 suspend fun convertTmdbToAnimeId(
     title: String?,
     date: String?,

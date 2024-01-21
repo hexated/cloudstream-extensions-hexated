@@ -1852,6 +1852,7 @@ object SoraExtractor : SoraStream() {
                 doc
             }
             val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return@apmap)?.groupValues?.getOrNull(1)
+            if(m3u8?.haveDub("$host/") == false) return@apmap
             callback.invoke(
                 ExtractorLink(
                     "Moflix",
