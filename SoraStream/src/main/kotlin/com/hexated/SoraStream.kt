@@ -727,7 +727,7 @@ open class SoraStream : TmdbProvider() {
 //                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
 //            },
             {
-                invokeMoflix(res.id, res.season, res.episode, callback)
+                if (!res.isAnime) invokeMoflix(res.id, res.season, res.episode, callback)
             },
         )
 

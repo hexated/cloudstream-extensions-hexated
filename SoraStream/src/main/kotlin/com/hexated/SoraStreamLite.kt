@@ -54,7 +54,7 @@ class SoraStreamLite : SoraStream() {
 
         argamap(
             {
-                invokeMoflix(res.id, res.season, res.episode, callback)
+                if (!res.isAnime) invokeMoflix(res.id, res.season, res.episode, callback)
             },
             {
                 if (!res.isAnime) invokeWatchsomuch(
