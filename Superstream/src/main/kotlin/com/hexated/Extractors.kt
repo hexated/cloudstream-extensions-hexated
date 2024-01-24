@@ -1,7 +1,9 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.mvvm.normalSafeApiCall
 import com.lagradost.cloudstream3.utils.*
+import java.net.URL
 
 object Extractors : Superstream() {
 
@@ -94,17 +96,28 @@ object Extractors : Superstream() {
 
         fids?.apmapIndexed { index, fileList ->
             val player = app.get("$thirdAPI/file/player?fid=${fileList.fid}&share_key=$shareKey").text
-            val video = """"(https.*?m3u8.*?)"""".toRegex().find(player)?.groupValues?.get(1)
-            callback.invoke(
-                ExtractorLink(
-                    "External",
-                    "External [Server ${index + 1}]",
-                    video?.replace("\\/", "/") ?: return@apmapIndexed,
-                    "$thirdAPI/",
-                    getIndexQuality(fileList.file_name),
-                    isM3u8 = true
+            val hls = """"(https.*?m3u8.*?)"""".toRegex().find(player)?.groupValues?.get(1)
+            val mp4 = "sources\\s*=\\s*(.*);".toRegex().find(player)?.groupValues?.get(1)?.let {
+                AppUtils.tryParseJson<List<ExternalSources>>(it)?.first()
+            }
+            listOf(
+                mp4?.file to mp4?.label,
+                hls to fileList.file_name
+            ).map {
+                val path = normalSafeApiCall { URL(it.first).path }.let { p ->
+                    if(p?.endsWith(".m3u8") == true) "HLS" else "MP4"
+                }
+                callback.invoke(
+                    ExtractorLink(
+                        "External $path",
+                        "External $path [Server ${index + 1}]",
+                        it.first?.replace("\\/", "/") ?: return@apmapIndexed,
+                        "$thirdAPI/",
+                        getIndexQuality(it.second),
+                        type = INFER_TYPE,
+                    )
                 )
-            )
+            }
         }
     }
 

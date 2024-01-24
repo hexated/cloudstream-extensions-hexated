@@ -774,6 +774,11 @@ open class Superstream : MainAPI() {
         }
     }
 
+    data class ExternalSources(
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+    )
+
     data class WatchsomuchTorrents(
         @JsonProperty("id") val id: Int? = null,
         @JsonProperty("movieId") val movieId: Int? = null,
