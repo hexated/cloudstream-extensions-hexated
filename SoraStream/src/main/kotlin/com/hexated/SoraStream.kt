@@ -717,12 +717,12 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-            {
-                if (!res.isAnime) invokeSFMovies(
-                    res.id, res.title, res.airedYear
-                        ?: res.year, res.season, res.episode, callback
-                )
-            },
+//            {
+//                if (!res.isAnime) invokeSFMovies(
+//                    res.id, res.title, res.airedYear
+//                        ?: res.year, res.season, res.episode, callback
+//                )
+//            },
 //            {
 //                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
 //            },
