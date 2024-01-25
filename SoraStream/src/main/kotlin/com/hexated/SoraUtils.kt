@@ -439,7 +439,7 @@ suspend fun invokeSmashySu(
                 "Smashy [$name]",
                 trimmedLink,
                 "",
-                quality.toIntOrNull() ?: Qualities.Unknown.value,
+                getQualityFromName(quality),
                 INFER_TYPE
             )
         )
