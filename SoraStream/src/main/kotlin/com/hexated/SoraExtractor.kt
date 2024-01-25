@@ -1750,8 +1750,9 @@ object SoraExtractor : SoraStream() {
                     invokeSmashyFfix(it.second, it.first, url, subtitleCallback, callback)
                 }
                 "Player SU" -> {
-                    invokeSmashySu(it.second, it.first, url, subtitleCallback, callback)
+                    invokeSmashySu(it.second, it.first, url, callback)
                 }
+
                 else -> return@apmap
             }
         }
