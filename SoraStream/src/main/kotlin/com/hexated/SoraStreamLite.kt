@@ -4,7 +4,6 @@ import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAllMovieland
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAoneroom
-import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeDoomovies
 import com.hexated.SoraExtractor.invokeDramaday
 import com.hexated.SoraExtractor.invokeDreamfilm
@@ -96,9 +95,6 @@ class SoraStreamLite : SoraStream() {
                 invokeVidSrc(res.id, res.season, res.episode, callback)
             },
             {
-                invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
                 if (!res.isAnime && res.isCartoon) invokeWatchCartoon(
                     res.title,
                     res.year,
@@ -158,7 +154,7 @@ class SoraStreamLite : SoraStream() {
             },
             {
                 if (!res.isAnime) invokeSmashyStream(
-                    res.imdbId,
+                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -228,7 +224,6 @@ class SoraStreamLite : SoraStream() {
                 if (!res.isAnime) invokeRidomovies(
                     res.id,
                     res.imdbId,
-                    res.title,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -324,15 +319,6 @@ class SoraStreamLite : SoraStream() {
                     callback
                 )
             },
-//            {
-//                if (!res.isAnime) invokeSFMovies(
-//                    res.id, res.title, res.airedYear
-//                        ?: res.year, res.season, res.episode, callback
-//                )
-//            },
-//            {
-//                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
-//            },
         )
 
         return true

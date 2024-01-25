@@ -460,15 +460,6 @@ data class SmashySources(
     @JsonProperty("subtitleUrls") var subtitleUrls: String? = null,
 )
 
-data class SmashyDSources(
-    @JsonProperty("sourceUrls") var sourceUrls: ArrayList<SmashyDSourcesUrls>? = arrayListOf(),
-)
-
-data class SmashyDSourcesUrls(
-    @JsonProperty("file") var file: String? = null,
-    @JsonProperty("title") var title: String? = null,
-)
-
 data class AoneroomResponse(
     @JsonProperty("data") val data: Data? = null,
 ) {

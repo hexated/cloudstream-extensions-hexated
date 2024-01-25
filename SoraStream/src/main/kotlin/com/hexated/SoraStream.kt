@@ -6,7 +6,6 @@ import com.hexated.SoraExtractor.invokeAllMovieland
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAoneroom
 import com.hexated.SoraExtractor.invokeBollyMaza
-import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -385,9 +384,6 @@ open class SoraStream : TmdbProvider() {
                 invokeVidSrc(res.id, res.season, res.episode, callback)
             },
             {
-                invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
                 if (!res.isAnime) invokeAoneroom(
                     res.title, res.airedYear
                         ?: res.year, res.season, res.episode, subtitleCallback, callback
@@ -547,7 +543,7 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeSmashyStream(
-                    res.imdbId,
+                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -587,7 +583,6 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeRidomovies(
                     res.id,
                     res.imdbId,
-                    res.title,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -715,15 +710,6 @@ open class SoraStream : TmdbProvider() {
                     callback
                 )
             },
-//            {
-//                if (!res.isAnime) invokeSFMovies(
-//                    res.id, res.title, res.airedYear
-//                        ?: res.year, res.season, res.episode, callback
-//                )
-//            },
-//            {
-//                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
-//            },
             {
                 if (!res.isAnime) invokeMoflix(res.id, res.season, res.episode, callback)
             },
