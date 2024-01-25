@@ -1065,9 +1065,9 @@ fun vidsrctoDecrypt(text: String): String {
 }
 
 fun String?.createSlug(): String? {
-    return this?.replace(Regex("[^\\w\\s-]"), "")
-        ?.replace(" ", "-")
-        ?.replace(Regex("( – )|( -)|(- )|(--)"), "-")
+    return this?.filter { it.isWhitespace() || it.isLetterOrDigit() }
+        ?.trim()
+        ?.replace("\\s+".toRegex(), "-")
         ?.lowercase()
 }
 
