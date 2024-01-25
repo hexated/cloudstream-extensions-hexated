@@ -2194,8 +2194,7 @@ object SoraExtractor : SoraStream() {
         val savedCookies = mapOf(
             base64Decode("X2lkZW50aXR5Z29tb3ZpZXM3") to base64Decode("NTJmZGM3MGIwMDhjMGIxZDg4MWRhYzBmMDFjY2E4MTllZGQ1MTJkZTAxY2M4YmJjMTIyNGVkNGFhZmI3OGI1MmElM0EyJTNBJTdCaSUzQTAlM0JzJTNBMTglM0ElMjJfaWRlbnRpdHlnb21vdmllczclMjIlM0JpJTNBMSUzQnMlM0E1MiUzQSUyMiU1QjIwNTAzNjYlMkMlMjJIblZSUkFPYlRBU09KRXI0NVl5Q004d2lIb2wwVjFrbyUyMiUyQzI1OTIwMDAlNUQlMjIlM0IlN0Q="),
         )
-        val req = app.get("$api/search/$query")
-        val doc = req.document
+        val doc = app.get("$api/search/$query").document
         val media = doc.select("div.$mediaSelector").map {
             Triple(it.attr("data-filmName"), it.attr("data-year"), it.select("a").attr("href"))
         }.let { el ->
@@ -2223,40 +2222,35 @@ object SoraExtractor : SoraStream() {
                 ?.attr("href")
         } ?: return
 
-        val users = if (season == null) {
-            media.third.substringAfterLast("/") to "0"
-        } else {
-            media.third.substringAfterLast("/") to iframe.substringAfterLast("/")
-                .substringBefore("-")
-        }
         val res = app.get(fixUrl(iframe, api), verify = false)
-        delay(2000)
-        val serverUrl = res.document.selectFirst("script:containsData(pushState)")?.data()?.let {
-            """,\s*'([^']+)""".toRegex().find(it)?.groupValues?.get(1)
-        } ?: return
         val cookies = savedCookies + res.cookies
+
         val url = res.document.select("meta[property=og:url]").attr("content")
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)
+
+        val (serverId, episodeId) = if(season == null) {
+            url.substringAfterLast("/") to "0"
+        } else {
+            url.substringBeforeLast("/").substringAfterLast("/") to url.substringAfterLast("/").substringBefore("-")
+        }
         val serverRes = app.get(
-            "$api/user/servers/${users.first}?ep=${users.second}",
+            "$api/user/servers/$serverId?ep=$episodeId",
             cookies = cookies,
             referer = url,
             headers = headers
         )
-        val unpack = getAndUnpack(serverRes.text)
-        val key = unpack.substringAfter("(key=").substringBefore(")")
-        val key2 = unpack.substringAfter("<\"").substringBefore("\".")
-        serverRes.document.select("ul li").amap { el ->
+        val serverDoc = serverRes.document
+        serverDoc.select("ul li").apmap { el ->
             val server = el.attr("data-value")
             val encryptedData = app.get(
-                "${fixUrl(serverUrl, api)}?server=$server&_=$unixTimeMS",
+                "$url?server=$server&_=$unixTimeMS",
                 cookies = cookies,
                 referer = url,
                 headers = headers
             ).text
-            val links = encryptedData.decrypt(key) ?: encryptedData.decrypt(key2) ?: return@amap
-            links.forEach { video ->
+            val links = encryptedData.decrypt(base64Decode("MTEx"))
+            links?.forEach { video ->
                 qualities.filter { it <= video.max.toInt() }.forEach {
                     callback(
                         ExtractorLink(
