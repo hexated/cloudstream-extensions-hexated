@@ -1,7 +1,6 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.APIHolder.unixTime
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -2150,7 +2149,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    suspend fun invokeOmovies(
+    suspend fun invokeGhostx(
         title: String? = null,
         year: Int? = null,
         season: Int? = null,
@@ -2163,7 +2162,7 @@ object SoraExtractor : SoraStream() {
             season,
             episode,
             callback,
-            BuildConfig.OMOVIES_API,
+            BuildConfig.GHOSTX_API,
             "Ghostx",
             base64Decode("X3NtUWFtQlFzRVRi"),
             base64Decode("X3NCV2NxYlRCTWFU")

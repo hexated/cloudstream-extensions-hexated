@@ -36,16 +36,14 @@ import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeHdmovies4u
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
-import com.hexated.SoraExtractor.invokeSFMovies
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
-import com.hexated.SoraExtractor.invokeMMovies
 import com.hexated.SoraExtractor.invokeMoflix
-import com.hexated.SoraExtractor.invokeOmovies
+import com.hexated.SoraExtractor.invokeGhostx
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
@@ -468,7 +466,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeOmovies(
+                if (!res.isAnime) invokeGhostx(
                     res.title,
                     res.year,
                     res.season,
