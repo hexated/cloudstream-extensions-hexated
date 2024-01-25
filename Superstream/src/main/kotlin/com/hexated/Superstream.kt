@@ -775,8 +775,10 @@ open class Superstream : MainAPI() {
     }
 
     data class ExternalSources(
+        @JsonProperty("m3u8_url") val m3u8_url: String? = null,
         @JsonProperty("file") val file: String? = null,
         @JsonProperty("label") val label: String? = null,
+        @JsonProperty("type") val type: String? = null,
     )
 
     data class WatchsomuchTorrents(
