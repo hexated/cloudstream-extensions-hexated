@@ -2164,7 +2164,7 @@ object SoraExtractor : SoraStream() {
             episode,
             callback,
             BuildConfig.OMOVIES_API,
-            "Omovies",
+            "Ghostx",
             base64Decode("X3NtUWFtQlFzRVRi"),
             base64Decode("X3NCV2NxYlRCTWFU")
         )
