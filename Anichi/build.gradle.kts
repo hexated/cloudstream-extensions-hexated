@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
 // use an integer for version numbers
-version = 9
+version = 10
 
 android {
     defaultConfig {
@@ -38,5 +38,5 @@ cloudstream {
         "OVA",
     )
 
-    iconUrl = "https://media.discordapp.net/attachments/1059306855865782282/1123970193274712096/Anichi.png"
+    iconUrl = "https://cdn.discordapp.com/attachments/1109266606292488297/1200409381813100554/Untitled-removebg-preview.png"
 }
