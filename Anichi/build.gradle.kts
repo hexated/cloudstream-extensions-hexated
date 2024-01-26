@@ -38,5 +38,5 @@ cloudstream {
         "OVA",
     )
 
-    iconUrl = "https://cdn.discordapp.com/attachments/1109266606292488297/1200409381813100554/Untitled-removebg-preview.png"
+    iconUrl = "https://cdn.discordapp.com/attachments/1109266606292488297/1200425504432472176/Anichi.png"
 }
