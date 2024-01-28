@@ -18,17 +18,12 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.nicehttp.RequestBodyTypes
-import com.lagradost.nicehttp.Requests.Companion.await
 import com.lagradost.nicehttp.requestCreator
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import org.jsoup.nodes.Document
 import java.math.BigInteger
 import java.net.*
@@ -38,7 +33,6 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
@@ -427,21 +421,28 @@ suspend fun invokeSmashyFfix(
 
 }
 
-suspend fun invokeSmashyD(
+suspend fun invokeSmashySu(
+    name: String,
     url: String,
     ref: String,
     callback: (ExtractorLink) -> Unit,
 ) {
     val json = app.get(url, referer = ref, headers = mapOf("X-Requested-With" to "XMLHttpRequest"))
-        .parsedSafe<SmashyDSources>()
-    json?.sourceUrls?.apmap {
-        M3u8Helper.generateM3u8(
-            "Smashy [Player D ${it.title}]",
-            it.file ?: return@apmap,
-            ""
-        ).forEach(callback)
+        .parsedSafe<SmashySources>()
+    json?.sourceUrls?.firstOrNull()?.removeSuffix(",")?.split(",")?.forEach { links ->
+        val quality = Regex("\\[(\\S+)]").find(links)?.groupValues?.getOrNull(1) ?: return@forEach
+        val trimmedLink = links.removePrefix("[$quality]").trim()
+        callback.invoke(
+            ExtractorLink(
+                "Smashy [$name]",
+                "Smashy [$name]",
+                trimmedLink,
+                "",
+                getQualityFromName(quality),
+                INFER_TYPE
+            )
+        )
     }
-
 }
 
 suspend fun getDumpIdAndType(title: String?, year: Int?, season: Int?): Pair<String?, Int?> {
@@ -800,6 +801,10 @@ suspend fun getCrunchyrollIdFromMalSync(aniId: String?): String? {
         ?: regex.find("$crunchyroll")?.groupValues?.getOrNull(1)
 }
 
+suspend fun String.haveDub(referer: String) : Boolean {
+    return app.get(this,referer=referer).text.contains("TYPE=AUDIO")
+}
+
 suspend fun convertTmdbToAnimeId(
     title: String?,
     date: String?,
@@ -1034,7 +1039,7 @@ fun decodeIndexJson(json: String): String {
     return base64Decode(slug.substring(0, slug.length - 20))
 }
 
-fun String.decodePrimewireXor(key: String): String {
+fun String.xorDecrypt(key: String): String {
     val sb = StringBuilder()
     var i = 0
     while (i < this.length) {
@@ -1060,9 +1065,9 @@ fun vidsrctoDecrypt(text: String): String {
 }
 
 fun String?.createSlug(): String? {
-    return this?.replace(Regex("[^\\w\\s-]"), "")
-        ?.replace(" ", "-")
-        ?.replace(Regex("( – )|( -)|(- )|(--)"), "-")
+    return this?.filter { it.isWhitespace() || it.isLetterOrDigit() }
+        ?.trim()
+        ?.replace("\\s+".toRegex(), "-")
         ?.lowercase()
 }
 
@@ -1148,14 +1153,6 @@ fun getVipLanguage(str: String): String {
     }
 }
 
-fun getDbgoLanguage(str: String): String {
-    return when (str) {
-        "Русский" -> "Russian"
-        "Українська" -> "Ukrainian"
-        else -> str
-    }
-}
-
 fun fixCrunchyrollLang(language: String?): String? {
     return SubtitleHelper.fromTwoLettersToLanguage(language ?: return null)
         ?: SubtitleHelper.fromTwoLettersToLanguage(language.substringBefore("-"))
@@ -1210,37 +1207,6 @@ fun encode(input: String): String = URLEncoder.encode(input, "utf-8").replace("+
 
 fun base64DecodeAPI(api: String): String {
     return api.chunked(4).map { base64Decode(it) }.reversed().joinToString("")
-}
-
-fun decryptStreamUrl(data: String): String {
-
-    fun getTrash(arr: List<String>, item: Int): List<String> {
-        val trash = ArrayList<List<String>>()
-        for (i in 1..item) {
-            trash.add(arr)
-        }
-        return trash.reduce { acc, list ->
-            val temp = ArrayList<String>()
-            acc.forEach { ac ->
-                list.forEach { li ->
-                    temp.add(ac.plus(li))
-                }
-            }
-            return@reduce temp
-        }
-    }
-
-    val trashList = listOf("@", "#", "!", "^", "$")
-    val trashSet = getTrash(trashList, 2) + getTrash(trashList, 3)
-    var trashString = data.replace("#2", "").split("//_//").joinToString("")
-
-    trashSet.forEach {
-        val temp = base64Encode(it.toByteArray())
-        trashString = trashString.replace(temp, "")
-    }
-
-    return base64Decode(trashString)
-
 }
 
 fun fixUrl(url: String, domain: String): String {

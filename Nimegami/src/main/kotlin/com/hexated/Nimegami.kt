@@ -81,7 +81,7 @@ class Nimegami : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
         for (i in 1..2) {
-            val res = app.get("$mainUrl/page/$i/?s=gintama&post_type=post").document.select("div.archive article")
+            val res = app.get("$mainUrl/page/$i/?s=$query&post_type=post").document.select("div.archive article")
                 .mapNotNull {
                     it.toSearchResult()
                 }

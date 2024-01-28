@@ -1,6 +1,5 @@
 package com.hexated
 
-import com.hexated.AnichiExtractors.invokeExternalSources
 import com.hexated.AnichiExtractors.invokeInternalSources
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
@@ -214,25 +213,12 @@ open class Anichi : MainAPI() {
 
         val loadData = parseJson<AnichiLoadData>(data)
 
-        argamap(
-            {
-                invokeInternalSources(
-                    loadData.hash,
-                    loadData.dubStatus,
-                    loadData.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
-                invokeExternalSources(
-                    loadData.idMal,
-                    loadData.dubStatus,
-                    loadData.episode,
-                    subtitleCallback,
-                    callback
-                )
-            }
+        invokeInternalSources(
+            loadData.hash,
+            loadData.dubStatus,
+            loadData.episode,
+            subtitleCallback,
+            callback
         )
 
         return true
@@ -245,7 +231,6 @@ open class Anichi : MainAPI() {
 
         const val anilistApi = "https://graphql.anilist.co"
         const val jikanApi = "https://api.jikan.moe/v4"
-        const val marinHost = "https://marin.moe"
 
         private const val mainHash = "e42a4466d984b2c0a2cecae5dd13aa68867f634b16ee0f17b380047d14482406"
         private const val popularHash = "31a117653812a2547fd981632e8c99fa8bf8a75c4ef1a77a1567ef1741a7ab9c"

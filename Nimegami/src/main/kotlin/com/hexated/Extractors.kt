@@ -1,12 +1,8 @@
 package com.hexated
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
 
 open class Mitedrive : ExtractorApi() {
     override val name = "Mitedrive"
@@ -77,6 +73,23 @@ open class Berkasdrive : ExtractorApi() {
             )
         )
 
+    }
+
+}
+
+open class Videogami : ExtractorApi() {
+    override val name = "Videogami"
+    override val mainUrl = "https://video.nimegami.id"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val id = base64Decode(url.substringAfter("url=")).substringAfterLast("/")
+        loadExtractor("https://hxfile.co/embed-$id.html", "$mainUrl/", subtitleCallback, callback)
     }
 
 }

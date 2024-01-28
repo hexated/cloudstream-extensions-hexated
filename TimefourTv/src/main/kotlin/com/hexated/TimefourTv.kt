@@ -4,7 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.M3u8Helper
+import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Element
 import java.net.URI
 
@@ -14,22 +14,22 @@ class TimefourTv : MainAPI() {
     override val hasDownloadSupport = false
     override val hasMainPage = true
     override val supportedTypes = setOf(
-            TvType.Live
+        TvType.Live
     )
 
     private val homePoster =
-            "https://cdn.discordapp.com/attachments/1109266606292488297/1193060449193840681/Screenshot_2024-01-06_at_12-14-16_Logo_Maker_Used_By_2.3_Million_Startups.png"
+        "https://cdn.discordapp.com/attachments/1109266606292488297/1193060449193840681/Screenshot_2024-01-06_at_12-14-16_Logo_Maker_Used_By_2.3_Million_Startups.png"
     private val detailPoster =
-            "https://cdn.discordapp.com/attachments/1109266606292488297/1193060448929595454/Screenshot_2024-01-06_at_12-13-02_Logo_Maker_Used_By_2.3_Million_Startups.png"
+        "https://cdn.discordapp.com/attachments/1109266606292488297/1193060448929595454/Screenshot_2024-01-06_at_12-13-02_Logo_Maker_Used_By_2.3_Million_Startups.png"
 
     override val mainPage = mainPageOf(
-            "$mainUrl/24-7-channels.php" to "24/7 Channels",
-            "$mainUrl/schedule/schedule-generated.json" to "Schedule Channels"
+        "$mainUrl/24-7-channels.php" to "24/7 Channels",
+        "$mainUrl/schedule/schedule-generated.json" to "Schedule Channels"
     )
 
     override suspend fun getMainPage(
-            page: Int,
-            request: MainPageRequest
+        page: Int,
+        request: MainPageRequest
     ): HomePageResponse {
         val items = mutableListOf<HomePageList>()
         if (request.name == "24/7 Channels") {
@@ -46,11 +46,11 @@ class TimefourTv : MainAPI() {
                 val header = tag.key
                 val channels = tag.value.mapNotNull {
                     LiveSearchResponse(
-                            it.key,
-                            Item(it.key, items = it.value.toJson()).toJson(),
-                            this@TimefourTv.name,
-                            TvType.Live,
-                            posterUrl = homePoster,
+                        it.key,
+                        Item(it.key, items = it.value.toJson()).toJson(),
+                        this@TimefourTv.name,
+                        TvType.Live,
+                        posterUrl = homePoster,
                     )
                 }
                 if (channels.isNotEmpty()) items.add(HomePageList(header, channels, true))
@@ -64,11 +64,11 @@ class TimefourTv : MainAPI() {
         val title = this.select("strong").text()
         val href = fixUrl(this.select("a").attr("href"))
         return LiveSearchResponse(
-                title,
-                Item(title, href).toJson(),
-                this@TimefourTv.name,
-                TvType.Live,
-                posterUrl = homePoster,
+            title,
+            Item(title, href).toJson(),
+            this@TimefourTv.name,
+            TvType.Live,
+            posterUrl = homePoster,
         )
     }
 
@@ -88,18 +88,18 @@ class TimefourTv : MainAPI() {
             val items = AppUtils.parseJson<ArrayList<Items>>(data.items)
             items.mapNotNull { eps ->
                 Episode(
-                        data = eps.channels?.toJson() ?: return@mapNotNull null,
-                        name = "${eps.event} • ${eps.time}",
-                        description = eps.channels.map { it.channel_name }.joinToString(" • "),
-                        posterUrl = detailPoster,
+                    data = eps.channels?.toJson() ?: return@mapNotNull null,
+                    name = "${eps.event} • ${eps.time}",
+                    description = eps.channels.map { it.channel_name }.joinToString(" • "),
+                    posterUrl = detailPoster,
                 )
             }
         }
         return newTvSeriesLoadResponse(
-                data.title ?: "",
-                url,
-                TvType.TvSeries,
-                episodes = episodes
+            data.title ?: "",
+            url,
+            TvType.TvSeries,
+            episodes = episodes
         ) {
             posterUrl = homePoster
         }
@@ -107,29 +107,34 @@ class TimefourTv : MainAPI() {
     }
 
     override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ): Boolean {
 
         val json = AppUtils.parseJson<ArrayList<Channels>>(data)
 
         json.apmap {
             val iframe = app.get(
-                    fixChannelUrl(
-                            it.channel_id ?: return@apmap
-                    )
+                fixChannelUrl(
+                    it.channel_id ?: return@apmap
+                )
             ).document.selectFirst("iframe#thatframe")?.attr("src")
-                    ?: throw ErrorLoadingException("No Iframe Found")
+                ?: throw ErrorLoadingException("No Iframe Found")
             val host = getBaseUrl(iframe)
             val video = extractVideo(iframe)
 
-            M3u8Helper.generateM3u8(
+            callback.invoke(
+                ExtractorLink(
+                    this.name,
                     it.channel_name ?: return@apmap,
                     video ?: return@apmap,
                     "$host/",
-            ).forEach(callback)
+                    Qualities.Unknown.value,
+                    isM3u8 = true,
+                )
+            )
         }
 
         return true
@@ -138,13 +143,13 @@ class TimefourTv : MainAPI() {
     private suspend fun extractVideo(url: String): String? {
         val res = app.get(url, referer = mainUrl)
         return Regex("""source:['"](\S+.m3u8)['"],""").find(res.text)?.groupValues?.getOrNull(
-                1
+            1
         ) ?: run {
             val scriptData =
-                    res.document.selectFirst("div#player")?.nextElementSibling()?.data()
-                            ?.substringAfterLast("return(")?.substringBefore(".join")
+                res.document.selectFirst("div#player")?.nextElementSibling()?.data()
+                    ?.substringAfterLast("return(")?.substringBefore(".join")
             scriptData?.removeSurrounding("[", "]")?.replace("\"", "")?.split(",")
-                    ?.joinToString("")
+                ?.joinToString("")
         }
     }
 
@@ -163,20 +168,20 @@ class TimefourTv : MainAPI() {
     }
 
     data class Item(
-            val title: String? = null,
-            val url: String? = null,
-            val items: String? = null,
+        val title: String? = null,
+        val url: String? = null,
+        val items: String? = null,
     )
 
     data class Items(
-            val time: String? = null,
-            val event: String? = null,
-            val channels: ArrayList<Channels>? = arrayListOf(),
+        val time: String? = null,
+        val event: String? = null,
+        val channels: ArrayList<Channels>? = arrayListOf(),
     )
 
     data class Channels(
-            val channel_name: String? = null,
-            val channel_id: String? = null,
+        val channel_name: String? = null,
+        val channel_id: String? = null,
     )
 
 }

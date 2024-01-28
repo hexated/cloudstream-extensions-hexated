@@ -6,7 +6,6 @@ import com.hexated.SoraExtractor.invokeAllMovieland
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAoneroom
 import com.hexated.SoraExtractor.invokeBollyMaza
-import com.hexated.SoraExtractor.invokeDbgo
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -36,15 +35,14 @@ import com.hexated.SoraExtractor.invokeEmovies
 import com.hexated.SoraExtractor.invokeHdmovies4u
 import com.hexated.SoraExtractor.invokeMultimovies
 import com.hexated.SoraExtractor.invokeNetmovies
-import com.hexated.SoraExtractor.invokeSFMovies
 import com.hexated.SoraExtractor.invokeShowflix
 import com.hexated.SoraExtractor.invokeTvMovies
 import com.hexated.SoraExtractor.invokeUhdmovies
 import com.hexated.SoraExtractor.invokeVegamovies
 import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
-import com.hexated.SoraExtractor.invokeMMovies
-import com.hexated.SoraExtractor.invokeOmovies
+import com.hexated.SoraExtractor.invokeMoflix
+import com.hexated.SoraExtractor.invokeGhostx
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
@@ -119,6 +117,7 @@ open class SoraStream : TmdbProvider() {
         const val aoneroomAPI = "https://api3.aoneroom.com"
         const val mMoviesAPI = "https://multimovies.uno"
         const val watchCartoonAPI = "https://www1.watchcartoononline.bz"
+        const val moflixAPI = "https://moflix-stream.xyz"
 
         const val fdMoviesAPI = "https://freedrivemovie.com"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
@@ -385,9 +384,6 @@ open class SoraStream : TmdbProvider() {
                 invokeVidSrc(res.id, res.season, res.episode, callback)
             },
             {
-                invokeDbgo(res.imdbId, res.season, res.episode, subtitleCallback, callback)
-            },
-            {
                 if (!res.isAnime) invokeAoneroom(
                     res.title, res.airedYear
                         ?: res.year, res.season, res.episode, subtitleCallback, callback
@@ -466,7 +462,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeOmovies(
+                if (!res.isAnime) invokeGhostx(
                     res.title,
                     res.year,
                     res.season,
@@ -547,7 +543,7 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeSmashyStream(
-                    res.imdbId,
+                    res.id,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -587,7 +583,6 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeRidomovies(
                     res.id,
                     res.imdbId,
-                    res.title,
                     res.season,
                     res.episode,
                     subtitleCallback,
@@ -716,13 +711,7 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeSFMovies(
-                    res.id, res.title, res.airedYear
-                        ?: res.year, res.season, res.episode, callback
-                )
-            },
-            {
-                invokeMMovies(res.title, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeMoflix(res.id, res.season, res.episode, callback)
             },
         )
 

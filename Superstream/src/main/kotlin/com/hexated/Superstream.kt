@@ -623,7 +623,6 @@ open class Superstream : MainAPI() {
         }
     }
 
-
     private data class LinkData(
         val id: Int,
         val type: Int,
@@ -632,7 +631,6 @@ open class Superstream : MainAPI() {
         val mediaId: Int?,
         val imdbId: String?,
     )
-
 
     data class LinkDataProp(
         @JsonProperty("code") val code: Int? = null,
@@ -775,6 +773,13 @@ open class Superstream : MainAPI() {
             )
         }
     }
+
+    data class ExternalSources(
+        @JsonProperty("m3u8_url") val m3u8_url: String? = null,
+        @JsonProperty("file") val file: String? = null,
+        @JsonProperty("label") val label: String? = null,
+        @JsonProperty("type") val type: String? = null,
+    )
 
     data class WatchsomuchTorrents(
         @JsonProperty("id") val id: Int? = null,

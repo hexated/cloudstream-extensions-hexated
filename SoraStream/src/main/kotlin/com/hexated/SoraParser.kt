@@ -47,6 +47,23 @@ data class AniwaveServer(
     }
 }
 
+data class MoflixResponse(
+    @JsonProperty("title") val title: Episode? = null,
+    @JsonProperty("episode") val episode: Episode? = null,
+) {
+    data class Episode(
+        @JsonProperty("id") val id: Int? = null,
+        @JsonProperty("videos") val videos: ArrayList<Videos>? = arrayListOf(),
+    ) {
+        data class Videos(
+            @JsonProperty("name") val name: String? = null,
+            @JsonProperty("category") val category: String? = null,
+            @JsonProperty("src") val src: String? = null,
+            @JsonProperty("quality") val quality: String? = null,
+        )
+    }
+}
+
 data class AniMedia(
     @JsonProperty("id") var id: Int? = null,
     @JsonProperty("idMal") var idMal: Int? = null
@@ -174,15 +191,31 @@ data class JikanResponse(
     @JsonProperty("data") val data: JikanData? = null,
 )
 
-data class CinemaTvSubtitles(
-    @JsonProperty("language") val language: String? = null,
-    @JsonProperty("file") val file: Any? = null,
-)
-
 data class CinemaTvResponse(
+    @JsonProperty("items") val items: ArrayList<Items>? = arrayListOf(),
+    @JsonProperty("episodes") val episodes: ArrayList<Episodes>? = arrayListOf(),
     @JsonProperty("streams") val streams: HashMap<String, String>? = null,
-    @JsonProperty("subtitles") val subtitles: ArrayList<CinemaTvSubtitles>? = arrayListOf(),
-)
+    @JsonProperty("subtitles") val subtitles: ArrayList<Subtitles>? = arrayListOf(),
+    ) {
+    data class Items(
+        @JsonProperty("id_movie") val id_movie: Int? = null,
+        @JsonProperty("id_show") val id_show: Int? = null,
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("year") val year: Int? = null,
+        @JsonProperty("imdb_id") val imdb_id: String? = null,
+    )
+
+    data class Episodes(
+        @JsonProperty("id") val id: Int? = null,
+        @JsonProperty("season") val season: Int? = null,
+        @JsonProperty("episode") val episode: Int? = null,
+    )
+
+    data class Subtitles(
+        @JsonProperty("language") val language: String? = null,
+        @JsonProperty("url") val url: String? = null,
+    )
+}
 
 data class VidsrctoResult(
     @JsonProperty("id") val id: String? = null,
@@ -425,15 +458,6 @@ data class RidoSearch(
 data class SmashySources(
     @JsonProperty("sourceUrls") var sourceUrls: ArrayList<String>? = arrayListOf(),
     @JsonProperty("subtitleUrls") var subtitleUrls: String? = null,
-)
-
-data class SmashyDSources(
-    @JsonProperty("sourceUrls") var sourceUrls: ArrayList<SmashyDSourcesUrls>? = arrayListOf(),
-)
-
-data class SmashyDSourcesUrls(
-    @JsonProperty("file") var file: String? = null,
-    @JsonProperty("title") var title: String? = null,
 )
 
 data class AoneroomResponse(

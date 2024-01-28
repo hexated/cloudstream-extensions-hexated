@@ -54,7 +54,7 @@ jobs:
           ZSHOW_API: ${{ secrets.ZSHOW_API }}
           SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
           CINEMATV_API: ${{ secrets.CINEMATV_API }}
-          OMOVIES_API: ${{ secrets.OMOVIES_API }}
+          GHOSTX_API: ${{ secrets.GHOSTX_API }}
           SUPERSTREAM_FIRST_API: ${{ secrets.SUPERSTREAM_FIRST_API }}
           SUPERSTREAM_SECOND_API: ${{ secrets.SUPERSTREAM_SECOND_API }}
           SUPERSTREAM_THIRD_API: ${{ secrets.SUPERSTREAM_THIRD_API }}
@@ -73,7 +73,7 @@ jobs:
           echo ZSHOW_API=$ZSHOW_API >> local.properties
           echo SFMOVIES_API=$SFMOVIES_API >> local.properties
           echo CINEMATV_API=$CINEMATV_API >> local.properties
-          echo OMOVIES_API=$OMOVIES_API >> local.properties
+          echo GHOSTX_API=$GHOSTX_API >> local.properties
           echo SUPERSTREAM_FIRST_API=$SUPERSTREAM_FIRST_API >> local.properties
           echo SUPERSTREAM_SECOND_API=$SUPERSTREAM_SECOND_API >> local.properties
           echo SUPERSTREAM_THIRD_API=$SUPERSTREAM_THIRD_API >> local.properties

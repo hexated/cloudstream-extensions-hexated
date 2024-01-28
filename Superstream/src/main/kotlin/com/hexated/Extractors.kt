@@ -1,7 +1,9 @@
 package com.hexated
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.mvvm.normalSafeApiCall
 import com.lagradost.cloudstream3.utils.*
+import java.net.URL
 
 object Extractors : Superstream() {
 
@@ -66,45 +68,44 @@ object Extractors : Superstream() {
         callback: (ExtractorLink) -> Unit,
     ) {
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-        val shareKey = app.get(
-            "$fourthAPI/index/share_link?id=${mediaId}&type=$type"
-        ).parsedSafe<ExternalResponse>()?.data?.link?.substringAfterLast("/")
+        val shareKey = app.get("$fourthAPI/index/share_link?id=${mediaId}&type=$type")
+            .parsedSafe<ExternalResponse>()?.data?.link?.substringAfterLast("/") ?: return
 
         val headers = mapOf("Accept-Language" to "en")
-        val shareRes = app.get(
-            "$thirdAPI/file/file_share_list?share_key=${shareKey ?: return}",
-            headers = headers
-        ).parsedSafe<ExternalResponse>()?.data
+        val shareRes = app.get("$thirdAPI/file/file_share_list?share_key=$shareKey", headers = headers)
+            .parsedSafe<ExternalResponse>()?.data ?: return
 
         val fids = if (season == null) {
-            shareRes?.file_list
+            shareRes.file_list
         } else {
-            val parentId =
-                shareRes?.file_list?.find { it.file_name.equals("season $season", true) }?.fid
-            app.get(
-                "$thirdAPI/file/file_share_list?share_key=$shareKey&parent_id=$parentId&page=1",
-                headers = headers
-            ).parsedSafe<ExternalResponse>()?.data?.file_list?.filter {
-                it.file_name?.contains(
-                    "s${seasonSlug}e${episodeSlug}",
-                    true
-                ) == true
-            }
-        }
+            val parentId = shareRes.file_list?.find { it.file_name.equals("season $season", true) }?.fid
+            app.get("$thirdAPI/file/file_share_list?share_key=$shareKey&parent_id=$parentId&page=1", headers = headers)
+                .parsedSafe<ExternalResponse>()?.data?.file_list?.filter {
+                    it.file_name?.contains("s${seasonSlug}e${episodeSlug}", true) == true
+                }
+        } ?: return
 
-        fids?.apmapIndexed { index, fileList ->
+        fids.apmapIndexed { index, fileList ->
             val player = app.get("$thirdAPI/file/player?fid=${fileList.fid}&share_key=$shareKey").text
-            val video = """"(https.*?m3u8.*?)"""".toRegex().find(player)?.groupValues?.get(1)
-            callback.invoke(
-                ExtractorLink(
-                    "External",
-                    "External [Server ${index + 1}]",
-                    video?.replace("\\/", "/") ?: return@apmapIndexed,
-                    "$thirdAPI/",
-                    getIndexQuality(fileList.file_name),
-                    isM3u8 = true
-                )
-            )
+            val sources = "sources\\s*=\\s*(.*);".toRegex().find(player)?.groupValues?.get(1)
+            val qualities = "quality_list\\s*=\\s*(.*);".toRegex().find(player)?.groupValues?.get(1)
+            listOf(sources, qualities).forEach {
+                AppUtils.tryParseJson<ArrayList<ExternalSources>>(it)?.forEach org@{ source ->
+                    val format = if (source.type == "video/mp4") ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
+                    val label = if (format == ExtractorLinkType.M3U8) "Hls" else "Mp4"
+                    if(!(source.label == "AUTO" || format == ExtractorLinkType.VIDEO)) return@org
+                    callback.invoke(
+                        ExtractorLink(
+                            "External",
+                            "External $label [Server ${index + 1}]",
+                            (source.m3u8_url ?: source.file)?.replace("\\/", "/") ?: return@org,
+                            "",
+                            getIndexQuality(if (format == ExtractorLinkType.M3U8) fileList.file_name else source.label),
+                            type = format,
+                        )
+                    )
+                }
+            }
         }
     }
 
