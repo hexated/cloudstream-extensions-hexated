@@ -1,7 +1,7 @@
 version = 1
 
 cloudstream {
-    authors     = listOf("hexated")
+    authors     = listOf("nexus")
     language    = "hi"
     description = "We Provide Huge Colocation of Hindi Porn (Uncut) Web Series"
 
