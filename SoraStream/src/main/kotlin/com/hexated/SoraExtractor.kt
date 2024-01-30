@@ -2202,26 +2202,38 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val media =
-            app.get("$cinemaTvAPI/v1/${if (season == null) "movies" else "shows"}?filters[q]=$title")
-                .parsedSafe<CinemaTvResponse>()?.items?.find {
-                    it.imdb_id?.removePrefix("tt")
-                        .equals(imdbId?.removePrefix("tt")) || (it.title.equals(
-                        title,
-                        true
-                    ) && it.year == year)
-                } ?: return
-
-        val mediaId = if (season == null) {
-            media.id_movie
+        val id = imdbId?.removePrefix("tt")
+        val slug = title?.createSlug()
+        val url = if (season == null) {
+            "$cinemaTvAPI/movies/play/$id-$slug-$year"
         } else {
-            app.get("$cinemaTvAPI/v1/shows?expand=episodes&id=${media.id_show}")
-                .parsedSafe<CinemaTvResponse>()?.episodes?.find { it.episode == episode && it.season == season }?.id
-        } ?: return
+            "$cinemaTvAPI/shows/play/$id-$slug-$year"
+        }
 
-        val sources =
-            app.get("$cinemaTvAPI/v1/${if (season == null) "movies" else "episodes"}/view?expand=streams,subtitles&id=$mediaId")
-                .parsedSafe<CinemaTvResponse>()
+        val headers = mapOf(
+            "x-requested-with" to "XMLHttpRequest",
+        )
+        val doc = app.get(url, headers = headers).document
+        val script = doc.selectFirst("script:containsData(hash:)")?.data()
+        val hash = Regex("hash:\\s*['\"](\\S+)['\"]").find(script ?: return)?.groupValues?.get(1)
+        val expires = Regex("expires:\\s*(\\d+)").find(script)?.groupValues?.get(1)
+        val episodeId = (if (season == null) {
+            """id_movie:\s*(\d+)"""
+        } else {
+            """episode:\s*['"]$episode['"],[\n\s]+id_episode:\s*(\d+),[\n\s]+season:\s*['"]$season['"]"""
+        }).let { it.toRegex().find(script)?.groupValues?.get(1) }
+
+        val videoUrl = if (season == null) {
+            "$cinemaTvAPI/api/v1/security/movie-access?id_movie=$episodeId&hash=$hash&expires=$expires"
+        } else {
+            "$cinemaTvAPI/api/v1/security/episode-access?id_episode=$episodeId&hash=$hash&expires=$expires"
+        }
+
+        val sources = app.get(
+            videoUrl,
+            referer = url,
+            headers = headers
+        ).parsedSafe<CinemaTvResponse>()
 
         sources?.streams?.mapKeys { source ->
             callback.invoke(
@@ -2229,18 +2241,19 @@ object SoraExtractor : SoraStream() {
                     "CinemaTv",
                     "CinemaTv",
                     source.value,
-                    "",
+                    "$cinemaTvAPI/",
                     getQualityFromName(source.key),
                     true
                 )
             )
         }
 
-        sources?.subtitles?.map {
+        sources?.subtitles?.map { sub ->
+            val file = sub.file.toString()
             subtitleCallback.invoke(
                 SubtitleFile(
-                    it.language ?: return@map,
-                    fixUrl(it.url ?: return@map, cinemaTvAPI)
+                    sub.language ?: return@map,
+                    if (file.startsWith("[")) return@map else fixUrl(file, cinemaTvAPI),
                 )
             )
         }
