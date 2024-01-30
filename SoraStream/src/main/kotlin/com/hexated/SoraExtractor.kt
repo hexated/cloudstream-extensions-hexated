@@ -2348,7 +2348,7 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
-        host: String = "https://esh-bostewsom-i-273.site",
+        host: String = "https://weisatted-forminsting-i-277.site",
     ) {
         val res = app.get(
             "$host/play/$imdbId",
