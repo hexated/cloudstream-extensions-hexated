@@ -337,7 +337,7 @@ open class Netembed : ExtractorApi() {
         val script = getAndUnpack(response.text)
         val m3u8 = Regex("((https:|http:)//.*\\.m3u8)").find(script)?.groupValues?.getOrNull(1) ?: return
 
-        M3u8Helper.generateM3u8(this.name, m3u8, "$mainUrl/", ).forEach(callback)
+        M3u8Helper.generateM3u8(this.name, m3u8, "$mainUrl/").forEach(callback)
     }
 }
 
@@ -345,6 +345,7 @@ open class Ridoo : ExtractorApi() {
     override val name = "Ridoo"
     override var mainUrl = "https://ridoo.net"
     override val requiresReferer = true
+    open val defaulQuality = Qualities.P1080.value
 
     override suspend fun getUrl(
         url: String,
@@ -359,16 +360,35 @@ open class Ridoo : ExtractorApi() {
             response.document.selectFirst("script:containsData(sources:)")?.data()
         }
         val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+        val quality = "qualityLabels.*\"(\\d{3,4})[pP]\"".toRegex().find(script)?.groupValues?.get(1)
         callback.invoke(
             ExtractorLink(
                 this.name,
                 this.name,
                 m3u8 ?: return,
                 mainUrl,
-                Qualities.P1080.value,
+                quality?.toIntOrNull() ?: defaulQuality,
                 INFER_TYPE
             )
         )
+    }
+
+}
+
+open class Gdmirrorbot : ExtractorApi() {
+    override val name = "Gdmirrorbot"
+    override val mainUrl = "https://gdmirrorbot.nl"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        app.get(url, referer = referer).document.select("ul#videoLinks li").apmap {
+            loadExtractor(it.attr("data-link"), "$mainUrl/", subtitleCallback, callback)
+        }
     }
 
 }
@@ -431,6 +451,18 @@ open class Embedrise : ExtractorApi() {
 
 }
 
+class FilemoonNl : Ridoo() {
+    override val name = "FilemoonNl"
+    override var mainUrl = "https://filemoon.nl"
+    override val defaulQuality = Qualities.Unknown.value
+}
+
+class Alions : Ridoo() {
+    override val name = "Alions"
+    override var mainUrl = "https://alions.pro"
+    override val defaulQuality = Qualities.Unknown.value
+}
+
 class Streamwish : Filesim() {
     override val name = "Streamwish"
     override var mainUrl = "https://streamwish.to"
@@ -484,9 +516,10 @@ class Embedwish : Filesim() {
     override val name = "Embedwish"
     override var mainUrl = "https://embedwish.com"
 }
-class Flaswish : Filesim() {
+class Flaswish : Ridoo() {
     override val name = "Flaswish"
     override var mainUrl = "https://flaswish.com"
+    override val defaulQuality = Qualities.Unknown.value
 }
 
 class Comedyshow : Jeniusplay() {

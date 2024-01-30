@@ -29,6 +29,7 @@ import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeMoflix
 import com.hexated.SoraExtractor.invokeGhostx
+import com.hexated.SoraExtractor.invokeMoviefiction
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
@@ -313,6 +314,15 @@ class SoraStreamLite : SoraStream() {
                 if (!res.isAnime) invokeShowflix(
                     res.title,
                     res.year,
+                    res.season,
+                    res.episode,
+                    subtitleCallback,
+                    callback
+                )
+            },
+            {
+                if (!res.isAnime) invokeMoviefiction(
+                    res.title,
                     res.season,
                     res.episode,
                     subtitleCallback,

@@ -33,5 +33,8 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Ridoo())
         registerExtractorAPI(Streamvid())
         registerExtractorAPI(Embedrise())
+        registerExtractorAPI(Gdmirrorbot())
+        registerExtractorAPI(FilemoonNl())
+        registerExtractorAPI(Alions())
     }
 }

@@ -5,7 +5,6 @@ import com.hexated.SoraExtractor.invoke2embed
 import com.hexated.SoraExtractor.invokeAllMovieland
 import com.hexated.SoraExtractor.invokeAnimes
 import com.hexated.SoraExtractor.invokeAoneroom
-import com.hexated.SoraExtractor.invokeBollyMaza
 import com.hexated.SoraExtractor.invokeFilmxy
 import com.hexated.SoraExtractor.invokeKimcartoon
 import com.hexated.SoraExtractor.invokeVidSrc
@@ -24,7 +23,6 @@ import com.hexated.SoraExtractor.invokeGoku
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
 import com.hexated.SoraExtractor.invokeM4uhd
-import com.hexated.SoraExtractor.invokeMoviezAdd
 import com.hexated.SoraExtractor.invokeNinetv
 import com.hexated.SoraExtractor.invokeNowTv
 import com.hexated.SoraExtractor.invokeRStream
@@ -43,6 +41,7 @@ import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeMoflix
 import com.hexated.SoraExtractor.invokeGhostx
+import com.hexated.SoraExtractor.invokeMoviefiction
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
 import com.hexated.SoraExtractor.invokeZshow
@@ -83,7 +82,6 @@ open class SoraStream : TmdbProvider() {
         /** ALL SOURCES */
         const val twoEmbedAPI = "https://www.2embed.cc"
         const val vidSrcAPI = "https://vidsrc.me"
-        const val dbgoAPI = "https://dbgo.fun"
         const val dreamfilmAPI = "https://dreamfilmsw.net"
         const val noverseAPI = "https://www.nollyverse.com"
         const val filmxyAPI = "https://www.filmxy.vip"
@@ -118,6 +116,7 @@ open class SoraStream : TmdbProvider() {
         const val mMoviesAPI = "https://multimovies.uno"
         const val watchCartoonAPI = "https://www1.watchcartoononline.bz"
         const val moflixAPI = "https://moflix-stream.xyz"
+        const val moviefictionAPI = "https://moviefiction.com"
 
         const val fdMoviesAPI = "https://freedrivemovie.com"
         const val uhdmoviesAPI = "https://uhdmovies.zip"
@@ -126,8 +125,6 @@ open class SoraStream : TmdbProvider() {
         const val vegaMoviesAPI = "https://vegamovies.dad"
         const val dotmoviesAPI = "https://dotmovies.rsvp"
         const val tvMoviesAPI = "https://www.tvseriesnmovies.com"
-        const val moviezAddAPI = "https://ww3.moviezaddiction.click"
-        const val bollyMazaAPI = "https://ww3.bollymaza.click"
         const val dahmerMoviesAPI = "https://odd-bird-1319.zwuhygoaqe.workers.dev"
 
         fun getType(t: String?): TvType {
@@ -508,28 +505,6 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeTvMovies(res.title, res.season, res.episode, callback)
             },
             {
-                if (!res.isAnime) invokeMoviezAdd(
-                    moviezAddAPI,
-                    "MoviezAdd",
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
-                if (!res.isAnime && res.isBollywood) invokeBollyMaza(
-                    bollyMazaAPI,
-                    "BollyMaza",
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    callback
-                )
-            },
-            {
                 if (!res.isAnime) invokeRStream(res.id, res.season, res.episode, callback)
             },
             {
@@ -712,6 +687,9 @@ open class SoraStream : TmdbProvider() {
             },
             {
                 if (!res.isAnime) invokeMoflix(res.id, res.season, res.episode, callback)
+            },
+            {
+                if (!res.isAnime) invokeMoviefiction(res.title, res.season, res.episode, subtitleCallback, callback)
             },
         )
 
