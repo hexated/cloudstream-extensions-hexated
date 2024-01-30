@@ -120,7 +120,7 @@ open class SoraStream : TmdbProvider() {
         const val moflixAPI = "https://moflix-stream.xyz"
 
         const val fdMoviesAPI = "https://freedrivemovie.com"
-        const val uhdmoviesAPI = "https://uhdmovies.zip"
+        const val uhdmoviesAPI = "https://uhdmovies.us"
         const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val hdmovies4uAPI = "https://hdmovies4u.day"
         const val vegaMoviesAPI = "https://vegamovies.ngo"
