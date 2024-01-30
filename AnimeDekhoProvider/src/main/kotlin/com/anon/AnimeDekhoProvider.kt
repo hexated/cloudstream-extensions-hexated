@@ -1,9 +1,7 @@
 package com.anon
 
 import android.util.Log
-
 import com.fasterxml.jackson.annotation.JsonProperty
-
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.utils.*
@@ -12,20 +10,16 @@ import com.lagradost.nicehttp.Requests
 import com.lagradost.nicehttp.Session
 import kotlinx.coroutines.delay
 import org.jsoup.nodes.Element
-
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.nicehttp.requestCreator
-
 import org.jsoup.Jsoup
 import java.util.regex.Pattern
 import okhttp3.Interceptor
 import okhttp3.Response
-
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.nicehttp.RequestBodyTypes
 import okhttp3.RequestBody.Companion.toRequestBody
-
 import com.lagradost.cloudstream3.extractors.helper.AesHelper.cryptoAESHandler
 
 class AnimeDekhoProvider : MainAPI() {
@@ -85,12 +79,10 @@ class AnimeDekhoProvider : MainAPI() {
         val poster  = document?.selectFirst("div.post-thumbnail figure img")?.attr("src") ?: "null"
         val plot  = document?.selectFirst("div.entry-content p")?.text()?.trim() ?: "null"
         val year  = document?.selectFirst("span.year")?.text()?.trim()?.toInt() ?: 1990
-
         var episodes = mutableListOf<Episode>()
 
         val items = document.select("ul.seasons-lst li").mapNotNull {   
             val name = it?.selectFirst("h3.title")?.text() ?: "null"
-            
             val tempstring = it?.selectFirst("a")?.attr("href") ?: "null"
 
             episodes.add( Episode(tempstring, name) )
@@ -106,6 +98,7 @@ class AnimeDekhoProvider : MainAPI() {
                 //this.recommendations = recommendations
             }
         }
+
         else{
             return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster.toString()
@@ -113,8 +106,7 @@ class AnimeDekhoProvider : MainAPI() {
                 this.year = year
                 //this.recommendations = recommendations
             }
-        }   
-        
+        }
     }
 
     override suspend fun loadLinks(
@@ -142,15 +134,10 @@ class AnimeDekhoProvider : MainAPI() {
         }
 
         //Log.d("TAGNAME", "vidlink $vidlink") //https://vidxstream.xyz/v/H0Rh3ixVLJKk/
-
         val body = app.get(vidlink).text
-
         val master = Regex("""JScript[\w+]?\s*=\s*'([^']+)""").find(body)!!.groupValues?.get(1)
-
         val decrypt = cryptoAESHandler(master ?: return false, "4MmH9EsZrq0WEekn".toByteArray(), false)?.replace("\\", "") ?: "ERROR"
-
         val vidfinal = Regex("""file:\s*\"(https:[^\"]+)\"""").find(decrypt)!!.groupValues?.get(1)
-        
 
         val headers = mapOf(
             "accept" to "*/*",
