@@ -2120,7 +2120,7 @@ object SoraExtractor : SoraStream() {
                 referer = url,
                 headers = headers
             ).text
-            val links = encryptedData.decrypt(base64Decode("MTEx"))
+            val links = encryptedData.decrypt(base64Decode("OTg="))
             links?.forEach { video ->
                 qualities.filter { it <= video.max.toInt() }.forEach {
                     callback(
