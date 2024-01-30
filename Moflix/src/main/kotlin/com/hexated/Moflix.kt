@@ -11,7 +11,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import org.jsoup.Jsoup
 import kotlin.math.roundToInt
 
-class Moflix : MainAPI() {
+open class Moflix : MainAPI() {
     override var name = "Moflix"
     override var mainUrl = "https://moflix-stream.xyz"
     override var lang = "de"
@@ -36,16 +36,16 @@ class Moflix : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "351" to "Kürzlich hinzugefügt",
-        "345" to "Movie-Datenbank",
-        "352" to "Angesagte Serien",
-        "358" to "Kinder & Familien",
+        "351/channelables.order:asc" to "Kürzlich hinzugefügt",
+        "345/popularity:desc" to "Movie-Datenbank",
+        "352/channelables.order:asc" to "Angesagte Serien",
+        "358/channelables.order:asc" to "Kinder & Familien",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val order = if (request.data == "345") "popularity:desc" else "channelables.order:asc"
+        val query = request.data.split("/")
         val home = app.get(
-            "$mainUrl/api/v1/channel/${request.data}?returnContentOnly=true&restriction=&order=$order&paginate=simple&perPage=50&query=&page=$page",
+            "$mainUrl/api/v1/channel/${query.first()}?returnContentOnly=true&restriction=&order=${query.last()}&paginate=simple&perPage=50&query=&page=$page",
             referer = "$mainUrl/"
         ).parsedSafe<Responses>()?.pagination?.data?.mapNotNull { it.toSearchResponse() }
             ?: emptyList()
@@ -194,7 +194,7 @@ class Moflix : MainAPI() {
                 "$mainUrl/",
                 subtitleCallback,
                 callback,
-                iframe.quality?.filter { it.isDigit() }?.toIntOrNull()
+                iframe.quality?.substringBefore("/")?.filter { it.isDigit() }?.toIntOrNull()
             )
         }
 
