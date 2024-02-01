@@ -23,5 +23,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=raveeflix.my.id&sz=%size%"
+    iconUrl = "https://raveeflix.my.id/favicon.ico"
 }
