@@ -1,8 +1,7 @@
-version = 2
+version = 3
 
 cloudstream {
     language = "hi"
-    description = "SKIP ADS on the SITE every 24 hours to Play, has Hindi Dubbed Cartoons"
     authors = listOf("anon")
 
     /**
