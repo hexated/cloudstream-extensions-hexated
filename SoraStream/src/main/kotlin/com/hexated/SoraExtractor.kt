@@ -218,10 +218,29 @@ object SoraExtractor : SoraStream() {
         val req = app.get(url)
         val directUrl = getBaseUrl(req.url)
         req.document.select("ul.bx-lst.aa-tbs li a").apmap {
-            if(!it.select("span.option").text().startsWith("Gdmirrorbot")) return@apmap
             val iframe = app.get(base64Decode(it.attr("data-src"))).document.selectFirst("iframe")
-                ?.attr("src")
-            loadExtractor(iframe ?: return@apmap, "$directUrl/", subtitleCallback, callback)
+                ?.attr("src") ?: return@apmap
+            loadExtractor(iframe, "$directUrl/", subtitleCallback) { link ->
+                when {
+                    link.name == "Bestx" && link.quality == Qualities.Unknown.value -> {
+                        callback.invoke(
+                            ExtractorLink(
+                                "Moviefiction",
+                                "Moviefiction",
+                                link.url,
+                                link.referer,
+                                Qualities.P1080.value,
+                                link.type,
+                                link.headers,
+                                link.extractorData
+                            )
+                        )
+                    }
+                    link.name != "Bestx" -> {
+                        callback.invoke(link)
+                    }
+                }
+            }
         }
     }
 
@@ -2111,8 +2130,10 @@ object SoraExtractor : SoraStream() {
             cookies = cookies,
             referer = url,
             headers = headers
-        ).document
-        serverRes.select("ul li").apmap { el ->
+        )
+        val script = getAndUnpack(serverRes.text)
+        val key = """\(key\s*=\s*(\d+)\)""".toRegex().find(script)?.groupValues?.get(1) ?: return
+        serverRes.document.select("ul li").apmap { el ->
             val server = el.attr("data-value")
             val encryptedData = app.get(
                 "$url?server=$server&_=$unixTimeMS",
@@ -2120,7 +2141,7 @@ object SoraExtractor : SoraStream() {
                 referer = url,
                 headers = headers
             ).text
-            val links = encryptedData.decrypt(base64Decode("OTg="))
+            val links = encryptedData.decrypt(key)
             links?.forEach { video ->
                 qualities.filter { it <= video.max.toInt() }.forEach {
                     callback(
