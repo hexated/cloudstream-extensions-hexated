@@ -3,10 +3,10 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.nodes.Element
+import java.net.URLDecoder
 
 class DubokuProvider : MainAPI() {
     override var mainUrl = "https://www.duboku.tv"
@@ -110,20 +110,28 @@ class DubokuProvider : MainAPI() {
             if (script.data().contains("var player_data={")) {
                 val dataJson =
                     script.data().substringAfter("var player_data={").substringBefore("}")
-                tryParseJson<Sources>("{$dataJson}")?.let { source ->
-                    M3u8Helper.generateM3u8(
+                val source = tryParseJson<Sources>("{$dataJson}")
+                callback.invoke(
+                    ExtractorLink(
                         this.name,
-                        source.url ?: return@map,
-                        referer = "https://w.duboku.io/",
-                        headers = mapOf("Origin" to "https://w.duboku.io")
-                    ).forEach(callback)
-                }
+                        this.name,
+                        decode(base64Decode(source?.url ?: return@map)),
+                        "https://w.duboku.io/",
+                        Qualities.Unknown.value,
+                        INFER_TYPE,
+                        headers = mapOf(
+                            "Accept-Language" to "en-US,en;q=0.5",
+                            "Origin" to "https://w.duboku.io"
+                        ),
+                    )
+                )
             }
         }
 
-
         return true
     }
+
+    private fun decode(input: String): String = URLDecoder.decode(input, "utf-8")
 
     data class Sources(
         @JsonProperty("url") val url: String?,

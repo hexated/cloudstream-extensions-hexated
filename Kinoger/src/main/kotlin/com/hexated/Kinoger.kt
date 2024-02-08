@@ -2,6 +2,7 @@ package com.hexated
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.Chillx
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -11,7 +12,7 @@ import org.jsoup.nodes.Element
 
 class Kinoger : MainAPI() {
     override var name = "Kinoger"
-    override var mainUrl = "https://kinoger.com"
+    override var mainUrl = "https://kinoger.to"
     override var lang = "de"
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.TvSeries, TvType.Movie)

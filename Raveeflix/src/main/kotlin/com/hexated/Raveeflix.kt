@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
 
 class Raveeflix : MainAPI() {
     override var mainUrl = "https://raveeflix.my.id"
@@ -21,6 +24,7 @@ class Raveeflix : MainAPI() {
     override val mainPage =
         mainPageOf(
             "categories/trending" to "Trending",
+            "movies" to "Movies",
             "tv" to "Tv-Shows",
             "drakor" to "Drakor",
             "categories/anime" to "Anime",
@@ -45,34 +49,41 @@ class Raveeflix : MainAPI() {
         val href = fixUrl(this.attr("href"))
         val posterUrl = this.selectFirst("div.thumbnail_card")?.attr("style")?.getPoster()
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        return newMovieSearchResponse(title, Media(href, posterUrl).toJson(), TvType.Movie) {
             this.posterUrl = posterUrl
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse>? {
-        val res = app.get("$mainUrl/index.json").text.let { AppUtils.tryParseJson<ArrayList<Index>>(it) }
+        val res =
+            app.get("$mainUrl/index.json").text.let { AppUtils.tryParseJson<ArrayList<Index>>(it) }
         return res?.filter {
             it.title?.contains(
                 query,
                 true
-            ) == true && !it.section.equals("Categories", true) && !it.section.equals("Tags", true) && it.permalink?.contains("/episode") == false
+            ) == true && !it.section.equals("Categories", true) && !it.section.equals(
+                "Tags",
+                true
+            ) && it.permalink?.contains("/episode") == false
         }?.mapNotNull {
             newMovieSearchResponse(
                 it.title ?: return@mapNotNull null,
-                fixUrl(
-                    it.permalink?.substringBefore("episode")?.substringBefore("season")
-                        ?: return@mapNotNull null,
-                ),
+                Media(
+                    fixUrl(
+                        it.permalink?.substringBefore("episode")?.substringBefore("season")
+                            ?: return@mapNotNull null
+                    )
+                ).toJson(),
                 TvType.Movie,
             )
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val media = parseJson<Media>(url)
+        val document = app.get(media.url).document
         val title = document.selectFirst("h1.text-4xl")?.text() ?: "No Title"
-        val poster = document.selectFirst("div.thumbnail_card, div.w-full.thumbnail_card_related")
+        val poster = media.poster ?: document.selectFirst("div.thumbnail_card, div.w-full.thumbnail_card_related")
             ?.attr("style")?.getPoster()
         val type =
             if (document.select("mux-player").isNullOrEmpty()) TvType.TvSeries else TvType.Movie
@@ -103,42 +114,24 @@ class Raveeflix : MainAPI() {
             document.select("section.w-full a.min-w-full").mapNotNull { it.toSearchResult() }
 
         return if (type == TvType.TvSeries) {
-            val section = document.select("div.relative > section.w-full a.min-w-full")
+            val sectionSelector = "div.relative > section.w-full a.min-w-full"
+            val section = document.select(sectionSelector)
             val hasMultipleSeason = section.any { it.attr("href").contains("/season-") }
-            val episodes =
-                if (hasMultipleSeason) {
-                    section.apmap { ss ->
-                        val season = ss.selectFirst("div.text-xl")?.text()?.filter { it.isDigit() }
+            val episodes = if (hasMultipleSeason) {
+                section.apmap { ss ->
+                    fetchEpisodesFromPages(
+                        ss.attr("href"),
+                        5,
+                        sectionSelector,
+                        true,
+                        ss.selectFirst("div.text-xl")?.text()?.filter { it.isDigit() }
                             ?.toIntOrNull()
-                        app.get(fixUrl(ss.attr("href"))).document.select("div.relative > section.w-full a.min-w-full")
-                            .mapNotNull { eps ->
-                                val name = eps.selectFirst("div.text-xl")?.text()
-                                    ?: return@mapNotNull null
-                                val href = fixUrl(eps.attr("href"))
-                                val posterUrl = eps.selectFirst("div.thumbnail_card")?.attr("style")
-                                    ?.getPoster()
-                                Episode(
-                                    href,
-                                    name,
-                                    posterUrl = posterUrl,
-                                    season = season
-                                )
-                            }
-                    }.flatten()
-                } else {
-                    section.mapNotNull { eps ->
-                        val name = eps.selectFirst("div.text-xl")?.text() ?: return@mapNotNull null
-                        val href = fixUrl(eps.attr("href"))
-                        val posterUrl =
-                            eps.selectFirst("div.thumbnail_card")?.attr("style")?.getPoster()
-                        Episode(
-                            href,
-                            name,
-                            posterUrl = posterUrl,
-                        )
-                    }
-                }
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes.reversed()) {
+                    )
+                }.toMutableList().flatten()
+            } else {
+                fetchEpisodesFromPages(media.url, 5, sectionSelector, false)
+            }
+            newTvSeriesLoadResponse(title, media.url, TvType.TvSeries, episodes.reversed()) {
                 this.posterUrl = poster
                 this.year = year
                 this.seasonNames
@@ -149,7 +142,7 @@ class Raveeflix : MainAPI() {
                 this.recommendations = recommendations
             }
         } else {
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
+            newMovieLoadResponse(title, media.url, TvType.Movie, media.url) {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
@@ -183,12 +176,47 @@ class Raveeflix : MainAPI() {
         return true
     }
 
+    private suspend fun fetchEpisodesFromPages(
+        baseUrl: String,
+        maxPages: Int,
+        sectionSelector: String,
+        hasMultipleSeasons: Boolean,
+        season: Int? = null
+    ): MutableList<Episode> {
+        val epsData = mutableListOf<Episode>()
+        for (index in 1..maxPages) {
+            val pageUrl = if (index == 1) baseUrl else "${baseUrl.removeSuffix("/")}/page/$index/"
+            val episodeVo = app.get(fixUrl(pageUrl)).document.select(sectionSelector)
+                .getEpisodes(if (hasMultipleSeasons) season else null)
+            if (episodeVo.isEmpty()) break
+            epsData.addAll(episodeVo)
+        }
+        return epsData
+    }
+
+    private fun Elements.getEpisodes(season: Int? = 1): List<Episode> {
+        return this.mapNotNull { eps ->
+            val name = eps.selectFirst("div.text-xl")?.text() ?: return@mapNotNull null
+            val href = fixUrl(eps.attr("href"))
+            val posterUrl =
+                eps.selectFirst("div.thumbnail_card")?.attr("style")?.getPoster()
+            Episode(
+                href,
+                name,
+                posterUrl = posterUrl,
+                season = season
+            )
+        }
+    }
+
     private fun String.getPoster(): String? {
         return fixUrlNull(
             this.substringAfter("(")
                 .substringBefore(")"),
         )
     }
+
+    data class Media(val url: String, val poster: String? = null)
 
     data class Index(
         @JsonProperty("title") val title: String? = null,
