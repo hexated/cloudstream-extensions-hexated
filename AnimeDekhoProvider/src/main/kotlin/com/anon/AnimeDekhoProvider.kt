@@ -49,8 +49,9 @@ class AnimeDekhoProvider : MainAPI() {
         val title = this.selectFirst("header h2")?.text() ?: "null"
         val posterUrl = this.selectFirst("div figure img")?.attr("src")
 
-        return newAnimeSearchResponse(title, Media(href, posterUrl).toJson(), TvType.Anime) {
+        return newAnimeSearchResponse(title, Media(href, posterUrl).toJson(), TvType.Anime, false) {
             this.posterUrl = posterUrl
+            addDubStatus(dubExist = true, subExist = true)
         }
     }
 
@@ -77,7 +78,7 @@ class AnimeDekhoProvider : MainAPI() {
         val lst = document.select("ul.seasons-lst li")
 
         return if (lst.isEmpty()) {
-            newMovieLoadResponse(title, media.url, TvType.Movie, Media(media.url, mediaType = 1).toJson()) {
+            newMovieLoadResponse(title, url, TvType.Movie, Media(media.url, mediaType = 1).toJson()) {
                 this.posterUrl = poster
                 this.plot = plot
                 this.year = year
@@ -88,7 +89,7 @@ class AnimeDekhoProvider : MainAPI() {
                 val href = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
                 Episode(Media(href, mediaType = 2).toJson(), name)
             }
-            newTvSeriesLoadResponse(title, media.url, TvType.TvSeries, episodes) {
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.plot = plot
                 this.year = year

@@ -49,7 +49,7 @@ class Raveeflix : MainAPI() {
         val href = fixUrl(this.attr("href"))
         val posterUrl = this.selectFirst("div.thumbnail_card")?.attr("style")?.getPoster()
 
-        return newMovieSearchResponse(title, Media(href, posterUrl).toJson(), TvType.Movie) {
+        return newMovieSearchResponse(title, Media(href, posterUrl).toJson(), TvType.Movie, false) {
             this.posterUrl = posterUrl
         }
     }
@@ -75,6 +75,7 @@ class Raveeflix : MainAPI() {
                     )
                 ).toJson(),
                 TvType.Movie,
+                false,
             )
         }
     }
@@ -131,7 +132,7 @@ class Raveeflix : MainAPI() {
             } else {
                 fetchEpisodesFromPages(media.url, 5, sectionSelector, false)
             }
-            newTvSeriesLoadResponse(title, media.url, TvType.TvSeries, episodes.reversed()) {
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes.reversed()) {
                 this.posterUrl = poster
                 this.year = year
                 this.seasonNames
@@ -142,7 +143,7 @@ class Raveeflix : MainAPI() {
                 this.recommendations = recommendations
             }
         } else {
-            newMovieLoadResponse(title, media.url, TvType.Movie, media.url) {
+            newMovieLoadResponse(title, url, TvType.Movie, media.url) {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = description
