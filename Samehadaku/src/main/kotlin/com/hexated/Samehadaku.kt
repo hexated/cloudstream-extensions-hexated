@@ -10,19 +10,17 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class Samehadaku : MainAPI() {
-    override var mainUrl = "https://samehadaku.guru"
+    override var mainUrl = "https://samehadaku.show"
     override var name = "Samehadaku"
     override val hasMainPage = true
     override var lang = "id"
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(
-            TvType.Anime,
-            TvType.AnimeMovie,
-            TvType.OVA
+        TvType.Anime,
+        TvType.AnimeMovie,
+        TvType.OVA
     )
     companion object {
-        const val acefile = "https://acefile.co"
-
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -39,13 +37,13 @@ class Samehadaku : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-            "$mainUrl/page/" to "Episode Terbaru",
-            "$mainUrl/" to "HomePage",
+        "$mainUrl/page/" to "Episode Terbaru",
+        "$mainUrl/" to "HomePage",
     )
 
     override suspend fun getMainPage(
-            page: Int,
-            request: MainPageRequest
+        page: Int,
+        request: MainPageRequest
     ): HomePageResponse {
         val items = mutableListOf<HomePageList>()
 
@@ -62,9 +60,9 @@ class Samehadaku : MainAPI() {
 
         if (request.name == "Episode Terbaru") {
             val home = app.get(request.data + page).document.selectFirst("div.post-show")?.select("ul li")
-                    ?.mapNotNull {
-                        it.toSearchResult()
-                    } ?: throw ErrorLoadingException("No Media Found")
+                ?.mapNotNull {
+                    it.toSearchResult()
+                } ?: throw ErrorLoadingException("No Media Found")
             items.add(HomePageList(request.name, home, true))
         }
 
@@ -74,7 +72,7 @@ class Samehadaku : MainAPI() {
 
     private fun Element.toSearchResult(): AnimeSearchResponse? {
         val title = this.selectFirst("div.title, h2.entry-title a, div.lftinfo h2")?.text()?.trim()
-                ?: return null
+            ?: return null
         val href = fixUrlNull(this.selectFirst("a")?.attr("href") ?: return null)
         val posterUrl = fixUrlNull(this.select("img").attr("src"))
         val epNum = this.selectFirst("div.dtla author")?.text()?.toIntOrNull()
@@ -107,11 +105,11 @@ class Samehadaku : MainAPI() {
             Regex("\\d,\\s(\\d*)").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
         }
         val status = getStatus(
-                document.selectFirst("div.spe > span:contains(Status)")?.ownText() ?: return null
+            document.selectFirst("div.spe > span:contains(Status)")?.ownText() ?: return null
         )
         val type =
-                getType(document.selectFirst("div.spe > span:contains(Type)")?.ownText()?.trim()?.lowercase()
-                        ?: "tv")
+            getType(document.selectFirst("div.spe > span:contains(Type)")?.ownText()?.trim()?.lowercase()
+                ?: "tv")
         val rating = document.selectFirst("span.ratingValue")?.text()?.trim()?.toRatingInt()
         val description = document.select("div.desc p").text().trim()
         val trailer = document.selectFirst("div.trailer-anime iframe")?.attr("src")
@@ -119,7 +117,7 @@ class Samehadaku : MainAPI() {
         val episodes = document.select("div.lstepsiode.listeps ul li").mapNotNull {
             val header = it.selectFirst("span.lchx > a") ?: return@mapNotNull null
             val episode = Regex("Episode\\s?(\\d+)").find(header.text())?.groupValues?.getOrNull(1)
-                    ?.toIntOrNull()
+                ?.toIntOrNull()
             val link = fixUrl(header.attr("href"))
             Episode(link, episode = episode)
         }.reversed()
@@ -149,68 +147,42 @@ class Samehadaku : MainAPI() {
     }
 
     override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ): Boolean {
 
         val document = app.get(data).document
 
-        argamap(
-                {
-                    document.select("div#server ul li div").apmap {
-                        val dataPost = it.attr("data-post")
-                        val dataNume = it.attr("data-nume")
-                        val dataType = it.attr("data-type")
-
-                        val iframe = app.post(
-                                url = "$mainUrl/wp-admin/admin-ajax.php",
-                                data = mapOf(
-                                        "action" to "player_ajax",
-                                        "post" to dataPost,
-                                        "nume" to dataNume,
-                                        "type" to dataType
-                                ),
-                                referer = data,
-                                headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
-                        ).document.select("iframe").attr("src")
-
-                        loadFixedExtractor(fixedIframe(iframe), it.text(), "$mainUrl/", subtitleCallback, callback)
-
-                    }
-                },
-                {
-                    document.select("div#downloadb li").map { el ->
-                        el.select("a").apmap {
-                            loadFixedExtractor(fixedIframe(it.attr("href")), el.select("strong").text(), "$mainUrl/", subtitleCallback, callback)
-                        }
-                    }
-                }
-        )
+        document.select("div#downloadb li").map { el ->
+            el.select("a").apmap {
+                loadFixedExtractor(fixUrl(it.attr("href")), el.select("strong").text(), "$mainUrl/", subtitleCallback, callback)
+            }
+        }
 
         return true
     }
 
     private suspend fun loadFixedExtractor(
-            url: String,
-            name: String,
-            referer: String? = null,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
+        url: String,
+        name: String,
+        referer: String? = null,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ) {
         loadExtractor(url, referer, subtitleCallback) { link ->
             callback.invoke(
-                    ExtractorLink(
-                            link.name,
-                            link.name,
-                            link.url,
-                            link.referer,
-                            name.fixQuality(),
-                            link.type,
-                            link.headers,
-                            link.extractorData
-                    )
+                ExtractorLink(
+                    link.name,
+                    link.name,
+                    link.url,
+                    link.referer,
+                    name.fixQuality(),
+                    link.type,
+                    link.headers,
+                    link.extractorData
+                )
             )
         }
     }
@@ -221,14 +193,6 @@ class Samehadaku : MainAPI() {
             "FULLHD" -> Qualities.P1080.value
             "MP4HD" -> Qualities.P720.value
             else -> this.filter { it.isDigit() }.toIntOrNull() ?: Qualities.Unknown.value
-        }
-    }
-
-    private fun fixedIframe(url: String): String {
-        val id = Regex("""(?:/f/|/file/)(\w+)""").find(url)?.groupValues?.getOrNull(1)
-        return when {
-            url.startsWith(acefile) -> "${acefile}/player/$id"
-            else -> fixUrl(url)
         }
     }
 

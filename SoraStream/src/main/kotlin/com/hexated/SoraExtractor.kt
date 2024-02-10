@@ -389,7 +389,6 @@ object SoraExtractor : SoraStream() {
             callback,
             true,
             hasCloudflare = true,
-            interceptor = multiInterceptor
         )
     }
 
@@ -1421,30 +1420,20 @@ object SoraExtractor : SoraStream() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val slugTitle = title.createSlug()
+        val slugTitle = title?.createSlug()
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-        val req = app.get("$m4uhdAPI/search/$slugTitle.html")
+        val req = app.get("$m4uhdAPI/search/$slugTitle.html", timeout = 20)
         val referer = getBaseUrl(req.url)
-        val scriptData = req.document.select("div.row div.item").map { ele ->
-            Triple(
-                ele.select("div.tiptitle p").text().substringBefore("(").trim().createSlug(),
-                ele.select("div.jtip-top div:last-child").text().filter { it.isDigit() },
-                ele.selectFirst("a")?.attr("href")
-            )
-        }
 
-        val script = if (scriptData.size == 1) {
-            scriptData.firstOrNull()
+        val media = req.document.select("div.row div.item > a").map { it.attr("href") }
+        val mediaUrl = if(media.size == 1) {
+            media.first()
         } else {
-            scriptData.find {
-                it.first.equals(slugTitle) && it.second == "$year" && if (season != null) it.third?.contains(
-                    "-tvshow-"
-                ) == true else it.third?.contains("-movie-") == true
-            }
+            media.find { it.contains("-$slugTitle-") && it.contains("-$year-") }
         }
 
-        val link = fixUrl(script?.third ?: return, referer)
-        val request = app.get(link)
+        val link = fixUrl(mediaUrl ?: return, referer)
+        val request = app.get(link, timeout = 20)
         var cookies = request.cookies
         val headers = mapOf("Accept" to "*/*", "X-Requested-With" to "XMLHttpRequest")
 
@@ -1454,15 +1443,13 @@ object SoraExtractor : SoraStream() {
             doc.select("div.le-server span").map { it.attr("data") }
         } else {
             val idepisode =
-                doc.selectFirst("div.detail > p:matches((?i)S$seasonSlug-E$episodeSlug) button")
+                doc.selectFirst("div.season > p:matches((?i)S$seasonSlug-E$episodeSlug) button")
                     ?.attr("idepisode")
                     ?: return
             val requestEmbed = app.post(
-                "$referer/ajaxtv",
-                data = mapOf("idepisode" to idepisode, "_token" to "$token"),
-                referer = link,
-                headers = headers,
-                cookies = cookies
+                "$referer/ajaxtv", data = mapOf(
+                    "idepisode" to idepisode, "_token" to "$token"
+                ), referer = link, headers = headers, cookies = cookies, timeout = 20
             )
             cookies = requestEmbed.cookies
             requestEmbed.document.select("div.le-server span").map { it.attr("data") }
@@ -1475,6 +1462,7 @@ object SoraExtractor : SoraStream() {
                 referer = link,
                 headers = headers,
                 cookies = cookies,
+                timeout = 20
             ).document.select("iframe").attr("src")
 
             loadExtractor(iframe, referer, subtitleCallback, callback)
@@ -2084,7 +2072,7 @@ object SoraExtractor : SoraStream() {
             base64Decode("X2lkZW50aXR5Z29tb3ZpZXM3") to base64Decode("NTJmZGM3MGIwMDhjMGIxZDg4MWRhYzBmMDFjY2E4MTllZGQ1MTJkZTAxY2M4YmJjMTIyNGVkNGFhZmI3OGI1MmElM0EyJTNBJTdCaSUzQTAlM0JzJTNBMTglM0ElMjJfaWRlbnRpdHlnb21vdmllczclMjIlM0JpJTNBMSUzQnMlM0E1MiUzQSUyMiU1QjIwNTAzNjYlMkMlMjJIblZSUkFPYlRBU09KRXI0NVl5Q004d2lIb2wwVjFrbyUyMiUyQzI1OTIwMDAlNUQlMjIlM0IlN0Q="),
         )
 
-        var res = app.get("$api/search/$query")
+        var res = app.get("$api/search/$query", timeout = 20)
         val cookies = savedCookies + res.cookies
         val doc = res.document
         val media = doc.select("div.$mediaSelector").map {
@@ -2109,12 +2097,12 @@ object SoraExtractor : SoraStream() {
         val iframe = if (season == null) {
             media.third
         } else {
-            app.get(fixUrl(media.third, api), cookies = cookies)
+            app.get(fixUrl(media.third, api), cookies = cookies, timeout = 20)
                 .document.selectFirst("div#$episodeSelector a:contains(Episode ${slug.second})")
                 ?.attr("href")
         }
 
-        res = app.get(fixUrl(iframe ?: return, api), cookies = cookies)
+        res = app.get(fixUrl(iframe ?: return, api), cookies = cookies, timeout = 20)
         val url = res.document.select("meta[property=og:url]").attr("content")
         val headers = mapOf("X-Requested-With" to "XMLHttpRequest")
         val qualities = intArrayOf(2160, 1440, 1080, 720, 480, 360)
@@ -2129,17 +2117,19 @@ object SoraExtractor : SoraStream() {
             "$api/user/servers/$serverId?ep=$episodeId",
             cookies = cookies,
             referer = url,
-            headers = headers
+            headers = headers,
+            timeout = 20
         )
         val script = getAndUnpack(serverRes.text)
-        val key = """\(key\s*=\s*(\d+)\)""".toRegex().find(script)?.groupValues?.get(1) ?: return
+        val key = """key\s*=\s*(\d+)""".toRegex().find(script)?.groupValues?.get(1) ?: return
         serverRes.document.select("ul li").apmap { el ->
             val server = el.attr("data-value")
             val encryptedData = app.get(
                 "$url?server=$server&_=$unixTimeMS",
                 cookies = cookies,
                 referer = url,
-                headers = headers
+                headers = headers,
+                timeout = 20
             ).text
             val links = encryptedData.decrypt(key)
             links?.forEach { video ->
@@ -2382,7 +2372,7 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
-        host: String = "https://weisatted-forminsting-i-277.site",
+        host: String = "https://dozzlegram-duj-i-280.site",
     ) {
         val res = app.get(
             "$host/play/$imdbId",
