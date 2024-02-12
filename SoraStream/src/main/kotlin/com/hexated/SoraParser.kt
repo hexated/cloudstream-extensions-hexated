@@ -471,3 +471,13 @@ data class CinemaTvResponse(
         @JsonProperty("file") val file: Any? = null,
     )
 }
+
+data class NepuSearch(
+    @JsonProperty("data") val data: ArrayList<Data>? = arrayListOf(),
+) {
+    data class Data(
+        @JsonProperty("url") val url: String? = null,
+        @JsonProperty("name") val name: String? = null,
+        @JsonProperty("type") val type: String? = null,
+    )
+}

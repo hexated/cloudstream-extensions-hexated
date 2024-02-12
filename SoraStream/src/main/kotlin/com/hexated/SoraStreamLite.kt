@@ -30,8 +30,10 @@ import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeMoflix
 import com.hexated.SoraExtractor.invokeGhostx
 import com.hexated.SoraExtractor.invokeMoviefiction
+import com.hexated.SoraExtractor.invokeNepu
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
+import com.hexated.SoraExtractor.invokeZoechip
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.argamap
@@ -321,14 +323,23 @@ class SoraStreamLite : SoraStream() {
                 )
             },
             {
-                if (!res.isAnime) invokeMoviefiction(
+                if (!res.isAnime) invokeZoechip(
                     res.title,
+                    res.year,
                     res.season,
                     res.episode,
-                    subtitleCallback,
                     callback
                 )
             },
+            {
+                if (!res.isAnime) invokeNepu(
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            }
         )
 
         return true

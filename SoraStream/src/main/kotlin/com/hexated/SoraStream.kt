@@ -18,7 +18,6 @@ import com.hexated.SoraExtractor.invokeDramaday
 import com.hexated.SoraExtractor.invokeDreamfilm
 import com.hexated.SoraExtractor.invokeFDMovies
 import com.hexated.SoraExtractor.invokeFlixon
-import com.hexated.SoraExtractor.invokeGMovies
 import com.hexated.SoraExtractor.invokeGoku
 import com.hexated.SoraExtractor.invokeKisskh
 import com.hexated.SoraExtractor.invokeLing
@@ -41,9 +40,10 @@ import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeMoflix
 import com.hexated.SoraExtractor.invokeGhostx
-import com.hexated.SoraExtractor.invokeMoviefiction
+import com.hexated.SoraExtractor.invokeNepu
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
+import com.hexated.SoraExtractor.invokeZoechip
 import com.hexated.SoraExtractor.invokeZshow
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
@@ -110,16 +110,17 @@ open class SoraStream : TmdbProvider() {
         const val vidsrctoAPI = "https://vidsrc.to"
         const val dramadayAPI = "https://dramaday.me"
         const val animetoshoAPI = "https://animetosho.org"
-        const val showflixAPI = "https://showflix.space"
+        const val showflixAPI = "https://showflix.lol"
         const val aoneroomAPI = "https://api3.aoneroom.com"
         const val mMoviesAPI = "https://multimovies.uno"
         const val watchCartoonAPI = "https://www1.watchcartoononline.bz"
         const val moflixAPI = "https://moflix-stream.xyz"
         const val moviefictionAPI = "https://moviefiction.com"
+        const val zoechipAPI = "https://zoechip.org"
+        const val nepuAPI = "https://nepu.to"
 
         const val fdMoviesAPI = "https://freedrivemovie.com"
         const val uhdmoviesAPI = "https://uhdmovies.us"
-        const val gMoviesAPI = "https://gdrivemovies.xyz"
         const val hdmovies4uAPI = "https://hdmovies4u.day"
         const val vegaMoviesAPI = "https://vegamovies.ngo"
         const val dotmoviesAPI = "https://dotmovies.dad"
@@ -482,16 +483,6 @@ open class SoraStream : TmdbProvider() {
                 )
             },
             {
-                if (!res.isAnime) invokeGMovies(
-                    res.title,
-                    res.year,
-                    res.season,
-                    res.episode,
-                    subtitleCallback,
-                    callback
-                )
-            },
-            {
                 if (!res.isAnime) invokeFDMovies(res.title, res.season, res.episode, callback)
             },
             {
@@ -688,8 +679,17 @@ open class SoraStream : TmdbProvider() {
                 if (!res.isAnime) invokeMoflix(res.id, res.season, res.episode, callback)
             },
             {
-                if (!res.isAnime) invokeMoviefiction(res.title, res.season, res.episode, subtitleCallback, callback)
+                if (!res.isAnime) invokeZoechip(res.title, res.year, res.season, res.episode, callback)
             },
+            {
+                if (!res.isAnime) invokeNepu(
+                    res.title,
+                    res.airedYear ?: res.year,
+                    res.season,
+                    res.episode,
+                    callback
+                )
+            }
         )
 
         return true

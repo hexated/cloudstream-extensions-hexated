@@ -1307,51 +1307,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeGMovies(
-        title: String? = null,
-        year: Int? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title.createSlug()
-        val url = if (season == null || season == 1) {
-            "$gMoviesAPI/$fixTitle-$year"
-        } else {
-            "$gMoviesAPI/$fixTitle-$year-season-$season"
-        }
-
-        val doc = app.get(url).document
-
-        val iframe = (if (season == null) {
-            doc.select("div.is-content-justification-center div.wp-block-button").map {
-                it.select("a").attr("href") to it.text()
-            }
-        } else {
-            doc.select("div.is-content-justification-center").find {
-                it.previousElementSibling()?.text()
-                    ?.contains(Regex("(?i)episode\\s?$episode")) == true
-            }?.select("div.wp-block-button")?.map {
-                it.select("a").attr("href") to it.text()
-            }
-        })?.filter {
-            it.second.contains(Regex("(?i)(4k|1080p)"))
-        } ?: return
-
-        iframe.apmap { (iframeLink, title) ->
-            val size = Regex("(?i)\\s(\\S+gb|mb)").find(title)?.groupValues?.getOrNull(1)
-            loadCustomTagExtractor(
-                "[$size]",
-                iframeLink,
-                "$gMoviesAPI/",
-                subtitleCallback,
-                callback,
-                getIndexQuality(title)
-            )
-        }
-    }
-
     suspend fun invokeFDMovies(
         title: String? = null,
         season: Int? = null,
@@ -1691,6 +1646,58 @@ object SoraExtractor : SoraStream() {
                 else -> return@apmap
             }
         }
+
+    }
+
+    suspend fun invokeNepu(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val slug = title?.createSlug()
+        val headers = mapOf(
+            "X-Requested-With" to "XMLHttpRequest"
+        )
+        val data = app.get("$nepuAPI/ajax/posts?q=$title", headers = headers, referer = "$nepuAPI/")
+            .parsedSafe<NepuSearch>()?.data
+
+        val media =
+            data?.find { it.url?.startsWith(if (season == null) "/movie/$slug-$year-" else "/serie/$slug-$year-") == true }
+                ?: data?.find {
+                    (it.name.equals(
+                        title,
+                        true
+                    ) && it.type == if (season == null) "Movie" else "Serie")
+                }
+
+        if (media?.url == null) return
+        val mediaUrl = if (season == null) {
+            media.url
+        } else {
+            "${media.url}/season/$season/episode/$episode"
+        }
+
+        val dataId = app.get(fixUrl(mediaUrl, nepuAPI)).document.selectFirst("a[data-embed]")?.attr("data-embed") ?: return
+        val res = app.post(
+            "$nepuAPI/ajax/embed", data = mapOf(
+                "id" to dataId
+            ), referer = mediaUrl, headers = headers
+        ).text
+
+        val m3u8 = "(http[^\"]+)".toRegex().find(res)?.groupValues?.get(1)
+
+        callback.invoke(
+            ExtractorLink(
+                "Nepu",
+                "Nepu",
+                m3u8 ?: return,
+                "$nepuAPI/",
+                Qualities.P1080.value,
+                INFER_TYPE
+            )
+        )
 
     }
 
@@ -2156,6 +2163,7 @@ object SoraExtractor : SoraStream() {
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
+        api: String = "https://parse.showflix.online"
     ) {
         val where = if (season == null) "movieName" else "seriesName"
         val classes = if (season == null) "movies" else "series"
@@ -2172,12 +2180,12 @@ object SoraExtractor : SoraStream() {
             "_ApplicationId": "SHOWFLIXAPPID",
             "_JavaScriptKey": "SHOWFLIXMASTERKEY",
             "_ClientVersion": "js3.4.1",
-            "_InstallationId": "d92d98d3-fa49-4103-8dcf-6347c86942a7"
+            "_InstallationId": "58f0e9ca-f164-42e0-a683-a1450ccf0221"
         }
     """.trimIndent().toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
 
         val data =
-            app.post("https://parse.showflix.tk/parse/classes/$classes", requestBody = body).text
+            app.post("$api/parse/classes/$classes", requestBody = body).text
         val iframes = if (season == null) {
             val result = tryParseJson<ShowflixSearchMovies>(data)?.resultsMovies?.find {
                 it.movieName.equals("$title ($year)", true)
@@ -2201,6 +2209,46 @@ object SoraExtractor : SoraStream() {
         iframes.apmap { iframe ->
             loadExtractor(iframe ?: return@apmap, "$showflixAPI/", subtitleCallback, callback)
         }
+
+    }
+
+    suspend fun invokeZoechip(
+        title: String? = null,
+        year: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        callback: (ExtractorLink) -> Unit,
+    ) {
+        val slug = title?.createSlug()
+        val url = if (season == null) {
+            "$zoechipAPI/film/${title?.createSlug()}-$year"
+        } else {
+            "$zoechipAPI/episode/$slug-season-$season-episode-$episode"
+        }
+
+        val id = app.get(url).document.selectFirst("div#show_player_ajax")?.attr("movie-id") ?: return
+
+        val server = app.post(
+            "$zoechipAPI/wp-admin/admin-ajax.php", data = mapOf(
+                "action" to "lazy_player",
+                "movieID" to id,
+            ), referer = url, headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest"
+            )
+        ).document.selectFirst("ul.nav a:contains(Filemoon)")?.attr("data-server")
+
+        val res = app.get(server ?: return, referer = "$zoechipAPI/")
+        val host = getBaseUrl(res.url)
+        val script = res.document.select("script:containsData(function(p,a,c,k,e,d))").last()?.data()
+        val unpacked = getAndUnpack(script ?: return)
+
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(unpacked)?.groupValues?.getOrNull(1)
+
+        M3u8Helper.generateM3u8(
+            "Zoechip",
+            m3u8 ?: return,
+            "$host/",
+        ).forEach(callback)
 
     }
 
