@@ -240,7 +240,6 @@ data class PageStatus(
     @JsonProperty("__typename") val _typename: String? = null
 )
 
-
 data class Recommendations(
     @JsonProperty("anyCard") val anyCard: AnyCard? = null,
     @JsonProperty("pageStatus") val pageStatus: PageStatus? = PageStatus(),
@@ -255,38 +254,4 @@ data class QueryPopular(
 
 data class DataPopular(
     @JsonProperty("queryPopular") val queryPopular: QueryPopular? = QueryPopular()
-)
-
-data class MALSyncSites(
-    @JsonProperty("Zoro") val zoro: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
-    @JsonProperty("Marin") val marin: HashMap<String?, HashMap<String, String?>>? = hashMapOf(),
-)
-
-data class MALSyncResponses(
-    @JsonProperty("Sites") val sites: MALSyncSites? = null,
-)
-
-data class MarinCode(
-    @JsonProperty("file") val file: String? = null,
-    @JsonProperty("height") val height: Int? = null,
-)
-
-data class MarinMirror(
-    @JsonProperty("code") val code: MarinCode? = null,
-)
-
-data class MarinData(
-    @JsonProperty("mirror") val mirror: ArrayList<MarinMirror>? = arrayListOf(),
-)
-
-data class MarinVideos(
-    @JsonProperty("data") val data: MarinData? = null,
-)
-
-data class MarinProps(
-    @JsonProperty("video") val video: MarinVideos? = null,
-)
-
-data class MarinResponses(
-    @JsonProperty("props") val props: MarinProps? = null,
 )

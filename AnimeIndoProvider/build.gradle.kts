@@ -23,5 +23,5 @@ cloudstream {
         "Anime",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=animeindo.fun&sz=%size%"
+    iconUrl = "https://animeindo.quest/wp-content/uploads/2023/05/favicon-300x300.png"
 }

@@ -55,7 +55,7 @@ class Hentaiheaven : MainAPI() {
         val link = "$mainUrl/?s=$query&post_type=wp-manga"
         val document = app.get(link).document
 
-        return document.select("div.c-tabs-item div.row.c-tabs-item__content").mapNotNull {
+        return document.select("div.c-tabs-item > div.c-tabs-item__content").mapNotNull {
             it.toSearchResult()
         }
     }

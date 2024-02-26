@@ -3,10 +3,9 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.base64Encode
 import com.lagradost.cloudstream3.utils.SubtitleHelper
 
-const val openSubAPI = "https://opensubtitles.strem.io/stremio/v1"
+const val openSubAPI = "https://opensubtitles-v3.strem.io"
 const val watchSomuchAPI = "https://watchsomuch.tv"
 
 object SubsExtractors {
@@ -16,22 +15,20 @@ object SubsExtractors {
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
     ) {
-        val id = if(season == null) {
-            imdbId
+        val slug = if(season == null) {
+            "movie/$imdbId"
         } else {
-            "$imdbId $season $episode"
+            "series/$imdbId:$season:$episode"
         }
-        val data = base64Encode("""{"id":1,"jsonrpc":"2.0","method":"subtitles.find","params":[null,{"query":{"itemHash":"$id"}}]}""".toByteArray())
-        app.get("${openSubAPI}/q.json?b=$data").parsedSafe<OsResult>()?.result?.all?.map { sub ->
+        app.get("${openSubAPI}/subtitles/$slug.json", timeout = 120L).parsedSafe<OsResult>()?.subtitles?.map { sub ->
             subtitleCallback.invoke(
                 SubtitleFile(
                     SubtitleHelper.fromThreeLettersToLanguage(sub.lang ?: "") ?: sub.lang
-                    ?: "",
+                    ?: return@map,
                     sub.url ?: return@map
                 )
             )
         }
-
     }
 
     suspend fun invokeWatchsomuch(
@@ -45,7 +42,7 @@ object SubsExtractors {
             "${watchSomuchAPI}/Watch/ajMovieTorrents.aspx", data = mapOf(
                 "index" to "0",
                 "mid" to "$id",
-                "wsk" to "f6ea6cde-e42b-4c26-98d3-b4fe48cdd4fb",
+                "wsk" to "30fb68aa-1c71-4b8c-b5d4-4ca9222cfb45",
                 "lid" to "",
                 "liu" to ""
             ), headers = mapOf("X-Requested-With" to "XMLHttpRequest")
@@ -81,12 +78,8 @@ object SubsExtractors {
         @JsonProperty("lang") val lang: String? = null,
     )
 
-    data class OsAll(
-        @JsonProperty("all") val all: ArrayList<OsSubtitles>? = arrayListOf(),
-    )
-
     data class OsResult(
-        @JsonProperty("result") val result: OsAll? = null,
+        @JsonProperty("subtitles") val subtitles: ArrayList<OsSubtitles>? = arrayListOf(),
     )
 
     data class WatchsomuchTorrents(

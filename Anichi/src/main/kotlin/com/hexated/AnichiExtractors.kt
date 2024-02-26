@@ -121,67 +121,6 @@ object AnichiExtractors : Anichi() {
         }
     }
 
-    suspend fun invokeExternalSources(
-        idMal: Int? = null,
-        dubStatus: String,
-        episode: String,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-    ) {
-        val ids = app.get("https://api.malsync.moe/mal/anime/${idMal ?: return}")
-            .parsedSafe<MALSyncResponses>()?.sites
-
-        if (dubStatus == "sub") invokeMarin(ids?.marin?.keys?.firstOrNull(), episode, callback)
-
-    }
-
-    private suspend fun invokeMarin(
-        id: String? = null,
-        episode: String,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val url = "$marinHost/anime/${id ?: return}/$episode"
-        val cookies = app.get(
-            "$marinHost/anime",
-            headers = mapOf(
-                "Cookie" to "__ddg1_=;__ddg2_=;"
-            ),
-            referer = "$marinHost/anime",
-        ).cookies.let {
-            decode(it["XSRF-TOKEN"].toString()) to decode(it["marin_session"].toString())
-        }
-
-        val json = app.get(
-            url,
-            headers = mapOf(
-                "Accept" to "text/html, application/xhtml+xml",
-                "Cookie" to "__ddg1=;__ddg2_=;XSRF-TOKEN=${cookies.first};marin_session=${cookies.second};",
-                "X-XSRF-TOKEN" to cookies.first
-            ),
-            referer = "$marinHost/anime/$id"
-        ).document.selectFirst("div#app")?.attr("data-page")
-        tryParseJson<MarinResponses>(json)?.props?.video?.data?.mirror?.map { video ->
-            callback.invoke(
-                ExtractorLink(
-                    "Marin",
-                    "Marin",
-                    video.code?.file ?: return@map,
-                    url,
-                    video.code.height ?: Qualities.Unknown.value,
-                    headers = mapOf(
-                        "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
-                        "Accept-Language" to "en-US,en;q=0.5",
-                        "Cookie" to "__ddg1=;__ddg2_=; XSRF-TOKEN=${cookies.first}; marin_session=${cookies.second};",
-                        "Connection" to "keep-alive",
-                        "Sec-Fetch-Dest" to "video",
-                        "Sec-Fetch-Mode" to "cors",
-                        "Sec-Fetch-Site" to "cross-site",
-                    )
-                )
-            )
-        }
-    }
-
     private suspend fun invokeGogo(
         link: String,
         subtitleCallback: (SubtitleFile) -> Unit,

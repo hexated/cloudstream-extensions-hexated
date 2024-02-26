@@ -84,17 +84,13 @@ class Anilibria : MainAPI() {
         val document = app.get(url).document
 
         val title = document.selectFirst("h1.release-title")?.text() ?: return null
-        val poster = fixUrlNull(document.selectFirst("img#adminPoster")?.attr("src"))
-        val trackTitle = (document.selectFirst("h1.release-title br")?.nextSibling()
+        val enTitle = (document.selectFirst("h1.release-title br")?.nextSibling()
             ?: document.selectFirst("h1.release-title")?.text()?.substringAfter("/")?.trim()).toString()
+        val poster = fixUrlNull(document.selectFirst("img#adminPoster")?.attr("src"))
         val type = document.selectFirst("div#xreleaseInfo b:contains(Тип:)")?.nextSibling()
             .toString().substringBefore(",").trim()
-        val trackType = type.let {
-            if(it.contains("Фильм", true)) "movie" else "tv"
-        }
         val year = document.selectFirst("div#xreleaseInfo b:contains(Сезон:)")?.nextElementSibling()
             ?.text()?.filter { it.isDigit() }?.toIntOrNull()
-        val (malId, anilistId, image, cover) = getTracker(trackTitle, trackType, year)
         val episodes = document.select("script").find { it.data().contains("var player =") }?.data()
             ?.substringAfter("file:[")?.substringBefore("],")?.let { data ->
                 tryParseJson<List<Episodes>>("[$data]")?.mapNotNull { eps ->
@@ -106,15 +102,14 @@ class Anilibria : MainAPI() {
                 }
             }
         return newAnimeLoadResponse(title, url, getType(type)) {
-            posterUrl = image ?: poster
-            backgroundPosterUrl = cover ?: image ?: poster
+            japName = enTitle
+            posterUrl = poster
+            backgroundPosterUrl = poster
             this.year = year
             addEpisodes(DubStatus.Subbed, episodes)
             plot = document.select("p.detail-description").text().trim()
             this.tags = document.selectFirst("div#xreleaseInfo b:contains(Жанры:)")?.nextSibling()
                 .toString().split(",").map { it.trim() }
-            addMalId(malId)
-            addAniListId(anilistId?.toIntOrNull())
         }
     }
 
@@ -142,43 +137,6 @@ class Anilibria : MainAPI() {
 
         return true
     }
-
-    private suspend fun getTracker(title: String?, type: String?, year: Int?): Tracker {
-        val res = app.get("https://api.consumet.org/meta/anilist/$title")
-            .parsedSafe<AniSearch>()?.results?.find { media ->
-                (media.title?.english.equals(title, true) || media.title?.romaji.equals(
-                    title,
-                    true
-                )) || (media.type.equals(type, true) && media.releaseDate == year)
-            }
-        return Tracker(res?.malId, res?.aniId, res?.image, res?.cover)
-    }
-
-    data class Tracker(
-        val malId: Int? = null,
-        val aniId: String? = null,
-        val image: String? = null,
-        val cover: String? = null,
-    )
-
-    data class Title(
-        @JsonProperty("romaji") val romaji: String? = null,
-        @JsonProperty("english") val english: String? = null,
-    )
-
-    data class Results(
-        @JsonProperty("id") val aniId: String? = null,
-        @JsonProperty("malId") val malId: Int? = null,
-        @JsonProperty("title") val title: Title? = null,
-        @JsonProperty("releaseDate") val releaseDate: Int? = null,
-        @JsonProperty("type") val type: String? = null,
-        @JsonProperty("image") val image: String? = null,
-        @JsonProperty("cover") val cover: String? = null,
-    )
-
-    data class AniSearch(
-        @JsonProperty("results") val results: ArrayList<Results>? = arrayListOf(),
-    )
 
     private data class Episodes(
         @JsonProperty("file") val file: String? = null,

@@ -3,13 +3,14 @@ package com.hexated
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.nodes.Element
+import java.net.URLDecoder
 
 class DubokuProvider : MainAPI() {
     override var mainUrl = "https://www.duboku.tv"
+    private var serverUrl = "https://w.duboku.io"
     override var name = "Duboku"
     override val hasMainPage = true
     override var lang = "zh"
@@ -106,27 +107,41 @@ class DubokuProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        app.get(data).document.select("script").map { script ->
-            if (script.data().contains("var player_data={")) {
-                val dataJson =
-                    script.data().substringAfter("var player_data={").substringBefore("}")
-                tryParseJson<Sources>("{$dataJson}")?.let { source ->
-                    M3u8Helper.generateM3u8(
-                        this.name,
-                        source.url ?: return@map,
-                        referer = "https://w.duboku.io/",
-                        headers = mapOf("Origin" to "https://w.duboku.io")
-                    ).forEach(callback)
-                }
-            }
-        }
-
+        val dataJson =
+            app.get(data).document.selectFirst("script:containsData(var player_data={)")?.data()
+                ?.substringAfter("var player_data={")?.substringBefore("}")
+                ?: throw IllegalArgumentException()
+        val source = tryParseJson<Sources>("{$dataJson}")
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                "${decode(base64Decode(source?.url ?: return false))}${getSign(source.from, data)}",
+                "$serverUrl/",
+                Qualities.Unknown.value,
+                INFER_TYPE,
+                headers = mapOf(
+                    "Accept-Language" to "en-US,en;q=0.5",
+                    "Origin" to serverUrl
+                ),
+            )
+        )
 
         return true
     }
 
+    private suspend fun getSign(server: String? = "vidjs24", ref: String): String {
+        return app.get(
+            "$serverUrl/static/player/$server.php",
+            referer = ref
+        ).text.substringAfter("PlayUrl+'").substringBefore("'")
+    }
+
+    private fun decode(input: String): String = URLDecoder.decode(input, "utf-8")
+
     data class Sources(
         @JsonProperty("url") val url: String?,
+        @JsonProperty("from") val from: String?,
     )
 
 

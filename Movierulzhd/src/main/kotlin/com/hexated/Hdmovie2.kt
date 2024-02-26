@@ -12,14 +12,14 @@ import org.jsoup.Jsoup
 
 class Hdmovie2 : Movierulzhd() {
 
-    override var mainUrl = "https://hdmovie2.li"
+    override var mainUrl = "https://hdmovie2.tax"
     override var name = "Hdmovie2"
     override val mainPage = mainPageOf(
         "trending" to "Trending",
         "movies" to "Movies",
-        "genre/tv-series" to "TV-Series",
+        "genre/tv-series" to "TV Shows",
         "genre/netflix" to "Netflix",
-        "genre/zee5-tv-series" to "Zee5 TV Series",
+        "genre/zee5-tv-series" to "Zee5",
     )
 
     override suspend fun loadLinks(

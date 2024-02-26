@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 class Samehadaku : MainAPI() {
-    override var mainUrl = "https://samehadaku.digital/"
+    override var mainUrl = "https://samehadaku.show"
     override var name = "Samehadaku"
     override val hasMainPage = true
     override var lang = "id"
@@ -20,10 +20,7 @@ class Samehadaku : MainAPI() {
         TvType.AnimeMovie,
         TvType.OVA
     )
-
     companion object {
-        const val acefile = "https://acefile.co"
-
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
             else if (t.contains("Movie", true)) TvType.AnimeMovie
@@ -63,9 +60,9 @@ class Samehadaku : MainAPI() {
 
         if (request.name == "Episode Terbaru") {
             val home = app.get(request.data + page).document.selectFirst("div.post-show")?.select("ul li")
-                    ?.mapNotNull {
-                        it.toSearchResult()
-                    } ?: throw ErrorLoadingException("No Media Found")
+                ?.mapNotNull {
+                    it.toSearchResult()
+                } ?: throw ErrorLoadingException("No Media Found")
             items.add(HomePageList(request.name, home, true))
         }
 
@@ -158,37 +155,11 @@ class Samehadaku : MainAPI() {
 
         val document = app.get(data).document
 
-        argamap(
-            {
-                document.select("div#server ul li div").apmap {
-                    val dataPost = it.attr("data-post")
-                    val dataNume = it.attr("data-nume")
-                    val dataType = it.attr("data-type")
-
-                    val iframe = app.post(
-                        url = "$mainUrl/wp-admin/admin-ajax.php",
-                        data = mapOf(
-                            "action" to "player_ajax",
-                            "post" to dataPost,
-                            "nume" to dataNume,
-                            "type" to dataType
-                        ),
-                        referer = data,
-                        headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
-                    ).document.select("iframe").attr("src")
-
-                    loadFixedExtractor(fixedIframe(iframe), it.text(), "$mainUrl/", subtitleCallback, callback)
-
-                }
-            },
-            {
-                document.select("div#downloadb li").map { el ->
-                    el.select("a").apmap {
-                        loadFixedExtractor(fixedIframe(it.attr("href")), el.select("strong").text(), "$mainUrl/", subtitleCallback, callback)
-                    }
-                }
+        document.select("div#downloadb li").map { el ->
+            el.select("a").apmap {
+                loadFixedExtractor(fixUrl(it.attr("href")), el.select("strong").text(), "$mainUrl/", subtitleCallback, callback)
             }
-        )
+        }
 
         return true
     }
@@ -217,18 +188,11 @@ class Samehadaku : MainAPI() {
     }
 
     private fun String.fixQuality() : Int {
-        return when(this) {
-            "MP4HD" -> Qualities.P720.value
+        return when(this.uppercase()) {
+            "4K" -> Qualities.P2160.value
             "FULLHD" -> Qualities.P1080.value
+            "MP4HD" -> Qualities.P720.value
             else -> this.filter { it.isDigit() }.toIntOrNull() ?: Qualities.Unknown.value
-        }
-    }
-
-    private fun fixedIframe(url: String): String {
-        val id = Regex("""(?:/f/|/file/)(\w+)""").find(url)?.groupValues?.getOrNull(1)
-        return when {
-            url.startsWith(acefile) -> "${acefile}/player/$id"
-            else -> fixUrl(url)
         }
     }
 

@@ -6,7 +6,9 @@ import com.lagradost.cloudstream3.TvSeriesLoadResponse
 import com.lagradost.cloudstream3.*
 
 class Pusatfilm : Gomov() {
+
     override var mainUrl = "http://37.60.238.37/Genre/pusatfilm21"
+
     override var name = "Pusatfilm"
     override val mainPage = mainPageOf(
         "film-terbaru/page/%d/" to "Film Terbaru",

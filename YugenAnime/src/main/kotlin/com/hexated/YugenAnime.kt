@@ -13,7 +13,7 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 class YugenAnime : MainAPI() {
-    override var mainUrl = "https://yugenanime.tv"
+    override var mainUrl = "https://yugenanime.sx"
     override var name = "YugenAnime"
     override val hasMainPage = true
     override var lang = "en"
@@ -31,8 +31,8 @@ class YugenAnime : MainAPI() {
     )
 
     companion object {
-        private const val consumetAnilist = "https://api.consumet.org/meta/anilist"
-        private const val consumetMal = "https://api.consumet.org/meta/mal"
+        private const val consumetAnilist = "https://consumet-instance.vercel.app/meta/anilist"
+        private const val consumetMal = "https://consumet-instance.vercel.app/meta/mal"
 
         fun getType(t: String): TvType {
             return if (t.contains("OVA", true) || t.contains("Special", true)) TvType.OVA
@@ -84,7 +84,7 @@ class YugenAnime : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/search/?q=$query").document
+        val document = app.get("$mainUrl/discover/?q=$query").document
         return document.select("div.cards-grid a.anime-meta").mapNotNull {
             it.toSearchResult()
         }

@@ -25,10 +25,16 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(Streamwish())
         registerExtractorAPI(FilelionsTo())
         registerExtractorAPI(Embedwish())
-        registerExtractorAPI(Wishfast())
+        registerExtractorAPI(UqloadsXyz())
         registerExtractorAPI(Uploadever())
         registerExtractorAPI(Netembed())
-        registerExtractorAPI(Vidplay2())
         registerExtractorAPI(Flaswish())
+        registerExtractorAPI(Comedyshow())
+        registerExtractorAPI(Ridoo())
+        registerExtractorAPI(Streamvid())
+        registerExtractorAPI(Embedrise())
+        registerExtractorAPI(Gdmirrorbot())
+        registerExtractorAPI(FilemoonNl())
+        registerExtractorAPI(Alions())
     }
 }

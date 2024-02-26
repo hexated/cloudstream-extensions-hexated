@@ -11,5 +11,7 @@ class NimegamiPlugin: Plugin() {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(Nimegami())
         registerExtractorAPI(Mitedrive())
+        registerExtractorAPI(Berkasdrive())
+        registerExtractorAPI(Videogami())
     }
 }

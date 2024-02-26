@@ -11,7 +11,7 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 
 open class XCine : MainAPI() {
     override var name = "XCine"
-    override var mainUrl = "https://xcine.ru"
+    override var mainUrl = "https://www1.xcine.ru"
     override var lang = "de"
     override val hasQuickSearch = true
     override val usesWebView = false

@@ -10,8 +10,8 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.apmap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
-import com.lagradost.cloudstream3.extractors.Pixeldrain
-import com.lagradost.cloudstream3.extractors.Vidplay
+import com.lagradost.cloudstream3.extractors.Jeniusplay
+import com.lagradost.cloudstream3.extractors.PixelDrain
 import com.lagradost.cloudstream3.utils.*
 import java.math.BigInteger
 import java.security.MessageDigest
@@ -124,8 +124,8 @@ open class Playm4u : ExtractorApi() {
         return "$this\\s*=\\s*[\"'](\\S+)[\"'];".toRegex().find(data)?.groupValues?.get(1) ?: ""
     }
 
-    private fun String.toLanguage() : String {
-        return if(this == "EN") "English" else this
+    private fun String.toLanguage(): String {
+        return if (this == "EN") "English" else this
     }
 
     data class Source(
@@ -209,7 +209,10 @@ open class VCloud : ExtractorApi() {
             )
         ).document.select("p.text-success ~ a").apmap {
             val link = it.attr("href")
-            if (link.contains("workers.dev") || it.text().contains("[Server : 1]") || link.contains("/dl.php?")) {
+            if (link.contains("workers.dev") || it.text().contains("[Server : 1]") || link.contains(
+                    "/dl.php?"
+                )
+            ) {
                 callback.invoke(
                     ExtractorLink(
                         this.name,
@@ -221,7 +224,7 @@ open class VCloud : ExtractorApi() {
                     )
                 )
             } else {
-                val direct = if(link.contains("gofile.io")) app.get(link).url else link
+                val direct = if (link.contains("gofile.io")) app.get(link).url else link
                 loadExtractor(direct, referer, subtitleCallback, callback)
             }
         }
@@ -247,19 +250,20 @@ open class Streamruby : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         val id = "/e/(\\w+)".toRegex().find(url)?.groupValues?.get(1) ?: return
-        val response = app.post("$mainUrl/dl", data = mapOf(
-            "op" to "embed",
-            "file_code" to id,
-            "auto" to "1",
-            "referer" to "",
-        ), referer = referer)
+        val response = app.post(
+            "$mainUrl/dl", data = mapOf(
+                "op" to "embed",
+                "file_code" to id,
+                "auto" to "1",
+                "referer" to "",
+            ), referer = referer
+        )
         val script = if (!getPacked(response.text).isNullOrEmpty()) {
             getAndUnpack(response.text)
         } else {
             response.document.selectFirst("script:containsData(sources:)")?.data()
         }
-        val m3u8 =
-            Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
         M3u8Helper.generateM3u8(
             name,
             m3u8 ?: return,
@@ -282,17 +286,25 @@ open class Uploadever : ExtractorApi() {
     ) {
         var res = app.get(url, referer = referer).document
         val formUrl = res.select("form").attr("action")
-        var formData = res.select("form input").associate { it.attr("name") to it.attr("value") }.filterKeys { it != "go" }
+        var formData = res.select("form input").associate { it.attr("name") to it.attr("value") }
+            .filterKeys { it != "go" }
             .toMutableMap()
         val formReq = app.post(formUrl, data = formData)
 
         res = formReq.document
-        val captchaKey = res.select("script[src*=https://www.google.com/recaptcha/api.js?render=]").attr("src").substringAfter("render=")
+        val captchaKey =
+            res.select("script[src*=https://www.google.com/recaptcha/api.js?render=]").attr("src")
+                .substringAfter("render=")
         val token = getCaptchaToken(url, captchaKey, referer = "$mainUrl/")
-        formData = res.select("form#down input").associate { it.attr("name") to it.attr("value") }.toMutableMap()
+        formData = res.select("form#down input").associate { it.attr("name") to it.attr("value") }
+            .toMutableMap()
         formData["adblock_detected"] = "0"
         formData["referer"] = url
-        res = app.post(formReq.url, data = formData + mapOf("g-recaptcha-response" to "$token"), cookies = formReq.cookies).document
+        res = app.post(
+            formReq.url,
+            data = formData + mapOf("g-recaptcha-response" to "$token"),
+            cookies = formReq.cookies
+        ).document
         val video = res.select("div.download-button a.btn.btn-dow.recaptchav2").attr("href")
 
         callback.invoke(
@@ -325,31 +337,130 @@ open class Netembed : ExtractorApi() {
         val script = getAndUnpack(response.text)
         val m3u8 = Regex("((https:|http:)//.*\\.m3u8)").find(script)?.groupValues?.getOrNull(1) ?: return
 
-        if(m3u8.startsWith("https://www.febbox.com")) {
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    this.name,
-                    m3u8,
-                    "$mainUrl/",
-                    getQuality(m3u8),
-                    INFER_TYPE
-                )
-            )
+        M3u8Helper.generateM3u8(this.name, m3u8, "$mainUrl/").forEach(callback)
+    }
+}
+
+open class Ridoo : ExtractorApi() {
+    override val name = "Ridoo"
+    override var mainUrl = "https://ridoo.net"
+    override val requiresReferer = true
+    open val defaulQuality = Qualities.P1080.value
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer = referer)
+        val script = if (!getPacked(response.text).isNullOrEmpty()) {
+            getAndUnpack(response.text)
         } else {
-            M3u8Helper.generateM3u8(
+            response.document.selectFirst("script:containsData(sources:)")?.data()
+        }
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+        val quality = "qualityLabels.*\"(\\d{3,4})[pP]\"".toRegex().find(script)?.groupValues?.get(1)
+        callback.invoke(
+            ExtractorLink(
                 this.name,
-                m3u8,
-                "$mainUrl/",
-            ).forEach(callback)
+                this.name,
+                m3u8 ?: return,
+                mainUrl,
+                quality?.toIntOrNull() ?: defaulQuality,
+                INFER_TYPE
+            )
+        )
+    }
+
+}
+
+open class Gdmirrorbot : ExtractorApi() {
+    override val name = "Gdmirrorbot"
+    override val mainUrl = "https://gdmirrorbot.nl"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        app.get(url, referer = referer).document.select("ul#videoLinks li").apmap {
+            loadExtractor(it.attr("data-link"), "$mainUrl/", subtitleCallback, callback)
         }
     }
 
-    private suspend fun getQuality(url: String) : Int {
-        val res = app.get(url, referer = "$mainUrl/").text
-        val regex = "#quality:\\s*(\\S+)".toRegex().find(res)?.groupValues?.get(1)
-        return getQualityFromName(regex)
+}
+
+open class Streamvid : ExtractorApi() {
+    override val name = "Streamvid"
+    override val mainUrl = "https://streamvid.net"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val response = app.get(url, referer = referer)
+        val script = if (!getPacked(response.text).isNullOrEmpty()) {
+            getAndUnpack(response.text)
+        } else {
+            response.document.selectFirst("script:containsData(sources:)")?.data()
+        }
+        val m3u8 =
+            Regex("src:\\s*\"(.*?m3u8.*?)\"").find(script ?: return)?.groupValues?.getOrNull(1)
+        M3u8Helper.generateM3u8(
+            name,
+            m3u8 ?: return,
+            mainUrl
+        ).forEach(callback)
     }
+
+}
+
+open class Embedrise : ExtractorApi() {
+    override val name = "Embedrise"
+    override val mainUrl = "https://embedrise.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get(url, referer = referer).document
+        val title = res.select("title").text()
+        val video = res.select("video#player source").attr("src")
+
+        callback.invoke(
+            ExtractorLink(
+                this.name,
+                this.name,
+                video,
+                "$mainUrl/",
+                getIndexQuality(title),
+                INFER_TYPE
+            )
+        )
+
+    }
+
+}
+
+class FilemoonNl : Ridoo() {
+    override val name = "FilemoonNl"
+    override var mainUrl = "https://filemoon.nl"
+    override val defaulQuality = Qualities.Unknown.value
+}
+
+class Alions : Ridoo() {
+    override val name = "Alions"
+    override var mainUrl = "https://alions.pro"
+    override val defaulQuality = Qualities.Unknown.value
 }
 
 class Streamwish : Filesim() {
@@ -357,9 +468,9 @@ class Streamwish : Filesim() {
     override var mainUrl = "https://streamwish.to"
 }
 
-class Wishfast : Filesim() {
-    override val name = "Wishfast"
-    override var mainUrl = "https://wishfast.top"
+class UqloadsXyz : Filesim() {
+    override val name = "Uqloads"
+    override var mainUrl = "https://uqloads.xyz"
 }
 
 class FilelionsTo : Filesim() {
@@ -367,7 +478,7 @@ class FilelionsTo : Filesim() {
     override var mainUrl = "https://filelions.to"
 }
 
-class Pixeldra : Pixeldrain() {
+class Pixeldra : PixelDrain() {
     override val mainUrl = "https://pixeldra.in"
 }
 
@@ -386,7 +497,7 @@ class Animefever : Filesim() {
     override var mainUrl = "https://animefever.fun"
 }
 
-class Multimovies : Filesim() {
+class Multimovies : Ridoo() {
     override val name = "Multimovies"
     override var mainUrl = "https://multimovies.cloud"
 }
@@ -405,12 +516,13 @@ class Embedwish : Filesim() {
     override val name = "Embedwish"
     override var mainUrl = "https://embedwish.com"
 }
-
-class Vidplay2 : Vidplay() {
-    override val mainUrl = "https://vidplay.online"
-}
-
-class Flaswish : Filesim() {
+class Flaswish : Ridoo() {
     override val name = "Flaswish"
     override var mainUrl = "https://flaswish.com"
+    override val defaulQuality = Qualities.Unknown.value
+}
+
+class Comedyshow : Jeniusplay() {
+    override val mainUrl = "https://comedyshow.to"
+    override val name = "Comedyshow"
 }

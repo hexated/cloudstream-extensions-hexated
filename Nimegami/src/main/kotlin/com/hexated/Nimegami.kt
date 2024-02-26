@@ -9,7 +9,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
-import java.net.URI
 
 class Nimegami : MainAPI() {
     override var mainUrl = "https://nimegami.id"
@@ -77,14 +76,18 @@ class Nimegami : MainAPI() {
             this.posterUrl = posterUrl
             addSub(episode)
         }
-
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        return app.get("$mainUrl/?s=$query&post_type=post").document.select("div.archive article")
-            .mapNotNull {
-                it.toSearchResult()
-            }
+        val searchResponse = mutableListOf<SearchResponse>()
+        for (i in 1..2) {
+            val res = app.get("$mainUrl/page/$i/?s=$query&post_type=post").document.select("div.archive article")
+                .mapNotNull {
+                    it.toSearchResult()
+                }
+            searchResponse.addAll(res)
+        }
+        return searchResponse
     }
 
     override suspend fun load(url: String): LoadResponse {
@@ -150,7 +153,7 @@ class Nimegami : MainAPI() {
         tryParseJson<ArrayList<Sources>>(base64Decode(data))?.map { sources ->
             sources.url?.apmap { url ->
                 loadFixedExtractor(
-                    url.fixIframe(),
+                    url,
                     sources.format,
                     "$mainUrl/",
                     subtitleCallback,
@@ -185,30 +188,8 @@ class Nimegami : MainAPI() {
         }
     }
 
-    private fun getBaseUrl(url: String): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
-        }
-    }
-
     private fun Elements.getContent(css: String): Elements {
         return this.select("tr:contains($css) td:last-child")
-    }
-
-    private fun String.fixIframe(): String {
-        val url = base64Decode(this.substringAfter("url=").substringAfter("id="))
-        return when {
-            url.contains("hxfile") -> {
-                val host = getBaseUrl(url)
-                val id = url.substringAfterLast("/")
-                "$host/embed-$id.html"
-            }
-            url.startsWith("https://mitedrive.my.id") -> url.replace(
-                "https://mitedrive.my.id",
-                "https://mitedrive.com"
-            )
-            else -> fixUrl(url)
-        }
     }
 
     data class Sources(
