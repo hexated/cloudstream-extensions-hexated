@@ -29,7 +29,6 @@ import com.hexated.SoraExtractor.invokeVidsrcto
 import com.hexated.SoraExtractor.invokeCinemaTv
 import com.hexated.SoraExtractor.invokeMoflix
 import com.hexated.SoraExtractor.invokeGhostx
-import com.hexated.SoraExtractor.invokeMoviefiction
 import com.hexated.SoraExtractor.invokeNepu
 import com.hexated.SoraExtractor.invokeWatchCartoon
 import com.hexated.SoraExtractor.invokeWatchsomuch
