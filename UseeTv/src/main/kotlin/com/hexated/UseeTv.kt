@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.nodes.Element
 
 class UseeTv : MainAPI() {
-    override var mainUrl = "https://www.useetv.com"
+    override var mainUrl = "https://www.indihometv.com/"
     override var name = "Useetv"
     override var lang = "id"
     override val hasDownloadSupport = false
@@ -16,7 +16,7 @@ class UseeTv : MainAPI() {
     )
 
     companion object {
-        private const val mainLink = "https://streaming.useetv.com"
+        private const val mainLink = "https://www.indihometv.com/"
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
