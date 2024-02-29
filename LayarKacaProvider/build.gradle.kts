@@ -23,5 +23,7 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://s8.lk21static.xyz/wp-content/themes/dunia21/images/favicon-set/ms-icon-144x144.png"
+
+    iconUrl = "https://www.google.com/s2/favicons?domain=amp.lk21official.mom&sz=%size%"
+
 }

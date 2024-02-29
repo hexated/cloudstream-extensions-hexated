@@ -8,8 +8,10 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
 class LayarKacaProvider : MainAPI() {
-    override var mainUrl = "https://tv10.lk21official.wiki"
-    private var seriesUrl = "https://tv11.nontondrama.click"
+
+    override var mainUrl = "https://amp.lk21official.mom"
+    private var seriesUrl = "https://tv12.nontondrama.click/"
+
     override var name = "LayarKaca"
     override val hasMainPage = true
     override var lang = "id"

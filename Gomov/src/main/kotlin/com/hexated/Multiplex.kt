@@ -3,7 +3,9 @@ package com.hexated
 import com.lagradost.cloudstream3.mainPageOf
 
 class Multiplex : Gomov() {
-    override var mainUrl = "http://5.189.181.147"
+
+    override var mainUrl = "http://95.111.236.109"
+
     override var name = "Multiplex"
     override val mainPage = mainPageOf(
         "country/usa/page/%d/" to "Movie",
