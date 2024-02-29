@@ -17,10 +17,9 @@ class TimefourTv : MainAPI() {
         TvType.Live
     )
 
-    private val homePoster =
-        "https://cdn.discordapp.com/attachments/1109266606292488297/1193060449193840681/Screenshot_2024-01-06_at_12-14-16_Logo_Maker_Used_By_2.3_Million_Startups.png"
+    private val homePoster = "https://cdn.discordapp.com/attachments/1109266606292488297/1193060449193840681/Screenshot_2024-01-06_at_12-14-16_Logo_Maker_Used_By_2.3_Million_Startups.png?ex=65ebf0a1&is=65d97ba1&hm=aa4018534090d5dc69cf16a15ab4663d6f84a742d3f3b5ccad4be779c26517d7&"
     private val detailPoster =
-        "https://cdn.discordapp.com/attachments/1109266606292488297/1193060448929595454/Screenshot_2024-01-06_at_12-13-02_Logo_Maker_Used_By_2.3_Million_Startups.png"
+        "https://cdn.discordapp.com/attachments/1109266606292488297/1193060448929595454/Screenshot_2024-01-06_at_12-13-02_Logo_Maker_Used_By_2.3_Million_Startups.png?ex=65ebf0a1&is=65d97ba1&hm=2dc35d2fcc09530f6d9fc963ecf6b9a28eeec1a7c76a083711379c7280dd34dc&"
 
     override val mainPage = mainPageOf(
         "$mainUrl/24-7-channels.php" to "24/7 Channels",

@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 23
+version = 24
 
 
 cloudstream {
@@ -21,5 +21,5 @@ cloudstream {
         "Live",
     )
 
-    iconUrl = "https://cdn.discordapp.com/attachments/1109266606292488297/1193088870212976640/Untitled.jpg"
+    iconUrl = "https://cdn.discordapp.com/attachments/1109266606292488297/1193088870212976640/Untitled.jpg?ex=65ec0b19&is=65d99619&hm=0eaf0f1926b6eb787b80c2eb3000ec9d77e2e706ab0601cad053ad8f677b8cc8&"
 }
