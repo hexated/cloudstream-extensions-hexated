@@ -202,48 +202,6 @@ object SoraExtractor : SoraStream() {
         }
     }
 
-    suspend fun invokeMoviefiction(
-        title: String? = null,
-        season: Int? = null,
-        episode: Int? = null,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val fixTitle = title?.createSlug()
-        val url = if (season == null) {
-            "$moviefictionAPI/movies/$fixTitle"
-        } else {
-            "$moviefictionAPI/episode/$fixTitle-${season}x${episode}"
-        }
-        val req = app.get(url)
-        val directUrl = getBaseUrl(req.url)
-        req.document.select("ul.bx-lst.aa-tbs li a").apmap {
-            val iframe = app.get(base64Decode(it.attr("data-src"))).document.selectFirst("iframe")
-                ?.attr("src") ?: return@apmap
-            loadExtractor(iframe, "$directUrl/", subtitleCallback) { link ->
-                when {
-                    link.name == "Bestx" && link.quality == Qualities.Unknown.value -> {
-                        callback.invoke(
-                            ExtractorLink(
-                                "Moviefiction",
-                                "Moviefiction",
-                                link.url,
-                                link.referer,
-                                Qualities.P1080.value,
-                                link.type,
-                                link.headers,
-                                link.extractorData
-                            )
-                        )
-                    }
-                    link.name != "Bestx" -> {
-                        callback.invoke(link)
-                    }
-                }
-            }
-        }
-    }
-
     suspend fun invokeAoneroom(
         title: String? = null,
         year: Int? = null,
@@ -1377,14 +1335,16 @@ object SoraExtractor : SoraStream() {
     ) {
         val slugTitle = title?.createSlug()
         val (seasonSlug, episodeSlug) = getEpisodeSlug(season, episode)
-        val req = app.get("$m4uhdAPI/search/$slugTitle.html", timeout = 20)
+        val req = app.get("$m4uhdAPI/search/$slugTitle", timeout = 20)
         val referer = getBaseUrl(req.url)
 
-        val media = req.document.select("div.row div.item > a").map { it.attr("href") }
-        val mediaUrl = if(media.size == 1) {
+        val media = req.document.select("div.row div.item a").map { it.attr("href") }
+        val mediaUrl = if (media.size == 1) {
             media.first()
         } else {
-            media.find { it.contains("-$slugTitle-") && it.contains("-$year-") }
+            media.find {
+                if(season == null) it.startsWith("movies/$slugTitle-$year.") else it.startsWith("tv-series/$slugTitle-$year.")
+            }
         }
 
         val link = fixUrl(mediaUrl ?: return, referer)
@@ -1398,7 +1358,7 @@ object SoraExtractor : SoraStream() {
             doc.select("div.le-server span").map { it.attr("data") }
         } else {
             val idepisode =
-                doc.selectFirst("div.season > p:matches((?i)S$seasonSlug-E$episodeSlug) button")
+                doc.selectFirst("button[class=episode]:matches(S$seasonSlug-E$episodeSlug)")
                     ?.attr("idepisode")
                     ?: return
             val requestEmbed = app.post(
@@ -2420,7 +2380,7 @@ object SoraExtractor : SoraStream() {
         season: Int? = null,
         episode: Int? = null,
         callback: (ExtractorLink) -> Unit,
-        host: String = "https://dozzlegram-duj-i-280.site",
+        host: String = "https://guinsters286nedril.com",
     ) {
         val res = app.get(
             "$host/play/$imdbId",
