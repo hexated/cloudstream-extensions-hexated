@@ -857,7 +857,7 @@ object SoraExtractor : SoraStream() {
                 invokeAnimetosho(malId, season, episode, subtitleCallback, callback)
             },
             {
-                invokeAniwatch(zoroIds, episode, subtitleCallback, callback)
+                invokeHianime(zoroIds, episode, subtitleCallback, callback)
             },
             {
                 invokeAniwave(aniwaveId, episode, subtitleCallback, callback)
@@ -955,7 +955,7 @@ object SoraExtractor : SoraStream() {
 
     }
 
-    private suspend fun invokeAniwatch(
+    private suspend fun invokeHianime(
         animeIds: List<String?>? = null,
         episode: Int? = null,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -966,17 +966,17 @@ object SoraExtractor : SoraStream() {
         )
         animeIds?.apmap { id ->
             val episodeId = app.get(
-                "$aniwatchAPI/ajax/v2/episode/list/${id ?: return@apmap}",
+                "$hianimeAPI/ajax/v2/episode/list/${id ?: return@apmap}",
                 headers = headers
-            ).parsedSafe<AniwatchResponses>()?.html?.let {
+            ).parsedSafe<HianimeResponses>()?.html?.let {
                 Jsoup.parse(it)
             }?.select("div.ss-list a")?.find { it.attr("data-number") == "${episode ?: 1}" }
                 ?.attr("data-id")
 
             val servers = app.get(
-                "$aniwatchAPI/ajax/v2/episode/servers?episodeId=${episodeId ?: return@apmap}",
+                "$hianimeAPI/ajax/v2/episode/servers?episodeId=${episodeId ?: return@apmap}",
                 headers = headers
-            ).parsedSafe<AniwatchResponses>()?.html?.let { Jsoup.parse(it) }
+            ).parsedSafe<HianimeResponses>()?.html?.let { Jsoup.parse(it) }
                 ?.select("div.item.server-item")?.map {
                     Triple(
                         it.text(),
@@ -987,15 +987,15 @@ object SoraExtractor : SoraStream() {
 
             servers?.apmap servers@{ server ->
                 val iframe = app.get(
-                    "$aniwatchAPI/ajax/v2/episode/sources?id=${server.second ?: return@servers}",
+                    "$hianimeAPI/ajax/v2/episode/sources?id=${server.second ?: return@servers}",
                     headers = headers
-                ).parsedSafe<AniwatchResponses>()?.link
+                ).parsedSafe<HianimeResponses>()?.link
                     ?: return@servers
                 val audio = if (server.third == "sub") "Raw" else "English Dub"
                 loadCustomExtractor(
                     "${server.first} [$audio]",
                     iframe,
-                    "$aniwatchAPI/",
+                    "$hianimeAPI/",
                     subtitleCallback,
                     callback,
                 )

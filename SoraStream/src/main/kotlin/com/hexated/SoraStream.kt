@@ -85,7 +85,7 @@ open class SoraStream : TmdbProvider() {
         const val noverseAPI = "https://www.nollyverse.com"
         const val filmxyAPI = "https://www.filmxy.vip"
         const val kimcartoonAPI = "https://kimcartoon.li"
-        const val aniwatchAPI = "https://aniwatch.to"
+        const val hianimeAPI = "https://hianime.to"
         const val aniwaveAPI = "https://aniwave.to"
         const val crunchyrollAPI = "https://beta-api.crunchyroll.com"
         const val kissKhAPI = "https://kisskh.co"
