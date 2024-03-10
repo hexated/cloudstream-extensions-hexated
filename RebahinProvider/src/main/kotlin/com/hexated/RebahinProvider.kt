@@ -12,7 +12,9 @@ import org.jsoup.nodes.Element
 import java.net.URI
 
 open class RebahinProvider : MainAPI() {
-    override var mainUrl = "http://179.43.169.211/"
+
+    override var mainUrl = "http://37.60.242.22/"
+
     private var directUrl: String? = null
     override var name = "Rebahin"
     override val hasMainPage = true
