@@ -4,7 +4,7 @@ import com.lagradost.cloudstream3.mainPageOf
 
 class Multiplex : Gomov() {
 
-    override var mainUrl = "http://95.111.236.109"
+    override var mainUrl = "https://imb-bmi.org/"
 
     override var name = "Multiplex"
     override val mainPage = mainPageOf(
