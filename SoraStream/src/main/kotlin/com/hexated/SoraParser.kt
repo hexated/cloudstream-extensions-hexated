@@ -274,7 +274,7 @@ data class MALSyncResponses(
     @JsonProperty("Sites") val sites: MALSyncSites? = null,
 )
 
-data class AniwatchResponses(
+data class HianimeResponses(
     @JsonProperty("html") val html: String? = null,
     @JsonProperty("link") val link: String? = null,
 )
