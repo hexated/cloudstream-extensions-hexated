@@ -7,6 +7,17 @@ import android.content.Context
 
 @CloudstreamPlugin
 class SoraStreamPlugin: Plugin() {
+
+    private fun classExist(className: String) : Boolean {
+        try {
+            Class.forName(className)
+        } catch (e: Exception) {
+            return false
+        }
+
+        return true
+    }
+
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(SoraStream())
@@ -19,7 +30,11 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(TravelR())
         registerExtractorAPI(Playm4u())
         registerExtractorAPI(VCloud())
-        registerExtractorAPI(Pixeldra())
+
+        if (classExist("com.lagradost.cloudstream3.extractors.PixelDrain")) {
+            registerExtractorAPI(Pixeldra())
+        }
+        
         registerExtractorAPI(M4ufree())
         registerExtractorAPI(Streamruby())
         registerExtractorAPI(Streamwish())
