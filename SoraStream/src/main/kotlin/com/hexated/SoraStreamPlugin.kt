@@ -7,6 +7,15 @@ import android.content.Context
 
 @CloudstreamPlugin
 class SoraStreamPlugin: Plugin() {
+    private fun classExist(className: String) : Boolean {
+        try {
+            Class.forName(className, false, ClassLoader.getSystemClassLoader())
+        } catch (e: ClassNotFoundException) {
+            return false
+        }
+
+        return true
+    }
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         registerMainAPI(SoraStream())
@@ -19,7 +28,19 @@ class SoraStreamPlugin: Plugin() {
         registerExtractorAPI(TravelR())
         registerExtractorAPI(Playm4u())
         registerExtractorAPI(VCloud())
-        registerExtractorAPI(Pixeldra())
+
+        /*
+            Check if class exists before load
+            v.4.3.0 released 20231209
+            Class added on 20231231
+
+            2cfdab54 (Extractor: added some extractors (#833), 2023-12-31)
+            app/src/main/java/com/lagradost/cloudstream3/extractors/PixelDrainExtractor.kt
+         */
+        if (classExist("com.lagradost.cloudstream3.extractors.PixelDrain")) {
+            registerExtractorAPI(Pixeldra())
+        }
+
         registerExtractorAPI(M4ufree())
         registerExtractorAPI(Streamruby())
         registerExtractorAPI(Streamwish())
